@@ -1,0 +1,230 @@
+/* 
+ * DazzleConf-core
+ * Copyright © 2020 Anand Beh <https://www.arim.space>
+ * 
+ * DazzleConf-core is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * DazzleConf-core is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
+ * and navigate to version 3 of the GNU Lesser General Public License.
+ */
+package space.arim.dazzleconf;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
+import space.arim.dazzleconf.annote.ConfSerialiser;
+import space.arim.dazzleconf.annote.ConfValidator;
+import space.arim.dazzleconf.internal.ImmutableCollections;
+import space.arim.dazzleconf.serialiser.ValueSerialiser;
+import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
+import space.arim.dazzleconf.sorter.ConfigurationSorter;
+import space.arim.dazzleconf.validator.ValueValidator;
+
+/**
+ * Options for loading, validating, and writing configuration values
+ * 
+ * @author A248
+ *
+ */
+public final class ConfigurationOptions {
+
+	private final ValueSerialiserMap serialisers;
+	private final Map<String, ValueValidator> validators;
+	private final ConfigurationSorter sorter;
+	private final boolean strictParseEnums;
+	
+	private static final ConfigurationOptions DEFAULTS = new ConfigurationOptions.Builder().build();
+	
+	ConfigurationOptions(Builder builder) {
+		serialisers = new ValueSerialiserMap(ImmutableCollections.mapOf(builder.serialisers));
+		validators = ImmutableCollections.mapOf(builder.validators);
+		sorter = builder.sorter;
+		strictParseEnums = builder.strictParseEnums;
+	}
+	
+	/**
+	 * Returns the default configuration options
+	 * 
+	 * @return the default config options
+	 */
+	public static ConfigurationOptions defaults() {
+		return DEFAULTS;
+	}
+	
+	/**
+	 * Gets the configuration value serialisers. Serialisers can also be specified by {@link ConfSerialiser},
+	 * which are not included here
+	 * 
+	 * @return the value serialisers, never {@code null}
+	 */
+	public ValueSerialiserMap getSerialisers() {
+		return serialisers;
+	}
+	
+	/**
+	 * Gets an immutable map of value validators, keyed by the configuration key to which they apply.
+	 * Validators can also be specified {@link ConfValidator}, which are not included here
+	 * 
+	 * @return the map of value validators, never {@code null}
+	 */
+	public Map<String, ValueValidator> getValidators() {
+		return validators;
+	}
+	
+	/**
+	 * Gets the {@link ConfigurationSorter}, or {@code null} for none
+	 * 
+	 * @return the sorter or {@code null} if there is none
+	 */
+	public ConfigurationSorter getSorter() {
+		return sorter;
+	}
+	
+	/**
+	 * Whether enums are strictly parsed
+	 * 
+	 * @return true if strictly parsed, false otherwise
+	 */
+	public boolean strictParseEnums() {
+		return strictParseEnums;
+	}
+	
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + (strictParseEnums ? 1231 : 1237);
+		result = prime * result + ((sorter == null) ? 0 : sorter.hashCode());
+		result = prime * result + serialisers.hashCode();
+		result = prime * result + validators.hashCode();
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object object) {
+		if (this == object) {
+			return true;
+		}
+		if (!(object instanceof ConfigurationOptions)) {
+			return false;
+		}
+		ConfigurationOptions other = (ConfigurationOptions) object;
+		return strictParseEnums == other.strictParseEnums
+				&& ((sorter == null) ? other.sorter == null : sorter == other.sorter)
+				&& serialisers.equals(other.serialisers)
+				&& validators.equals(other.validators);
+	}
+
+	@Override
+	public String toString() {
+		return "ConfigurationOptions [serialisers=" + serialisers + ", validators=" + validators + ", sorter=" + sorter
+				+ ", strictParseEnums=" + strictParseEnums + "]";
+	}
+
+	/**
+	 * Builder of {@link ConfigurationOptions}. <b>Not thread safe</b>
+	 * 
+	 * @author A248
+	 *
+	 */
+	public static class Builder {
+		
+		final Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>();
+		final Map<String, ValueValidator> validators = new HashMap<>();
+		ConfigurationSorter sorter;
+		boolean strictParseEnums;
+		
+		/**
+		 * Adds the specified value serialiser to this builder
+		 * 
+		 * @param <T> the type of the value serialiser
+		 * @param type the type class
+		 * @param serialiser the value serialiser
+		 * @return this builder
+		 * @throws NullPointerException if either parameter is null
+		 */
+		public <T> Builder addSerialiser(Class<T> type, ValueSerialiser<T> serialiser) {
+			serialisers.put(Objects.requireNonNull(type, "type"), Objects.requireNonNull(serialiser, "serialiser"));
+			return this;
+		}
+		
+		/**
+		 * Clears the serialisers of this builder
+		 * 
+		 * @return this builder
+		 */
+		public Builder clearSerialisers() {
+			serialisers.clear();
+			return this;
+		}
+		
+		/**
+		 * Adds the specified value validator to this builder
+		 * 
+		 * @param key the config key at which to place the validator
+		 * @param validator the value validator
+		 * @return this builder
+		 * @throws NullPointerException if either parameter is null
+		 */
+		public Builder addValidator(String key, ValueValidator validator) {
+			validators.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(validator, "validator"));
+			return this;
+		}
+		
+		/**
+		 * Clears the validators of this builder
+		 * 
+		 * @return this builder
+		 */
+		public Builder clearValidators() {
+			validators.clear();
+			return this;
+		}
+		
+		/**
+		 * Sets the {@link ConfigurationSorter} to use when writing the configuration to a stream or channel. <br>
+		 * By default there is no sorter (null)
+		 * 
+		 * @param sorter the configuration sorter to use
+		 * @return this builder
+		 */
+		public Builder sorter(ConfigurationSorter sorter) {
+			this.sorter = sorter;
+			return this;
+		}
+		
+		/**
+		 * Specifies whether enum values should be strictly parsed. By default this is {@code false}. <br>
+		 * <br>
+		 * If {@code true}, enum values must be have proper case. Otherwise they are validated ignoring case.
+		 * 
+		 * @param strictParseEnums whether to strictly parse enums
+		 * @return this builder
+		 */
+		public Builder setStrictParseEnums(boolean strictParseEnums) {
+			this.strictParseEnums = strictParseEnums;
+			return this;
+		}
+		
+		/**
+		 * Builds a {@code ValidationOptions} from the contents of this builder
+		 * 
+		 * @return built options
+		 */
+		public ConfigurationOptions build() {
+			return new ConfigurationOptions(this);
+		}
+		
+	}
+	
+}
