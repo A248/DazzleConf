@@ -89,6 +89,9 @@ public class DefinitionReader<C> {
 	}
 	
 	private void create(Method method) {
+		if (method.getParameterCount() > 0) {
+			throw new IllDefinedConfigException("Cannot use a method with parameters in a configuration");
+		}
 		this.method = method;
 		ConfEntry toAdd = create0();
 		boolean added = entries.add(toAdd);
