@@ -18,6 +18,7 @@
  */
 package space.arim.dazzleconf.internal.processor;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.text.NumberFormat;
@@ -31,6 +32,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import space.arim.dazzleconf.AuxiliaryKeys;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.annote.CollectionSize;
 import space.arim.dazzleconf.annote.IntegerRange;
@@ -54,23 +56,28 @@ public abstract class ProcessorBase {
 
 	private final ConfigurationOptions options;
 	private final List<ConfEntry> entries;
+	private final Object auxiliaryValues;
 	
 	private String key;
 	
 	private final Map<String, Object> result = new HashMap<>();
+	private boolean usedAuxiliary;
 	
 	/**
-	 * Creates from options and entries
+	 * Creates from options, entries, and auxiliary config values
 	 * 
 	 * @param options the config options
 	 * @param mainEntry the config entries
+	 * @param auxiliaryValues the auxiliary config, null for none
 	 */
-	ProcessorBase(ConfigurationOptions options, List<ConfEntry> entries) {
+	ProcessorBase(ConfigurationOptions options, List<ConfEntry> entries, Object auxiliaryValues) {
 		this.options = options;
 		this.entries = entries;
+		this.auxiliaryValues = auxiliaryValues;
 	}
 	
-	abstract ProcessorBase continueNested(ConfigurationOptions options, NestedConfEntry<?> childEntry) throws ImproperEntryException;
+	abstract ProcessorBase continueNested(ConfigurationOptions options, NestedConfEntry<?> childEntry,
+			Object nestedAuxiliaryValues) throws ImproperEntryException;
 	
 	/**
 	 * Creates a configuration using the specified processor
@@ -91,7 +98,13 @@ public abstract class ProcessorBase {
 			handler = new ConfigInvocationHandler(processor.result);
 		}
 		Class<C> configClass = definition.getConfigClass();
-		Object proxy = Proxy.newProxyInstance(configClass.getClassLoader(), new Class<?>[] {configClass}, handler);
+		Class<?>[] intf;
+		if (processor.usedAuxiliary) {
+			intf = new Class<?>[] {configClass, AuxiliaryKeys.class};
+		} else {
+			intf = new Class<?>[] {configClass};
+		}
+		Object proxy = Proxy.newProxyInstance(configClass.getClassLoader(), intf, handler);
 		return configClass.cast(proxy);
 	}
 	
@@ -112,15 +125,40 @@ public abstract class ProcessorBase {
 	}
 	
 	private Object processEntry(ConfEntry entry) throws InvalidConfigException {
+		/*
+		 * Check if this is a nested configuration section
+		 */
 		if (entry instanceof NestedConfEntry) {
 			NestedConfEntry<?> nestedEntry = (NestedConfEntry<?>) entry;
-			return createConfig(nestedEntry.getDefinition(), continueNested(options, nestedEntry));
+
+			Object nestedAuxiliary = (auxiliaryValues == null) ?
+					null : getAuxiliaryValue(entry); // Pass along auxiliary entries
+			ProcessorBase childProcessor = continueNested(options, nestedEntry, nestedAuxiliary);
+			Object nestedSection = createConfig(nestedEntry.getDefinition(), childProcessor);
+			if (childProcessor.usedAuxiliary) {
+				usedAuxiliary = true; // propagate auxiliary usage flag upward
+			}
+			return nestedSection;
 		}
+
 		SingleConfEntry singleEntry = (SingleConfEntry) entry;
-		Object preValue = getValueFromSources(entry);
+		/*
+		 * Get pre value
+		 * If missing and auxiliary entries are provided, return auxiliary value
+		 */
+		Object preValue;
+		try {
+			preValue = getValueFromSources(entry);
+		} catch (MissingKeyException mke) {
+			if (auxiliaryValues == null) {
+				throw mke;
+			}
+			return getAuxiliaryValue(singleEntry);
+		}
 		if (preValue == null) {
 			throw MissingValueException.forKey(key);
 		}
+
 		Object value = processObjectAtEntryWithGoal(singleEntry, entry.getMethod().getReturnType(), preValue);
 
 		ValueValidator validator = singleEntry.getValidator();
@@ -131,6 +169,22 @@ public abstract class ProcessorBase {
 			validator.validate(key, value);
 		}
 		return value;
+	}
+	
+	private Object getAuxiliaryValue(ConfEntry entry) {
+		Object auxiliaryValue;
+		try {
+			auxiliaryValue = entry.getMethod().invoke(auxiliaryValues);
+		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+			throw new IllDefinedConfigException(
+					"Configuration " + auxiliaryValues + " threw an exception while getting value at " + key, ex);
+		}
+		if (auxiliaryValue == null) {
+			throw new IllDefinedConfigException(
+					"Configuration " + auxiliaryValues + " returned null while getting value at " + key);
+		}
+		usedAuxiliary = true;
+		return auxiliaryValue;
 	}
 	
 	private <G> Object processObjectAtEntryWithGoal(SingleConfEntry entry, Class<G> goal, Object preValue)

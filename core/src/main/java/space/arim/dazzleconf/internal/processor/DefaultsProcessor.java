@@ -35,12 +35,15 @@ import space.arim.dazzleconf.internal.NestedConfEntry;
 public class DefaultsProcessor extends ProcessorBase {
 
 	public DefaultsProcessor(ConfigurationOptions options, List<ConfEntry> entries) {
-		super(options, entries);
+		super(options, entries, null);
 	}
 	
 	@Override
-	ProcessorBase continueNested(ConfigurationOptions options, NestedConfEntry<?> childEntry)
-			throws ImproperEntryException {
+	ProcessorBase continueNested(ConfigurationOptions options, NestedConfEntry<?> childEntry,
+			Object nestedAuxiliaryValues) throws ImproperEntryException {
+		if (nestedAuxiliaryValues != null) {
+			throw new AssertionError("DefaultsProcessor does not handle auxiliary entries");
+		}
 		return new DefaultsProcessor(options, childEntry.getDefinition().getEntries());
 	}
 

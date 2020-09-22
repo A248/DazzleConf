@@ -74,6 +74,36 @@ public interface ConfigurationFactory<C> {
 	C load(InputStream inputStream) throws IOException, InvalidConfigException;
 	
 	/**
+	 * Reads configuration data from a readable channel with the given auxiliary configuration instance. Any keys
+	 * missing in the loaded config data will be supplanted by the config instance's corresponding entry. <br>
+	 * <br>
+	 * By checking if the returned configuration implements {@link AuxiliaryKeys}, the caller can determine
+	 * whether any of the auxiliary entries were used.
+	 * 
+	 * @param readChannel the channel from which to read the data
+	 * @return the read config data
+	 * @throws IOException if an I/O error occurs
+	 * @throws InvalidConfigException if the configuration is invalid. Where possible, more specific subclasses are thrown
+	 * @throws NullPointerException if {@code readChannel} is null
+	 */
+	C load(ReadableByteChannel readChannel, C auxiliaryEntries) throws IOException, InvalidConfigException;
+	
+	/**
+	 * Reads configuration data from an input stream with the given auxiliary configuration instance. Any keys
+	 * missing in the loaded config data will be supplanted by the config instance's corresponding entry. <br>
+	 * <br>
+	 * By checking if the returned configuration implements {@link AuxiliaryKeys}, the caller can determine
+	 * whether any of the auxiliary entries were used.
+	 * 
+	 * @param inputStream the stream from which to read the data
+	 * @return the read config data
+	 * @throws IOException if an I/O error occurs
+	 * @throws InvalidConfigException if the configuration is invalid. Where possible, more specific subclasses are thrown
+	 * @throws NullPointerException if {@code inputStream} is null
+	 */
+	C load(InputStream inputStream, C auxiliaryEntries) throws IOException, InvalidConfigException;
+	
+	/**
 	 * Reads the default configuration data from annotations in {@link ConfDefault} <br>
 	 * <br>
 	 * If any config entry is missing a default value annotation, or the default values cannot be deserialised

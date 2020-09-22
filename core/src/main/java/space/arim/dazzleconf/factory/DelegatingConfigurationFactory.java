@@ -51,6 +51,16 @@ abstract class DelegatingConfigurationFactory<C> implements ConfigurationFactory
 	public C load(InputStream inputStream) throws IOException, InvalidConfigException {
 		return delegate().load(inputStream);
 	}
+	
+	@Override
+	public C load(ReadableByteChannel readChannel, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		return delegate().load(readChannel, auxiliaryEntries);
+	}
+
+	@Override
+	public C load(InputStream inputStream, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		return delegate().load(inputStream, auxiliaryEntries);
+	}
 
 	@Override
 	public C loadDefaults() {
