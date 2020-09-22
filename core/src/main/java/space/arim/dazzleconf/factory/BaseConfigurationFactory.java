@@ -61,6 +61,7 @@ public abstract class BaseConfigurationFactory<C> extends BaseConfigurationFacto
 	/**
 	 * Reads config data from the specified reader
 	 * 
+	 * @param reader the stream reader
 	 * @return the config data
 	 * @throws IOException if an I/O error occurs
 	 * @throws InvalidConfigException if the configuration is not valid
@@ -69,8 +70,23 @@ public abstract class BaseConfigurationFactory<C> extends BaseConfigurationFacto
 	protected abstract C loadFromReader(Reader reader) throws IOException, InvalidConfigException;
 	
 	/**
+	 * Reads config data from the specified reader with the given auxiliary entries. The auxiliary entries
+	 * are the same ones passed to {@link ConfigurationFactory}
+	 * 
+	 * @param reader the stream reader
+	 * @param auxiliaryEntries the auxiliary entries
+	 * @return the config data
+	 * @throws IOException if an I/O error occurs
+	 * @throws InvalidConfigException if the configuration is not valid
+	 */
+	@Override
+	protected abstract C loadFromReader(Reader reader, C auxiliaryEntries) throws IOException, InvalidConfigException;
+	
+	/**
 	 * Writes config data to the specified writer
 	 * 
+	 * @param configData the configuration data to write
+	 * @param writer the stream writer
 	 * @throws IOException if an I/O error occurs
 	 */
 	@Override

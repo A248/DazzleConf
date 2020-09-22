@@ -66,21 +66,50 @@ public abstract class BaseConfigurationFactoryImpl<C> implements ConfigurationFa
 	
 	protected abstract C loadFromReader(Reader reader) throws IOException, InvalidConfigException;
 	
+	protected abstract C loadFromReader(Reader reader, C auxiliaryEntries) throws IOException, InvalidConfigException;
+	
 	private C loadConfig(Reader reader) throws IOException, InvalidConfigException {
 		try (reader; BufferedReader buffReader = new BufferedReader(reader)) {
 
 			return loadFromReader(buffReader);
 		}
 	}
+	
+	private C loadConfig(Reader reader, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		try (reader; BufferedReader buffReader = new BufferedReader(reader)) {
+
+			return loadFromReader(buffReader, auxiliaryEntries);
+		}
+	}
+	
+	private Reader toReader(ReadableByteChannel readChannel) {
+		return Channels.newReader(readChannel, charset()); // Channels.newReader performs null check
+	}
+	
+	private Reader toReader(InputStream inputStream) {
+		return new InputStreamReader(inputStream, charset()); // InputStreamReader performs null check
+	}
 
 	@Override
 	public C load(ReadableByteChannel readChannel) throws IOException, InvalidConfigException {
-		return loadConfig(Channels.newReader(readChannel, charset())); // Channels.newReader performs null check
+		return loadConfig(toReader(readChannel));
 	}
 
 	@Override
 	public C load(InputStream inputStream) throws IOException, InvalidConfigException {
-		return loadConfig(new InputStreamReader(inputStream, charset())); // InputStreamReader performs null check
+		return loadConfig(toReader(inputStream));
+	}
+	
+	@Override
+	public C load(ReadableByteChannel readChannel, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		configClass.cast(Objects.requireNonNull(auxiliaryEntries, "auxiliaryEntries"));
+		return loadConfig(toReader(readChannel), auxiliaryEntries);
+	}
+
+	@Override
+	public C load(InputStream inputStream, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		configClass.cast(Objects.requireNonNull(auxiliaryEntries, "auxiliaryEntries"));
+		return loadConfig(toReader(inputStream), auxiliaryEntries);
 	}
 	
 	// Writing

@@ -33,19 +33,21 @@ public class MapProcessor extends ProcessorBase {
 
 	private final NestedMapHelper mapHelper;
 	
-	public MapProcessor(ConfigurationOptions options, List<ConfEntry> entries, Map<String, Object> sourceMap) {
-		this(options, entries, new NestedMapHelper(sourceMap));
+	public MapProcessor(ConfigurationOptions options, List<ConfEntry> entries,
+			Map<String, Object> sourceMap, Object auxiliaryValues) {
+		this(options, entries, new NestedMapHelper(sourceMap), auxiliaryValues);
 	}
 	
 	@Override
-	ProcessorBase continueNested(ConfigurationOptions options, NestedConfEntry<?> childEntry)
-			throws ImproperEntryException {
+	ProcessorBase continueNested(ConfigurationOptions options, NestedConfEntry<?> childEntry,
+			Object nestedAuxiliaryValues) throws ImproperEntryException {
 		Map<String, Object> childMap = getChildMapFromSources(childEntry, mapHelper);
-		return new MapProcessor(options, childEntry.getDefinition().getEntries(), childMap);
+		return new MapProcessor(options, childEntry.getDefinition().getEntries(), childMap, nestedAuxiliaryValues);
 	}
 	
-	private MapProcessor(ConfigurationOptions options, List<ConfEntry> entries, NestedMapHelper mapHelper) {
-		super(options, entries);
+	private MapProcessor(ConfigurationOptions options, List<ConfEntry> entries,
+			NestedMapHelper mapHelper, Object auxiliaryValues) {
+		super(options, entries, auxiliaryValues);
 		this.mapHelper = mapHelper;
 	}
 	

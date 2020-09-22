@@ -66,6 +66,11 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 		return fromRawMap(loadMapFromReader(reader));
 	}
 	
+	@Override
+	protected C loadFromReader(Reader reader, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		return fromRawMap(loadMapFromReader(reader), auxiliaryEntries);
+	}
+	
 	/**
 	 * For use by testing (SerialisationFactory)
 	 * 
@@ -74,7 +79,11 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 	 * @throws InvalidConfigException if the config is invalid
 	 */
 	/*private*/ C fromRawMap(Map<String, Object> rawMap) throws InvalidConfigException {
-		return fromProcessor(new MapProcessor(getOptions(), definition.getEntries(), rawMap));
+		return fromRawMap(rawMap, null);
+	}
+
+	private C fromRawMap(Map<String, Object> rawMap, Object auxiliaryValues) throws InvalidConfigException {
+		return fromProcessor(new MapProcessor(getOptions(), definition.getEntries(), rawMap, auxiliaryValues));
 	}
 	
 	private C fromProcessor(ProcessorBase processor) throws InvalidConfigException {
