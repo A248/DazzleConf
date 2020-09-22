@@ -83,7 +83,7 @@ public abstract class BaseConfigurationFactoryImpl<C> implements ConfigurationFa
 	}
 	
 	private Reader toReader(ReadableByteChannel readChannel) {
-		return Channels.newReader(readChannel, charset()); // Channels.newReader performs null check
+		return Channels.newReader(readChannel, charset().newDecoder(), -1); // Channels.newReader performs null check
 	}
 	
 	private Reader toReader(InputStream inputStream) {
@@ -126,7 +126,7 @@ public abstract class BaseConfigurationFactoryImpl<C> implements ConfigurationFa
 	@Override
 	public void write(C configData, WritableByteChannel writableChannel) throws IOException {
 		configClass.cast(Objects.requireNonNull(configData, "configData"));
-		writeConfig(configData, Channels.newWriter(writableChannel, charset())); // Channels.newWriter performs null check
+		writeConfig(configData, Channels.newWriter(writableChannel, charset().newEncoder(), -1)); // Channels.newWriter performs null check
 	}
 
 	@Override
