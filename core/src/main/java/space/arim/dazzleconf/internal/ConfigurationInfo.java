@@ -18,7 +18,9 @@
  */
 package space.arim.dazzleconf.internal;
 
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Set;
 
 import space.arim.dazzleconf.ConfigurationOptions;
 
@@ -27,7 +29,7 @@ public class ConfigurationInfo<C> extends ConfigurationDefinition<C> {
 	private final ConfigurationOptions options;
 	
 	ConfigurationInfo(Class<C> configClass, ConfigurationOptions options, List<ConfEntry> entries,
-			boolean defaultMethods) {
+			Set<Method> defaultMethods) {
 		super(configClass, entries, defaultMethods);
 		this.options = options;
 	}

@@ -105,6 +105,9 @@ public abstract class ProcessorBase {
 			intf = new Class<?>[] {configClass};
 		}
 		Object proxy = Proxy.newProxyInstance(configClass.getClassLoader(), intf, handler);
+		if (definition.hasDefaultMethods()) {
+			((DefaultMethodConfigInvocationHandler) handler).initDefaultMethods(proxy, definition.getDefaultMethods());
+		}
 		return configClass.cast(proxy);
 	}
 	

@@ -20,31 +20,38 @@ package space.arim.dazzleconf.internal.processor;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Set;
 
 import space.arim.dazzleconf.internal.DefaultMethodUtil;
+import space.arim.dazzleconf.internal.ImmutableCollections;
 
 class DefaultMethodConfigInvocationHandler extends ConfigInvocationHandler {
 
-	private final ConcurrentMap<Method, MethodHandle> defaultMethods = new ConcurrentHashMap<>();
+	private volatile Map<Method, MethodHandle> defaultMethodsMap;
 	
 	DefaultMethodConfigInvocationHandler(Map<String, Object> configMap) {
 		super(configMap);
 	}
 	
-	private MethodHandle defaultMethodHandle(Object proxy, Method method) {
-		MethodHandle defaultHandle = defaultMethods.computeIfAbsent(method, (defaultMethod) -> {
-			return DefaultMethodUtil.createDefaultMethodHandle(method).bindTo(proxy);
-		});
-		return defaultHandle;
+	void initDefaultMethods(Object proxy, Set<Method> defaultMethods) {
+		defaultMethodsMap = buildDefaultMethodsMap(proxy, defaultMethods);
+	}
+	
+	private static Map<Method, MethodHandle> buildDefaultMethodsMap(Object proxy, Set<Method> defaultMethods) {
+		Map<Method, MethodHandle> result = new HashMap<>();
+		for (Method method : defaultMethods) {
+			MethodHandle methodHandle = DefaultMethodUtil.createDefaultMethodHandle(method).bindTo(proxy);
+			result.put(method, methodHandle);
+		}
+		return ImmutableCollections.mapOf(result);
 	}
 	
 	@Override
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		if (DefaultMethodUtil.isDefault(method)) {
-			return defaultMethodHandle(proxy, method).invokeWithArguments(args);
+			return defaultMethodsMap.get(method).invokeWithArguments(args);
 		}
 		return super.invoke(proxy, method, args);
 	}

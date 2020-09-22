@@ -44,7 +44,7 @@ public class DefinitionReader<C> {
 	
 	private final Set<Class<?>> nestedConfigDejaVu;
 	
-	private boolean foundDefaultMethods;
+	private final Set<Method> defaultMethods = new HashSet<>();
 	private final List<ConfEntry> entries;
 	
 	DefinitionReader(Class<C> configClass, ConfigurationOptions options) {
@@ -63,13 +63,13 @@ public class DefinitionReader<C> {
 		return options.getSorter();
 	}
 	
-	private List<ConfEntry> readEntries() {
+	private void readEntries() {
 		if (!nestedConfigDejaVu.add(configClass)) {
 			throw new IllDefinedConfigException("Circular nested configuration for " + configClass.getName());
 		}
 		for (Method method : configClass.getMethods()) {
 			if (DefaultMethodUtil.isDefault(method)) {
-				foundDefaultMethods = true;
+				defaultMethods.add(method);
 				continue;
 			}
 			create(method);
@@ -81,11 +81,11 @@ public class DefinitionReader<C> {
 		if (sorter != null) {
 			entries.sort(sorter);
 		}
-		return ImmutableCollections.listOf(entries);
 	}
 	
 	ConfigurationInfo<C> read() {
-		return new ConfigurationInfo<>(configClass, options, readEntries(), foundDefaultMethods);
+		readEntries();
+		return new ConfigurationInfo<>(configClass, options, entries, defaultMethods);
 	}
 	
 	private void create(Method method) {
@@ -107,8 +107,9 @@ public class DefinitionReader<C> {
 				throw new IllDefinedConfigException(configClass.getName() + " is not an interface");
 			}
 			DefinitionReader<?> nestedReader = new DefinitionReader<>(configClass, options, nestedConfigDejaVu);
-			List<ConfEntry> nestedEntries = nestedReader.readEntries();
-			return new NestedConfEntry<>(method, new ConfigurationDefinition<>(configClass, nestedEntries, foundDefaultMethods));
+			nestedReader.readEntries();
+			return new NestedConfEntry<>(method,
+					new ConfigurationDefinition<>(configClass, nestedReader.entries, nestedReader.defaultMethods));
 		}
 		ValueSerialiser<?> serialiser = getSerialiser();
 		ValueValidator validator = getValidator();

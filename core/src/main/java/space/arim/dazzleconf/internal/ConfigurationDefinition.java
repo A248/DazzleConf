@@ -18,18 +18,20 @@
  */
 package space.arim.dazzleconf.internal;
 
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Set;
 
 public class ConfigurationDefinition<C> {
 
 	private final Class<C> configClass;
 	private final List<ConfEntry> entries;
-	private final boolean defaultMethods;
+	private final Set<Method> defaultMethods;
 	
-	ConfigurationDefinition(Class<C> configClass, List<ConfEntry> entries, boolean defaultMethods) {
+	ConfigurationDefinition(Class<C> configClass, List<ConfEntry> entries, Set<Method> defaultMethods) {
 		this.configClass = configClass;
-		this.entries = entries;
-		this.defaultMethods = defaultMethods;
+		this.entries = ImmutableCollections.listOf(entries);
+		this.defaultMethods = ImmutableCollections.setOf(defaultMethods);
 	}
 	
 	public Class<C> getConfigClass() {
@@ -41,6 +43,13 @@ public class ConfigurationDefinition<C> {
 	}
 	
 	public boolean hasDefaultMethods() {
+		return !defaultMethods.isEmpty();
+	}
+	
+	public Set<Method> getDefaultMethods() {
+		if (!hasDefaultMethods()) {
+			throw new IllegalStateException("No default methods present");
+		}
 		return defaultMethods;
 	}
 
