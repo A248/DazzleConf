@@ -47,7 +47,7 @@ public class MapDeprocessor<C> extends DeprocessorBase<C> {
 	
 	@Override
 	<N> void continueNested(String key, NestedConfEntry<N> childEntry, N childConf) {
-		var deprocessor = createChildDeprocessor(childEntry, childConf);
+		MapDeprocessor<N> deprocessor = createChildDeprocessor(childEntry, childConf);
 		mapHelper.combine(key, wrapValue(childEntry, deprocessor.deprocessAndGetResult()));
 	}
 	

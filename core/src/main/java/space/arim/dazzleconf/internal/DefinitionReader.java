@@ -77,7 +77,7 @@ public class DefinitionReader<C> {
 		boolean cleared = nestedConfigDejaVu.remove(configClass);
 		assert cleared : configClass;
 		// Sort entries
-		var sorter = sorter();
+		ConfigurationSorter sorter = sorter();
 		if (sorter != null) {
 			entries.sort(sorter);
 		}

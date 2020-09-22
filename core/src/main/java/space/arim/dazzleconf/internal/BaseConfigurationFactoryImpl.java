@@ -69,14 +69,14 @@ public abstract class BaseConfigurationFactoryImpl<C> implements ConfigurationFa
 	protected abstract C loadFromReader(Reader reader, C auxiliaryEntries) throws IOException, InvalidConfigException;
 	
 	private C loadConfig(Reader reader) throws IOException, InvalidConfigException {
-		try (reader; BufferedReader buffReader = new BufferedReader(reader)) {
+		try (Reader reader0 = reader; BufferedReader buffReader = new BufferedReader(reader)) {
 
 			return loadFromReader(buffReader);
 		}
 	}
 	
 	private C loadConfig(Reader reader, C auxiliaryEntries) throws IOException, InvalidConfigException {
-		try (reader; BufferedReader buffReader = new BufferedReader(reader)) {
+		try (Reader reader0 = reader; BufferedReader buffReader = new BufferedReader(reader)) {
 
 			return loadFromReader(buffReader, auxiliaryEntries);
 		}
@@ -117,7 +117,7 @@ public abstract class BaseConfigurationFactoryImpl<C> implements ConfigurationFa
 	protected abstract void writeToWriter(C configData, Writer writer) throws IOException;
 	
 	private void writeConfig(C configData, Writer writer) throws IOException {
-		try (writer; BufferedWriter buffWriter = new BufferedWriter(writer)) {
+		try (Writer writer0 = writer; BufferedWriter buffWriter = new BufferedWriter(writer)) {
 
 			writeToWriter(configData, buffWriter);
 		}
