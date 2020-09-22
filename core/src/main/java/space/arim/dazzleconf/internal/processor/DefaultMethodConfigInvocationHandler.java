@@ -50,7 +50,7 @@ class DefaultMethodConfigInvocationHandler extends ConfigInvocationHandler {
 	
 	@Override
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-		if (DefaultMethodUtil.isDefault(method)) {
+		if (method.getDeclaringClass() != Object.class && DefaultMethodUtil.isDefault(method)) {
 			return defaultMethodsMap.get(method).invokeWithArguments(args);
 		}
 		return super.invoke(proxy, method, args);
