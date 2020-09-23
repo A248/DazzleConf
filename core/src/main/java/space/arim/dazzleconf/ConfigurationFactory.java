@@ -81,6 +81,7 @@ public interface ConfigurationFactory<C> {
 	 * whether any of the auxiliary entries were used.
 	 * 
 	 * @param readChannel the channel from which to read the data
+	 * @param auxiliaryEntries the auxiliary configuration instance
 	 * @return the read config data
 	 * @throws IOException if an I/O error occurs
 	 * @throws InvalidConfigException if the configuration is invalid. Where possible, more specific subclasses are thrown
@@ -96,6 +97,7 @@ public interface ConfigurationFactory<C> {
 	 * whether any of the auxiliary entries were used.
 	 * 
 	 * @param inputStream the stream from which to read the data
+	 * @param auxiliaryEntries the auxiliary configuration instance
 	 * @return the read config data
 	 * @throws IOException if an I/O error occurs
 	 * @throws InvalidConfigException if the configuration is invalid. Where possible, more specific subclasses are thrown
