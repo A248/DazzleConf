@@ -19,10 +19,10 @@
 package space.arim.dazzleconf.internal;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 
 import space.arim.dazzleconf.annote.ConfComment;
+import space.arim.dazzleconf.annote.ConfComments;
 import space.arim.dazzleconf.annote.ConfKey;
 import space.arim.dazzleconf.sorter.SortableConfigurationEntry;
 
@@ -59,15 +59,13 @@ public abstract class ConfEntry implements SortableConfigurationEntry {
 	}
 	
 	private static List<String> findComments(Method method) {
-		ConfComment[] commentAnnotations = method.getAnnotationsByType(ConfComment.class);
-		if (commentAnnotations.length == 0) {
-			return ImmutableCollections.emptyList();
+		ConfComment commentAnnotation = method.getAnnotation(ConfComment.class);
+		if (commentAnnotation != null) {
+			return ImmutableCollections.listOf(commentAnnotation.value());
 		}
-		List<String> comments = new ArrayList<>(commentAnnotations.length);
-		for (ConfComment commentAnnotation : commentAnnotations) {
-			comments.add(commentAnnotation.value());
-		}
-		return ImmutableCollections.listOf(comments);
+		ConfComments commentsAnnotation = method.getAnnotation(ConfComments.class);
+		return (commentsAnnotation == null) ?
+				ImmutableCollections.emptyList() : ImmutableCollections.listOf(commentsAnnotation.value());
 	}
 	
 	@Override

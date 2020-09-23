@@ -26,8 +26,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * Inserts a comment ahead of the config entry this annotation is placed before. For multiple comments,
- * see {@link ConfComments}
+ * Inserts multiple comments ahead of the config entry this annotation is placed before
  * 
  * @author A248
  *
@@ -35,13 +34,13 @@ import java.lang.annotation.Target;
 @Retention(RUNTIME)
 @Target(METHOD)
 @Inherited
-public @interface ConfComment {
+public @interface ConfComments {
 
 	/**
-	 * The comment itself
+	 * Specifies the comments on this entry
 	 * 
-	 * @return the comment
+	 * @return the comments
 	 */
-	String value();
+	String[] value();
 	
 }
