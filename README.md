@@ -107,18 +107,28 @@ The same document can be reparsed to an instance of the configuration interface.
 
 ### Requirements
 
-* Java 11
-* Java 8: coming soon
+* Java 8
 
-DazzleConf uses the module system to strongly encapsulate internals; it also uses the collection factory methods - List.of(), Set.of(), Map.of().
+Java 11 is highly recommended. DazzleConf includes `module-info` for use in modular applications.
 
-A backport for Java 8, with weaker encapsulation and less efficient immutable collections, is in progress.
+### Components
 
-### Dependency
+**Core artifact**
 
-The dependency FQDN is `space.arim.dazzleconf:dazzleconf-core:{VERSION}`.
+Dependency: `space.arim.dazzleconf:dazzleconf-core`
+Module name: `space.arim.dazzleconf`
 
-Format extensions are in the form `dazzleconf-ext-{extension}`, the available extensions currently being 'snakeyaml' and 'gson'.
+**Gson extension**
+
+Dependency: `space.arim.dazzleconf:dazzleconf-ext-gson`
+Module name: `space.arim.dazzleconf.ext.gson`
+
+**SnakeYaml extension**
+
+Dependency: `space.arim.dazzleconf:dazzleconf-ext-snakeyaml`
+Module name: `space.arim.dazzleconf.ext.snakeyaml`
+
+**Repository**
 
 The repository for all artifacts is:
 

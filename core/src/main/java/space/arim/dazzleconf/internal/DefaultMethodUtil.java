@@ -20,6 +20,8 @@ package space.arim.dazzleconf.internal;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
@@ -51,6 +53,9 @@ public final class DefaultMethodUtil {
 	 * @throws IllDefinedConfigException if unable to generate the default method handle
 	 */
 	public static MethodHandle createDefaultMethodHandle(Method method) {
+		if (IS_JAVA_8) {
+			return Java8DefaultMethodHandle.getMethodHandle(method);
+		}
 		Class<?> declaringClass = method.getDeclaringClass();
 		try {
 			return MethodHandles.privateLookupIn(declaringClass, MethodHandles.lookup())
@@ -58,6 +63,43 @@ public final class DefaultMethodUtil {
 		} catch (IllegalAccessException ex) {
 			throw new IllDefinedConfigException(
 					"Unable to generate default method accessor for " + method.getName(), ex);
+		}
+	}
+	
+	private static final boolean IS_JAVA_8;
+	
+	static {
+		boolean isJava8 = false;
+		try {
+			MethodHandles.class.getDeclaredMethod("privateLookupIn", Class.class, MethodHandles.Lookup.class);
+		} catch (NoSuchMethodException nsme) {
+			isJava8 = true;
+		}
+		IS_JAVA_8 = isJava8;
+	}
+	
+	private static class Java8DefaultMethodHandle {
+		
+		private static final Constructor<MethodHandles.Lookup> lookupConstructor;
+		
+		static {
+			try {
+				lookupConstructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class);
+				lookupConstructor.setAccessible(true);
+			} catch (NoSuchMethodException | SecurityException ex) {
+				throw new ExceptionInInitializerError(ex);
+			}
+		}
+		
+		static MethodHandle getMethodHandle(Method method) {
+			Class<?> declaringClass = method.getDeclaringClass();
+			try {
+				return lookupConstructor.newInstance(declaringClass).unreflectSpecial(method, declaringClass);
+
+			} catch (IllegalAccessException | InstantiationException | InvocationTargetException ex) {
+				throw new IllDefinedConfigException(
+						"Unable to generate default method accessor for " + method.getName(), ex);
+			}
 		}
 	}
 	
