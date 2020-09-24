@@ -20,6 +20,7 @@ package space.arim.dazzleconf.internal.deprocessor;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -94,6 +95,14 @@ abstract class DeprocessorBase<C> {
 	
 	private <G> Object deprocessObjectAtEntryWithGoal(SingleConfEntry entry, Class<G> goal, Object value) {
 
+		if (goal == List.class || goal == Set.class || goal == Collection.class) {
+			List<Object> serialised = new ArrayList<>();
+			for (Object element : (Collection<?>) value) {
+				serialised.add(deprocessObjectAtEntryWithGoal(entry, entry.getCollectionElementType(), element));
+			}
+			return ImmutableCollections.listOf(serialised);
+		}
+
 		// @ConfSerialiser override
 		@SuppressWarnings("unchecked")
 		ValueSerialiser<G> confSerialiser = (ValueSerialiser<G>) entry.getSerialiser();
@@ -101,9 +110,6 @@ abstract class DeprocessorBase<C> {
 			return fromSerialiser(confSerialiser, goal.cast(value));
 		}
 
-		if (goal == List.class || goal == Set.class || goal == Collection.class) {
-			return ImmutableCollections.listOf((Collection<?>) value);
-		}
 		if (goal == String.class) {
 			return value;
 		}
