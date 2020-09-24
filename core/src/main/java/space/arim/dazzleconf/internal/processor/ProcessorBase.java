@@ -193,18 +193,18 @@ public abstract class ProcessorBase {
 	private <G> Object processObjectAtEntryWithGoal(SingleConfEntry entry, Class<G> goal, Object preValue)
 			throws InvalidConfigException {
 
-		// @ConfSerialiser override
-		@SuppressWarnings("unchecked")
-		ValueSerialiser<G> confSerialiser = (ValueSerialiser<G>) entry.getSerialiser();
-		if (confSerialiser != null) {
-			return fromSerialiser(preValue, goal, confSerialiser);
-		}
-
 		Method method = entry.getMethod();
 		// Collections
 		if (goal == List.class || goal == Set.class || goal == Collection.class) {
 			Class<?> elementType = entry.getCollectionElementType();
 			return getAsCollection(entry, goal == List.class, preValue, method, elementType);
+		}
+
+		// @ConfSerialiser override
+		@SuppressWarnings("unchecked")
+		ValueSerialiser<G> confSerialiser = (ValueSerialiser<G>) entry.getSerialiser();
+		if (confSerialiser != null) {
+			return fromSerialiser(preValue, goal, confSerialiser);
 		}
 
 		// boolean and String
@@ -259,8 +259,7 @@ public abstract class ProcessorBase {
 	}
 	
 	private <G> G fromSerialiser(Object preValue, Class<G> goal, ValueSerialiser<G> serialiser) throws BadValueException {
-		String toParse = getAsString(preValue);
-		G deserialised = serialiser.deserialise(key, toParse);
+		G deserialised = serialiser.deserialise(key, preValue);
 		if (deserialised == null) {
 			throw new IllDefinedConfigException(
 					"At key " + key + ", ValueSerialiser#deserialise for " + serialiser + " returned null");
