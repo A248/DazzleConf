@@ -29,6 +29,8 @@ import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.ConfigFormatSyntaxException;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.internal.AbstractConfigurationFactoryImpl;
+import space.arim.dazzleconf.internal.deprocessor.CommentedDeprocessor;
+import space.arim.dazzleconf.internal.deprocessor.MapDeprocessor;
 
 /**
  * Abstract implementation of {@link ConfigurationFactory} which takes care of IO boilerplate as well as
@@ -129,6 +131,14 @@ public abstract class AbstractConfigurationFactory<C> extends DelegatingConfigur
 		@Override
 		protected void writeMapToWriter(Map<String, Object> config, Writer writer) throws IOException {
 			AbstractConfigurationFactory.this.writeMapToWriter(config, writer);
+		}
+		
+		@Override
+		protected MapDeprocessor<C> createMapDeprocessor(C configData) {
+			if (AbstractConfigurationFactory.this.supportsCommentsThroughWrapper()) {
+				return new CommentedDeprocessor<>(getOptions(), getDefinition().getEntries(), configData);
+			}
+			return super.createMapDeprocessor(configData);
 		}
 		
 	}
