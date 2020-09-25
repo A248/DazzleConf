@@ -5,7 +5,7 @@
 	
 	<groupId>space.arim.dazzleconf</groupId>
 	<artifactId>dazzleconf-parent</artifactId>
-	<version>0.3.2-SNAPSHOT</version>
+	<version>0.3.3-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	
 	<name>DazzleConf</name>
