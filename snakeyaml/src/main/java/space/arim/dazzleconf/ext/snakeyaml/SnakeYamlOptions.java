@@ -89,7 +89,13 @@ public final class SnakeYamlOptions {
 	public Charset charset() {
 		return charset;
 	}
-	
+
+	@Override
+	public String toString() {
+		return "SnakeYamlOptions [yamlSupplier=" + yamlSupplier + ", useCommentingWriter=" + useCommentingWriter
+				+ ", charset=" + charset + "]";
+	}
+
 	/**
 	 * Builder of {@code SnakeYamlOptions}
 	 * 
@@ -137,6 +143,12 @@ public final class SnakeYamlOptions {
 		 */
 		public SnakeYamlOptions build() {
 			return new SnakeYamlOptions(this);
+		}
+
+		@Override
+		public String toString() {
+			return "SnakeYamlOptions.Builder [yamlSupplier=" + yamlSupplier + ", useCommentingWriter=" + useCommentingWriter
+					+ ", charset=" + charset + "]";
 		}
 		
 	}

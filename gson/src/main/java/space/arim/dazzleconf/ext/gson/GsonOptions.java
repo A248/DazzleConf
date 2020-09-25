@@ -74,7 +74,12 @@ public final class GsonOptions {
 	public Charset charset() {
 		return charset;
 	}
-	
+
+	@Override
+	public String toString() {
+		return "GsonOptions [pseudoComments=" + pseudoComments + ", charset=" + charset + ", gson=" + gson + "]";
+	}
+
 	/**
 	 * Builder of {@code GsonOptions}
 	 * 
@@ -141,6 +146,11 @@ public final class GsonOptions {
 		 */
 		public GsonOptions build() {
 			return new GsonOptions(this);
+		}
+
+		@Override
+		public String toString() {
+			return "GsonOptions.Builder [gson=" + gson + ", pseudoComments=" + pseudoComments + ", charset=" + charset + "]";
 		}
 		
 	}
