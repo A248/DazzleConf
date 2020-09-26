@@ -43,7 +43,7 @@ import space.arim.dazzleconf.internal.deprocessor.MapDeprocessor;
  *
  * @param <C> the configuration class
  */
-public class GsonConfigurationFactory<C> extends AbstractConfigurationFactoryImpl<C> {
+public final class GsonConfigurationFactory<C> extends AbstractConfigurationFactoryImpl<C> {
 
 	private final GsonOptions gsonOptions;
 	
