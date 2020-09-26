@@ -22,6 +22,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
 
+import space.arim.dazzleconf.annote.ConfHeader;
+
 public class ConfigurationDefinition<C> {
 
 	private final Class<C> configClass;
@@ -36,6 +38,11 @@ public class ConfigurationDefinition<C> {
 	
 	public Class<C> getConfigClass() {
 		return configClass;
+	}
+	
+	public List<String> getHeader() {
+		ConfHeader header = getConfigClass().getAnnotation(ConfHeader.class);
+		return (header == null) ? ImmutableCollections.emptyList() : ImmutableCollections.listOf(header.value());
 	}
 	
 	public List<ConfEntry> getEntries() {

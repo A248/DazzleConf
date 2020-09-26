@@ -29,15 +29,15 @@ import java.lang.reflect.Method;
  */
 public class NestedConfEntry<N> extends ConfEntry {
 
-	private final ConfigurationDefinition<N> configInfo;
+	private final ConfigurationDefinition<N> configDefinition;
 	
-	NestedConfEntry(Method method, ConfigurationDefinition<N> configInfo) {
-		super(method);
-		this.configInfo = configInfo;
+	NestedConfEntry(Method method, ConfigurationDefinition<N> configDefinition) {
+		super(method, configDefinition::getHeader);
+		this.configDefinition = configDefinition;
 	}
 	
 	public ConfigurationDefinition<N> getDefinition() {
-		return configInfo;
+		return configDefinition;
 	}
 
 }

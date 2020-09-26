@@ -26,7 +26,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * Inserts multiple comments ahead of the config entry this annotation is placed before
+ * Inserts one or more comments ahead of the config entry this annotation is placed before
  * 
  * @author A248
  *
@@ -37,7 +37,7 @@ import java.lang.annotation.Target;
 public @interface ConfComments {
 
 	/**
-	 * Specifies the comments on this entry
+	 * The comments on this entry. Each string is on its own line
 	 * 
 	 * @return the comments
 	 */

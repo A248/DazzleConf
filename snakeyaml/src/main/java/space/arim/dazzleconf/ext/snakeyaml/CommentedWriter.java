@@ -88,7 +88,14 @@ class CommentedWriter {
 	 */
 	
 	private void writeComments(List<String> comments) throws IOException {
-		CharSequence depthPrefix = depthPrefix();
+		writeComments0(depthPrefix(), writer, comments);
+	}
+	
+	static void writeCommentsHeader(Writer writer, List<String> comments) throws IOException {
+		writeComments0("", writer, comments);
+	}
+	
+	private static void writeComments0(CharSequence depthPrefix, Writer writer, List<String> comments) throws IOException {
 		for (String comment : comments) {
 			StringBuilder commentBuilder = new StringBuilder(depthPrefix);
 			commentBuilder.append(" # ").append(comment).append('\n');

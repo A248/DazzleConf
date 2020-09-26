@@ -18,7 +18,7 @@
  */
 package space.arim.dazzleconf.annote;
 
-import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import java.lang.annotation.Inherited;
@@ -26,22 +26,28 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * Inserts a comment ahead of the config entry this annotation is placed before. For multiple comments,
- * see {@link ConfComments}
+ * Allows specifying the comment header on a top level configuration or a comment on a sub section. <br>
+ * <br>
+ * If the target of this annotation is used as a top level config, {@link #value()} becomes the comment header
+ * of the configuration. <br>
+ * <br>
+ * If the target of this annotation is used as a subsection, the value of this annotation instead becomes a comment
+ * on that specific subsection. Note the presence of {@link ConfComments} on the method declaring the subsection
+ * will override this annotation.
  * 
  * @author A248
  *
  */
 @Retention(RUNTIME)
-@Target(METHOD)
+@Target(TYPE)
 @Inherited
-public @interface ConfComment {
+public @interface ConfHeader {
 
 	/**
-	 * The comment itself
+	 * The comment header itself. Each string is on its own line
 	 * 
-	 * @return the comment
+	 * @return the comment header
 	 */
-	String value();
+	String[] value();
 	
 }

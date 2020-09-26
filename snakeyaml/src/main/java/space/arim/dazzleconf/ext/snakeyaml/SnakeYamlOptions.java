@@ -126,7 +126,9 @@ public final class SnakeYamlOptions {
 		
 		/**
 		 * SnakeYaml does not support writing comments. This option enables an alternative yaml writer
-		 * implementation which has the ability to write comments. False by default.
+		 * implementation which has the ability to write comments before each entry. False by default. <br>
+		 * <br>
+		 * With this option disabled, only the comment header on the top level configuration is written.
 		 * 
 		 * @param useCommentingWriter true to use the commenting alternate writer, false otherwise
 		 * @return this builder

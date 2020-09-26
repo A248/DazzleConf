@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Map;
 
 import space.arim.dazzleconf.ConfigurationFactory;
@@ -29,6 +30,7 @@ import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.ConfigFormatSyntaxException;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.internal.AbstractConfigurationFactoryImpl;
+import space.arim.dazzleconf.internal.ConfigurationInfo;
 import space.arim.dazzleconf.internal.deprocessor.CommentedDeprocessor;
 import space.arim.dazzleconf.internal.deprocessor.MapDeprocessor;
 
@@ -103,10 +105,19 @@ public abstract class AbstractConfigurationFactory<C> extends DelegatingConfigur
 		return false;
 	}
 	
+	/**
+	 * Gets the comment header on the top level configuration
+	 * 
+	 * @return the comment header
+	 */
+	protected List<String> getHeader() {
+		return delegate().getDefinition().getHeader();
+	}
+	
 	// Delegation
 	
 	@Override
-	ConfigurationFactory<C> delegate() {
+	ConfigFactoryDelegate delegate() {
 		return delegate;
 	}
 	
@@ -118,6 +129,11 @@ public abstract class AbstractConfigurationFactory<C> extends DelegatingConfigur
 			super(configClazz, options);
 		}
 		
+		@Override
+		protected ConfigurationInfo<C> getDefinition() {
+			return super.getDefinition();
+		}
+
 		@Override
 		protected Charset charset() {
 			return AbstractConfigurationFactory.this.charset();

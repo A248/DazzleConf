@@ -15,11 +15,11 @@ Overrides the key of the configuration entry. If unspecified, the key is the met
 
 @DefaultBooleans, @DefaultIntegers, @DefaultLongs, @DefaultDoubles, and @DefaultStrings all specify a collection of elements of the noted type.
 
-### @ConfComment
+### @ConfComments and @ConfHeader
 
-A repeatable annotation which adds a comment to the configuration entry.
+@ConfComments adds comments to a configuration entry. @ConfHeader is placed on a configuration interface and sets the comment header of the entire configuration.
 
-Note that this does not guarantee a comment will be written to the underlying configuration format. Some formats do not support comments or do not support writing them. In these cases, DazzleConf has knobs, which are disabled by default, to hack comments into the configuration format.
+These annotations do not guarantee comments will be written to the underlying configuration format. JSON has no concept of a comment. YAML has comments but SnakeYAML does not write them. In these cases, DazzleConf has format-specific options, which are disabled by default, to hack comments into the configuration format.
 
 ### @SubSection
 

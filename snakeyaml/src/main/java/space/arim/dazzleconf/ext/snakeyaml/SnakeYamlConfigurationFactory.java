@@ -97,6 +97,8 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 
 	@Override
 	protected void writeMapToWriter(Map<String, Object> rawMap, Writer writer) throws IOException {
+		CommentedWriter.writeCommentsHeader(writer, getHeader());
+
 		if (yamlOptions.useCommentingWriter()) {
 			new CommentedWriter(rawMap, writer).write();
 

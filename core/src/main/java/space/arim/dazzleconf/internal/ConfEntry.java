@@ -20,8 +20,8 @@ package space.arim.dazzleconf.internal;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.function.Supplier;
 
-import space.arim.dazzleconf.annote.ConfComment;
 import space.arim.dazzleconf.annote.ConfComments;
 import space.arim.dazzleconf.annote.ConfKey;
 import space.arim.dazzleconf.sorter.SortableConfigurationEntry;
@@ -32,12 +32,20 @@ public abstract class ConfEntry implements SortableConfigurationEntry {
 	private final String key;
 	private final List<String> comments;
 
-	ConfEntry(Method method) {
+	private ConfEntry(Method method, String key, List<String> comments) {
 		this.method = method;
-		key = findKey(method);
-		comments = findComments(method);
+		this.key = key;
+		this.comments = comments;
+	}
+
+	ConfEntry(Method method, Supplier<List<String>> headerSupplier) {
+		this(method, findKey(method), findComments(method, headerSupplier));
 	}
 	
+	ConfEntry(Method method) {
+		this(method, ImmutableCollections::emptyList);
+	}
+
 	@Override
 	public Method getMethod() {
 		return method;
@@ -58,14 +66,12 @@ public abstract class ConfEntry implements SortableConfigurationEntry {
 		return (confKey != null) ? confKey.value() : method.getName();
 	}
 	
-	private static List<String> findComments(Method method) {
-		ConfComment commentAnnotation = method.getAnnotation(ConfComment.class);
-		if (commentAnnotation != null) {
-			return ImmutableCollections.listOf(commentAnnotation.value());
-		}
+	private static List<String> findComments(Method method, Supplier<List<String>> headerSupplier) {
 		ConfComments commentsAnnotation = method.getAnnotation(ConfComments.class);
-		return (commentsAnnotation == null) ?
-				ImmutableCollections.emptyList() : ImmutableCollections.listOf(commentsAnnotation.value());
+		if (commentsAnnotation != null) {
+			return ImmutableCollections.listOf(commentsAnnotation.value());
+		}
+		return headerSupplier.get();
 	}
 	
 	@Override
