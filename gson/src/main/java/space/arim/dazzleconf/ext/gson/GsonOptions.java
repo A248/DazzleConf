@@ -39,7 +39,7 @@ public final class GsonOptions {
 	
 	GsonOptions(Builder builder) {
 		Gson gson = builder.gson;
-		this.gson = (gson != null) ? gson : new GsonBuilder().setPrettyPrinting().create();
+		this.gson = (gson != null) ? gson : new GsonBuilder().setPrettyPrinting().setLenient().create();
 
 		this.pseudoComments = builder.pseudoComments;
 
@@ -97,7 +97,7 @@ public final class GsonOptions {
 		}
 		
 		/**
-		 * Sets the Gson instance to be used. By default this is an instance with pretty printing enabled
+		 * Sets the Gson instance to be used. By default pretty printing and lenient mode are enabled
 		 * 
 		 * @param gson the Gson instance
 		 * @return this builder
