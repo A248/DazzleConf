@@ -24,9 +24,13 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.Map;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.TypeAdapter;
 import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.MalformedJsonException;
 
 import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
@@ -83,15 +87,18 @@ public final class GsonConfigurationFactory<C> extends AbstractConfigurationFact
 
 	@Override
 	protected Map<String, Object> loadMapFromReader(Reader reader) throws IOException, ConfigFormatSyntaxException {
+		Gson gson = gsonOptions.gson();
+		TypeAdapter<Map<String, Object>> adapter = gson.getAdapter(new TypeToken<Map<String, Object>>() {});
+		JsonReader jsonReader = gson.newJsonReader(reader);
 		try {
-			return gsonOptions.gson().fromJson(reader, new TypeToken<Map<String, Object>>() {}.getType());
+			return adapter.read(jsonReader);
 		} catch (JsonIOException ex) {
 			Throwable cause = ex.getCause();
 			if (cause instanceof IOException) {
 				throw (IOException) cause;
 			}
 			throw new IOException(ex);
-		} catch (JsonSyntaxException ex) {
+		} catch (JsonSyntaxException | MalformedJsonException ex) {
 			throw new ConfigFormatSyntaxException(ex);
 		}
 	}
