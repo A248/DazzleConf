@@ -26,7 +26,6 @@ import java.util.Map;
 
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.ConfigFormatSyntaxException;
-import space.arim.dazzleconf.factory.AbstractConfigurationFactory;
 
 public class DefaultsOnlyFactory<C> extends AbstractConfigurationFactory<C> {
 
