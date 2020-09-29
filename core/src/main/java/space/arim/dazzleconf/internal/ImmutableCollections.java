@@ -51,14 +51,6 @@ public final class ImmutableCollections {
 		return List.of();
 	}
 	
-	public static <E> List<E> listOf(E element) {
-		if (PRE_JAVA_10) {
-			Objects.requireNonNull(element, "element");
-			return Collections.singletonList(element);
-		}
-		return List.of(element);
-	}
-	
 	@SafeVarargs
 	public static <E> List<E> listOf(E...elements) {
 		if (PRE_JAVA_10) {
