@@ -119,7 +119,12 @@ public abstract class ProcessorBase {
 			}
 			key = entry.getKey();
 			String methodName = method.getName();
-			Object value = processEntry(entry);
+			Object value;
+			if (entry instanceof NestedConfEntry) {
+				value = getNestedSection((NestedConfEntry<?>) entry);
+			} else {
+				value = getSingleValue((SingleConfEntry) entry);
+			}
 			Object formerValue = result.put(methodName, value);
 			if (formerValue != null) {
 				throw new IllDefinedConfigException("Duplicate method name " + methodName);
@@ -127,28 +132,27 @@ public abstract class ProcessorBase {
 		}
 	}
 	
-	private Object processEntry(ConfEntry entry) throws InvalidConfigException {
-		/*
-		 * Check if this is a nested configuration section
-		 */
-		if (entry instanceof NestedConfEntry) {
-			NestedConfEntry<?> nestedEntry = (NestedConfEntry<?>) entry;
-
-			Object nestedAuxiliary = (auxiliaryValues == null) ?
-					null : getAuxiliaryValue(entry); // Pass along auxiliary entries
-			ProcessorBase childProcessor = continueNested(options, nestedEntry, nestedAuxiliary);
-			Object nestedSection = createConfig(nestedEntry.getDefinition(), childProcessor);
-			if (childProcessor.usedAuxiliary) {
-				usedAuxiliary = true; // propagate auxiliary usage flag upward
+	private Object getNestedSection(NestedConfEntry<?> nestedEntry) throws InvalidConfigException {
+		Object nestedAuxiliary = (auxiliaryValues == null) ?
+				null : getAuxiliaryValue(nestedEntry); // Pass along auxiliary entries
+		ProcessorBase childProcessor;
+		try {
+			childProcessor = continueNested(options, nestedEntry, nestedAuxiliary);
+		} catch (MissingKeyException mke) {
+			if (auxiliaryValues == null) {
+				throw mke;
 			}
-			return nestedSection;
+			return getAuxiliaryValue(nestedEntry);
 		}
-
-		SingleConfEntry singleEntry = (SingleConfEntry) entry;
-		/*
-		 * Get pre value
-		 * If missing and auxiliary entries are provided, return auxiliary value
-		 */
+		Object nestedSection = createConfig(nestedEntry.getDefinition(), childProcessor);
+		if (childProcessor.usedAuxiliary) {
+			usedAuxiliary = true; // propagate auxiliary usage flag upward
+		}
+		return nestedSection;
+	}
+	
+	private Object getSingleValue(SingleConfEntry entry) throws InvalidConfigException {
+		// Get pre value; if missing and auxiliary entries are provided, return auxiliary value
 		Object preValue;
 		try {
 			preValue = getValueFromSources(entry);
@@ -156,15 +160,15 @@ public abstract class ProcessorBase {
 			if (auxiliaryValues == null) {
 				throw mke;
 			}
-			return getAuxiliaryValue(singleEntry);
+			return getAuxiliaryValue(entry);
 		}
 		if (preValue == null) {
 			throw MissingValueException.forKey(key);
 		}
 
-		Object value = processObjectAtEntryWithGoal(singleEntry, entry.getMethod().getReturnType(), preValue);
+		Object value = processObjectAtEntryWithGoal(entry, entry.getMethod().getReturnType(), preValue);
 
-		ValueValidator validator = singleEntry.getValidator();
+		ValueValidator validator = entry.getValidator();
 		if (validator == null) {
 			validator = options.getValidators().get(key);
 		}
