@@ -22,16 +22,19 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import space.arim.dazzleconf.ConfigurationOptions;
-import space.arim.dazzleconf.annote.ConfSerialiser;
+import space.arim.dazzleconf.annote.ConfSerialisers;
 import space.arim.dazzleconf.annote.ConfValidator;
 import space.arim.dazzleconf.annote.SubSection;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.serialiser.ValueSerialiser;
+import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 import space.arim.dazzleconf.sorter.ConfigurationSorter;
 import space.arim.dazzleconf.validator.ValueValidator;
 
@@ -46,6 +49,7 @@ public class DefinitionReader<C> {
 	
 	private final Set<Method> defaultMethods = new HashSet<>();
 	private final List<ConfEntry> entries;
+	private final Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>();
 	
 	DefinitionReader(Class<C> configClass, ConfigurationOptions options) {
 		this(configClass, options, new HashSet<>());
@@ -57,10 +61,28 @@ public class DefinitionReader<C> {
 		this.options = options;
 		entries = new ArrayList<>();
 		this.nestedConfigDejaVu = nestedConfigDejaVu;
+		serialisers.putAll(options.getSerialisers().asMap());
 	}
 	
 	private ConfigurationSorter sorter() {
 		return options.getSorter();
+	}
+	
+	ConfigurationInfo<C> read() {
+		readSerialisers();
+		readEntries();
+		return new ConfigurationInfo<>(configClass, options, entries, defaultMethods, ValueSerialiserMap.of(serialisers));
+	}
+	
+	private void readSerialisers() {
+		ConfSerialisers confSerialisers = configClass.getAnnotation(ConfSerialisers.class);
+		if (confSerialisers == null) {
+			return;
+		}
+		for (Class<? extends ValueSerialiser<?>> serialiserClass : confSerialisers.value()) {
+			ValueSerialiser<?> serialiser = instantiate(ValueSerialiser.class, serialiserClass);
+			serialisers.put(serialiser.getTargetClass(), serialiser);
+		}
 	}
 	
 	private void readEntries() {
@@ -83,11 +105,6 @@ public class DefinitionReader<C> {
 		}
 	}
 	
-	ConfigurationInfo<C> read() {
-		readEntries();
-		return new ConfigurationInfo<>(configClass, options, entries, defaultMethods);
-	}
-	
 	private void create(Method method) {
 		if (method.getParameterCount() > 0) {
 			throw new IllDefinedConfigException("Cannot use a method with parameters in a configuration");
@@ -107,18 +124,10 @@ public class DefinitionReader<C> {
 				throw new IllDefinedConfigException(configClass.getName() + " is not an interface");
 			}
 			DefinitionReader<?> nestedReader = new DefinitionReader<>(configClass, options, nestedConfigDejaVu);
-			nestedReader.readEntries();
-			return new NestedConfEntry<>(method,
-					new ConfigurationDefinition<>(configClass, nestedReader.entries, nestedReader.defaultMethods));
+			return new NestedConfEntry<>(method, nestedReader.read());
 		}
-		ValueSerialiser<?> serialiser = getSerialiser();
 		ValueValidator validator = getValidator();
-		return new SingleConfEntry(method, serialiser, validator);
-	}
-	
-	private ValueSerialiser<?> getSerialiser() {
-		ConfSerialiser chosenSerialiser = method.getAnnotation(ConfSerialiser.class);
-		return (chosenSerialiser == null) ? null : instantiate(ValueSerialiser.class, chosenSerialiser.value());
+		return new SingleConfEntry(method, validator);
 	}
 	
 	private ValueValidator getValidator() {
@@ -135,19 +144,19 @@ public class DefinitionReader<C> {
 		} catch (NoSuchMethodException ignored) {
 
 		} catch (IllegalArgumentException | InvocationTargetException | IllegalAccessException | SecurityException ex) {
-			throw uninstantiable(intf, ex);
+			throw uninstantiable(intf, impl, ex);
 		}
 		try {
 			return impl.getDeclaredConstructor().newInstance();
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException ex) {
-			throw uninstantiable(intf, ex);
+			throw uninstantiable(intf, impl, ex);
 		}
 	}
 	
-	private IllDefinedConfigException uninstantiable(Class<?> intf, Throwable cause) {
+	private <V> IllDefinedConfigException uninstantiable(Class<V> intf, Class<? extends V> impl, Throwable cause) {
 		return new IllDefinedConfigException(
-				"Unable to instantiate chosen " + intf.getSimpleName() + " for " + method.getName(), cause);
+				"Unable to instantiate " + intf.getSimpleName() + " implemented by " + impl.getName(), cause);
 	}
 	
 }

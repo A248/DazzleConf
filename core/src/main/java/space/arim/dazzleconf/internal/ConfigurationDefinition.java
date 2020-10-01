@@ -23,17 +23,21 @@ import java.util.List;
 import java.util.Set;
 
 import space.arim.dazzleconf.annote.ConfHeader;
+import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 
 public class ConfigurationDefinition<C> {
 
 	private final Class<C> configClass;
 	private final List<ConfEntry> entries;
 	private final Set<Method> defaultMethods;
+	private final ValueSerialiserMap serialisers;
 	
-	ConfigurationDefinition(Class<C> configClass, List<ConfEntry> entries, Set<Method> defaultMethods) {
+	ConfigurationDefinition(Class<C> configClass, List<ConfEntry> entries, Set<Method> defaultMethods,
+			ValueSerialiserMap serialisers) {
 		this.configClass = configClass;
 		this.entries = ImmutableCollections.listOf(entries);
 		this.defaultMethods = ImmutableCollections.setOf(defaultMethods);
+		this.serialisers = serialisers;
 	}
 	
 	public Class<C> getConfigClass() {
@@ -58,6 +62,10 @@ public class ConfigurationDefinition<C> {
 			throw new IllegalStateException("No default methods present");
 		}
 		return defaultMethods;
+	}
+	
+	public ValueSerialiserMap getSerialisers() {
+		return serialisers;
 	}
 
 	@Override

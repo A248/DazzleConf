@@ -18,7 +18,6 @@
  */
 package space.arim.dazzleconf.internal.processor;
 
-import java.util.List;
 import java.util.Map;
 
 import space.arim.dazzleconf.ConfigurationOptions;
@@ -26,6 +25,7 @@ import space.arim.dazzleconf.error.BadValueException;
 import space.arim.dazzleconf.error.ImproperEntryException;
 import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.internal.ConfEntry;
+import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.NestedMapHelper;
 
@@ -33,21 +33,21 @@ public class MapProcessor extends ProcessorBase {
 
 	private final NestedMapHelper mapHelper;
 	
-	public MapProcessor(ConfigurationOptions options, List<ConfEntry> entries,
+	public MapProcessor(ConfigurationOptions options, ConfigurationDefinition<?> definition,
 			Map<String, Object> sourceMap, Object auxiliaryValues) {
-		this(options, entries, new NestedMapHelper(sourceMap), auxiliaryValues);
+		this(options, definition, new NestedMapHelper(sourceMap), auxiliaryValues);
 	}
 	
 	@Override
 	ProcessorBase continueNested(ConfigurationOptions options, NestedConfEntry<?> childEntry,
 			Object nestedAuxiliaryValues) throws ImproperEntryException {
 		Map<String, Object> childMap = getChildMapFromSources(childEntry, mapHelper);
-		return new MapProcessor(options, childEntry.getDefinition().getEntries(), childMap, nestedAuxiliaryValues);
+		return new MapProcessor(options, childEntry.getDefinition(), childMap, nestedAuxiliaryValues);
 	}
 	
-	private MapProcessor(ConfigurationOptions options, List<ConfEntry> entries,
+	private MapProcessor(ConfigurationOptions options, ConfigurationDefinition<?> definition,
 			NestedMapHelper mapHelper, Object auxiliaryValues) {
-		super(options, entries, auxiliaryValues);
+		super(options, definition, auxiliaryValues);
 		this.mapHelper = mapHelper;
 	}
 	

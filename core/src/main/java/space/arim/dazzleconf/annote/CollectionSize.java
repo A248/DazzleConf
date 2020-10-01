@@ -21,13 +21,17 @@ package space.arim.dazzleconf.annote;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+/**
+ * Applied to lists, sets, collections, and maps in order to limit their size
+ * 
+ * @author A248
+ *
+ */
 @Retention(RUNTIME)
 @Target(METHOD)
-@Inherited
 public @interface CollectionSize {
 
 	/**

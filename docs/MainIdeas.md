@@ -32,17 +32,15 @@ In DazzleConf, configuration objects are validated and converted to their desire
 
 ### How does it work?
 
-* Numeric types:
-    * All numeric types are interchangeable to any other. If a user writes '0.0', for instance, in a configuration, but the configuration method's return type is an `int`, DazzleConf will convert the `double` free of charge.
-    * All can be parsed from a `String`.
+* Numeric types: all numeric types are interchangeable to any other. If a user writes '0.0', for instance, in a configuration, but the configuration method's return type is an `int`, DazzleConf will cast the value. Additionally, if the user surrounds the value with quotes, it will be parsed to a number.
 * String types will never fail to validate. Object.toString() is used to ensure this.
 * Boolean types are parsed from true/false and yes/no, ignoring case for all comparisons.
 * Collections are supported:
     * Set, List, and Collection are supported. Collection is currently implemented as Set.
     * The generic parameter of the collection is determined and used for parsing and validation.
-    * Each element in the collection is parsed and validated as it would be if the element was any other value.
-* Maps are supported similarly to collections, but their key type must be String.
-* Custom types require a ValueSerialiser to be specified, either in the `ConfigurationOptions`, or by `@ConfSerialiser` on the entry.
+    * Each element in the collection is parsed and validated as it would be if the element was a single value.
+* Maps are supported similarly to collections. Their keys and values are processed.
+* Custom types require a ValueSerialiser to be specified, either in the `ConfigurationOptions`, or by `@ConfSerialisers` on the configuration interface.
 
 All serialisation can also be overridden per key using the `@ConfSerialiser` annotation. See the annotations page for more information.
 

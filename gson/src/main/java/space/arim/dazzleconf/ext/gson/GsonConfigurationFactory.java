@@ -119,7 +119,7 @@ public final class GsonConfigurationFactory<C> extends AbstractConfigurationFact
 	@Override
 	protected MapDeprocessor<C> createMapDeprocessor(C configData) {
 		if (gsonOptions.pseudoComments()) {
-			return new AddCommentStringBeforeDeprocessor<>(getOptions(), getDefinition().getEntries(), configData);
+			return new AddCommentStringBeforeDeprocessor<>(getOptions(), getDefinition(), configData);
 		}
 		return super.createMapDeprocessor(configData);
 	}

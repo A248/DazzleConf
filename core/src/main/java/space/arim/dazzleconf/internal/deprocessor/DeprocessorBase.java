@@ -28,6 +28,7 @@ import java.util.Set;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.internal.ConfEntry;
+import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.ImmutableCollections;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.SingleConfEntry;
@@ -44,14 +45,14 @@ import space.arim.dazzleconf.serialiser.ValueSerialiser;
 abstract class DeprocessorBase<C> {
 
 	final ConfigurationOptions options;
-	private final List<ConfEntry> entries;
+	private final ConfigurationDefinition<?> definition;
 	private final C configData;
 	
 	private String key;
 	
-	DeprocessorBase(ConfigurationOptions options, List<ConfEntry> entries, C configData) {
+	DeprocessorBase(ConfigurationOptions options, ConfigurationDefinition<C> definition, C configData) {
 		this.options = options;
-		this.entries = entries;
+		this.definition = definition;
 		this.configData = configData;
 	}
 	
@@ -60,7 +61,7 @@ abstract class DeprocessorBase<C> {
 	abstract <N> void continueNested(String key, NestedConfEntry<N> childEntry, N childConf);
 	
 	void deprocess() {
-		for (ConfEntry entry : entries) {
+		for (ConfEntry entry : definition.getEntries()) {
 			String key = entry.getKey();
 			this.key = key;
 			deprocessEntry(entry);
@@ -73,9 +74,8 @@ abstract class DeprocessorBase<C> {
 		try {
 			value = method.invoke(configData);
 		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-			throw new RuntimeException(
-					"Exception while invoking implementation of " + configData.getClass().getName() + "#" + method.getName(),
-					ex);
+			throw new RuntimeException("Exception while invoking implementation of " + entry.getQualifiedMethodName()
+					+ " in " + configData.getClass().getName(), ex);
 		}
 		if (entry instanceof NestedConfEntry) {
 			preContinueNested((NestedConfEntry<?>) entry, value);
@@ -103,15 +103,11 @@ abstract class DeprocessorBase<C> {
 			return ImmutableCollections.listOf(serialised);
 		}
 
-		// @ConfSerialiser override
-		@SuppressWarnings("unchecked")
-		ValueSerialiser<G> confSerialiser = (ValueSerialiser<G>) entry.getSerialiser();
-		if (confSerialiser != null) {
-			return fromSerialiser(confSerialiser, goal.cast(value));
-		}
-
 		if (goal == String.class) {
 			return value;
+		}
+		if (goal == char.class || goal == Character.class) {
+			return String.valueOf(value);
 		}
 		if (value instanceof Boolean || value instanceof Number) { // Includes boxes and primitives
 			return value;
@@ -119,12 +115,15 @@ abstract class DeprocessorBase<C> {
 		if (value instanceof Enum) {
 			return ((Enum<?>) value).name();
 		}
-
-		ValueSerialiser<G> serialiser = options.getSerialisers().getSerialiser(goal);
+		return fromSerialiser(getSerialiser(goal), goal.cast(value));
+	}
+	
+	private <G> ValueSerialiser<G> getSerialiser(Class<G> goal) {
+		ValueSerialiser<G> serialiser  = definition.getSerialisers().getSerialiser(goal);
 		if (serialiser == null) {
-			throw new IllDefinedConfigException("No ValueSerialiser applicable for type " + goal.getName());
+			throw new RuntimeException("Internal error: no ValueSerialiser for " + goal + " at entry " + key);
 		}
-		return fromSerialiser(serialiser, goal.cast(value));
+		return serialiser;
 	}
 	
 	private <G> Object fromSerialiser(ValueSerialiser<G> serialiser, G value) {

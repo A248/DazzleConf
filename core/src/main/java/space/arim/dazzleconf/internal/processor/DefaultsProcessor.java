@@ -20,7 +20,9 @@ package space.arim.dazzleconf.internal.processor;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.annote.ConfDefault;
@@ -29,13 +31,14 @@ import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.error.ImproperEntryException;
 import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.internal.ConfEntry;
+import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.ImmutableCollections;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 
 public class DefaultsProcessor extends ProcessorBase {
 
-	public DefaultsProcessor(ConfigurationOptions options, List<ConfEntry> entries) {
-		super(options, entries, null);
+	public DefaultsProcessor(ConfigurationOptions options, ConfigurationDefinition<?> definition) {
+		super(options, definition, null);
 	}
 	
 	@Override
@@ -44,7 +47,7 @@ public class DefaultsProcessor extends ProcessorBase {
 		if (nestedAuxiliaryValues != null) {
 			throw new AssertionError("DefaultsProcessor does not handle auxiliary entries");
 		}
-		return new DefaultsProcessor(options, childEntry.getDefinition().getEntries());
+		return new DefaultsProcessor(options, childEntry.getDefinition());
 	}
 
 	@Override
@@ -99,7 +102,24 @@ public class DefaultsProcessor extends ProcessorBase {
 		if (ofStrings != null) {
 			return ImmutableCollections.listOf(ofStrings.value());
 		}
-		throw new IllDefinedConfigException("No default value annotation present on " + method.getName());
+		DefaultMap ofMap = method.getAnnotation(ConfDefault.DefaultMap.class);
+		if (ofMap != null) {
+			Map<String, String> result = new HashMap<>();
+			String key = null;
+			for (String value : ofMap.value()) {
+				if (key == null) {
+					key = value;
+				} else {
+					result.put(key, value);
+					key = null;
+				}
+			}
+			if (key != null) {
+				throw new IllDefinedConfigException("@DefaultMap on " + entry.getQualifiedMethodName() + " is incomplete");
+			}
+			return result;
+		}
+		throw new IllDefinedConfigException("No default value annotation present on " + entry.getQualifiedMethodName());
 	}
 
 }

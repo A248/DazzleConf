@@ -29,7 +29,7 @@ import space.arim.dazzleconf.error.BadValueException;
  * @author A248
  *
  */
-public class URLValueSerialiser implements ValueSerialiser<URL> {
+public final class URLValueSerialiser implements ValueSerialiser<URL> {
 
 	private static final URLValueSerialiser INSTANCE = new URLValueSerialiser();
 	
@@ -40,10 +40,17 @@ public class URLValueSerialiser implements ValueSerialiser<URL> {
 	}
 	
 	@Override
-	public URL deserialise(String key, Object value) throws BadValueException {
+	public Class<URL> getTargetClass() {
+		return URL.class;
+	}
+	
+	@Override
+	public URL deserialise(FlexibleType flexibleType) throws BadValueException {
+		String key = flexibleType.getAssociatedKey();
+		String value = flexibleType.getString();
 		URL url;
 		try {
-			url = new URL(value.toString());
+			url = new URL(value);
 		} catch (MalformedURLException ex) {
 			throw new BadValueException.Builder().key(key).message("malformed URL " + value).cause(ex).build();
 		}

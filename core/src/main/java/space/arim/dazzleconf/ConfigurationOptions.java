@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import space.arim.dazzleconf.annote.ConfSerialiser;
+import space.arim.dazzleconf.annote.ConfSerialisers;
 import space.arim.dazzleconf.annote.ConfValidator;
 import space.arim.dazzleconf.internal.ImmutableCollections;
 import space.arim.dazzleconf.serialiser.ValueSerialiser;
@@ -42,14 +42,16 @@ public final class ConfigurationOptions {
 	private final Map<String, ValueValidator> validators;
 	private final ConfigurationSorter sorter;
 	private final boolean strictParseEnums;
+	private final boolean createSingleElementCollections;
 	
 	private static final ConfigurationOptions DEFAULTS = new ConfigurationOptions.Builder().build();
 	
 	ConfigurationOptions(Builder builder) {
-		serialisers = new ValueSerialiserMap(ImmutableCollections.mapOf(builder.serialisers));
+		serialisers = ValueSerialiserMap.of(builder.serialisers);
 		validators = ImmutableCollections.mapOf(builder.validators);
 		sorter = builder.sorter;
 		strictParseEnums = builder.strictParseEnums;
+		createSingleElementCollections = builder.createSingleElementCollections;
 	}
 	
 	/**
@@ -62,7 +64,7 @@ public final class ConfigurationOptions {
 	}
 	
 	/**
-	 * Gets the configuration value serialisers. Serialisers can also be specified by {@link ConfSerialiser},
+	 * Gets the configuration value serialisers. Serialisers can also be specified by {@link ConfSerialisers},
 	 * which are not included here
 	 * 
 	 * @return the value serialisers, never {@code null}
@@ -97,6 +99,15 @@ public final class ConfigurationOptions {
 	 */
 	public boolean strictParseEnums() {
 		return strictParseEnums;
+	}
+	
+	/**
+	 * Whether single element collections are created for config values which were not originally collections
+	 * 
+	 * @return true to create single element collections, false otherwise
+	 */
+	public boolean createSingleElementCollections() {
+		return createSingleElementCollections;
 	}
 	
 	@Override
@@ -143,18 +154,22 @@ public final class ConfigurationOptions {
 		final Map<String, ValueValidator> validators = new HashMap<>();
 		ConfigurationSorter sorter;
 		boolean strictParseEnums;
+		boolean createSingleElementCollections;
 		
 		/**
 		 * Adds the specified value serialiser to this builder
 		 * 
-		 * @param <T> the type of the value serialiser
-		 * @param type the type class
 		 * @param serialiser the value serialiser
 		 * @return this builder
-		 * @throws NullPointerException if either parameter is null
+		 * @throws NullPointerException if {@code serialiser} is null
+		 * @throws IllegalArgumentException if this serialiser conflicts with an existing one
 		 */
-		public <T> Builder addSerialiser(Class<T> type, ValueSerialiser<T> serialiser) {
-			serialisers.put(Objects.requireNonNull(type, "type"), Objects.requireNonNull(serialiser, "serialiser"));
+		public Builder addSerialiser(ValueSerialiser<?> serialiser) {
+			Objects.requireNonNull(serialiser, "serialiser");
+			ValueSerialiser<?> previous = serialisers.putIfAbsent(serialiser.getTargetClass(), serialiser);
+			if (previous != null) {
+				throw new IllegalArgumentException("ValueSerialiser " + serialiser + " conflicts with " + previous);
+			}
 			return this;
 		}
 		
@@ -213,6 +228,19 @@ public final class ConfigurationOptions {
 		 */
 		public Builder setStrictParseEnums(boolean strictParseEnums) {
 			this.strictParseEnums = strictParseEnums;
+			return this;
+		}
+		
+		/**
+		 * Specifies whether, when a configuration value is desired as some kind of collection, but the config
+		 * value is not a collection, a single element collection should be created from the value and used.
+		 * By default this is {@code false}
+		 * 
+		 * @param createSingleElementCollections whether to create single element collections
+		 * @return this builder
+		 */
+		public Builder setCreateSingleElementCollections(boolean createSingleElementCollections) {
+			this.createSingleElementCollections = createSingleElementCollections;
 			return this;
 		}
 		

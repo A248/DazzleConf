@@ -21,14 +21,9 @@ package space.arim.dazzleconf.internal.processor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.text.NumberFormat;
-import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,13 +44,14 @@ import space.arim.dazzleconf.internal.DefaultMethodUtil;
 import space.arim.dazzleconf.internal.ImmutableCollections;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.SingleConfEntry;
-import space.arim.dazzleconf.serialiser.ValueSerialiser;
+import space.arim.dazzleconf.serialiser.FlexibleType;
+import space.arim.dazzleconf.serialiser.FlexibleTypeFunction;
 import space.arim.dazzleconf.validator.ValueValidator;
 
 public abstract class ProcessorBase {
 
 	private final ConfigurationOptions options;
-	private final List<ConfEntry> entries;
+	private final ConfigurationDefinition<?> definition;
 	private final Object auxiliaryValues;
 	
 	private String key;
@@ -64,15 +60,15 @@ public abstract class ProcessorBase {
 	private boolean usedAuxiliary;
 	
 	/**
-	 * Creates from options, entries, and auxiliary config values
+	 * Creates from options, definition, and auxiliary config values
 	 * 
 	 * @param options the config options
-	 * @param mainEntry the config entries
+	 * @param definition the config definition
 	 * @param auxiliaryValues the auxiliary config, null for none
 	 */
-	ProcessorBase(ConfigurationOptions options, List<ConfEntry> entries, Object auxiliaryValues) {
+	ProcessorBase(ConfigurationOptions options, ConfigurationDefinition<?> definition, Object auxiliaryValues) {
 		this.options = options;
-		this.entries = entries;
+		this.definition = definition;
 		this.auxiliaryValues = auxiliaryValues;
 	}
 	
@@ -112,7 +108,7 @@ public abstract class ProcessorBase {
 	}
 	
 	private void process() throws InvalidConfigException {
-		for (ConfEntry entry : entries) {
+		for (ConfEntry entry : definition.getEntries()) {
 			Method method = entry.getMethod();
 			if (DefaultMethodUtil.isDefault(method)) {
 				continue;
@@ -195,99 +191,74 @@ public abstract class ProcessorBase {
 	}
 	
 	private <G> Object processObjectAtEntryWithGoal(SingleConfEntry entry, Class<G> goal, Object preValue)
-			throws InvalidConfigException {
+			throws BadValueException {
+		FlexibleTypeImpl flexType = new FlexibleTypeImpl(key, preValue, options, definition.getSerialisers());
 
 		Method method = entry.getMethod();
-		// Collections
+
+		// Numerics types can't be delegated to FlexibleType, since @IntegerRange/@NumericRange need to be checked
+		if (goal == int.class || goal == Integer.class) {
+			return getAsNumber(method, flexType).intValue();
+		} else if (goal == long.class || goal == Long.class) {
+			return getAsNumber(method, flexType).longValue();
+		} else if (goal == short.class || goal == Short.class) {
+			return getAsNumber(method, flexType).shortValue();
+		} else if (goal == byte.class || goal == Byte.class) {
+			return getAsNumber(method, flexType).byteValue();
+		}
+		if (goal == double.class || goal == Double.class) {
+			return getAsNumber(method, flexType).doubleValue();
+		} else if (goal == float.class || goal == Float.class) {
+			return getAsNumber(method, flexType).floatValue();
+		}
+		// Same goes for Collections with @CollectionSize
 		if (goal == List.class || goal == Set.class || goal == Collection.class) {
 			Class<?> elementType = entry.getCollectionElementType();
-			return getAsCollection(entry, goal == List.class, preValue, method, elementType);
+			return getCollection(goal, flexType, method, elementType);
+		}
+		// And Maps with @CollectionSize
+		if (goal == Map.class) {
+			Class<?> keyType = entry.getMapKeyType();
+			Class<?> valueType = entry.getMapValueType();
+			return getMap(flexType, method, keyType, valueType);
 		}
 
-		// @ConfSerialiser override
-		@SuppressWarnings("unchecked")
-		ValueSerialiser<G> confSerialiser = (ValueSerialiser<G>) entry.getSerialiser();
-		if (confSerialiser != null) {
-			return fromSerialiser(preValue, goal, confSerialiser);
-		}
-
-		// boolean and String
-		if (goal == boolean.class || goal == Boolean.class) {
-			return getAsBoolean(preValue);
-		} else if (goal == String.class) {
-			return getAsString(preValue);
-		}
-
-		// Integer types
-		if (goal == int.class || goal == Integer.class) {
-			return getAsNumber(method, preValue).intValue();
-		} else if (goal == long.class || goal == Long.class) {
-			return getAsNumber(method, preValue).longValue();
-		} else if (goal == short.class || goal == Short.class) {
-			return getAsNumber(method, preValue).shortValue();
-		} else if (goal == byte.class || goal == Byte.class) {
-			return getAsNumber(method, preValue).byteValue();
-		}
-
-		// Floating point types
-		if (goal == double.class || goal == Double.class) {
-			return getAsNumber(method, preValue).doubleValue();
-		} else if (goal == float.class || goal == Float.class) {
-			return getAsNumber(method, preValue).floatValue();
-		}
-
-		// char
-		if (goal == char.class || goal == Character.class) {
-			String string = getAsString(preValue);
-			if (string.length() != 1) {
-				throw new BadValueException.Builder().key(key).message("value " + preValue + " is not a single character").build();
-			}
-			return string.charAt(0);
-		}
-
-		// Enums
-		if (goal.isEnum()) {
-			String parsable = getAsString(preValue);
-			if (!options.strictParseEnums()) {
-				parsable = parsable.toUpperCase(Locale.ROOT);
-			}
-			return enumValueOf(goal, parsable);
-		}
-
-		// All other types
-		ValueSerialiser<G> serialiser  = options.getSerialisers().getSerialiser(goal);
-		if (serialiser == null) {
-			throw new IllDefinedConfigException("No ValueSerialiser for " + key);
-		}
-		return fromSerialiser(preValue, goal, serialiser);
+		// Everything else
+		return flexType.getObject(goal);
 	}
 	
-	private <G> G fromSerialiser(Object preValue, Class<G> goal, ValueSerialiser<G> serialiser) throws BadValueException {
-		G deserialised = serialiser.deserialise(key, preValue);
-		if (deserialised == null) {
-			throw new IllDefinedConfigException(
-					"At key " + key + ", ValueSerialiser#deserialise for " + serialiser + " returned null");
+	private <E> Collection<E> getCollection(Class<?> goal, FlexibleType flexType, Method method, Class<E> elementClass)
+			throws BadValueException {
+
+		FlexibleTypeFunction<E> function = (element) -> element.getObject(elementClass);
+		Collection<E> collection;
+		if (goal == List.class) {
+			collection = flexType.getList(function);
+		} else if (goal == Set.class) {
+			collection = flexType.getSet(function);
+		} else if (goal == Collection.class) { 
+			collection = flexType.getCollection(function);
+		} else {
+			throw new IllegalArgumentException("Internal error: Unknown goal " + goal + ", expected List/Set/Collection");
 		}
-		return goal.cast(deserialised);
+		checkSize(method, collection.size());
+		return collection;
 	}
 	
-	/*
-	 * 
-	 * Type conversion methods
-	 * 
-	 */
+	private <K, V> Map<K, V> getMap(FlexibleType flexType, Method method, Class<K> keyClass, Class<V> valueClass)
+			throws BadValueException {
+		Map<K, V> map = flexType.getMap((flexibleKey, flexibleValue) -> {
+			K key = flexibleKey.getObject(keyClass);
+			V value = flexibleValue.getObject(valueClass);
+			return ImmutableCollections.mapEntryOf(key, value);
+		});
+		checkSize(method, map.size());
+		return map;
+	}
 	
-	private <E> Collection<E> getAsCollection(SingleConfEntry entry, boolean ordered, Object preValue,
-			Method method, Class<E> elementClass) throws InvalidConfigException {
-
-		Collection<E> result = (ordered) ? new ArrayList<>() : new HashSet<>();
-		if (!(preValue instanceof List)) {
-			throw new BadValueException.Builder().key(key).message("value " + preValue + " is not a List").build();
-		}
-		List<?> asList = (List<?>) preValue;
+	private void checkSize(Method method, int size) throws BadValueException {
 		CollectionSize sizing = method.getAnnotation(CollectionSize.class);
 		if (sizing != null) {
-			int size = asList.size();
 			if (size < sizing.min()) {
 				throw new BadValueException.Builder().key(key)
 						.message("value's size " + size + " is less than minimum size " + sizing.min()).build();
@@ -297,19 +268,15 @@ public abstract class ProcessorBase {
 						"value's size " + size + " is more than maximum size " + sizing.max()).build();
 			}
 		}
-		for (Object element : asList) {
-			result.add(elementClass.cast(processObjectAtEntryWithGoal(entry, elementClass, element)));
-		}
-		return (ordered) ? ImmutableCollections.listOf(result) : ImmutableCollections.setOf(result);
 	}
 	
-	private String getAsString(Object value) {
-		return value.toString();
+	private Number getAsNumber(Method method, FlexibleType flexType) throws BadValueException {
+		Number number = flexType.getObject(Number.class);
+		checkRange(method, number);
+		return number;
 	}
 	
-	private Number getAsNumber(Method method, Object value) throws BadValueException {
-		Number number = getAsNumber0(value);
-
+	private void checkRange(Method method, Number number) throws BadValueException {
 		NumericRange numericRange = method.getAnnotation(NumericRange.class);
 		if (numericRange != null) {
 			double asDouble = number.doubleValue();
@@ -333,50 +300,6 @@ public abstract class ProcessorBase {
 				throw new BadValueException.Builder().key(key)
 						.message("value's size " + asLong + " is more than maximum size " + intRange.max()).build();
 			}
-		}
-		return number;
-	}
-	
-	private Number getAsNumber0(Object value) throws BadValueException {
-		if (value instanceof Number) {
-			return (Number) value;
-		}
-		if (value instanceof String) {
-			Number parsed;
-			try {
-				parsed = NumberFormat.getInstance().parse((String) value);
-			} catch (ParseException ex) {
-				throw new BadValueException.Builder().key(key).message(
-						"value " + value + " is not a Number and cannot be converted to one").cause(ex).build();
-			}
-			return parsed;
-		}
-		throw new BadValueException.Builder().key(key).message("value " + value + " is not a Number").build();
-	}
-	
-	private Boolean getAsBoolean(Object value) throws BadValueException {
-		if (value instanceof Boolean) {
-			return (Boolean) value;
-		}
-		if (value instanceof String) {
-			String parsable = (String) value;
-			if (parsable.equalsIgnoreCase("true") || parsable.equalsIgnoreCase("yes")) {
-				return Boolean.TRUE;
-			}
-			if (parsable.equalsIgnoreCase("false") || parsable.equalsIgnoreCase("false")) {
-				return Boolean.FALSE;
-			}
-		}
-		throw new BadValueException.Builder().key(key).message("value " + value + " is not a boolean").build();
-	}
-	
-	@SuppressWarnings("unchecked")
-	private <T, E extends Enum<E>> Enum<E> enumValueOf(Class<T> enumClass, String parsable) throws BadValueException {
-		try {
-			return Enum.valueOf((Class<E>) enumClass, parsable);
-		} catch (IllegalArgumentException ex) {
-			throw new BadValueException.Builder().key(key)
-					.message("value " + parsable + " is not a " + enumClass.getName()).build();
 		}
 	}
 	

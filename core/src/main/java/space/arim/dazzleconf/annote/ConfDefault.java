@@ -21,7 +21,6 @@ package space.arim.dazzleconf.annote;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
@@ -48,7 +47,6 @@ public final class ConfDefault {
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
-	@Inherited
 	public @interface DefaultBoolean {
 		boolean value();
 	}
@@ -57,7 +55,7 @@ public final class ConfDefault {
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
-	@Inherited
+
 	public @interface DefaultBooleans {
 		boolean[] value();
 	}
@@ -66,7 +64,6 @@ public final class ConfDefault {
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
-	@Inherited
 	public @interface DefaultInteger {
 		int value();
 	}
@@ -76,7 +73,6 @@ public final class ConfDefault {
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
-	@Inherited
 	public @interface DefaultIntegers {
 		int[] value();
 	}
@@ -85,7 +81,6 @@ public final class ConfDefault {
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
-	@Inherited
 	public @interface DefaultLong {
 		long value();
 	}
@@ -95,7 +90,6 @@ public final class ConfDefault {
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
-	@Inherited
 	public @interface DefaultLongs {
 		long[] value();
 	}
@@ -104,7 +98,6 @@ public final class ConfDefault {
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
-	@Inherited
 	public @interface DefaultDouble {
 		double value();
 	}
@@ -114,7 +107,6 @@ public final class ConfDefault {
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
-	@Inherited
 	public @interface DefaultDoubles {
 		double[] value();
 	}
@@ -123,7 +115,6 @@ public final class ConfDefault {
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
-	@Inherited
 	public @interface DefaultString {
 		String value();
 	}
@@ -133,8 +124,16 @@ public final class ConfDefault {
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
-	@Inherited
 	public @interface DefaultStrings {
+		String[] value();
+	}
+	/**
+	 * Specifies the default value as a map. The values of this annotation must be in the form of paired key and value strings.
+	 * Therefore the length of the array would be even.
+	 */
+	@Retention(RUNTIME)
+	@Target(METHOD)
+	public @interface DefaultMap {
 		String[] value();
 	}
 	

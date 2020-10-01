@@ -16,35 +16,32 @@
  * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
-package space.arim.dazzleconf.annote;
+package space.arim.dazzleconf.serialiser;
 
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import java.util.Map.Entry;
 
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
-
-import space.arim.dazzleconf.serialiser.ValueSerialiser;
+import space.arim.dazzleconf.error.BadValueException;
 
 /**
- * Attaches a value serialiser to a specific config entry
+ * Functional interface which computes a <pre>{@code Map.Entry<K, V>>}</pre> from a {@link FlexibleType}
+ * key and value
  * 
  * @author A248
  *
+ * @param <K> the type of the key result
+ * @param <V> the type of the value result
  */
-@Retention(RUNTIME)
-@Target(METHOD)
-@Inherited
-public @interface ConfSerialiser {
+@FunctionalInterface
+public interface FlexibleTypeMapEntryFunction<K, V> {
 
 	/**
-	 * Specifies the {@link ValueSerialiser} to use for this config entry. The {@code ValueSerialiser}
-	 * must have a either a public static {@code getInstance()} method returning an instance or a public constructor,
-	 * each with no arguments, in order to be created.
+	 * Gets a result from two flexible types
 	 * 
-	 * @return the value serialiser to use
+	 * @param flexibleKey the flexible type key
+	 * @param flexibleValue the flexible type value
+	 * @return the map entry
+	 * @throws BadValueException if thrown from {@link FlexibleType}'s methods
 	 */
-	Class<? extends ValueSerialiser<?>> value();
+	Entry<K, V> getResult(FlexibleType flexibleKey, FlexibleType flexibleValue) throws BadValueException;
 	
 }

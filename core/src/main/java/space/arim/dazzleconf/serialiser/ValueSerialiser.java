@@ -32,20 +32,27 @@ import space.arim.dazzleconf.error.BadValueException;
 public interface ValueSerialiser<T> {
 
 	/**
-	 * Deserialises a value from a raw config value. <br>
-	 * <br>
-	 * The key is informative. It should not affect the deserialisation, but should be included in thrown
-	 * {@code BadValueException}s to inform the user which key is in question.
+	 * Gets the target type of deserialisation
 	 * 
-	 * @param key the key
-	 * @param value the value
-	 * @return the deserialised value, never {@code null}
-	 * @throws BadValueException if the value is invalid
+	 * @return the target class type
 	 */
-	T deserialise(String key, Object value) throws BadValueException;
+	Class<T> getTargetClass();
 	
 	/**
-	 * Serialises a value to a raw config value. Should be the inverse operation of {@link #deserialise(String, Object)}.
+	 * Deserialises a value from a flexible type representing a raw config value. <br>
+	 * <br>
+	 * The key ({@link FlexibleType#getAssociatedKey()}) is informative. It should not affect the deserialisation, but should
+	 * be included in thrown {@code BadValueException}s to inform the user which key is in question.
+	 * 
+	 * @param flexibleType the flexible type
+	 * @return the deserialised value, never {@code null}
+	 * @throws BadValueException if the value could not be deserialised
+	 */
+	T deserialise(FlexibleType flexibleType) throws BadValueException;
+	
+	/**
+	 * Serialises a value to a raw config value. Should be the inverse operation of {@link #deserialise(FlexibleType)}
+	 * in that if the result of this method were wrapped in a {@link FlexibleType}, it could be deserialised.
 	 * 
 	 * @param value the value
 	 * @return the serialised value

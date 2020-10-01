@@ -23,12 +23,13 @@ import java.util.List;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.factory.CommentedWrapper;
 import space.arim.dazzleconf.internal.ConfEntry;
+import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 
 public class CommentedDeprocessor<C> extends MapDeprocessor<C> {
 
-	public CommentedDeprocessor(ConfigurationOptions options, List<ConfEntry> entries, C configData) {
-		super(options, entries, configData);
+	public CommentedDeprocessor(ConfigurationOptions options, ConfigurationDefinition<C> definition, C configData) {
+		super(options, definition, configData);
 	}
 	
 	@Override
@@ -42,7 +43,7 @@ public class CommentedDeprocessor<C> extends MapDeprocessor<C> {
 	
 	@Override
 	<N> MapDeprocessor<N> createChildDeprocessor(NestedConfEntry<N> childEntry, N childConf) {
-		return new CommentedDeprocessor<>(options, childEntry.getDefinition().getEntries(), childConf);
+		return new CommentedDeprocessor<>(options, childEntry.getDefinition(), childConf);
 	}
 
 }

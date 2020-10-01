@@ -16,29 +16,27 @@
  * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
-package space.arim.dazzleconf.annote;
+package space.arim.dazzleconf.serialiser;
 
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
-
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
+import space.arim.dazzleconf.error.BadValueException;
 
 /**
- * Inserts one or more comments ahead of the config entry this annotation is placed before
+ * Functional interface which computes a result from a {@link FlexibleType}
  * 
  * @author A248
  *
+ * @param <T> the type of the result
  */
-@Retention(RUNTIME)
-@Target(METHOD)
-public @interface ConfComments {
+@FunctionalInterface
+public interface FlexibleTypeFunction<T> {
 
 	/**
-	 * The comments on this entry. Each string is on its own line
+	 * Gets a result from the flexible type
 	 * 
-	 * @return the comments
+	 * @param flexibleType the flexible type
+	 * @return the result
+	 * @throws BadValueException if thrown from {@link FlexibleType}'s methods
 	 */
-	String[] value();
+	T getResult(FlexibleType flexibleType) throws BadValueException;
 	
 }

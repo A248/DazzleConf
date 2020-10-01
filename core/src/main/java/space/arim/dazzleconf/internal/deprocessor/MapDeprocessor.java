@@ -19,25 +19,20 @@
 package space.arim.dazzleconf.internal.deprocessor;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.internal.ConfEntry;
+import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.NestedMapHelper;
 
 public class MapDeprocessor<C> extends DeprocessorBase<C> {
 
-	final NestedMapHelper mapHelper;
+	final NestedMapHelper mapHelper = new NestedMapHelper(new LinkedHashMap<>());
 	
-	public MapDeprocessor(ConfigurationOptions options, List<ConfEntry> entries, C configData) {
-		this(options, entries, configData, new LinkedHashMap<>());
-	}
-	
-	private MapDeprocessor(ConfigurationOptions options, List<ConfEntry> entries, C configData, Map<String, Object> result) {
-		super(options, entries, configData);
-		mapHelper = new NestedMapHelper(result);
+	public MapDeprocessor(ConfigurationOptions options, ConfigurationDefinition<C> definition, C configData) {
+		super(options, definition, configData);
 	}
 
 	@Override
@@ -46,7 +41,7 @@ public class MapDeprocessor<C> extends DeprocessorBase<C> {
 	}
 	
 	@Override
-	<N> void continueNested(String key, NestedConfEntry<N> childEntry, N childConf) {
+	final <N> void continueNested(String key, NestedConfEntry<N> childEntry, N childConf) {
 		MapDeprocessor<N> deprocessor = createChildDeprocessor(childEntry, childConf);
 		mapHelper.combine(key, wrapValue(childEntry, deprocessor.deprocessAndGetResult()));
 	}
@@ -56,7 +51,7 @@ public class MapDeprocessor<C> extends DeprocessorBase<C> {
 	}
 	
 	<N> MapDeprocessor<N> createChildDeprocessor(NestedConfEntry<N> childEntry, N childConf) {
-		return new MapDeprocessor<>(options, childEntry.getDefinition().getEntries(), childConf);
+		return new MapDeprocessor<>(options, childEntry.getDefinition(), childConf);
 	}
 	
 	public Map<String, Object> deprocessAndGetResult() {

@@ -152,7 +152,7 @@ public abstract class AbstractConfigurationFactory<C> extends DelegatingConfigur
 		@Override
 		protected MapDeprocessor<C> createMapDeprocessor(C configData) {
 			if (AbstractConfigurationFactory.this.supportsCommentsThroughWrapper()) {
-				return new CommentedDeprocessor<>(getOptions(), getDefinition().getEntries(), configData);
+				return new CommentedDeprocessor<>(getOptions(), getDefinition(), configData);
 			}
 			return super.createMapDeprocessor(configData);
 		}

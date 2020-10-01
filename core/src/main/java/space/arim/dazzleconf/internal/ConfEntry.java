@@ -29,8 +29,8 @@ import space.arim.dazzleconf.sorter.SortableConfigurationEntry;
 public abstract class ConfEntry implements SortableConfigurationEntry {
 
 	private final Method method;
-	private final String key;
-	private final List<String> comments;
+	private transient final String key;
+	private transient final List<String> comments;
 
 	private ConfEntry(Method method, String key, List<String> comments) {
 		this.method = method;
@@ -74,29 +74,38 @@ public abstract class ConfEntry implements SortableConfigurationEntry {
 		return headerSupplier.get();
 	}
 	
+	/**
+	 * Gets the fully qualified name of the method this entry represents
+	 * 
+	 * @return the qualified name of the method
+	 */
+	public String getQualifiedMethodName() {
+		return method.getDeclaringClass().getName() + "#" + method.getName();
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + getKey().hashCode();
+		result = prime * result + method.hashCode();
 		return result;
 	}
-	
+
 	@Override
-	public boolean equals(Object obj) {
-		if (this == obj) {
+	public boolean equals(Object object) {
+		if (this == object) {
 			return true;
 		}
-		if (!(obj instanceof ConfEntry)) {
+		if (!(object instanceof ConfEntry)) {
 			return false;
 		}
-		ConfEntry other = (ConfEntry) obj;
-		return getKey().equals(other.getKey());
+		ConfEntry other = (ConfEntry) object;
+		return method.equals(other.method);
 	}
 
 	@Override
 	public String toString() {
-		return "ConfEntry [key=" + getKey() + "]";
+		return "ConfEntry [method=" + method + "]";
 	}
 	
 }

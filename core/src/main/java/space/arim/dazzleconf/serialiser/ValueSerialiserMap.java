@@ -18,7 +18,10 @@
  */
 package space.arim.dazzleconf.serialiser;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import space.arim.dazzleconf.internal.ImmutableCollections;
 
@@ -31,15 +34,75 @@ import space.arim.dazzleconf.internal.ImmutableCollections;
 public final class ValueSerialiserMap {
 
 	private final Map<Class<?>, ValueSerialiser<?>> map;
+
+	private static final ValueSerialiserMap EMPTY = new ValueSerialiserMap();
+	
+	private ValueSerialiserMap() {
+		this.map = ImmutableCollections.emptyMap();
+	}
+	
+	private ValueSerialiserMap(Map<Class<?>, ValueSerialiser<?>> map) {
+		this.map = ImmutableCollections.mapOf(map);
+	}
 	
 	/**
-	 * Creates from a map. The map's contents are copied
+	 * Creates from a collection of serialisers. If any two serialisers specify the same target type
+	 * ({@link ValueSerialiser#getTargetClass()}), {@code IllegalArgumentException} is thrown
 	 * 
-	 * @param map the map
-	 * @throws NullPointerException if the map or any of its keys or values i null
+	 * @param serialisers the value serialisers
+	 * @return the value serialiser map
+	 * @throws NullPointerException if any serialiser is null
+	 * @throws IllegalArgumentException if any value serialisers conflict
 	 */
-	public ValueSerialiserMap(Map<Class<?>, ValueSerialiser<?>> map) {
-		this.map = ImmutableCollections.mapOf(map);
+	public static ValueSerialiserMap of(Collection<ValueSerialiser<?>> serialisers) {
+		Map<Class<?>, ValueSerialiser<?>> map = new HashMap<>();
+		for (ValueSerialiser<?> serialiser : serialisers) {
+			Objects.requireNonNull(serialiser, "serialiser");
+			ValueSerialiser<?> previous = map.putIfAbsent(serialiser.getTargetClass(), serialiser);
+			if (previous != null) {
+				throw new IllegalArgumentException("ValueSerialiser " + serialiser + " conflicts with " + previous);
+			}
+		}
+		if (map.isEmpty()) {
+			return EMPTY;
+		}
+		return new ValueSerialiserMap(map);
+	}
+	
+	/**
+	 * Creates from a map of serialisers. If any serialisers are at a mismatched key,
+	 * {@code IllegalArgumentException} is thrown
+	 * 
+	 * @param serialisers the value serialisers
+	 * @return the value serialiser map
+	 * @throws NullPointerException if any serialiser is null
+	 * @throws IllegalArgumentException if any value serialisers are at a mismatched key
+	 */
+	public static ValueSerialiserMap of(Map<Class<?>, ValueSerialiser<?>> serialisers) {
+		Map<Class<?>, ValueSerialiser<?>> map = new HashMap<>(serialisers);
+		for (Map.Entry<Class<?>, ValueSerialiser<?>> entry : map.entrySet()) {
+			Class<?> actualKey = entry.getKey();
+			ValueSerialiser<?> serialiser = entry.getValue();
+			Objects.requireNonNull(serialiser, "serialiser");
+			Class<?> expectedKey = serialiser.getTargetClass();
+			if (actualKey != expectedKey) {
+				throw new IllegalArgumentException("ValueSerialiser " + serialiser
+						+ " is at a mismatched key, expected " + expectedKey + " but got " + actualKey);
+			}
+		}
+		if (map.isEmpty()) {
+			return EMPTY;
+		}
+		return new ValueSerialiserMap(map);
+	}
+	
+	/**
+	 * Gets an empty value serialiser map
+	 * 
+	 * @return an empty map
+	 */
+	public static ValueSerialiserMap empty() {
+		return EMPTY;
 	}
 	
 	/**
@@ -56,7 +119,7 @@ public final class ValueSerialiserMap {
 	}
 	
 	/**
-	 * Gets this value serialiser map as a {@link Map}. This map is not modifiable.
+	 * Gets this value serialiser map as a {@link Map}. This map is immutable.
 	 * 
 	 * @return the map of classes to value serialisers, never {@code null}
 	 */

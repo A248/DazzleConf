@@ -23,14 +23,15 @@ import java.util.List;
 import java.util.Set;
 
 import space.arim.dazzleconf.ConfigurationOptions;
+import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 
 public class ConfigurationInfo<C> extends ConfigurationDefinition<C> {
 
 	private final ConfigurationOptions options;
 	
 	ConfigurationInfo(Class<C> configClass, ConfigurationOptions options, List<ConfEntry> entries,
-			Set<Method> defaultMethods) {
-		super(configClass, entries, defaultMethods);
+			Set<Method> defaultMethods, ValueSerialiserMap serialisers) {
+		super(configClass, entries, defaultMethods, serialisers);
 		this.options = options;
 	}
 	

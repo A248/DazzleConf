@@ -18,27 +18,38 @@
  */
 package space.arim.dazzleconf.annote;
 
-import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
+import space.arim.dazzleconf.ConfigurationOptions;
+import space.arim.dazzleconf.serialiser.ValueSerialiser;
+
 /**
- * Inserts one or more comments ahead of the config entry this annotation is placed before
+ * Attaches a value serialiser to a configuration interface
  * 
  * @author A248
  *
  */
 @Retention(RUNTIME)
-@Target(METHOD)
-public @interface ConfComments {
+@Target(TYPE)
+public @interface ConfSerialisers {
 
 	/**
-	 * The comments on this entry. Each string is on its own line
+	 * Specifies additional {@link ValueSerialiser}s to use for this configuration interface. Each {@code ValueSerialiser}
+	 * must have a either a public static {@code getInstance()} method returning an instance or a public constructor
+	 * with no arguments, in order to be created. <br>
+	 * <br>
+	 * These serialisers are in addition to the global {@link ConfigurationOptions#getSerialisers()}. When determining
+	 * a serialiser for a configuration entry, this annotation is prioritised over the global options. <br>
+	 * <br>
+	 * Furthermore, note that configuration subsections do not "inherit" the value of this annotation in their own
+	 * serialisers. Subsections should likewise use this annotation if it is needed.
 	 * 
-	 * @return the comments
+	 * @return the value serialisers to use
 	 */
-	String[] value();
+	Class<? extends ValueSerialiser<?>>[] value();
 	
 }

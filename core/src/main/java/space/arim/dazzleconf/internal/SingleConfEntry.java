@@ -23,22 +23,15 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 import space.arim.dazzleconf.error.IllDefinedConfigException;
-import space.arim.dazzleconf.serialiser.ValueSerialiser;
 import space.arim.dazzleconf.validator.ValueValidator;
 
 public class SingleConfEntry extends ConfEntry {
 	
-	private final ValueSerialiser<?> serialiser;
 	private final ValueValidator validator;
 	
-	SingleConfEntry(Method method, ValueSerialiser<?> serialiser, ValueValidator validator) {
+	SingleConfEntry(Method method, ValueValidator validator) {
 		super(method);
-		this.serialiser = serialiser;
 		this.validator = validator;
-	}
-
-	public ValueSerialiser<?> getSerialiser() {
-		return serialiser;
 	}
 	
 	public ValueValidator getValidator() {
@@ -46,23 +39,48 @@ public class SingleConfEntry extends ConfEntry {
 	}
 	
 	/**
-	 * Assuming this entry's config value is a collection, get the element type
+	 * Assuming this entry's return type is a collection, get the element type
 	 * 
 	 * @return the element type
 	 * @throws IllDefinedConfigException if the element type cannot be determined
 	 */
 	public Class<?> getCollectionElementType() {
+		return getGenericReturnParameter(0);
+	}
+	
+	/**
+	 * Assuming this entry's return type is a map, get the key type
+	 * 
+	 * @return the key type
+	 * @throws IllDefinedConfigException if the key type cannot be determined
+	 */
+	public Class<?> getMapKeyType() {
+		return getGenericReturnParameter(0);
+	}
+	
+	/**
+	 * Assuming this entry's return type is a map, get the value type
+	 * 
+	 * @return the value type
+	 * @throws IllDefinedConfigException if the value type cannot be determined
+	 */
+	public Class<?> getMapValueType() {
+		return getGenericReturnParameter(1);
+	}
+	
+	private Class<?> getGenericReturnParameter(int index) {
 		Type genericReturnType = getMethod().getGenericReturnType();
 		if (genericReturnType instanceof ParameterizedType) {
 			ParameterizedType paramType = (ParameterizedType) genericReturnType;
 			Type[] typeArguments = paramType.getActualTypeArguments();
-			Type elementType;
-			if (typeArguments.length > 0 && (elementType = typeArguments[0]) instanceof Class) {
-				return (Class<?>) elementType;
+
+			Type genericReturnParameter;
+			if (typeArguments.length > index && (genericReturnParameter = typeArguments[index]) instanceof Class) {
+				return (Class<?>) genericReturnParameter;
 			}
 		}
 		throw new IllDefinedConfigException(
-					"Unable to determine element type of collection in " + getMethod().getName());
+					"Unable to determine return type's generic parameters in " + getQualifiedMethodName());
 	}
 	
 }

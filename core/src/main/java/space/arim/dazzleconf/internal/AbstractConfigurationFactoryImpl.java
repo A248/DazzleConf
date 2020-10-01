@@ -51,7 +51,7 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 
 	@Override
 	public C loadDefaults() {
-		ProcessorBase processor = new DefaultsProcessor(getOptions(), definition.getEntries());
+		ProcessorBase processor = new DefaultsProcessor(getOptions(), definition);
 		try {
 			return fromProcessor(processor);
 		} catch (InvalidConfigException ex) {
@@ -83,7 +83,7 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 	}
 
 	private C fromRawMap(Map<String, Object> rawMap, Object auxiliaryValues) throws InvalidConfigException {
-		return fromProcessor(new MapProcessor(getOptions(), definition.getEntries(), rawMap, auxiliaryValues));
+		return fromProcessor(new MapProcessor(getOptions(), definition, rawMap, auxiliaryValues));
 	}
 	
 	private C fromProcessor(ProcessorBase processor) throws InvalidConfigException {
@@ -113,7 +113,7 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 	}
 	
 	protected MapDeprocessor<C> createMapDeprocessor(C configData) {
-		return new MapDeprocessor<>(getOptions(), getDefinition().getEntries(), configData);
+		return new MapDeprocessor<>(getOptions(), getDefinition(), configData);
 	}
 
 }

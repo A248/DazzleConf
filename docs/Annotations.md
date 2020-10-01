@@ -1,7 +1,7 @@
 
 # Annotations
 
-DazzleConf supports several annotations on configuration entries.
+DazzleConf supports several annotations on configuration entries and a couple on configuration interfaces.
 
 ## Entry Attributes
 
@@ -27,13 +27,13 @@ This annotation is required for nested configuration interfaces. Without it, Daz
 
 ## Other Annotations
 
-### @ConfSerialiser and @ConfValidator
+### @ConfSerialisers and @ConfValidator
 
-Both these annotations take a class as an argument. To instantiate it, DazzleConf will use either its static no-arg `getInstance()` method (if it exists) or its public no-arg constructor.
+Both these annotations take a class or classes as an argument. DazzleConf will instantiate the target classes using either a static `getInstance()` method (if it exists) or the public no-arg constructor.
 
-*ConfSerialiser* specifies a class implementing *ValueSerialiser*. ValueSerialiser is to be used for implementing custom types; it is concerned with deserialising and serialising from a string. URLValueSerialiser is one usable implementation serving as a good example.
+*ConfSerialiser* is placed on a configuration interface and specifies classes implementing *ValueSerialiser*. ValueSerialiser is to be used for implementing custom types; it is concerned with deserialisation and serialisation. URLValueSerialiser is one usable implementation serving as a good example. All the ValueSerialisers instantiated by *ConfSerialiser* will apply to the configuration entries in that configuration interface which the annotation is placed on. Note that nested config sections do not "inherit" this annotation.
 
-*ConfValidator* specifies a *ValueValidator* applying to the configuration entry. *ValueValidator* is designed to validate a value once it has been deserialised.
+*ConfValidator* is placed on a configuration entry and specifies a single class implementing *ValueValidator* applying to the entry. *ValueValidator* is designed to validate a value once it has been deserialised.
 
 ### Range annotations
 

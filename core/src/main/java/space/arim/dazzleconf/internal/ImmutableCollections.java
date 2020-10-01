@@ -51,17 +51,22 @@ public final class ImmutableCollections {
 		return List.of();
 	}
 	
+	public static <E> List<E> listOf(E element) {
+		if (PRE_JAVA_10) {
+			Objects.requireNonNull(element, "element");
+			return Collections.singletonList(element);
+		}
+		return List.of(element);
+	}
+	
 	@SafeVarargs
 	public static <E> List<E> listOf(E...elements) {
 		if (PRE_JAVA_10) {
-			E[] clone = elements.clone();
-			if (clone.length == 0) {
-				return emptyList();
-			}
-			for (E element : clone) {
+			elements = elements.clone();
+			for (E element : elements) {
 				Objects.requireNonNull(element, "element");
 			}
-			return Collections.unmodifiableList(Arrays.asList(clone));
+			return Collections.unmodifiableList(Arrays.asList(elements));
 		}
 		return List.of(elements);
 	}
@@ -81,12 +86,17 @@ public final class ImmutableCollections {
 		return Set.of();
 	}
 	
+	public static <E> Set<E> setOf(E element) {
+		if (PRE_JAVA_10) {
+			Objects.requireNonNull(element, "element");
+			return Collections.singleton(element);
+		}
+		return Set.of(element);
+	}
+	
 	public static <E> Set<E> setOf(Collection<? extends E> coll) {
 		if (PRE_JAVA_10) {
 			Set<E> hashSet = new HashSet<>(coll);
-			if (hashSet.isEmpty()) {
-				return emptySet();
-			}
 			for (E element : hashSet) {
 				Objects.requireNonNull(element, "element");
 			}
@@ -105,9 +115,6 @@ public final class ImmutableCollections {
 	public static <K, V> Map<K, V> mapOf(Map<? extends K, ? extends V> map) {
 		if (PRE_JAVA_10) {
 			Map<K, V> hashMap = new HashMap<>(map);
-			if (hashMap.isEmpty()) {
-				return emptyMap();
-			}
 			for (Map.Entry<K, V> entry : hashMap.entrySet()) {
 				Objects.requireNonNull(entry.getKey(), "key");
 				Objects.requireNonNull(entry.getValue(), "value");
@@ -115,6 +122,15 @@ public final class ImmutableCollections {
 			return Collections.unmodifiableMap(hashMap);
 		}
 		return Map.copyOf(map);
+	}
+	
+	public static <K, V> Map.Entry<K, V> mapEntryOf(K key, V value) {
+		if (PRE_JAVA_10) {
+			Objects.requireNonNull(key, "key");
+			Objects.requireNonNull(value, "value");
+			return new java.util.AbstractMap.SimpleImmutableEntry<>(key, value);
+		}
+		return Map.entry(key, value);
 	}
 	
 }
