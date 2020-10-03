@@ -45,6 +45,13 @@ public final class ValueSerialiserMap {
 		this.map = ImmutableCollections.mapOf(map);
 	}
 	
+	private static ValueSerialiserMap fromMap(Map<Class<?>, ValueSerialiser<?>> map) {
+		if (map.isEmpty()) {
+			return EMPTY;
+		}
+		return new ValueSerialiserMap(map);
+	}
+	
 	/**
 	 * Creates from a collection of serialisers. If any two serialisers specify the same target type
 	 * ({@link ValueSerialiser#getTargetClass()}), {@code IllegalArgumentException} is thrown
@@ -54,7 +61,7 @@ public final class ValueSerialiserMap {
 	 * @throws NullPointerException if any serialiser is null
 	 * @throws IllegalArgumentException if any value serialisers conflict
 	 */
-	public static ValueSerialiserMap of(Collection<ValueSerialiser<?>> serialisers) {
+	public static ValueSerialiserMap of(Collection<? extends ValueSerialiser<?>> serialisers) {
 		Map<Class<?>, ValueSerialiser<?>> map = new HashMap<>();
 		for (ValueSerialiser<?> serialiser : serialisers) {
 			Objects.requireNonNull(serialiser, "serialiser");
@@ -63,10 +70,7 @@ public final class ValueSerialiserMap {
 				throw new IllegalArgumentException("ValueSerialiser " + serialiser + " conflicts with " + previous);
 			}
 		}
-		if (map.isEmpty()) {
-			return EMPTY;
-		}
-		return new ValueSerialiserMap(map);
+		return fromMap(map);
 	}
 	
 	/**
@@ -78,7 +82,7 @@ public final class ValueSerialiserMap {
 	 * @throws NullPointerException if any serialiser is null
 	 * @throws IllegalArgumentException if any value serialisers are at a mismatched key
 	 */
-	public static ValueSerialiserMap of(Map<Class<?>, ValueSerialiser<?>> serialisers) {
+	public static ValueSerialiserMap of(Map<Class<?>, ? extends ValueSerialiser<?>> serialisers) {
 		Map<Class<?>, ValueSerialiser<?>> map = new HashMap<>(serialisers);
 		for (Map.Entry<Class<?>, ValueSerialiser<?>> entry : map.entrySet()) {
 			Class<?> actualKey = entry.getKey();
@@ -90,10 +94,7 @@ public final class ValueSerialiserMap {
 						+ " is at a mismatched key, expected " + expectedKey + " but got " + actualKey);
 			}
 		}
-		if (map.isEmpty()) {
-			return EMPTY;
-		}
-		return new ValueSerialiserMap(map);
+		return fromMap(map);
 	}
 	
 	/**
