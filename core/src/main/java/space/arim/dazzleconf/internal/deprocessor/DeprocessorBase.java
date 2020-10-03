@@ -56,7 +56,7 @@ abstract class DeprocessorBase<C> {
 		this.configData = configData;
 	}
 	
-	abstract void finishSimple(String key, ConfEntry entry, Object value);
+	abstract void finishSimple(String key, SingleConfEntry entry, Object value);
 	
 	abstract <N> void continueNested(String key, NestedConfEntry<N> childEntry, N childConf);
 	
@@ -80,8 +80,9 @@ abstract class DeprocessorBase<C> {
 		if (entry instanceof NestedConfEntry) {
 			preContinueNested((NestedConfEntry<?>) entry, value);
 		} else {
-			Object postValue = deprocessObjectAtEntry(entry, value);
-			finishSimple(key, entry, postValue);
+			SingleConfEntry singleEntry = (SingleConfEntry) entry;
+			Object postValue = deprocessObjectAtEntry(singleEntry, value);
+			finishSimple(key, singleEntry, postValue);
 		}
 	}
 	
@@ -89,8 +90,8 @@ abstract class DeprocessorBase<C> {
 		continueNested(key, childEntry, childEntry.getDefinition().getConfigClass().cast(childConf));
 	}
 	
-	private Object deprocessObjectAtEntry(ConfEntry entry, Object value) {
-		return deprocessObjectAtEntryWithGoal((SingleConfEntry) entry, entry.getMethod().getReturnType(), value);
+	private Object deprocessObjectAtEntry(SingleConfEntry entry, Object value) {
+		return deprocessObjectAtEntryWithGoal(entry, entry.getMethod().getReturnType(), value);
 	}
 	
 	private <G> Object deprocessObjectAtEntryWithGoal(SingleConfEntry entry, Class<G> goal, Object value) {

@@ -26,6 +26,7 @@ import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.NestedMapHelper;
+import space.arim.dazzleconf.internal.SingleConfEntry;
 
 public class MapDeprocessor<C> extends DeprocessorBase<C> {
 
@@ -36,17 +37,18 @@ public class MapDeprocessor<C> extends DeprocessorBase<C> {
 	}
 
 	@Override
-	void finishSimple(String key, ConfEntry entry, Object value) {
-		mapHelper.put(key, wrapValue(entry, value));
+	final void finishSimple(String key, SingleConfEntry entry, Object value) {
+		mapHelper.put(key, wrapValue(key, entry, value));
 	}
 	
 	@Override
 	final <N> void continueNested(String key, NestedConfEntry<N> childEntry, N childConf) {
 		MapDeprocessor<N> deprocessor = createChildDeprocessor(childEntry, childConf);
-		mapHelper.combine(key, wrapValue(childEntry, deprocessor.deprocessAndGetResult()));
+		mapHelper.combine(key, wrapValue(key, childEntry, deprocessor.deprocessAndGetResult()));
 	}
 	
-	Object wrapValue(@SuppressWarnings("unused") ConfEntry entry, Object value) {
+	@SuppressWarnings("unused")
+	Object wrapValue(String key, ConfEntry entry, Object value) {
 		return value;
 	}
 	

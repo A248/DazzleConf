@@ -32,12 +32,12 @@ public class AddCommentStringBeforeDeprocessor<C> extends MapDeprocessor<C> {
 	}
 	
 	@Override
-	void finishSimple(String key, ConfEntry entry, Object value) {
+	Object wrapValue(String key, ConfEntry entry, Object value) {
 		List<String> comments = entry.getComments();
 		if (comments.size() > 0) {
 			mapHelper.put(key + "-comment", String.join("\n", comments));
 		}
-		super.finishSimple(key, entry, value);
+		return value;
 	}
 	
 	@Override
