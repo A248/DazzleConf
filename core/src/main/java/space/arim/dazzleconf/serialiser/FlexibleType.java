@@ -44,6 +44,15 @@ public interface FlexibleType {
 	String getAssociatedKey();
 	
 	/**
+	 * Helper method to begin creating a {@link BadValueException} from {@link #getAssociatedKey()}
+	 * 
+	 * @return an exception builder for {@link BadValueException} with the key already set
+	 */
+	default BadValueException.Builder badValueExceptionBuilder() {
+		return new BadValueException.Builder().key(getAssociatedKey());
+	}
+	
+	/**
 	 * Gets the value as a string
 	 * 
 	 * @return the string

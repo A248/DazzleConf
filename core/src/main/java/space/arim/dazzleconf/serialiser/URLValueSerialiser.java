@@ -46,13 +46,12 @@ public final class URLValueSerialiser implements ValueSerialiser<URL> {
 	
 	@Override
 	public URL deserialise(FlexibleType flexibleType) throws BadValueException {
-		String key = flexibleType.getAssociatedKey();
 		String value = flexibleType.getString();
 		URL url;
 		try {
 			url = new URL(value);
 		} catch (MalformedURLException ex) {
-			throw new BadValueException.Builder().key(key).message("malformed URL " + value).cause(ex).build();
+			throw flexibleType.badValueExceptionBuilder().message("malformed URL " + value).cause(ex).build();
 		}
 		return url;
 	}

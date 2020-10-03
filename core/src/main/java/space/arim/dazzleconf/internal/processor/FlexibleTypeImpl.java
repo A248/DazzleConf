@@ -58,10 +58,6 @@ class FlexibleTypeImpl implements FlexibleType {
 	public String getAssociatedKey() {
 		return key;
 	}
-	
-	private BadValueException.Builder badValueExceptionBuilder() {
-		return new BadValueException.Builder().key(key);
-	}
 
 	@Override
 	public String getString() throws BadValueException {
