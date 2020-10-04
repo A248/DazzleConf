@@ -24,10 +24,10 @@ import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.BadValueException;
 import space.arim.dazzleconf.error.ImproperEntryException;
 import space.arim.dazzleconf.error.MissingKeyException;
-import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.NestedMapHelper;
+import space.arim.dazzleconf.internal.SingleConfEntry;
 
 public class MapProcessor extends ProcessorBase {
 
@@ -64,7 +64,7 @@ public class MapProcessor extends ProcessorBase {
 	}
 	
 	@Override
-	Object getValueFromSources(ConfEntry entry) throws MissingKeyException {
+	Object getValueFromSources(SingleConfEntry entry) throws MissingKeyException {
 		return mapHelper.get(entry.getKey());
 	}
 	

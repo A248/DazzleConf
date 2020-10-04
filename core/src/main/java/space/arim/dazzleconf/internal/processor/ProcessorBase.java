@@ -310,6 +310,6 @@ public abstract class ProcessorBase {
 	 * @return the pre processed value
 	 * @throws MissingKeyException if the key is not defined
 	 */
-	abstract Object getValueFromSources(ConfEntry entry) throws MissingKeyException;
+	abstract Object getValueFromSources(SingleConfEntry entry) throws MissingKeyException;
 	
 }

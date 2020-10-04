@@ -49,6 +49,9 @@ public class DefinitionReader<C> {
 	
 	private final Set<Method> defaultMethods = new HashSet<>();
 	private final List<ConfEntry> entries;
+	/**
+	 * Value serialiser map, empty if ConfSerialisers annotation not specified
+	 */
 	private final Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>();
 	
 	DefinitionReader(Class<C> configClass, ConfigurationOptions options) {
@@ -61,7 +64,6 @@ public class DefinitionReader<C> {
 		this.options = options;
 		entries = new ArrayList<>();
 		this.nestedConfigDejaVu = nestedConfigDejaVu;
-		serialisers.putAll(options.getSerialisers().asMap());
 	}
 	
 	private ConfigurationSorter sorter() {
@@ -71,7 +73,8 @@ public class DefinitionReader<C> {
 	ConfigurationInfo<C> read() {
 		readSerialisers();
 		readEntries();
-		return new ConfigurationInfo<>(configClass, options, entries, defaultMethods, ValueSerialiserMap.of(serialisers));
+		ValueSerialiserMap serialiserMap = (serialisers.isEmpty()) ? options.getSerialisers() : ValueSerialiserMap.of(serialisers);
+		return new ConfigurationInfo<>(configClass, options, entries, defaultMethods, serialiserMap);
 	}
 	
 	private void readSerialisers() {
@@ -79,6 +82,7 @@ public class DefinitionReader<C> {
 		if (confSerialisers == null) {
 			return;
 		}
+		serialisers.putAll(options.getSerialisers().asMap());
 		for (Class<? extends ValueSerialiser<?>> serialiserClass : confSerialisers.value()) {
 			ValueSerialiser<?> serialiser = instantiate(ValueSerialiser.class, serialiserClass);
 			serialisers.put(serialiser.getTargetClass(), serialiser);

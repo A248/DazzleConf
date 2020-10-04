@@ -40,7 +40,7 @@ class DefaultMethodConfigInvocationHandler extends ConfigInvocationHandler {
 	}
 	
 	private static Map<Method, MethodHandle> buildDefaultMethodsMap(Object proxy, Set<Method> defaultMethods) {
-		Map<Method, MethodHandle> result = new HashMap<>();
+		Map<Method, MethodHandle> result = new HashMap<>(defaultMethods.size());
 		for (Method method : defaultMethods) {
 			MethodHandle methodHandle = DefaultMethodUtil.createDefaultMethodHandle(method).bindTo(proxy);
 			result.put(method, methodHandle);
