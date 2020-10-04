@@ -155,7 +155,7 @@ public interface FlexibleType {
 	 * @throws BadValueException if the list cannot be made or any flexible type cannot be made into a result
 	 * @throws NullPointerException if {@code elementProcessor} is null
 	 */
-	<E> List<E> getList(FlexibleTypeFunction<E> elementProcessor) throws BadValueException;
+	<E> List<E> getList(FlexibleTypeFunction<? extends E> elementProcessor) throws BadValueException;
 	
 	/**
 	 * Gets the value as a set of further flexible types. This operation may fail if the underlying config value
@@ -177,7 +177,7 @@ public interface FlexibleType {
 	 * @throws BadValueException if the set cannot be made or any flexible type cannot be made into a result
 	 * @throws NullPointerException if {@code elementProcessor} is null
 	 */
-	<E> Set<E> getSet(FlexibleTypeFunction<E> elementProcessor) throws BadValueException;
+	<E> Set<E> getSet(FlexibleTypeFunction<? extends E> elementProcessor) throws BadValueException;
 	
 	/**
 	 * Gets the value as a collection of further flexible types. This operation may fail if the underlying config value
@@ -199,7 +199,7 @@ public interface FlexibleType {
 	 * @throws BadValueException if the collection cannot be made or any flexible type cannot be made into a result
 	 * @throws NullPointerException if {@code elementProcessor} is null
 	 */
-	<E> Collection<E> getCollection(FlexibleTypeFunction<E> elementProcessor) throws BadValueException;
+	<E> Collection<E> getCollection(FlexibleTypeFunction<? extends E> elementProcessor) throws BadValueException;
 	
 	/**
 	 * Gets the value as a map of further flexible types. This operation may fail if the underlying
@@ -221,7 +221,7 @@ public interface FlexibleType {
 	 * @throws BadValueException if the map cannot be made or any flexible type cannot be made into a result
 	 * @throws NullPointerException if {@code entryProcessor} is null
 	 */
-	<K, V> Map<K, V> getMap(FlexibleTypeMapEntryFunction<K, V> entryProcessor) throws BadValueException;
+	<K, V> Map<K, V> getMap(FlexibleTypeMapEntryFunction<? extends K, ? extends V> entryProcessor) throws BadValueException;
 	
 	/**
 	 * Gets this type as some arbitrary object. This may call other configured {@link ValueSerialiser}s which

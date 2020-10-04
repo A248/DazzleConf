@@ -167,8 +167,8 @@ class FlexibleTypeImpl implements FlexibleType {
 	}
 	
 	@Override
-	public <E> List<E> getList(FlexibleTypeFunction<E> elementProcessor) throws BadValueException {
-		return (List<E>) getCollection0(true, elementProcessor);
+	public <E> List<E> getList(FlexibleTypeFunction<? extends E> elementProcessor) throws BadValueException {
+		return (List<E>) this.<E>getCollection0(true, elementProcessor);
 	}
 
 	@Override
@@ -177,8 +177,8 @@ class FlexibleTypeImpl implements FlexibleType {
 	}
 	
 	@Override
-	public <E> Set<E> getSet(FlexibleTypeFunction<E> elementProcessor) throws BadValueException {
-		return (Set<E>) getCollection0(false, elementProcessor);
+	public <E> Set<E> getSet(FlexibleTypeFunction<? extends E> elementProcessor) throws BadValueException {
+		return (Set<E>) this.<E>getCollection0(false, elementProcessor);
 	}
 
 	@Override
@@ -187,11 +187,11 @@ class FlexibleTypeImpl implements FlexibleType {
 	}
 	
 	@Override
-	public <E> Collection<E> getCollection(FlexibleTypeFunction<E> elementProcessor) throws BadValueException {
+	public <E> Collection<E> getCollection(FlexibleTypeFunction<? extends E> elementProcessor) throws BadValueException {
 		return getCollection0(false, elementProcessor);
 	}
 	
-	private <E> Collection<E> getCollection0(boolean ordered, FlexibleTypeFunction<E> elementProcessor)
+	private <E> Collection<E> getCollection0(boolean ordered, FlexibleTypeFunction<? extends E> elementProcessor)
 			throws BadValueException {
 		Objects.requireNonNull(elementProcessor, "elementProcessor");
 		List<?> list;
@@ -216,7 +216,7 @@ class FlexibleTypeImpl implements FlexibleType {
 	}
 	
 	@Override
-	public <K, V> Map<K, V> getMap(FlexibleTypeMapEntryFunction<K, V> entryProcessor) throws BadValueException {
+	public <K, V> Map<K, V> getMap(FlexibleTypeMapEntryFunction<? extends K, ? extends V> entryProcessor) throws BadValueException {
 		Objects.requireNonNull(entryProcessor, "entryProcessor");
 		if (!(value instanceof Map)) {
 			throw badValueExceptionBuilder().message("value " + value + " is not a Map").build();
@@ -224,7 +224,7 @@ class FlexibleTypeImpl implements FlexibleType {
 		Map<?, ?> map = (Map<?, ?>) value;
 		Map<K, V> result = new HashMap<>(map.size());
 		for (Map.Entry<?, ?> entry : map.entrySet()) {
-			Map.Entry<K, V> processed = entryProcessor.getResult(
+			Map.Entry<? extends K, ? extends V> processed = entryProcessor.getResult(
 					deriveFlexibleObject(entry.getKey()), deriveFlexibleObject(entry.getValue()));
 			result.put(processed.getKey(), processed.getValue());
 		}
