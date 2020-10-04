@@ -28,6 +28,7 @@ import space.arim.dazzleconf.error.BadValueException;
  * 
  * @author A248
  *
+ * @param <T> the target type of deserialisation
  */
 public interface ValueSerialiser<T> {
 
