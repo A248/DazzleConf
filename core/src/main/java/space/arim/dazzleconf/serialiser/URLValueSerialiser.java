@@ -57,7 +57,7 @@ public final class URLValueSerialiser implements ValueSerialiser<URL> {
 	}
 
 	@Override
-	public String serialise(URL value) {
+	public String serialise(URL value, Decomposer decomposer) {
 		return value.toExternalForm();
 	}
 

@@ -26,13 +26,11 @@ import java.util.List;
 import java.util.Set;
 
 import space.arim.dazzleconf.ConfigurationOptions;
-import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.ImmutableCollections;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.SingleConfEntry;
-import space.arim.dazzleconf.serialiser.ValueSerialiser;
 
 /**
  * Base class for deprocessors. A deprocessor is responsible for serialising config values. While this
@@ -104,36 +102,9 @@ abstract class DeprocessorBase<C> {
 			return ImmutableCollections.listOf(serialised);
 		}
 
-		if (goal == String.class) {
-			return value;
-		}
-		if (goal == char.class || goal == Character.class) {
-			return String.valueOf(value);
-		}
-		if (value instanceof Boolean || value instanceof Number) { // Includes boxes and primitives
-			return value;
-		}
-		if (value instanceof Enum) {
-			return ((Enum<?>) value).name();
-		}
-		return fromSerialiser(getSerialiser(goal), goal.cast(value));
-	}
-	
-	private <G> ValueSerialiser<G> getSerialiser(Class<G> goal) {
-		ValueSerialiser<G> serialiser  = definition.getSerialisers().getSerialiser(goal);
-		if (serialiser == null) {
-			throw new RuntimeException("Internal error: no ValueSerialiser for " + goal + " at entry " + key);
-		}
-		return serialiser;
-	}
-	
-	private <G> Object fromSerialiser(ValueSerialiser<G> serialiser, G value) {
-		Object serialised = serialiser.serialise(value);
-		if (serialised == null) {
-			throw new IllDefinedConfigException(
-					"At key " + key + ", ValueSerialiser#serialise for " + serialiser + " returned null");
-		}
-		return serialised;
+		@SuppressWarnings("unchecked")
+		G castedValue = (G) value; // a class.cast call breaks primitives
+		return new DecomposerImpl(key, definition.getSerialisers()).decompose(goal, castedValue);
 	}
 	
 }

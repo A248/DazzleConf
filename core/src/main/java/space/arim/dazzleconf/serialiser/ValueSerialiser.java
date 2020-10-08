@@ -53,11 +53,15 @@ public interface ValueSerialiser<T> {
 	
 	/**
 	 * Serialises a value to a raw config value. Should be the inverse operation of {@link #deserialise(FlexibleType)}
-	 * in that if the result of this method were wrapped in a {@link FlexibleType}, it could be deserialised.
+	 * in that if the result of this method were wrapped in a {@link FlexibleType}, it could be deserialised. <br>
+	 * <br>
+	 * If this serialiser serialises values by converting from another custom type, then the provided {@code decomposer}
+	 * should be used to reserialise such custom types.
 	 * 
 	 * @param value the value
+	 * @param decomposer the decomposer used to help breakdown the value
 	 * @return the serialised value
 	 */
-	Object serialise(T value);
+	Object serialise(T value, Decomposer decomposer);
 	
 }
