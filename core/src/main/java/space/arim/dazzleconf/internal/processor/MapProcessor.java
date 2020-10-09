@@ -29,23 +29,23 @@ import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.NestedMapHelper;
 import space.arim.dazzleconf.internal.SingleConfEntry;
 
-public class MapProcessor extends ProcessorBase {
+public class MapProcessor<C> extends ProcessorBase<C> {
 
 	private final NestedMapHelper mapHelper;
 	
-	public MapProcessor(ConfigurationOptions options, ConfigurationDefinition<?> definition,
+	public MapProcessor(ConfigurationOptions options, ConfigurationDefinition<C> definition,
 			Map<String, Object> sourceMap, Object auxiliaryValues) {
 		this(options, definition, new NestedMapHelper(sourceMap), auxiliaryValues);
 	}
 	
 	@Override
-	ProcessorBase continueNested(ConfigurationOptions options, NestedConfEntry<?> childEntry,
+	<N> ProcessorBase<N> continueNested(ConfigurationOptions options, NestedConfEntry<N> childEntry,
 			Object nestedAuxiliaryValues) throws ImproperEntryException {
 		Map<String, Object> childMap = getChildMapFromSources(childEntry, mapHelper);
-		return new MapProcessor(options, childEntry.getDefinition(), childMap, nestedAuxiliaryValues);
+		return new MapProcessor<>(options, childEntry.getDefinition(), childMap, nestedAuxiliaryValues);
 	}
 	
-	private MapProcessor(ConfigurationOptions options, ConfigurationDefinition<?> definition,
+	private MapProcessor(ConfigurationOptions options, ConfigurationDefinition<C> definition,
 			NestedMapHelper mapHelper, Object auxiliaryValues) {
 		super(options, definition, auxiliaryValues);
 		this.mapHelper = mapHelper;

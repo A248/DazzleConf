@@ -34,19 +34,19 @@ import space.arim.dazzleconf.internal.ImmutableCollections;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.SingleConfEntry;
 
-public class DefaultsProcessor extends ProcessorBase {
+public class DefaultsProcessor<C> extends ProcessorBase<C> {
 
-	public DefaultsProcessor(ConfigurationOptions options, ConfigurationDefinition<?> definition) {
+	public DefaultsProcessor(ConfigurationOptions options, ConfigurationDefinition<C> definition) {
 		super(options, definition, null);
 	}
 	
 	@Override
-	ProcessorBase continueNested(ConfigurationOptions options, NestedConfEntry<?> childEntry,
+	<N> ProcessorBase<N> continueNested(ConfigurationOptions options, NestedConfEntry<N> childEntry,
 			Object nestedAuxiliaryValues) throws ImproperEntryException {
 		if (nestedAuxiliaryValues != null) {
 			throw new AssertionError("Internal error: DefaultsProcessor does not handle auxiliary entries");
 		}
-		return new DefaultsProcessor(options, childEntry.getDefinition());
+		return new DefaultsProcessor<>(options, childEntry.getDefinition());
 	}
 
 	@Override

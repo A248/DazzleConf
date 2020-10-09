@@ -48,10 +48,10 @@ import space.arim.dazzleconf.serialiser.FlexibleType;
 import space.arim.dazzleconf.serialiser.FlexibleTypeFunction;
 import space.arim.dazzleconf.validator.ValueValidator;
 
-public abstract class ProcessorBase {
+public abstract class ProcessorBase<C> {
 
 	private final ConfigurationOptions options;
-	private final ConfigurationDefinition<?> definition;
+	private final ConfigurationDefinition<C> definition;
 	private final Object auxiliaryValues;
 	
 	private String key;
@@ -66,43 +66,39 @@ public abstract class ProcessorBase {
 	 * @param definition the config definition
 	 * @param auxiliaryValues the auxiliary config, null for none
 	 */
-	ProcessorBase(ConfigurationOptions options, ConfigurationDefinition<?> definition, Object auxiliaryValues) {
+	ProcessorBase(ConfigurationOptions options, ConfigurationDefinition<C> definition, Object auxiliaryValues) {
 		this.options = options;
 		this.definition = definition;
 		this.auxiliaryValues = auxiliaryValues;
 	}
 	
-	abstract ProcessorBase continueNested(ConfigurationOptions options, NestedConfEntry<?> childEntry,
+	abstract <N> ProcessorBase<N> continueNested(ConfigurationOptions options, NestedConfEntry<N> childEntry,
 			Object nestedAuxiliaryValues) throws ImproperEntryException;
 	
 	/**
-	 * Creates a configuration using the specified processor
+	 * Creates a configuration
 	 * 
-	 * @param <C> the type of the config class
-	 * @param definition the config definition
-	 * @param processor the processor
 	 * @return an instance of the config class
-	 * @throws InvalidConfigException if the input to the processor is invalid for the configuration
+	 * @throws InvalidConfigException if the input to this processor is invalid for the configuration
 	 */
-	public static <C> C createConfig(ConfigurationDefinition<C> definition, ProcessorBase processor) throws InvalidConfigException {
-		processor.process();
+	public C createConfig() throws InvalidConfigException {
+		process();
 
-		ConfigInvocationHandler handler;
-		if (definition.hasDefaultMethods()) {
-			handler = new DefaultMethodConfigInvocationHandler(processor.result);
-		} else {
-			handler = new ConfigInvocationHandler(processor.result);
-		}
 		Class<C> configClass = definition.getConfigClass();
 		Class<?>[] intf;
-		if (processor.usedAuxiliary) {
+		if (usedAuxiliary) {
 			intf = new Class<?>[] {configClass, AuxiliaryKeys.class};
 		} else {
 			intf = new Class<?>[] {configClass};
 		}
-		Object proxy = Proxy.newProxyInstance(configClass.getClassLoader(), intf, handler);
+		ClassLoader classLoader = configClass.getClassLoader();
+		Object proxy;
 		if (definition.hasDefaultMethods()) {
-			((DefaultMethodConfigInvocationHandler) handler).initDefaultMethods(proxy, definition.getDefaultMethods());
+			DefaultMethodConfigInvocationHandler handler = new DefaultMethodConfigInvocationHandler(result);
+			proxy = Proxy.newProxyInstance(classLoader, intf, handler);
+			handler.initDefaultMethods(proxy, definition.getDefaultMethods());
+		} else {
+			proxy = Proxy.newProxyInstance(classLoader, intf, new ConfigInvocationHandler(result));
 		}
 		return configClass.cast(proxy);
 	}
@@ -131,7 +127,7 @@ public abstract class ProcessorBase {
 	private Object getNestedSection(NestedConfEntry<?> nestedEntry) throws InvalidConfigException {
 		Object nestedAuxiliary = (auxiliaryValues == null) ?
 				null : getAuxiliaryValue(nestedEntry); // Pass along auxiliary entries
-		ProcessorBase childProcessor;
+		ProcessorBase<?> childProcessor;
 		try {
 			childProcessor = continueNested(options, nestedEntry, nestedAuxiliary);
 		} catch (MissingKeyException mke) {
@@ -140,7 +136,7 @@ public abstract class ProcessorBase {
 			}
 			return getAuxiliaryValue(nestedEntry);
 		}
-		Object nestedSection = createConfig(nestedEntry.getDefinition(), childProcessor);
+		Object nestedSection = childProcessor.createConfig();
 		if (childProcessor.usedAuxiliary) {
 			usedAuxiliary = true; // propagate auxiliary usage flag upward
 		}
@@ -211,12 +207,14 @@ public abstract class ProcessorBase {
 		} else if (goal == float.class || goal == Float.class) {
 			return getAsNumber(method, flexType).floatValue();
 		}
-		// Same goes for Collections with @CollectionSize
+		/*
+		 * Same goes for Collections and Maps with @CollectionSize.
+		 * Collections and Maps also need to call getList/getSet/getCollection/getMap.
+		 */
 		if (goal == List.class || goal == Set.class || goal == Collection.class) {
 			Class<?> elementType = entry.getCollectionElementType();
 			return getCollection(goal, flexType, method, elementType);
 		}
-		// And Maps with @CollectionSize
 		if (goal == Map.class) {
 			Class<?> keyType = entry.getMapKeyType();
 			Class<?> valueType = entry.getMapValueType();
@@ -227,10 +225,10 @@ public abstract class ProcessorBase {
 		return flexType.getObject(goal);
 	}
 	
-	private <E> Collection<E> getCollection(Class<?> goal, FlexibleType flexType, Method method, Class<E> elementClass)
+	private <E> Collection<E> getCollection(Class<?> goal, FlexibleType flexType, Method method, Class<E> elementType)
 			throws BadValueException {
 
-		FlexibleTypeFunction<E> function = (element) -> element.getObject(elementClass);
+		FlexibleTypeFunction<E> function = (element) -> element.getObject(elementType);
 		Collection<E> collection;
 		if (goal == List.class) {
 			collection = flexType.getList(function);
@@ -245,11 +243,11 @@ public abstract class ProcessorBase {
 		return collection;
 	}
 	
-	private <K, V> Map<K, V> getMap(FlexibleType flexType, Method method, Class<K> keyClass, Class<V> valueClass)
+	private <K, V> Map<K, V> getMap(FlexibleType flexType, Method method, Class<K> keyType, Class<V> valueType)
 			throws BadValueException {
 		Map<K, V> map = flexType.getMap((flexibleKey, flexibleValue) -> {
-			K key = flexibleKey.getObject(keyClass);
-			V value = flexibleValue.getObject(valueClass);
+			K key = flexibleKey.getObject(keyType);
+			V value = flexibleValue.getObject(valueType);
 			return ImmutableCollections.mapEntryOf(key, value);
 		});
 		checkSize(method, map.size());

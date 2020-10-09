@@ -18,17 +18,16 @@
  */
 package space.arim.dazzleconf.internal.deprocessor;
 
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.lang.reflect.Proxy;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
-import space.arim.dazzleconf.internal.ImmutableCollections;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.SingleConfEntry;
 
@@ -42,16 +41,23 @@ import space.arim.dazzleconf.internal.SingleConfEntry;
  */
 abstract class DeprocessorBase<C> {
 
-	final ConfigurationOptions options;
-	private final ConfigurationDefinition<?> definition;
+	private final ConfigurationDefinition<C> definition;
 	private final C configData;
 	
-	private String key;
+	/** InvocationHandler, nonnull if configData is a proxy */
+	private transient final InvocationHandler configDataProxyHandler;
 	
-	DeprocessorBase(ConfigurationOptions options, ConfigurationDefinition<C> definition, C configData) {
-		this.options = options;
+	private transient final DecomposerImpl decomposer;
+	
+	DeprocessorBase(ConfigurationDefinition<C> definition, C configData) {
 		this.definition = definition;
 		this.configData = configData;
+		decomposer = new DecomposerImpl(definition.getSerialisers());
+		if (Proxy.isProxyClass(configData.getClass())) {
+			configDataProxyHandler = Proxy.getInvocationHandler(configData);
+		} else {
+			configDataProxyHandler = null;
+		}
 	}
 	
 	abstract void finishSimple(String key, SingleConfEntry entry, Object value);
@@ -61,22 +67,32 @@ abstract class DeprocessorBase<C> {
 	void deprocess() {
 		for (ConfEntry entry : definition.getEntries()) {
 			String key = entry.getKey();
-			this.key = key;
-			deprocessEntry(entry);
+			decomposer.setKey(key);
+			deprocessEntry(key, entry);
 		}
 	}
 	
-	private void deprocessEntry(ConfEntry entry) {
+	private Object getValueAt(ConfEntry entry) {
 		Method method = entry.getMethod();
-		Object value;
 		try {
-			value = method.invoke(configData);
-		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+			if (configDataProxyHandler != null) {
+				return configDataProxyHandler.invoke(configData, method, null);
+			} else {
+				return method.invoke(configData);
+			}
+
+		} catch (RuntimeException | Error ex) {
+			throw ex;
+		} catch (Throwable ex) {
 			throw new RuntimeException("Exception while invoking implementation of " + entry.getQualifiedMethodName()
-					+ " in " + configData.getClass().getName(), ex);
+			+ " in " + configData.getClass().getName(), ex);
 		}
+	}
+	
+	private void deprocessEntry(String key, ConfEntry entry) {
+		Object value = getValueAt(entry);
 		if (entry instanceof NestedConfEntry) {
-			preContinueNested((NestedConfEntry<?>) entry, value);
+			preContinueNested(key, (NestedConfEntry<?>) entry, value);
 		} else {
 			SingleConfEntry singleEntry = (SingleConfEntry) entry;
 			Object postValue = deprocessObjectAtEntry(singleEntry, value);
@@ -84,7 +100,7 @@ abstract class DeprocessorBase<C> {
 		}
 	}
 	
-	private <N> void preContinueNested(NestedConfEntry<N> childEntry, Object childConf) {
+	private <N> void preContinueNested(String key, NestedConfEntry<N> childEntry, Object childConf) {
 		continueNested(key, childEntry, childEntry.getDefinition().getConfigClass().cast(childConf));
 	}
 	
@@ -93,18 +109,29 @@ abstract class DeprocessorBase<C> {
 	}
 	
 	private <G> Object deprocessObjectAtEntryWithGoal(SingleConfEntry entry, Class<G> goal, Object value) {
-
 		if (goal == List.class || goal == Set.class || goal == Collection.class) {
-			List<Object> serialised = new ArrayList<>();
-			for (Object element : (Collection<?>) value) {
-				serialised.add(deprocessObjectAtEntryWithGoal(entry, entry.getCollectionElementType(), element));
-			}
-			return ImmutableCollections.listOf(serialised);
+			Class<?> elementType = entry.getCollectionElementType();
+			return decomposeCollection(elementType, value);
+		}
+		if (goal == Map.class) {
+			Class<?> keyType = entry.getMapKeyType();
+			Class<?> valueType = entry.getMapValueType();
+			return decomposeMap(keyType, valueType, value);
 		}
 
 		@SuppressWarnings("unchecked")
 		G castedValue = (G) value; // a class.cast call breaks primitives
-		return new DecomposerImpl(key, definition.getSerialisers()).decompose(goal, castedValue);
+		return decomposer.decompose(goal, castedValue);
+	}
+	
+	@SuppressWarnings("unchecked")
+	private <E> Collection<Object> decomposeCollection(Class<E> elementType, Object value) {
+		return decomposer.decomposeCollection(elementType, (Collection<E>) value);
+	}
+	
+	@SuppressWarnings("unchecked")
+	private <K, V> Map<Object, Object> decomposeMap(Class<K> keyType, Class<V> valueType, Object value) {
+		return decomposer.decomposeMap(keyType, valueType, (Map<K, V>) value);
 	}
 	
 }

@@ -43,10 +43,11 @@ public abstract class BaseConfigurationFactoryImpl<C> implements ConfigurationFa
 	private final ConfigurationOptions options;
 	
 	protected BaseConfigurationFactoryImpl(Class<C> configClass, ConfigurationOptions options) {
+		Objects.requireNonNull(configClass, "configClazz");
 		if (!configClass.isInterface()) {
 			throw new IllegalArgumentException(configClass.getName() + " is not an interface");
 		}
-		this.configClass = Objects.requireNonNull(configClass, "configClazz");
+		this.configClass = configClass;
 		this.options = Objects.requireNonNull(options, "options");
 	}
 	

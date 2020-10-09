@@ -51,9 +51,9 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 
 	@Override
 	public C loadDefaults() {
-		ProcessorBase processor = new DefaultsProcessor(getOptions(), definition);
+		ProcessorBase<C> processor = new DefaultsProcessor<>(getOptions(), definition);
 		try {
-			return fromProcessor(processor);
+			return processor.createConfig();
 		} catch (InvalidConfigException ex) {
 			throw new IllDefinedConfigException(ex);
 		}
@@ -72,7 +72,7 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 	}
 	
 	/**
-	 * For use by testing (SerialisationFactory)
+	 * Visible for use by testing (SerialisationFactory)
 	 * 
 	 * @param rawMap the raw map of nested values
 	 * @return the config data
@@ -83,11 +83,7 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 	}
 
 	private C fromRawMap(Map<String, Object> rawMap, Object auxiliaryValues) throws InvalidConfigException {
-		return fromProcessor(new MapProcessor(getOptions(), definition, rawMap, auxiliaryValues));
-	}
-	
-	private C fromProcessor(ProcessorBase processor) throws InvalidConfigException {
-		return ProcessorBase.createConfig(definition, processor);
+		return new MapProcessor<>(getOptions(), definition, rawMap, auxiliaryValues).createConfig();
 	}
 	
 	/*
@@ -102,7 +98,7 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 	}
 	
 	/**
-	 * For use by testing (SerialisationFactory)
+	 * Visible for use by testing (SerialisationFactory)
 	 * 
 	 * @param configData the config data
 	 * @return the raw map of nested values
@@ -113,7 +109,7 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 	}
 	
 	protected MapDeprocessor<C> createMapDeprocessor(C configData) {
-		return new MapDeprocessor<>(getOptions(), getDefinition(), configData);
+		return new MapDeprocessor<>(getDefinition(), configData);
 	}
 
 }

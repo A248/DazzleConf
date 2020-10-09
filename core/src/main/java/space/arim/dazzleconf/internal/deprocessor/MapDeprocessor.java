@@ -21,7 +21,6 @@ package space.arim.dazzleconf.internal.deprocessor;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.NestedConfEntry;
@@ -32,8 +31,8 @@ public class MapDeprocessor<C> extends DeprocessorBase<C> {
 
 	final NestedMapHelper mapHelper = new NestedMapHelper(new LinkedHashMap<>());
 	
-	public MapDeprocessor(ConfigurationOptions options, ConfigurationDefinition<C> definition, C configData) {
-		super(options, definition, configData);
+	public MapDeprocessor(ConfigurationDefinition<C> definition, C configData) {
+		super(definition, configData);
 	}
 
 	@Override
@@ -53,7 +52,7 @@ public class MapDeprocessor<C> extends DeprocessorBase<C> {
 	}
 	
 	<N> MapDeprocessor<N> createChildDeprocessor(NestedConfEntry<N> childEntry, N childConf) {
-		return new MapDeprocessor<>(options, childEntry.getDefinition(), childConf);
+		return new MapDeprocessor<>(childEntry.getDefinition(), childConf);
 	}
 	
 	public Map<String, Object> deprocessAndGetResult() {

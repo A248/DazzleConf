@@ -29,7 +29,7 @@ import space.arim.dazzleconf.internal.ImmutableCollections;
 
 class DefaultMethodConfigInvocationHandler extends ConfigInvocationHandler {
 
-	private volatile Map<Method, MethodHandle> defaultMethodsMap;
+	private Map<Method, MethodHandle> defaultMethodsMap;
 	
 	DefaultMethodConfigInvocationHandler(Map<String, Object> configMap) {
 		super(configMap);
