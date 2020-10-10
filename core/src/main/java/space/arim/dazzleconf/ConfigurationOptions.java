@@ -19,6 +19,7 @@
 package space.arim.dazzleconf;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -139,7 +140,8 @@ public final class ConfigurationOptions {
 	@Override
 	public String toString() {
 		return "ConfigurationOptions [serialisers=" + serialisers + ", validators=" + validators + ", sorter=" + sorter
-				+ ", strictParseEnums=" + strictParseEnums + "]";
+				+ ", strictParseEnums=" + strictParseEnums + ", createSingleElementCollections="
+				+ createSingleElementCollections + "]";
 	}
 
 	/**
@@ -162,13 +164,45 @@ public final class ConfigurationOptions {
 		 * @param serialiser the value serialiser
 		 * @return this builder
 		 * @throws NullPointerException if {@code serialiser} is null
-		 * @throws IllegalArgumentException if this serialiser conflicts with an existing one
+		 * @throws IllegalArgumentException if the serialiser conflicts with an existing one
 		 */
 		public Builder addSerialiser(ValueSerialiser<?> serialiser) {
 			Objects.requireNonNull(serialiser, "serialiser");
 			ValueSerialiser<?> previous = serialisers.putIfAbsent(serialiser.getTargetClass(), serialiser);
 			if (previous != null) {
 				throw new IllegalArgumentException("ValueSerialiser " + serialiser + " conflicts with " + previous);
+			}
+			return this;
+		}
+		
+		/**
+		 * Adds the specified value serialisers to this builder
+		 * 
+		 * @param serialisers the value serialisers
+		 * @return this builder
+		 * @throws NullPointerException if {@code serialisers} or an element in it is null
+		 * @throws IllegalArgumentException if any serialiser conflicts with an existing one
+		 */
+		public Builder addSerialisers(ValueSerialiser<?>...serialisers) {
+			Objects.requireNonNull(serialisers, "serialisers");
+			for (ValueSerialiser<?> serialiser : serialisers) {
+				addSerialiser(serialiser);
+			}
+			return this;
+		}
+		
+		/**
+		 * Adds the specified value serialisers to this builder
+		 * 
+		 * @param serialisers the value serialisers
+		 * @return this builder
+		 * @throws NullPointerException if {@code serialisers} or an element in it is null
+		 * @throws IllegalArgumentException if any serialiser conflicts with an existing one
+		 */
+		public Builder addSerialisers(List<ValueSerialiser<?>> serialisers) {
+			Objects.requireNonNull(serialisers, "serialisers");
+			for (ValueSerialiser<?> serialiser : serialisers) {
+				addSerialiser(serialiser);
 			}
 			return this;
 		}
@@ -193,6 +227,21 @@ public final class ConfigurationOptions {
 		 */
 		public Builder addValidator(String key, ValueValidator validator) {
 			validators.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(validator, "validator"));
+			return this;
+		}
+		
+		/**
+		 * Adds the specified value validators to this builder
+		 * 
+		 * @param validators the map of keys at which the validators are placed to the validators themselves
+		 * @return this builder
+		 * @throws NullPointerException if the map, any key, or any value is null
+		 */
+		public Builder addValidators(Map<String, ? extends ValueValidator> validators) {
+			Objects.requireNonNull(validators, "validators");
+			for (Map.Entry<String, ? extends ValueValidator> entry : validators.entrySet()) {
+				addValidator(entry.getKey(), entry.getValue());
+			}
 			return this;
 		}
 		
@@ -251,6 +300,13 @@ public final class ConfigurationOptions {
 		 */
 		public ConfigurationOptions build() {
 			return new ConfigurationOptions(this);
+		}
+
+		@Override
+		public String toString() {
+			return "ConfigurationOptions.Builder [serialisers=" + serialisers + ", validators=" + validators
+					+ ", sorter=" + sorter + ", strictParseEnums=" + strictParseEnums
+					+ ", createSingleElementCollections="+ createSingleElementCollections + "]";
 		}
 		
 	}
