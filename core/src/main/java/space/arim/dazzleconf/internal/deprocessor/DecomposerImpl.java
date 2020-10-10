@@ -92,7 +92,7 @@ class DecomposerImpl implements Decomposer {
 
 	@Override
 	public <E> Collection<Object> decomposeCollection(Class<E> elementType, Collection<? extends E> collection) {
-		List<Object> serialised = new ArrayList<>();
+		List<Object> serialised = new ArrayList<>(collection.size());
 		for (E element : collection) {
 			serialised.add(decompose(elementType, element));
 		}
@@ -101,7 +101,7 @@ class DecomposerImpl implements Decomposer {
 
 	@Override
 	public <K, V> Map<Object, Object> decomposeMap(Class<K> keyType, Class<V> valueType, Map<? extends K, ? extends V> map) {
-		Map<Object, Object> serialised = new LinkedHashMap<>();
+		Map<Object, Object> serialised = new LinkedHashMap<>(map.size());
 		for (Map.Entry<? extends K, ? extends V> mapEntry : map.entrySet()) {
 			serialised.put(
 					decompose(keyType, mapEntry.getKey()),
