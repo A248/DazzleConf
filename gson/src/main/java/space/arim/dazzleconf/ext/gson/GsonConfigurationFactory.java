@@ -36,9 +36,7 @@ import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.ConfigFormatSyntaxException;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
-import space.arim.dazzleconf.internal.AbstractConfigurationFactoryImpl;
-import space.arim.dazzleconf.internal.deprocessor.AddCommentStringBeforeDeprocessor;
-import space.arim.dazzleconf.internal.deprocessor.MapDeprocessor;
+import space.arim.dazzleconf.factory.AbstractConfigurationFactory;
 
 /**
  * A {@link ConfigurationFactory} implementation using Gson to load a json configuration
@@ -47,7 +45,7 @@ import space.arim.dazzleconf.internal.deprocessor.MapDeprocessor;
  *
  * @param <C> the configuration class
  */
-public final class GsonConfigurationFactory<C> extends AbstractConfigurationFactoryImpl<C> {
+public class GsonConfigurationFactory<C> extends AbstractConfigurationFactory<C> {
 
 	private final GsonOptions gsonOptions;
 	
@@ -117,11 +115,11 @@ public final class GsonConfigurationFactory<C> extends AbstractConfigurationFact
 	}
 	
 	@Override
-	protected MapDeprocessor<C> createMapDeprocessor(C configData) {
+	protected String pseudoCommentsSuffix() {
 		if (gsonOptions.pseudoComments()) {
-			return new AddCommentStringBeforeDeprocessor<>(getDefinition(), configData);
+			return "-comment";
 		}
-		return super.createMapDeprocessor(configData);
+		return "";
 	}
 
 }

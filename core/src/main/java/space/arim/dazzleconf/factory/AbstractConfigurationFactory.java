@@ -31,6 +31,7 @@ import space.arim.dazzleconf.error.ConfigFormatSyntaxException;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.internal.AbstractConfigurationFactoryImpl;
 import space.arim.dazzleconf.internal.ConfigurationInfo;
+import space.arim.dazzleconf.internal.deprocessor.AddCommentStringBeforeDeprocessor;
 import space.arim.dazzleconf.internal.deprocessor.CommentedDeprocessor;
 import space.arim.dazzleconf.internal.deprocessor.MapDeprocessor;
 
@@ -106,6 +107,23 @@ public abstract class AbstractConfigurationFactory<C> extends DelegatingConfigur
 	}
 	
 	/**
+	 * If the configuration format does not natively support comments, it is possible to attach a "comment"
+	 * as a string value before the configuration entry which is to be commented, with the use of some key suffix. <br>
+	 * <br>
+	 * If this method returns a non empty string, this feature is enabled. For example, if this returns
+	 * {@literal '-comment'}, using the Json configuration language, comments will be written as shown:
+	 * <pre>
+	 *   retries-comment: "determines the amount of retries"
+     *   retries: 3
+     * </pre>
+	 * 
+	 * @return an empty string if disabled, otherwise the suffix to append to form the keys of comments
+	 */
+	protected String pseudoCommentsSuffix() {
+		return "";
+	}
+	
+	/**
 	 * Gets the comment header on the top level configuration
 	 * 
 	 * @return the comment header
@@ -153,6 +171,10 @@ public abstract class AbstractConfigurationFactory<C> extends DelegatingConfigur
 		protected MapDeprocessor<C> createMapDeprocessor(C configData) {
 			if (AbstractConfigurationFactory.this.supportsCommentsThroughWrapper()) {
 				return new CommentedDeprocessor<>(getDefinition(), configData);
+			}
+			String pseudoCommentsSuffix = AbstractConfigurationFactory.this.pseudoCommentsSuffix();
+			if (!pseudoCommentsSuffix.isEmpty()) {
+				return new AddCommentStringBeforeDeprocessor<>(getDefinition(), configData, pseudoCommentsSuffix);
 			}
 			return super.createMapDeprocessor(configData);
 		}
