@@ -48,7 +48,7 @@ public interface MyConfig {
   int someInteger();
   
   @ConfKey("display.user-message")
-  @ConfComment("The message shown when a certain thing happens")
+  @ConfComments("The message shown when a certain thing happens")
   @DefaultString("Hello user")
   String userMessage();
   
@@ -80,7 +80,7 @@ public enum MyEnum {
 
 public interface SubSection {
 
-  @ConfComment("Every annotation shown above works here too")
+  @ConfComments("Every annotation shown above works here too")
   @DefaultString("Also, all annotations are inherited, enabling inheritable config interfaces")
   String flexibility();
 
