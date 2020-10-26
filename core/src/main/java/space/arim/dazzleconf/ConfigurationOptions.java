@@ -18,8 +18,8 @@
  */
 package space.arim.dazzleconf;
 
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -199,7 +199,7 @@ public final class ConfigurationOptions {
 		 * @throws NullPointerException if {@code serialisers} or an element in it is null
 		 * @throws IllegalArgumentException if any serialiser conflicts with an existing one
 		 */
-		public Builder addSerialisers(List<ValueSerialiser<?>> serialisers) {
+		public Builder addSerialisers(Collection<ValueSerialiser<?>> serialisers) {
 			Objects.requireNonNull(serialisers, "serialisers");
 			for (ValueSerialiser<?> serialiser : serialisers) {
 				addSerialiser(serialiser);

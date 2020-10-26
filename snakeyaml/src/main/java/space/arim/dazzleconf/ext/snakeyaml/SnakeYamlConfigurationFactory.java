@@ -23,6 +23,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.Objects;
 
 import org.yaml.snakeyaml.error.YAMLException;
 
@@ -49,13 +50,13 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 	 * @param configClazz the config class
 	 * @param options the config options
 	 * @param yamlOptions the snake yaml options
-	 * @throws NullPointerException if {@code configClazz} or {@code options} is null
+	 * @throws NullPointerException if {@code configClazz}, {@code options}, or {@code yamlOptions} is null
 	 * @throws IllegalArgumentException if {@code configClazz} is not an interface
 	 * @throws IllDefinedConfigException if a configuration entry in {@code configClazz} is not defined properly
 	 */
 	public SnakeYamlConfigurationFactory(Class<C> configClazz, ConfigurationOptions options, SnakeYamlOptions yamlOptions) {
 		super(configClazz, options);
-		this.yamlOptions = yamlOptions;
+		this.yamlOptions = Objects.requireNonNull(yamlOptions, "yamlOptions");
 	}
 	
 	/**

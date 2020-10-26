@@ -23,6 +23,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.Objects;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonIOException;
@@ -55,13 +56,13 @@ public class GsonConfigurationFactory<C> extends AbstractConfigurationFactory<C>
 	 * @param configClazz the config class
 	 * @param options the config options
 	 * @param gsonOptions the gson options
-	 * @throws NullPointerException if {@code configClazz} or {@code options} is null
+	 * @throws NullPointerException if {@code configClazz}, {@code options}, or {@code gsonOptions} is null
 	 * @throws IllegalArgumentException if {@code configClazz} is not an interface
 	 * @throws IllDefinedConfigException if a configuration entry in {@code configClazz} is not defined properly
 	 */
 	public GsonConfigurationFactory(Class<C> configClazz, ConfigurationOptions options, GsonOptions gsonOptions) {
 		super(configClazz, options);
-		this.gsonOptions = gsonOptions;
+		this.gsonOptions = Objects.requireNonNull(gsonOptions, "gsonOptions");
 	}
 	
 	/**
