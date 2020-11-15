@@ -16,7 +16,7 @@
  * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
-package space.arim.dazzleconf.internal;
+package space.arim.dazzleconf.internal.util;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -27,9 +27,19 @@ import java.lang.reflect.Modifier;
 
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 
-public final class DefaultMethodUtil {
+public final class MethodUtil {
 
-	private DefaultMethodUtil() {}
+	private MethodUtil() {}
+	
+	/**
+	 * Gets the qualified name of a method
+	 * 
+	 * @param method the method
+	 * @return the qualified name
+	 */
+	public static String getQualifiedName(Method method) {
+		return method.getDeclaringClass().getName() + "#" + method.getName();
+	}
 	
 	/**
 	 * Micro optimised version of {@link Method#isDefault()} since it is known the declaring class is an interface

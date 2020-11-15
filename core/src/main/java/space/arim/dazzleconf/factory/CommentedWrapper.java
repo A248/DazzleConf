@@ -21,7 +21,7 @@ package space.arim.dazzleconf.factory;
 import java.util.List;
 import java.util.Objects;
 
-import space.arim.dazzleconf.internal.ImmutableCollections;
+import space.arim.dazzleconf.internal.util.ImmutableCollections;
 
 /**
  * A simple wrapper used to attach comments to a configuration wrapper. Often requires special treatment when handling

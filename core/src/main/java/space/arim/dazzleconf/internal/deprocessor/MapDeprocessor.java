@@ -36,18 +36,18 @@ public class MapDeprocessor<C> extends DeprocessorBase<C> {
 	}
 
 	@Override
-	final void finishSimple(String key, SingleConfEntry entry, Object value) {
-		mapHelper.put(key, wrapValue(key, entry, value));
+	final void finishSingle(SingleConfEntry entry, Object value) {
+		mapHelper.put(entry.getKey(), wrapValue(entry, value));
 	}
 	
 	@Override
-	final <N> void continueNested(String key, NestedConfEntry<N> childEntry, N childConf) {
+	final <N> void continueNested(NestedConfEntry<N> childEntry, N childConf) {
 		MapDeprocessor<N> deprocessor = createChildDeprocessor(childEntry, childConf);
-		mapHelper.combine(key, wrapValue(key, childEntry, deprocessor.deprocessAndGetResult()));
+		mapHelper.combine(childEntry.getKey(), wrapValue(childEntry, deprocessor.deprocessAndGetResult()));
 	}
 	
 	@SuppressWarnings("unused")
-	Object wrapValue(String key, ConfEntry entry, Object value) {
+	Object wrapValue(ConfEntry entry, Object value) {
 		return value;
 	}
 	

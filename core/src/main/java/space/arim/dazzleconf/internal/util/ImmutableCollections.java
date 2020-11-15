@@ -16,7 +16,7 @@
  * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
-package space.arim.dazzleconf.internal;
+package space.arim.dazzleconf.internal.util;
 
 import java.util.Arrays;
 import java.util.Collection;

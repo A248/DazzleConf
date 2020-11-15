@@ -24,8 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import space.arim.dazzleconf.internal.DefaultMethodUtil;
-import space.arim.dazzleconf.internal.ImmutableCollections;
+import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import space.arim.dazzleconf.internal.util.MethodUtil;
 
 class DefaultMethodConfigInvocationHandler extends ConfigInvocationHandler {
 
@@ -42,7 +42,7 @@ class DefaultMethodConfigInvocationHandler extends ConfigInvocationHandler {
 	private static Map<Method, MethodHandle> buildDefaultMethodsMap(Object proxy, Set<Method> defaultMethods) {
 		Map<Method, MethodHandle> result = new HashMap<>(defaultMethods.size());
 		for (Method method : defaultMethods) {
-			MethodHandle methodHandle = DefaultMethodUtil.createDefaultMethodHandle(method).bindTo(proxy);
+			MethodHandle methodHandle = MethodUtil.createDefaultMethodHandle(method).bindTo(proxy);
 			result.put(method, methodHandle);
 		}
 		return ImmutableCollections.mapOf(result);
@@ -50,7 +50,7 @@ class DefaultMethodConfigInvocationHandler extends ConfigInvocationHandler {
 	
 	@Override
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-		if (method.getDeclaringClass() != Object.class && DefaultMethodUtil.isDefault(method)) {
+		if (method.getDeclaringClass() != Object.class && MethodUtil.isDefault(method)) {
 			return defaultMethodsMap.get(method).invokeWithArguments(args);
 		}
 		return super.invoke(proxy, method, args);

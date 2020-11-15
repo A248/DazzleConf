@@ -82,7 +82,7 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 		return fromRawMap(rawMap, null);
 	}
 
-	private C fromRawMap(Map<String, Object> rawMap, Object auxiliaryValues) throws InvalidConfigException {
+	private C fromRawMap(Map<String, Object> rawMap, C auxiliaryValues) throws InvalidConfigException {
 		return new MapProcessor<>(getOptions(), definition, rawMap, auxiliaryValues).createConfig();
 	}
 	

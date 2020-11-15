@@ -32,7 +32,7 @@ import java.util.Set;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.BadValueException;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
-import space.arim.dazzleconf.internal.ImmutableCollections;
+import space.arim.dazzleconf.internal.util.ImmutableCollections;
 import space.arim.dazzleconf.serialiser.FlexibleType;
 import space.arim.dazzleconf.serialiser.FlexibleTypeFunction;
 import space.arim.dazzleconf.serialiser.FlexibleTypeMapEntryFunction;

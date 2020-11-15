@@ -32,15 +32,12 @@ import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 
 class DecomposerImpl implements Decomposer {
 
-	private String key;
+	private final String key;
 	private final ValueSerialiserMap serialisers;
 	
-	DecomposerImpl(ValueSerialiserMap serialisers) {
-		this.serialisers = serialisers;
-	}
-	
-	void setKey(String key) {
+	DecomposerImpl(String key, ValueSerialiserMap serialisers) {
 		this.key = key;
+		this.serialisers = serialisers;
 	}
 	
 	@Override

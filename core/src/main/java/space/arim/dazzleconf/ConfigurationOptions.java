@@ -25,7 +25,7 @@ import java.util.Objects;
 
 import space.arim.dazzleconf.annote.ConfSerialisers;
 import space.arim.dazzleconf.annote.ConfValidator;
-import space.arim.dazzleconf.internal.ImmutableCollections;
+import space.arim.dazzleconf.internal.util.ImmutableCollections;
 import space.arim.dazzleconf.serialiser.ValueSerialiser;
 import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 import space.arim.dazzleconf.sorter.ConfigurationSorter;

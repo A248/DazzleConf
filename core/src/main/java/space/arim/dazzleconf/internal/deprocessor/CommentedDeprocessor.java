@@ -32,7 +32,7 @@ public class CommentedDeprocessor<C> extends MapDeprocessor<C> {
 	}
 	
 	@Override
-	Object wrapValue(String key, ConfEntry entry, Object value) {
+	Object wrapValue(ConfEntry entry, Object value) {
 		List<String> comments = entry.getComments();
 		if (comments.size() > 0) {
 			return new CommentedWrapper(comments, value);

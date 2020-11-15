@@ -24,7 +24,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Map;
 
-import space.arim.dazzleconf.internal.ImmutableCollections;
+import space.arim.dazzleconf.internal.util.ImmutableCollections;
 
 class ConfigInvocationHandler implements InvocationHandler {
 

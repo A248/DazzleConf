@@ -34,21 +34,21 @@ public class MapProcessor<C> extends ProcessorBase<C> {
 	private final NestedMapHelper mapHelper;
 	
 	public MapProcessor(ConfigurationOptions options, ConfigurationDefinition<C> definition,
-			Map<String, Object> sourceMap, Object auxiliaryValues) {
+			Map<String, Object> sourceMap, C auxiliaryValues) {
 		this(options, definition, new NestedMapHelper(sourceMap), auxiliaryValues);
+	}
+	
+	private MapProcessor(ConfigurationOptions options, ConfigurationDefinition<C> definition,
+			NestedMapHelper mapHelper, C auxiliaryValues) {
+		super(options, definition, auxiliaryValues);
+		this.mapHelper = mapHelper;
 	}
 	
 	@Override
 	<N> ProcessorBase<N> continueNested(ConfigurationOptions options, NestedConfEntry<N> childEntry,
-			Object nestedAuxiliaryValues) throws ImproperEntryException {
+			N nestedAuxiliaryValues) throws ImproperEntryException {
 		Map<String, Object> childMap = getChildMapFromSources(childEntry, mapHelper);
 		return new MapProcessor<>(options, childEntry.getDefinition(), childMap, nestedAuxiliaryValues);
-	}
-	
-	private MapProcessor(ConfigurationOptions options, ConfigurationDefinition<C> definition,
-			NestedMapHelper mapHelper, Object auxiliaryValues) {
-		super(options, definition, auxiliaryValues);
-		this.mapHelper = mapHelper;
 	}
 	
 	@SuppressWarnings("unchecked")

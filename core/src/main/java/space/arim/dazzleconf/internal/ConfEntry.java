@@ -24,6 +24,8 @@ import java.util.function.Supplier;
 
 import space.arim.dazzleconf.annote.ConfComments;
 import space.arim.dazzleconf.annote.ConfKey;
+import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import space.arim.dazzleconf.internal.util.MethodUtil;
 import space.arim.dazzleconf.sorter.SortableConfigurationEntry;
 
 public abstract class ConfEntry implements SortableConfigurationEntry {
@@ -80,7 +82,7 @@ public abstract class ConfEntry implements SortableConfigurationEntry {
 	 * @return the qualified name of the method
 	 */
 	public String getQualifiedMethodName() {
-		return method.getDeclaringClass().getName() + "#" + method.getName();
+		return MethodUtil.getQualifiedName(method);
 	}
 
 	@Override

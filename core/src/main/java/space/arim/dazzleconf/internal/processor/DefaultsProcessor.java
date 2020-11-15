@@ -30,9 +30,9 @@ import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.error.ImproperEntryException;
 import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
-import space.arim.dazzleconf.internal.ImmutableCollections;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.SingleConfEntry;
+import space.arim.dazzleconf.internal.util.ImmutableCollections;
 
 public class DefaultsProcessor<C> extends ProcessorBase<C> {
 
@@ -42,7 +42,7 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 	
 	@Override
 	<N> ProcessorBase<N> continueNested(ConfigurationOptions options, NestedConfEntry<N> childEntry,
-			Object nestedAuxiliaryValues) throws ImproperEntryException {
+			N nestedAuxiliaryValues) throws ImproperEntryException {
 		if (nestedAuxiliaryValues != null) {
 			throw new AssertionError("Internal error: DefaultsProcessor does not handle auxiliary entries");
 		}

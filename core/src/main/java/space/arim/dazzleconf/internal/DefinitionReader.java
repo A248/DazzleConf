@@ -24,35 +24,28 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.annote.ConfSerialisers;
-import space.arim.dazzleconf.annote.ConfValidator;
-import space.arim.dazzleconf.annote.SubSection;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
+import space.arim.dazzleconf.internal.util.MethodUtil;
 import space.arim.dazzleconf.serialiser.ValueSerialiser;
 import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 import space.arim.dazzleconf.sorter.ConfigurationSorter;
-import space.arim.dazzleconf.validator.ValueValidator;
 
 public class DefinitionReader<C> {
 
 	private final Class<C> configClass;
 	private final ConfigurationOptions options;
 	
-	private Method method;
-	
 	private final Set<Class<?>> nestedConfigDejaVu;
 	
 	private final Set<Method> defaultMethods = new HashSet<>();
-	private final List<ConfEntry> entries;
-	/**
-	 * Value serialiser map, empty if ConfSerialisers annotation not specified
-	 */
-	private final Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>();
+	private final Map<String, ConfEntry> entries = new LinkedHashMap<>();
 	
 	DefinitionReader(Class<C> configClass, ConfigurationOptions options) {
 		this(configClass, options, new HashSet<>());
@@ -62,39 +55,35 @@ public class DefinitionReader<C> {
 			Set<Class<?>> nestedConfigDejaVu) {
 		this.configClass = configClass;
 		this.options = options;
-		entries = new ArrayList<>();
 		this.nestedConfigDejaVu = nestedConfigDejaVu;
 	}
 	
-	private ConfigurationSorter sorter() {
-		return options.getSorter();
-	}
-	
 	ConfigurationInfo<C> read() {
-		readSerialisers();
-		readEntries();
-		ValueSerialiserMap serialiserMap = (serialisers.isEmpty()) ? options.getSerialisers() : ValueSerialiserMap.of(serialisers);
-		return new ConfigurationInfo<>(configClass, options, entries, defaultMethods, serialiserMap);
+		ValueSerialiserMap serialiserMap = readSerialisers();
+		Map<String, ConfEntry> sortedEntries = readAndSortEntries();
+		return new ConfigurationInfo<>(configClass, options, sortedEntries, defaultMethods, serialiserMap);
 	}
 	
-	private void readSerialisers() {
+	private ValueSerialiserMap readSerialisers() {
 		ConfSerialisers confSerialisers = configClass.getAnnotation(ConfSerialisers.class);
 		if (confSerialisers == null) {
-			return;
+			return options.getSerialisers();
 		}
+		Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>();
 		serialisers.putAll(options.getSerialisers().asMap());
 		for (Class<? extends ValueSerialiser<?>> serialiserClass : confSerialisers.value()) {
 			ValueSerialiser<?> serialiser = instantiate(ValueSerialiser.class, serialiserClass);
 			serialisers.put(serialiser.getTargetClass(), serialiser);
 		}
+		return ValueSerialiserMap.of(serialisers);
 	}
 	
-	private void readEntries() {
+	private Map<String, ConfEntry> readAndSortEntries() {
 		if (!nestedConfigDejaVu.add(configClass)) {
 			throw new IllDefinedConfigException("Circular nested configuration for " + configClass.getName());
 		}
 		for (Method method : configClass.getMethods()) {
-			if (DefaultMethodUtil.isDefault(method)) {
+			if (MethodUtil.isDefault(method)) {
 				defaultMethods.add(method);
 				continue;
 			}
@@ -102,44 +91,37 @@ public class DefinitionReader<C> {
 		}
 		boolean cleared = nestedConfigDejaVu.remove(configClass);
 		assert cleared : configClass;
-		// Sort entries
-		ConfigurationSorter sorter = sorter();
-		if (sorter != null) {
-			entries.sort(sorter);
+
+		/*
+		 * Sort entries
+		 */
+		ConfigurationSorter sorter = options.getSorter();
+		if (sorter == null) {
+			return entries;
 		}
+		List<ConfEntry> entriesList = new ArrayList<>(entries.values());
+		entriesList.sort(sorter);
+
+		Map<String, ConfEntry> sortedEntries = new LinkedHashMap<>(entriesList.size());
+		for (ConfEntry entry : entriesList) {
+			sortedEntries.put(entry.getKey(), entry);
+		}
+		return sortedEntries;
 	}
 	
 	private void create(Method method) {
-		if (method.getParameterCount() > 0) {
-			throw new IllDefinedConfigException("Cannot use a method with parameters in a configuration");
-		}
-		this.method = method;
-		ConfEntry toAdd = create0();
-		boolean added = entries.add(toAdd);
-		if (!added) {
-			throw new IllDefinedConfigException("Duplicate key " + toAdd.getKey());
+		ConfEntry entry = new ConfEntryCreation(this, method).create();
+		ConfEntry previous = entries.put(entry.getKey(), entry);
+		if (previous != null) {
+			throw new IllDefinedConfigException("Duplicate key " + entry.getKey());
 		}
 	}
 	
-	private ConfEntry create0() {
-		if (method.getAnnotation(SubSection.class) != null) {
-			Class<?> configClass = method.getReturnType();
-			if (!configClass.isInterface()) {
-				throw new IllDefinedConfigException(configClass.getName() + " is not an interface");
-			}
-			DefinitionReader<?> nestedReader = new DefinitionReader<>(configClass, options, nestedConfigDejaVu);
-			return new NestedConfEntry<>(method, nestedReader.read());
-		}
-		ValueValidator validator = getValidator();
-		return new SingleConfEntry(method, validator);
+	<N> DefinitionReader<N> createNestedReader(Class<N> configClass) {
+		return new DefinitionReader<>(configClass, options, nestedConfigDejaVu);
 	}
 	
-	private ValueValidator getValidator() {
-		ConfValidator chosenValidator = method.getAnnotation(ConfValidator.class);
-		return (chosenValidator == null) ? null : instantiate(ValueValidator.class, chosenValidator.value());
-	}
-	
-	private <V> V instantiate(Class<V> intf, Class<? extends V> impl) {
+	<V> V instantiate(Class<V> intf, Class<? extends V> impl) {
 		try {
 			Method createMethod = impl.getDeclaredMethod("getInstance");
 			if (Modifier.isStatic(createMethod.getModifiers()) && intf.isAssignableFrom(createMethod.getReturnType())) {

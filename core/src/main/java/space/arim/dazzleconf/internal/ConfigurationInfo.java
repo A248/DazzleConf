@@ -19,7 +19,7 @@
 package space.arim.dazzleconf.internal;
 
 import java.lang.reflect.Method;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import space.arim.dazzleconf.ConfigurationOptions;
@@ -29,7 +29,7 @@ public class ConfigurationInfo<C> extends ConfigurationDefinition<C> {
 
 	private final ConfigurationOptions options;
 	
-	ConfigurationInfo(Class<C> configClass, ConfigurationOptions options, List<ConfEntry> entries,
+	ConfigurationInfo(Class<C> configClass, ConfigurationOptions options, Map<String, ConfEntry> entries,
 			Set<Method> defaultMethods, ValueSerialiserMap serialisers) {
 		super(configClass, entries, defaultMethods, serialisers);
 		this.options = options;

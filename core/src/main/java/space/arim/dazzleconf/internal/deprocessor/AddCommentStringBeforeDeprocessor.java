@@ -34,10 +34,10 @@ public class AddCommentStringBeforeDeprocessor<C> extends MapDeprocessor<C> {
 	}
 	
 	@Override
-	Object wrapValue(String key, ConfEntry entry, Object value) {
+	Object wrapValue(ConfEntry entry, Object value) {
 		List<String> comments = entry.getComments();
 		if (comments.size() > 0) {
-			mapHelper.put(key + suffix, String.join("\n", comments));
+			mapHelper.put(entry.getKey() + suffix, String.join("\n", comments));
 		}
 		return value;
 	}
