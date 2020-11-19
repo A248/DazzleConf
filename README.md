@@ -13,7 +13,7 @@ A type-safe, thread-safe, fail-fast, user-oriented, easy to setup, extensible an
 
 * *Eliminate* stringly-typed spaghetti such as `getString("key")` or `getAsInt("section.subsection")`. Use your configuration just as you would any other immutable bean.
 
-* *Write defaults once* and never both with them again.
+* *Write defaults once* and never bother with them again.
 
 * *Validate configuration* in all manners, and fail-fast with informative messages.
 
