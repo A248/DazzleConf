@@ -71,6 +71,7 @@ public class ConfigurationHelper<C> {
 	 * 
 	 * @throws IOException if an I/O exception occurred
 	 * @throws InvalidConfigException if the loaded configuration was not valid (user error)
+	 * @return the loaded config data
 	 */
 	public C reloadConfigData() throws IOException, InvalidConfigException {
 
