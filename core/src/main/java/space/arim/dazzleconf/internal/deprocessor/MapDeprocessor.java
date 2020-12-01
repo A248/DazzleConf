@@ -46,7 +46,6 @@ public class MapDeprocessor<C> extends DeprocessorBase<C> {
 		mapHelper.combine(childEntry.getKey(), wrapValue(childEntry, deprocessor.deprocessAndGetResult()));
 	}
 	
-	@SuppressWarnings("unused")
 	Object wrapValue(ConfEntry entry, Object value) {
 		return value;
 	}
