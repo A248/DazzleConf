@@ -57,6 +57,23 @@ public class SerialisationFactory<C> extends AbstractConfigurationFactoryImpl<C>
 			throw new IOException(ex);
 		}
 	}
+
+	@Override
+	public C load(ReadableByteChannel readChannel, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		try (InputStream inputStream = Channels.newInputStream(readChannel)) {
+			return load(inputStream, auxiliaryEntries);
+		}
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public C load(InputStream inputStream, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		try (ObjectInputStream ois = new ObjectInputStream(inputStream)) {
+			return fromRawMap((Map<String, Object>) ois.readObject(), auxiliaryEntries);
+		} catch (ClassNotFoundException ex) {
+			throw new IOException(ex);
+		}
+	}
 	
 	@Override
 	public void write(C configData, WritableByteChannel writableChannel) throws IOException {

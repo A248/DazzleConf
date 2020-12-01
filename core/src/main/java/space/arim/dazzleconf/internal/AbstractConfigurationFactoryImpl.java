@@ -71,18 +71,13 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 		return fromRawMap(loadMapFromReader(reader), auxiliaryEntries);
 	}
 	
-	/**
-	 * Visible for use by testing (SerialisationFactory)
-	 * 
-	 * @param rawMap the raw map of nested values
-	 * @return the config data
-	 * @throws InvalidConfigException if the config is invalid
-	 */
+	// Visible for use by testing (SerialisationFactory)
 	/*private*/ C fromRawMap(Map<String, Object> rawMap) throws InvalidConfigException {
 		return fromRawMap(rawMap, null);
 	}
 
-	private C fromRawMap(Map<String, Object> rawMap, C auxiliaryValues) throws InvalidConfigException {
+	// Visible for use by testing (SerialisationFactory)
+	C fromRawMap(Map<String, Object> rawMap, C auxiliaryValues) throws InvalidConfigException {
 		return new MapProcessor<>(getOptions(), definition, rawMap, auxiliaryValues).createConfig();
 	}
 	
@@ -97,12 +92,7 @@ public abstract class AbstractConfigurationFactoryImpl<C> extends BaseConfigurat
 		writeMapToWriter(toRawMap(configData), writer);
 	}
 	
-	/**
-	 * Visible for use by testing (SerialisationFactory)
-	 * 
-	 * @param configData the config data
-	 * @return the raw map of nested values
-	 */
+	// Visible for use by testing (SerialisationFactory)
 	/*private*/ Map<String, Object> toRawMap(C configData) {
 		MapDeprocessor<C> simpleDeprocessor = createMapDeprocessor(configData);
 		return simpleDeprocessor.deprocessAndGetResult();

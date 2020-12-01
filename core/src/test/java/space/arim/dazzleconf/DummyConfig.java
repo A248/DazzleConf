@@ -18,6 +18,7 @@
  */
 package space.arim.dazzleconf;
 
+import java.net.URL;
 import java.util.List;
 import java.util.Set;
 
@@ -27,8 +28,11 @@ import space.arim.dazzleconf.annote.ConfDefault.DefaultIntegers;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultString;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultStrings;
 import space.arim.dazzleconf.annote.ConfKey;
+import space.arim.dazzleconf.annote.ConfSerialisers;
 import space.arim.dazzleconf.annote.SubSection;
+import space.arim.dazzleconf.serialiser.URLValueSerialiser;
 
+@ConfSerialisers(URLValueSerialiser.class)
 public interface DummyConfig {
 
 	@DefaultString("let's see")
@@ -61,6 +65,10 @@ public interface DummyConfig {
 	@DefaultString("did not see that coming")
 	String combinedSubsection();
 	
+	@DefaultString("https://google.com")
+	URL someUrl();
+	
+	@ConfSerialisers(NumericPairSerialiser.class)
 	interface NestedConfig {
 		
 		@DefaultString("ahaha")
@@ -71,7 +79,12 @@ public interface DummyConfig {
 		
 		@DefaultIntegers({1, 2, 3})
 		List<Integer> ordered123();
+
+		@DefaultString("1:3")
+		NumericPair numericPair();
 		
 	}
+
+
 	
 }

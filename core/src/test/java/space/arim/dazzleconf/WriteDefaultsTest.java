@@ -56,7 +56,7 @@ public class WriteDefaultsTest {
 		} catch (IOException | InvalidConfigException ex) {
 			throw Assertions.<RuntimeException>fail(ex);
 		}
-		LoadDefaultsTest.assertDefaultValues(reloaded);
+		new DummyConfigDefaults().assertDefaultValues(reloaded);
 	}
 	
 }

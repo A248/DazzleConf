@@ -18,24 +18,43 @@
  */
 package space.arim.dazzleconf;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+public class NumericPair {
 
-import space.arim.dazzleconf.factory.DefaultsOnlyFactory;
+	private final int value1;
+	private final int value2;
 
-public class LoadDefaultsTest {
-
-	private ConfigurationFactory<DummyConfig> factory;
-	
-	@BeforeEach
-	public void setup() {
-		factory = new DefaultsOnlyFactory<>(DummyConfig.class, ConfigurationOptions.defaults());
+	public NumericPair(int value1, int value2) {
+		this.value1 = value1;
+		this.value2 = value2;
 	}
-	
-	@Test
-	public void testLoadDefaults() {
-		DummyConfig defaultConf = factory.loadDefaults();
-		new DummyConfigDefaults().assertDefaultValues(defaultConf);
+
+	public int getValue1() {
+		return value1;
 	}
-	
+
+	public int getValue2() {
+		return value2;
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + value1;
+		result = prime * result + value2;
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object object) {
+		if (this == object) {
+			return true;
+		}
+		if (!(object instanceof NumericPair)) {
+			return false;
+		}
+		NumericPair other = (NumericPair) object;
+		return value1 == other.value1 && value2 == other.value2;
+	}
+
 }
