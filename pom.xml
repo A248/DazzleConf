@@ -37,7 +37,8 @@
 		<developer>
 			<id>anandbeh</id>
 			<name>Anand Beh</name>
-			<url>https://www.arim.space</url>
+			<email>anandebeh@gmail.com</email>
+			<url>https://github.com/A248</url>
 			<roles>
 				<role>creator</role>
 				<role>developer</role>
@@ -47,14 +48,14 @@
 	</developers>
 	
 	<distributionManagement>
-		<repository>
-			<id>cloudsmith-deploy</id>
-			<url>https://maven.cloudsmith.io/anand-beh/lesser-gpl3/</url>
-		</repository>
 		<snapshotRepository>
-			<id>cloudsmith-deploy</id>
-			<url>https://maven.cloudsmith.io/anand-beh/lesser-gpl3/</url>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
 		</snapshotRepository>
+		<repository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+		</repository>
 	</distributionManagement>
 	
 	<build>
@@ -150,6 +151,41 @@
 			</plugins>
 		</pluginManagement>
 	</build>
+	
+	<profiles>
+		<profile>
+			<id>release</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>1.6</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.sonatype.plugins</groupId>
+						<artifactId>nexus-staging-maven-plugin</artifactId>
+						<version>1.6.8</version>
+						<extensions>true</extensions>
+						<configuration>
+							<serverId>ossrh</serverId>
+							<nexusUrl>https://oss.sonatype.org/</nexusUrl>
+							<autoReleaseAfterClose>true</autoReleaseAfterClose>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 	
 	<modules>
 		<module>core</module>
