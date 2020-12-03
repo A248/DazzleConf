@@ -20,11 +20,13 @@ package space.arim.dazzleconf;
 
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import space.arim.dazzleconf.annote.ConfDefault.DefaultBoolean;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultInteger;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultIntegers;
+import space.arim.dazzleconf.annote.ConfDefault.DefaultMap;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultString;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultStrings;
 import space.arim.dazzleconf.annote.ConfKey;
@@ -67,7 +69,13 @@ public interface DummyConfig {
 	
 	@DefaultString("https://google.com")
 	URL someUrl();
-	
+
+	@DefaultMap({"ANOTHER", "value", "THIRD", "more"})
+	Map<ValueEnum, String> enumMap();
+
+	@DefaultStrings({"string1", "string2"})
+	Set<String> someStrings();
+
 	@ConfSerialisers(NumericPairSerialiser.class)
 	interface NestedConfig {
 		
@@ -82,9 +90,10 @@ public interface DummyConfig {
 
 		@DefaultString("1:3")
 		NumericPair numericPair();
+
+		@DefaultMap({"key1", "4:18", "key2", "2:8"})
+		Map<String, NumericPair> extraPairs();
 		
 	}
-
-
 	
 }

@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.opentest4j.AssertionFailedError;
@@ -47,12 +48,15 @@ public class DummyConfigDefaults {
 		} catch (MalformedURLException ex) {
 			fail(ex);
 		}
+		assertEquals(Map.of(ValueEnum.ANOTHER, "value", ValueEnum.THIRD, "more"), defaultConf.enumMap());
+		assertEquals(Set.of("string1", "string2"), defaultConf.someStrings());
 
 		NestedConfig nestedConf = defaultConf.subSection();
 		assertEquals("ahaha", nestedConf.nestedValue());
 		assertEquals(Set.of("1string", "2string", "3string"), nestedConf.someStringsForYou());
 		assertEquals(List.of(1, 2, 3), nestedConf.ordered123());
 		assertEquals(new NumericPair(1, 3), nestedConf.numericPair());
+		assertEquals(Map.of("key1", new NumericPair(4, 18), "key2", new NumericPair(2, 8)), nestedConf.extraPairs());
 	}
 
 	public void assumeDefaultValues(DummyConfig defaultConf) {
