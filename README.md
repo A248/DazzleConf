@@ -116,27 +116,24 @@ Java 11 is highly recommended. DazzleConf includes `module-info` for use in modu
 **Core artifact**
 
 Dependency: `space.arim.dazzleconf:dazzleconf-core`
+
 Module name: `space.arim.dazzleconf`
 
 **Gson extension**
 
 Dependency: `space.arim.dazzleconf:dazzleconf-ext-gson`
+
 Module name: `space.arim.dazzleconf.ext.gson`
 
 **SnakeYaml extension**
 
 Dependency: `space.arim.dazzleconf:dazzleconf-ext-snakeyaml`
+
 Module name: `space.arim.dazzleconf.ext.snakeyaml`
 
 **Repository**
 
-The repository for all artifacts is:
-
-```
-https://mvn-repo.arim.space/lesser-gpl3/
-```
-
-A thanks to Cloudsmith for providing free repositories for FOSS.
+Now deployed to Central. No extra repository is necessary.
 
 ### Documentations
 
