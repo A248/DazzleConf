@@ -1,5 +1,5 @@
 
-# DazzleConf
+# DazzleConf [![Maven Central](https://maven-badges.herokuapp.com/maven-central/space.arim.dazzleconf/dazzleconf-parent/badge.svg)](https://maven-badges.herokuapp.com/maven-central/space.arim.dazzleconf/dazzleconf-parent)
 
 Prepare to be dazzled
 
@@ -130,10 +130,6 @@ Module name: `space.arim.dazzleconf.ext.gson`
 Dependency: `space.arim.dazzleconf:dazzleconf-ext-snakeyaml`
 
 Module name: `space.arim.dazzleconf.ext.snakeyaml`
-
-**Repository**
-
-Now deployed to Central. No extra repository is necessary.
 
 ### Documentations
 
