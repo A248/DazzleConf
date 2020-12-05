@@ -9,7 +9,7 @@
 	<packaging>pom</packaging>
 	
 	<name>DazzleConf</name>
-	<description>Incredible! The ultimate configuration solution.</description>
+	<description>Boilerplate-free, type-safe configuration solution.</description>
 	<url>https://github.com/A248/DazzleConf</url>
 	<inceptionYear>2020</inceptionYear>
 	
