@@ -1,5 +1,5 @@
 
-# DazzleConf [![Maven Central](https://maven-badges.herokuapp.com/maven-central/space.arim.dazzleconf/dazzleconf-parent/badge.svg)](https://maven-badges.herokuapp.com/maven-central/space.arim.dazzleconf/dazzleconf-parent)
+# DazzleConf [![Maven Central](https://img.shields.io/maven-central/v/space.arim.dazzleconf/dazzleconf-parent?color=brightgreen&label=maven%20central)](https://mvnrepository.com/artifact/space.arim.dazzleconf/dazzleconf-core) [![Javadoc](https://javadoc.io/badge2/space.arim.dazzleconf/dazzleconf-core/javadoc.svg)](https://javadoc.io/doc/space.arim.dazzleconf/dazzleconf-core)
 
 Prepare to be dazzled
 
@@ -119,7 +119,7 @@ The wiki also has extra examples such as with setting up a reloadable configurat
 
 See [the docs folder](https://github.com/A248/DazzleConf/tree/master/docs) of this repository for a detailed overview.
 
-Additionally, the javadocs are published with the artifact and cover the details of specific classes and methods.
+Additionally, the javadocs are published with the artifact. They can also be browsed [here](https://javadoc.io/doc/space.arim.dazzleconf/dazzleconf-core).
 
 ### License
 
