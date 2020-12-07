@@ -35,10 +35,6 @@ A type-safe, thread-safe, fail-fast, user-oriented, easy to setup, extensible an
 
 ## Usage
 
-### Documentation
-
-The javadocs are published with the artifact and cover the details of specific classes and methods. General documentation is available in the docs/ folder of this repository.
-
 ### Example
 
 ```java
@@ -63,8 +59,8 @@ public interface MyConfig {
   @DefaultString("ONE")
   MyEnum enumValue();
   
-  @NestedConfig
-  SubSection nestedConfigSection();
+  @SubSection
+  NestedSection nestedConfigSection();
   
   @ConfSerialiser(URLSerialiser.class)
   @DefaultString("https://github.com")
@@ -78,10 +74,10 @@ public enum MyEnum {
 }
 
 
-public interface SubSection {
+public interface NestedSection {
 
   @ConfComments("Every annotation shown above works here too")
-  @DefaultString("Also, all annotations are inherited, enabling inheritable config interfaces")
+  @DefaultString("Also, methods are inherited if this interface extends another, enabling inheritable config interfaces")
   String flexibility();
 
 }
@@ -99,7 +95,7 @@ boundedNumeric: 10
 enumValue: 'ONE'
 nestedConfigSection:
   # Every annotation shown above works here too
-  flexibility: 'Also, all annotations are inherited, enabling inheritable config interfaces'
+  flexibility: 'Also, methods are inherited if this interface extends another, enabling inheritable config interfaces'
 validUrl: 'https://github.com'
 ```
 
@@ -109,37 +105,21 @@ The same document can be reparsed to an instance of the configuration interface.
 
 * Java 8
 
-Java 11 is highly recommended. DazzleConf includes `module-info` for use in modular applications.
+Java 11 is recommended, but not required.
 
-### Components
+`module-info` files are also included, and these are backwards compatible with Java 8.
 
-**Core artifact**
+### Getting Started
 
-Dependency: `space.arim.dazzleconf:dazzleconf-core`
+This page will help you out: https://github.com/A248/DazzleConf/wiki/Getting-Started
 
-Module name: `space.arim.dazzleconf`
+The wiki also has extra examples such as with setting up a reloadable configuration, automatically updating the configuration with the latest keys, and more.
 
-**Gson extension**
+### Documentation
 
-Dependency: `space.arim.dazzleconf:dazzleconf-ext-gson`
+See [the docs folder](https://github.com/A248/DazzleConf/tree/master/docs) of this repository for a detailed overview.
 
-Module name: `space.arim.dazzleconf.ext.gson`
-
-**SnakeYaml extension**
-
-Dependency: `space.arim.dazzleconf:dazzleconf-ext-snakeyaml`
-
-Module name: `space.arim.dazzleconf.ext.snakeyaml`
-
-### Documentations
-
-See the docs folder of this repository, specifically these files:
-
-* MainIdeas.md
-* Annotations.md
-* Options.md
-
-Additionally, the javadocs are attached to the artifact.
+Additionally, the javadocs are published with the artifact and cover the details of specific classes and methods.
 
 ### License
 
