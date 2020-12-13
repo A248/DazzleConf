@@ -197,7 +197,8 @@
 		<module>core</module>
 		<module>gson</module>
 		<module>snakeyaml</module>
-	</modules>
+        <module>hocon</module>
+    </modules>
 	
 	<dependencyManagement>
 		<dependencies>
