@@ -4,6 +4,7 @@ import com.typesafe.config.ConfigParseOptions;
 import com.typesafe.config.ConfigRenderOptions;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public class HoconOptions {
   private final ConfigParseOptions configParseOptions;
@@ -51,7 +52,7 @@ public class HoconOptions {
   public static class Builder {
     ConfigParseOptions configParseOptions = ConfigParseOptions.defaults();
     ConfigRenderOptions configRenderOptions = ConfigRenderOptions.defaults();
-    Charset charset = Charset.defaultCharset();
+    Charset charset = StandardCharsets.UTF_8;
 
     /**
      * Sets parse options. Reading config uses them.
