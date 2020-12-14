@@ -2,6 +2,8 @@ package space.arim.dazzleconf.ext.hocon;
 
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigValue;
+import com.typesafe.config.ConfigValueFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.ConfigFormatSyntaxException;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
@@ -23,7 +25,7 @@ public class HoconConfigurationFactory<C> extends AbstractConfigurationFactory<C
    *
    * @param configClass  the config class
    * @param options      configuration options
-   * @param hoconOptions parsing & reading options, can not be null
+   * @param hoconOptions parsing and reading options, can not be null
    * @throws NullPointerException      if {@code configClass} or {@code options} is null
    * @throws IllegalArgumentException  if {@code configClass} is not an interface
    * @throws IllDefinedConfigException if the configuration entries defined in the config class are invalid
