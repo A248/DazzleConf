@@ -118,10 +118,7 @@ public class GsonConfigurationFactory<C> extends AbstractConfigurationFactory<C>
 	
 	@Override
 	protected String pseudoCommentsSuffix() {
-		if (gsonOptions.pseudoComments()) {
-			return "-comment";
-		}
-		return "";
+		return gsonOptions.pseudoCommentsSuffix();
 	}
 
 }

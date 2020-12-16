@@ -71,7 +71,7 @@ public class GsonConfigurationFactoryTest {
 	public void pseudoComments() throws IOException {
 		ConfigurationFactory<Conf> factory = new GsonConfigurationFactory<>(Conf.class,
 				new ConfigurationOptions.Builder().sorter(new AnnotationBasedSorter()).build(),
-				new GsonOptions.Builder().pseudoComments(true).build());
+				new GsonOptions.Builder().pseudoCommentsSuffix("-comment").build());
 
 		assertLinesMatch(Stream.of(
 				"{",
