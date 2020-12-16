@@ -1,19 +1,19 @@
-/* 
- * DazzleConf-snakeyaml
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-snakeyaml is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2020 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-snakeyaml is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-snakeyaml. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 package space.arim.dazzleconf.ext.snakeyaml;
@@ -64,7 +64,7 @@ public class SortedYamlTest {
 	}
 
 	@Test
-	public void testOrder() {
+	public void generateOrderedLines() {
 		Conf defaults = factory.loadDefaults();
 		assumeTrue(defaults != null);
 

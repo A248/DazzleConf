@@ -10,6 +10,19 @@
 	</parent>
 
 	<artifactId>dazzleconf-ext-snakeyaml</artifactId>
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-XX:TieredStopAtLevel=1 -XX:-TieredCompilation
+						--add-exports
+						space.arim.dazzleconf.ext.snakeyaml/space.arim.dazzleconf.ext.snakeyaml.ness=space.arim.dazzleconf</argLine>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 	
 	<dependencies>
 		<dependency>

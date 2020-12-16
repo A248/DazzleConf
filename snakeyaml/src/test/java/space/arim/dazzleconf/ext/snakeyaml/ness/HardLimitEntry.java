@@ -16,33 +16,46 @@
  * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
-package space.arim.dazzleconf.ext.snakeyaml;
 
-import static org.junit.jupiter.api.Assertions.fail;
+package space.arim.dazzleconf.ext.snakeyaml.ness;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.stream.Stream;
+final class HardLimitEntry {
 
-import space.arim.dazzleconf.ConfigurationFactory;
+	private final int maxCps;
+	private final int retentionSecs;
 
-public class ConfigToLines<C> {
-
-	private final ConfigurationFactory<C> factory;
-
-	public ConfigToLines(ConfigurationFactory<C> factory) {
-		this.factory = factory;
+	HardLimitEntry(int maxCps, int retentionSecs) {
+		this.maxCps = maxCps;
+		this.retentionSecs = retentionSecs;
+	}
+	
+	int maxCps() {
+		return maxCps;
+	}
+	
+	int retentionSecs() {
+		return retentionSecs;
 	}
 
-	public Stream<String> writeLines(C config) {
-		var baos = new ByteArrayOutputStream();
-		try {
-			factory.write(config, baos);
-		} catch (IOException ex) {
-			fail(ex);
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + maxCps;
+		result = prime * result + retentionSecs;
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object object) {
+		if (this == object) {
+			return true;
 		}
-		return baos.toString(StandardCharsets.UTF_8).lines();
+		if (!(object instanceof HardLimitEntry)) {
+			return false;
+		}
+		HardLimitEntry other = (HardLimitEntry) object;
+		return maxCps == other.maxCps && retentionSecs == other.retentionSecs;
 	}
-
+	
 }
