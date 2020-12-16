@@ -4,7 +4,7 @@ import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.error.InvalidConfigException;
-import space.arim.dazzleconf.internal.ConfigurationInfo;
+import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.DefinitionReader;
 import space.arim.dazzleconf.internal.deprocessor.AddCommentStringBeforeDeprocessor;
 import space.arim.dazzleconf.internal.deprocessor.CommentedDeprocessor;
@@ -48,7 +48,7 @@ public abstract class ConfigurationFormatFactory<C> implements ConfigurationFact
 
 	private final Class<C> configClass;
 	private final ConfigurationOptions options;
-	private final ConfigurationInfo<C> definition;
+	private final ConfigurationDefinition<C> definition;
 
 	/**
 	 * Creates from a config class and config options

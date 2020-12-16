@@ -58,10 +58,10 @@ public class DefinitionReader<C> {
 		this.nestedConfigDejaVu = nestedConfigDejaVu;
 	}
 	
-	public ConfigurationInfo<C> read() {
+	public ConfigurationDefinition<C> read() {
 		ValueSerialiserMap serialiserMap = readSerialisers();
 		Map<String, ConfEntry> sortedEntries = readAndSortEntries();
-		return new ConfigurationInfo<>(configClass, options, sortedEntries, defaultMethods, serialiserMap);
+		return new ConfigurationDefinition<>(configClass, sortedEntries, defaultMethods, serialiserMap);
 	}
 	
 	private ValueSerialiserMap readSerialisers() {
@@ -69,8 +69,7 @@ public class DefinitionReader<C> {
 		if (confSerialisers == null) {
 			return options.getSerialisers();
 		}
-		Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>();
-		serialisers.putAll(options.getSerialisers().asMap());
+		Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>(options.getSerialisers().asMap());
 		for (Class<? extends ValueSerialiser<?>> serialiserClass : confSerialisers.value()) {
 			ValueSerialiser<?> serialiser = instantiate(ValueSerialiser.class, serialiserClass);
 			serialisers.put(serialiser.getTargetClass(), serialiser);
