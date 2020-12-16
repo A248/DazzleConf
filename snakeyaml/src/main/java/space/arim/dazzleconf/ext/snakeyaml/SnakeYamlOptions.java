@@ -166,7 +166,7 @@ public final class SnakeYamlOptions {
 		 * @param charset the charset
 		 * @return this builder
 		 */
-		public Builder encoding(Charset charset) {
+		public Builder charset(Charset charset) {
 			this.charset = Objects.requireNonNull(charset, "charset");
 			return this;
 		}

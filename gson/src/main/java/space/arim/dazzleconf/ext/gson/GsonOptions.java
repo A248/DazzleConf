@@ -164,27 +164,12 @@ public final class GsonOptions {
 		}
 
 		/**
-		 * Sets the charset used by the factory. Default is UTF 8
-		 * 
-		 * @param charset the charset
-		 * @return this builder
-		 * @deprecated This method leaked an internal null value
-		 * from past versions. The null hostile {@link #encoding(Charset)}
-		 * should be used instead.
-		 */
-		@Deprecated
-		public Builder charset(Charset charset) {
-			// In a previous version, null defaulted to UTF-8
-			return encoding((charset == null) ? StandardCharsets.UTF_8 : charset);
-		}
-
-		/**
 		 * Sets the character encoding used by the factory. Default is UTF 8
 		 *
 		 * @param charset the charset
 		 * @return this builder
 		 */
-		public Builder encoding(Charset charset) {
+		public Builder charset(Charset charset) {
 			this.charset = Objects.requireNonNull(charset, "charset");
 			return this;
 		}
