@@ -15,7 +15,7 @@ Steps:
 
 PRs are very welcome. Of course, they will need to meet some standards.
 
-For new features, do consider whether the feature requires or is best served by or a change to this library.
+For new features, do consider whether the feature requires or is best served by a change to this library.
 Tangential features might be better implemented by another software component.
 
 With regards to code style, it is best to:
