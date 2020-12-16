@@ -46,6 +46,7 @@ import space.arim.dazzleconf.factory.AbstractConfigurationFactory;
  *
  * @param <C> the configuration class
  */
+@SuppressWarnings("deprecation")
 public class GsonConfigurationFactory<C> extends AbstractConfigurationFactory<C> {
 
 	private final GsonOptions gsonOptions;

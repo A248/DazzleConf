@@ -29,7 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import space.arim.dazzleconf.error.InvalidConfigException;
-import space.arim.dazzleconf.internal.SerialisationFactory;
+import space.arim.dazzleconf.factory.SerialisationFactory;
 
 public class WriteDefaultsTest {
 	

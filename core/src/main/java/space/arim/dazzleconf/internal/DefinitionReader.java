@@ -47,7 +47,7 @@ public class DefinitionReader<C> {
 	private final Set<Method> defaultMethods = new HashSet<>();
 	private final Map<String, ConfEntry> entries = new LinkedHashMap<>();
 	
-	DefinitionReader(Class<C> configClass, ConfigurationOptions options) {
+	public DefinitionReader(Class<C> configClass, ConfigurationOptions options) {
 		this(configClass, options, new HashSet<>());
 	}
 	
@@ -58,7 +58,7 @@ public class DefinitionReader<C> {
 		this.nestedConfigDejaVu = nestedConfigDejaVu;
 	}
 	
-	ConfigurationInfo<C> read() {
+	public ConfigurationInfo<C> read() {
 		ValueSerialiserMap serialiserMap = readSerialisers();
 		Map<String, ConfEntry> sortedEntries = readAndSortEntries();
 		return new ConfigurationInfo<>(configClass, options, sortedEntries, defaultMethods, serialiserMap);

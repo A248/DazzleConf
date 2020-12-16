@@ -40,6 +40,7 @@ import space.arim.dazzleconf.factory.AbstractConfigurationFactory;
  *
  * @param <C> the configuration type
  */
+@SuppressWarnings("deprecation")
 public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFactory<C> {
 
 	private final SnakeYamlOptions yamlOptions;
