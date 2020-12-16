@@ -43,7 +43,7 @@ public class BlueTreeConfigTest {
 	}
 
 	@Test
-	public void testOrder() {
+	public void generatedLinesMatch() {
 		BlueTreeConfig defaults = factory.loadDefaults();
 		assumeTrue(defaults != null);
 

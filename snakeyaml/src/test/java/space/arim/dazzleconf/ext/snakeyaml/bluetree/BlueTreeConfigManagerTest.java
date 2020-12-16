@@ -53,7 +53,7 @@ public class BlueTreeConfigManagerTest {
 	}
 
 	@Test
-	public void testSortedWrite() throws IOException, InvalidConfigException {
+	public void generatedLinesMatch() throws IOException, InvalidConfigException {
 		helper.reloadConfigData();
 		assertLinesMatch(
 				BlueTreeConfig.EXPECTED_LINES,
