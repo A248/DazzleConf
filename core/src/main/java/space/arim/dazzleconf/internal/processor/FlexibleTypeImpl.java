@@ -42,6 +42,11 @@ import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 class FlexibleTypeImpl implements FlexibleType {
 
 	private final String key;
+	/**
+	 * The raw object. In some cases, values returned from @DefaultObject methods
+	 * may already be an instance of the desired type.
+	 *
+	 */
 	private final Object value;
 	private transient final ConfigurationOptions options;
 	private transient final ValueSerialiserMap serialisers;
@@ -67,7 +72,7 @@ class FlexibleTypeImpl implements FlexibleType {
 	@Override
 	public boolean getBoolean() throws BadValueException {
 		if (value instanceof Boolean) {
-			return ((Boolean) value).booleanValue();
+			return (Boolean) value;
 		}
 		if (value instanceof String) {
 			String parsable = (String) value;
@@ -144,6 +149,9 @@ class FlexibleTypeImpl implements FlexibleType {
 	@Override
 	public <T extends Enum<T>> T getEnum(Class<T> enumClass) throws BadValueException {
 		Objects.requireNonNull(enumClass, "enumClass");
+		if (enumClass.isInstance(value)) {
+			return enumClass.cast(value);
+		}
 		String parsable = getString();
 		boolean strictParseEnums = options.strictParseEnums();
 		for (T enumConstant : enumClass.getEnumConstants()) {
@@ -279,6 +287,9 @@ class FlexibleTypeImpl implements FlexibleType {
 		}
 
 		// All other types
+		if (goal.isInstance(value)) {
+			return goal.cast(value);
+		}
 		return goal.cast(fromSerialiser(getSerialiser(goal)));
 	}
 	

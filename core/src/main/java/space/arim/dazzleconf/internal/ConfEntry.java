@@ -34,7 +34,7 @@ public abstract class ConfEntry implements SortableConfigurationEntry {
 	private transient final String key;
 	private transient final List<String> comments;
 
-	private ConfEntry(Method method, String key, List<String> comments) {
+	ConfEntry(Method method, String key, List<String> comments) {
 		this.method = method;
 		this.key = key;
 		this.comments = comments;

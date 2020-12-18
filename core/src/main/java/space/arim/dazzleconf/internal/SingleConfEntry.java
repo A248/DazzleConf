@@ -21,6 +21,7 @@ package space.arim.dazzleconf.internal;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.List;
 
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.validator.ValueValidator;
@@ -31,6 +32,12 @@ public class SingleConfEntry extends ConfEntry {
 	
 	SingleConfEntry(Method method, ValueValidator validator) {
 		super(method);
+		this.validator = validator;
+	}
+
+	// Used for testing purposes
+	public SingleConfEntry(Method method, String key, List<String> comments, ValueValidator validator) {
+		super(method, key, comments);
 		this.validator = validator;
 	}
 	

@@ -37,7 +37,7 @@ public class WriteDefaultsTest {
 	
 	@BeforeEach
 	public void setup() {
-		factory = new SerialisationFactory<>(DummyConfig.class, ConfigurationOptions.defaults());
+		factory = new SerialisationFactory<>(DummyConfig.class, DummyConfigDefaults.createOptions());
 	}
 
 	@Test

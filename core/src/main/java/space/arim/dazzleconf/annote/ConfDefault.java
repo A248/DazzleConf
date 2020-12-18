@@ -129,12 +129,30 @@ public final class ConfDefault {
 	}
 	/**
 	 * Specifies the default value as a map. The values of this annotation must be in the form of paired key and value strings.
-	 * Therefore the length of the array would be even.
+	 * Therefore the length of the array would be even. <br>
+	 * <br>
+	 * For example, {@literal @DefaultMap({"key1", "true", "key2", "15"})} translates to the same Map as
+	 * {@literal Map.of("key1", true, "key2", 15)}
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)
 	public @interface DefaultMap {
 		String[] value();
 	}
-	
+
+	/**
+	 * Specifies the fully qualified name of the static method returning the default value. <br>
+	 * <br>
+	 * The method must be static, and it must be visible. It cannot have parameters.
+	 * When the default configuration is loaded, the method will be invoked. <br>
+	 * <br>
+	 * For example, {@literal @DefaultObject("com.mypackage.ConfigDefaults.someObject")}
+	 * will invoke the public static method called 'someObject' in the class ConfigDefaults.
+	 *
+	 */
+	@Retention(RUNTIME)
+	@Target(METHOD)
+	public @interface DefaultObject {
+		String value();
+	}
 }

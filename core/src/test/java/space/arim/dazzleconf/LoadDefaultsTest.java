@@ -29,7 +29,7 @@ public class LoadDefaultsTest {
 	
 	@BeforeEach
 	public void setup() {
-		factory = new DefaultsOnlyFactory<>(DummyConfig.class, ConfigurationOptions.defaults());
+		factory = new DefaultsOnlyFactory<>(DummyConfig.class, DummyConfigDefaults.createOptions());
 	}
 	
 	@Test
