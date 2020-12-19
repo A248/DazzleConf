@@ -183,7 +183,7 @@ public final class GsonOptions {
 			Gson gson = this.gson;
 			if (gson == null) {
 				// Default Gson
-				gson = new GsonBuilder().setPrettyPrinting().setLenient().create();
+				gson = new GsonBuilder().setPrettyPrinting().setLenient().disableHtmlEscaping().create();
 			}
 			return new GsonOptions(gson, pseudoCommentsSuffix, charset);
 		}
