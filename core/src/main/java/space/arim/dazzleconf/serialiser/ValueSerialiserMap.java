@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
 
@@ -112,11 +113,24 @@ public final class ValueSerialiserMap {
 	 * @param <T> the type
 	 * @param type the type class
 	 * @return the value serialiser for the type or {@code null} if there is none
+	 * @deprecated Use {@link #getSerialiserFor(Class)} instead
 	 */
+	@Deprecated
 	public <T> ValueSerialiser<T> getSerialiser(Class<T> type) {
+		return getSerialiserFor(type).orElse(null);
+	}
+
+	/**
+	 * Gets the value serialiser for a given type
+	 *
+	 * @param <T> the type
+	 * @param type the type class
+	 * @return the value serialiser for the type or an empty optional if there is none
+	 */
+	public <T> Optional<ValueSerialiser<T>> getSerialiserFor(Class<T> type) {
 		@SuppressWarnings("unchecked")
 		ValueSerialiser<T> serialiser = (ValueSerialiser<T>) map.get(type);
-		return serialiser;
+		return Optional.ofNullable(serialiser);
 	}
 	
 	/**

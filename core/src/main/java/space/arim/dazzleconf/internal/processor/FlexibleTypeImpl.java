@@ -294,11 +294,8 @@ class FlexibleTypeImpl implements FlexibleType {
 	}
 	
 	private <G> ValueSerialiser<G> getSerialiser(Class<G> goal) {
-		ValueSerialiser<G> serialiser  = serialisers.getSerialiser(goal);
-		if (serialiser == null) {
-			throw new IllDefinedConfigException("No ValueSerialiser for " + goal + " at entry " + key);
-		}
-		return serialiser;
+		return serialisers.getSerialiserFor(goal).orElseThrow(
+				() -> new IllDefinedConfigException("No ValueSerialiser for " + goal + " at entry " + key));
 	}
 	
 	private <G> G fromSerialiser(ValueSerialiser<G> serialiser) throws BadValueException {

@@ -71,11 +71,8 @@ class DecomposerImpl implements Decomposer {
 	}
 	
 	private <T> ValueSerialiser<T> getSerialiser(Class<T> clazz) {
-		ValueSerialiser<T> serialiser  = serialisers.getSerialiser(clazz);
-		if (serialiser == null) {
-			throw new IllDefinedConfigException("No ValueSerialiser for " + clazz + " at entry " + key);
-		}
-		return serialiser;
+		return serialisers.getSerialiserFor(clazz).orElseThrow(
+				() -> new IllDefinedConfigException("No ValueSerialiser for " + clazz + " at entry " + key));
 	}
 	
 	private <T> Object fromSerialiser(ValueSerialiser<T> serialiser, T value) {

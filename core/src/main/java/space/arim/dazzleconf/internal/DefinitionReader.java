@@ -94,7 +94,7 @@ public class DefinitionReader<C> {
 		/*
 		 * Sort entries
 		 */
-		ConfigurationSorter sorter = options.getSorter();
+		ConfigurationSorter sorter = options.getConfigurationSorter().orElse(null);
 		if (sorter == null) {
 			return entries;
 		}

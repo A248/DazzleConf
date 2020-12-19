@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import space.arim.dazzleconf.annote.ConfSerialisers;
 import space.arim.dazzleconf.annote.ConfValidator;
@@ -85,18 +86,29 @@ public final class ConfigurationOptions {
 	public Map<String, ValueValidator> getValidators() {
 		return validators;
 	}
-	
+
 	/**
 	 * Gets the {@link ConfigurationSorter}, or {@code null} for none
-	 * 
+	 *
 	 * @return the sorter or {@code null} if there is none
+	 * @deprecated Use {@link #getConfigurationSorter()} instead
 	 */
+	@Deprecated
 	public ConfigurationSorter getSorter() {
-		return sorter;
+		return getConfigurationSorter().orElse(null);
+	}
+
+	/**
+	 * Gets the configuration sorter
+	 *
+	 * @return the sorter, or an empty optional if there is none
+	 */
+	public Optional<ConfigurationSorter> getConfigurationSorter() {
+		return Optional.ofNullable(sorter);
 	}
 	
 	/**
-	 * Whether enums are strictly parsed
+	 * Whether enums are strictly parsed. See {@link Builder#setStrictParseEnums(boolean)}
 	 * 
 	 * @return true if strictly parsed, false otherwise
 	 */
@@ -161,6 +173,15 @@ public final class ConfigurationOptions {
 		private ConfigurationSorter sorter;
 		private boolean strictParseEnums;
 		private boolean createSingleElementCollections;
+
+		/**
+		 * Creates the builder. <br>
+		 * <br>
+		 * <b>Subclassing this builder is deprecated, and will be removed in a later release.</b>
+		 */
+		public Builder() {
+
+		}
 
 		/**
 		 * Adds the specified value serialiser to this builder
@@ -263,7 +284,7 @@ public final class ConfigurationOptions {
 		 * Sets the {@link ConfigurationSorter} to use when writing the configuration to a stream or channel. <br>
 		 * By default there is no sorter (null)
 		 * 
-		 * @param sorter the configuration sorter to use
+		 * @param sorter the configuration sorter to use, or {@code null} for none
 		 * @return this builder
 		 */
 		public Builder sorter(ConfigurationSorter sorter) {
@@ -274,7 +295,7 @@ public final class ConfigurationOptions {
 		/**
 		 * Specifies whether enum values should be strictly parsed. By default this is {@code false}. <br>
 		 * <br>
-		 * If {@code true}, enum values must be have proper case. Otherwise they are validated ignoring case.
+		 * When {@code false}, enum values are parsed ignoring case. Otherwise, they must have correct case.
 		 * 
 		 * @param strictParseEnums whether to strictly parse enums
 		 * @return this builder
@@ -298,7 +319,9 @@ public final class ConfigurationOptions {
 		}
 		
 		/**
-		 * Builds a {@code ValidationOptions} from the contents of this builder
+		 * Builds a {@code ValidationOptions} from the contents of this builder. <br>
+		 * <br>
+		 * May be used repeatedly without side effects.
 		 * 
 		 * @return built options
 		 */
