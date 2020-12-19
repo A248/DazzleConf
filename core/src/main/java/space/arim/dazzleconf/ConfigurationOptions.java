@@ -46,13 +46,15 @@ public final class ConfigurationOptions {
 	private final boolean createSingleElementCollections;
 	
 	private static final ConfigurationOptions DEFAULTS = new ConfigurationOptions.Builder().build();
-	
-	ConfigurationOptions(Builder builder) {
-		serialisers = ValueSerialiserMap.of(builder.serialisers);
-		validators = ImmutableCollections.mapOf(builder.validators);
-		sorter = builder.sorter;
-		strictParseEnums = builder.strictParseEnums;
-		createSingleElementCollections = builder.createSingleElementCollections;
+
+	ConfigurationOptions(ValueSerialiserMap serialisers, Map<String, ValueValidator> validators,
+								ConfigurationSorter sorter, boolean strictParseEnums,
+								boolean createSingleElementCollections) {
+		this.serialisers = serialisers;
+		this.validators = validators;
+		this.sorter = sorter;
+		this.strictParseEnums = strictParseEnums;
+		this.createSingleElementCollections = createSingleElementCollections;
 	}
 	
 	/**
@@ -116,9 +118,10 @@ public final class ConfigurationOptions {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + (strictParseEnums ? 1231 : 1237);
-		result = prime * result + ((sorter == null) ? 0 : sorter.hashCode());
+		result = prime * result + System.identityHashCode(sorter);
 		result = prime * result + serialisers.hashCode();
 		result = prime * result + validators.hashCode();
+		result = prime * result + (createSingleElementCollections ? 1231 : 1237);
 		return result;
 	}
 
@@ -134,7 +137,8 @@ public final class ConfigurationOptions {
 		return strictParseEnums == other.strictParseEnums
 				&& ((sorter == null) ? other.sorter == null : sorter == other.sorter)
 				&& serialisers.equals(other.serialisers)
-				&& validators.equals(other.validators);
+				&& validators.equals(other.validators)
+				&& createSingleElementCollections == other.createSingleElementCollections;
 	}
 
 	@Override
@@ -152,12 +156,12 @@ public final class ConfigurationOptions {
 	 */
 	public static class Builder {
 		
-		final Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>();
-		final Map<String, ValueValidator> validators = new HashMap<>();
-		ConfigurationSorter sorter;
-		boolean strictParseEnums;
-		boolean createSingleElementCollections;
-		
+		private final Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>();
+		private final Map<String, ValueValidator> validators = new HashMap<>();
+		private ConfigurationSorter sorter;
+		private boolean strictParseEnums;
+		private boolean createSingleElementCollections;
+
 		/**
 		 * Adds the specified value serialiser to this builder
 		 * 
@@ -299,7 +303,9 @@ public final class ConfigurationOptions {
 		 * @return built options
 		 */
 		public ConfigurationOptions build() {
-			return new ConfigurationOptions(this);
+			return new ConfigurationOptions(
+					ValueSerialiserMap.of(serialisers), ImmutableCollections.mapOf(validators),
+					sorter, strictParseEnums, createSingleElementCollections);
 		}
 
 		@Override
