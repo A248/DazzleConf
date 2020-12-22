@@ -18,10 +18,12 @@
  */
 package space.arim.dazzleconf.ext.gson;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
@@ -100,6 +102,9 @@ public class GsonConfigurationFactory<C> extends AbstractConfigurationFactory<C>
 			throw new IOException(ex);
 		} catch (JsonSyntaxException | MalformedJsonException ex) {
 			throw new ConfigFormatSyntaxException(ex);
+		} catch (EOFException ex) {
+			// JsonReader throws EOFException on empty documents
+			return Collections.emptyMap();
 		}
 	}
 

@@ -37,6 +37,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Extension of {@link ConfigurationFormatFactory} which turns {@code ReadableByteChannel} and
@@ -84,9 +85,11 @@ public abstract class HumanReadableConfigurationFactory<C> extends Configuration
 	}
 
 	private Map<String, Object> bufferedLoadMap(Reader reader) throws IOException, InvalidConfigException {
+		Map<String, Object> map;
 		try (Reader unbuffered = reader; BufferedReader buffered = new BufferedReader(unbuffered)) {
-			return loadMap(buffered);
+			map = loadMap(buffered);
 		}
+		return Objects.requireNonNull(map, "Subclass returned null map from #loadMap");
 	}
 
 	/**

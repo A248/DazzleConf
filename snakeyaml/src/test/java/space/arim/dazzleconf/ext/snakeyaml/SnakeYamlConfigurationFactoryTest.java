@@ -16,61 +16,62 @@
  * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
+
 package space.arim.dazzleconf.ext.snakeyaml;
-
-import static org.junit.jupiter.api.Assertions.assertLinesMatch;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
-import java.nio.file.Path;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
-import space.arim.dazzleconf.annote.ConfDefault.DefaultString;
+import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.sorter.AnnotationBasedSorter;
-import space.arim.dazzleconf.sorter.AnnotationBasedSorter.Order;
 
-public class SortedYamlTest {
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.stream.Stream;
 
-	@TempDir
-	public Path tempDir;
+import static org.junit.jupiter.api.Assertions.assertLinesMatch;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-	public interface Conf {
+public class SnakeYamlConfigurationFactoryTest {
 
-		@Order(3)
-		@DefaultString("three")
-		String optionThree();
-
-		@Order(2)
-		@DefaultString("two")
-		String optionTwo();
-
-		@Order(1)
-		@DefaultString("one")
-		String optionOne();
-
-	}
-
-	private ConfigurationFactory<Conf> factory;
+	private ConfigurationFactory<Config> factory;
 
 	@BeforeEach
 	public void setup() {
-		factory = new SnakeYamlConfigurationFactory<>(Conf.class,
+		factory = new SnakeYamlConfigurationFactory<>(Config.class,
 				new ConfigurationOptions.Builder().sorter(new AnnotationBasedSorter()).build());
 	}
 
 	@Test
-	public void generateOrderedLines() {
-		Conf defaults = factory.loadDefaults();
+	public void writeOrderedYaml() {
+		Config defaults = factory.loadDefaults();
 		assumeTrue(defaults != null);
 
 		assertLinesMatch(
 				Stream.of("optionOne: one", "optionTwo: two", "optionThree: three"),
 				new ConfigToLines<>(factory).writeLines(defaults));
+	}
+
+	private InputStream streamFor(String content) {
+		return new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"", "    ", " \n "})
+	public void loadEmptyDocument(String emptyString) {
+		var stream = streamFor(emptyString);
+		assertThrows(MissingKeyException.class, () -> factory.load(stream));
+	}
+
+	@Test
+	public void loadMissingKeys() {
+		var stream = streamFor("optionThree: 'three'");
+		assertThrows(MissingKeyException.class, () -> factory.load(stream));
 	}
 
 }

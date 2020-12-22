@@ -20,21 +20,24 @@
 package space.arim.dazzleconf.ext.gson;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
-import space.arim.dazzleconf.annote.ConfComments;
-import space.arim.dazzleconf.annote.ConfDefault;
 import space.arim.dazzleconf.error.InvalidConfigException;
+import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.sorter.AnnotationBasedSorter;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertLinesMatch;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class GsonConfigurationFactoryTest {
 
@@ -45,11 +48,11 @@ public class GsonConfigurationFactoryTest {
 	}
 
 	@Test
-	public void orderedJson() throws IOException, InvalidConfigException {
-		ConfigurationFactory<Conf> factory = new GsonConfigurationFactory<>(Conf.class,
+	public void writeOrderedJson() throws IOException, InvalidConfigException {
+		ConfigurationFactory<Config> factory = new GsonConfigurationFactory<>(Config.class,
 				new ConfigurationOptions.Builder().sorter(new AnnotationBasedSorter()).build());
 
-		Conf defaults = factory.loadDefaults();
+		Config defaults = factory.loadDefaults();
 
 		assertLinesMatch(Stream.of(
 				"{",
@@ -61,15 +64,15 @@ public class GsonConfigurationFactoryTest {
 
 		var byteArrayOutput = new ByteArrayOutputStream();
 		factory.write(defaults, byteArrayOutput);
-		Conf reloaded = factory.load(new ByteArrayInputStream(byteArrayOutput.toByteArray()));
+		Config reloaded = factory.load(new ByteArrayInputStream(byteArrayOutput.toByteArray()));
 		assertEquals(defaults.optionOne(), reloaded.optionOne());
 		assertEquals(defaults.optionTwo(), reloaded.optionTwo());
 		assertEquals(defaults.optionThree(), reloaded.optionThree());
 	}
 
 	@Test
-	public void pseudoComments() throws IOException {
-		ConfigurationFactory<Conf> factory = new GsonConfigurationFactory<>(Conf.class,
+	public void writePseudoComments() throws IOException {
+		ConfigurationFactory<Config> factory = new GsonConfigurationFactory<>(Config.class,
 				new ConfigurationOptions.Builder().sorter(new AnnotationBasedSorter()).build(),
 				new GsonOptions.Builder().pseudoCommentsSuffix("-comment").build());
 
@@ -83,20 +86,23 @@ public class GsonConfigurationFactoryTest {
 				configToLines(factory, factory.loadDefaults()));
 	}
 
-	public interface Conf {
+	private InputStream streamFor(String content) {
+		return new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+	}
 
-		@ConfComments("Comment on first option")
-		@AnnotationBasedSorter.Order(1)
-		@ConfDefault.DefaultString("one")
-		String optionOne();
-
-		@AnnotationBasedSorter.Order(2)
-		@ConfDefault.DefaultInteger(5)
-		int optionTwo();
-
-		@AnnotationBasedSorter.Order(3)
-		@ConfDefault.DefaultBoolean(false)
-		boolean optionThree();
+	@ParameterizedTest
+	@ValueSource(strings = {"", "    ", " \n "})
+	public void loadEmptyDocument(String emptyString) {
+		var factory = new GsonConfigurationFactory<>(Config.class, ConfigurationOptions.defaults());
+		var stream = streamFor(emptyString);
+		assertThrows(MissingKeyException.class, () -> factory.load(stream));
+	}
+	
+	@Test
+	public void loadMissingKeys() {
+		var factory = new GsonConfigurationFactory<>(Config.class, ConfigurationOptions.defaults());
+		var stream = streamFor("{\"optionOne\": \"one\"}");
+		assertThrows(MissingKeyException.class, () -> factory.load(stream));
 	}
 
 }

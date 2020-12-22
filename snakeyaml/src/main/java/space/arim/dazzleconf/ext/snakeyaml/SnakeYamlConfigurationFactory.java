@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
@@ -86,8 +87,9 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 	
 	@Override
 	protected Map<String, Object> loadMapFromReader(Reader reader) throws IOException, ConfigFormatSyntaxException {
+		Map<String, Object> map;
 		try {
-			return yamlOptions.yamlSupplier().get().load(reader);
+			map = yamlOptions.yamlSupplier().get().load(reader);
 		} catch (YAMLException ex) {
 			Throwable cause = ex.getCause();
 			if (cause instanceof IOException) {
@@ -95,6 +97,8 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 			}
 			throw new ConfigFormatSyntaxException(ex);
 		}
+		// SnakeYAML returns a null object for an empty document
+		return (map == null) ? Collections.emptyMap() : map;
 	}
 
 	@Override
