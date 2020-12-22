@@ -50,7 +50,7 @@ public class BlueTreeConfigTest {
 	public void setup() {
 		factory = new SnakeYamlConfigurationFactory<>(BlueTreeConfig.class,
 				new ConfigurationOptions.Builder().sorter(new AnnotationBasedSorter()).build(),
-				new SnakeYamlOptions.Builder().useCommentingWriter(true).build());
+				new SnakeYamlOptions.Builder().useCommentingWriter(true).commentFormat("\n # %s").build());
 	}
 
 	@Test

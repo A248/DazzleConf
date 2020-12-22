@@ -37,32 +37,34 @@ public interface BlueTreeConfig {
 
     @ConfKey("Host")
     @DefaultString("localhost")
-    @ConfComments("\nHost for your database, usually localhost.")
+    @ConfComments("Host for your database, usually localhost.")
     @Order(2)
     String Host();
 
     @ConfKey("Port")
     @ConfDefault.DefaultInteger(3306)
-    @ConfComments("\nPort for your Database, usually 3306")
+    @ConfComments("Port for your Database, usually 3306")
     @Order(3)
     int Port();
 
     @ConfKey("DatabaseName")
     @DefaultString("DiscordSRVUtilsData")
-    @ConfComments("\nDatabase name. The host should tell you the name normally.")
+    @ConfComments("Database name. The host should tell you the name normally.")
     @Order(4)
     String DatabaseName();
 
-    static final List<String> EXPECTED_LINES = List.of(" # Should we use a database?",
+    static final List<String> EXPECTED_LINES = List.of(
+    			"",
+    			" # Should we use a database?",
 				"isEnabled: false",
-				" # ",
-				"Host for your database, usually localhost.",
+				"",
+				" # Host for your database, usually localhost.",
 				"Host: 'localhost'",
-				" # ",
-				"Port for your Database, usually 3306",
+				"",
+				" # Port for your Database, usually 3306",
 				"Port: 3306",
-				" # ",
-				"Database name. The host should tell you the name normally.",
+				"",
+				" # Database name. The host should tell you the name normally.",
 				"DatabaseName: 'DiscordSRVUtilsData'");
 
 }
