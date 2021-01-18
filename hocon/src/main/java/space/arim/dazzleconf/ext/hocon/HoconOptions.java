@@ -51,7 +51,10 @@ public class HoconOptions {
    */
   public static class Builder {
     ConfigParseOptions configParseOptions = ConfigParseOptions.defaults();
-    ConfigRenderOptions configRenderOptions = ConfigRenderOptions.defaults();
+    ConfigRenderOptions configRenderOptions = ConfigRenderOptions.defaults()
+        .setOriginComments(false)
+        .setJson(false);
+
     Charset charset = StandardCharsets.UTF_8;
 
     /**
