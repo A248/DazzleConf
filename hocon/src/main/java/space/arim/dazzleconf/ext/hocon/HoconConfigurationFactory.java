@@ -66,7 +66,7 @@ public class HoconConfigurationFactory<C> extends HumanReadableConfigurationFact
         throw new ConfigFormatSyntaxException(e);
       }
 
-      throw new IOException("Unknown ConfigException subclass", e);
+      throw new IOException("Unexpected ConfigException subclass", e);
     }
   }
 
