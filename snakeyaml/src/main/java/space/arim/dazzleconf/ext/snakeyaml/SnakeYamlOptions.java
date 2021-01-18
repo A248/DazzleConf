@@ -1,25 +1,27 @@
-/* 
- * DazzleConf-snakeyaml
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-snakeyaml is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2020 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-snakeyaml is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-snakeyaml. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 package space.arim.dazzleconf.ext.snakeyaml;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.IllegalFormatException;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 import org.yaml.snakeyaml.DumperOptions.FlowStyle;
@@ -36,30 +38,15 @@ public final class SnakeYamlOptions {
 
 	private final Supplier<Yaml> yamlSupplier;
 	private final boolean useCommentingWriter;
+	private final String commentFormat;
 	private final Charset charset;
 	
-	SnakeYamlOptions(Builder builder) {
-		Supplier<Yaml> yamlSupplier = builder.yamlSupplier;
-		this.yamlSupplier = (yamlSupplier != null) ? yamlSupplier : DefaultYamlSupplier.INSTANCE;
-
-		this.useCommentingWriter = builder.useCommentingWriter;
-
-		Charset charset = builder.charset;
-		this.charset = (charset != null) ? charset : StandardCharsets.UTF_8;
-	}
-
-	private static class DefaultYamlSupplier implements Supplier<Yaml> {
-
-		static final Supplier<Yaml> INSTANCE = new DefaultYamlSupplier();
-
-		private DefaultYamlSupplier() {}
-
-		@Override
-		public Yaml get() {
-			Representer representer = new Representer();
-			representer.setDefaultFlowStyle(FlowStyle.BLOCK);
-			return new Yaml(representer);
-		}
+	SnakeYamlOptions(Supplier<Yaml> yamlSupplier, boolean useCommentingWriter, String commentFormat,
+					 Charset charset) {
+		this.yamlSupplier = yamlSupplier;
+		this.useCommentingWriter = useCommentingWriter;
+		this.commentFormat = commentFormat;
+		this.charset = charset;
 	}
 
 	/**
@@ -80,7 +67,16 @@ public final class SnakeYamlOptions {
 	public boolean useCommentingWriter() {
 		return useCommentingWriter;
 	}
-	
+
+	/**
+	 * Gets the format of written comments. See {@link Builder#commentFormat(String)} for details.
+	 *
+	 * @return the comment format
+	 */
+	public String commentFormat() {
+		return commentFormat;
+	}
+
 	/**
 	 * Gets the charset used
 	 * 
@@ -93,7 +89,7 @@ public final class SnakeYamlOptions {
 	@Override
 	public String toString() {
 		return "SnakeYamlOptions [yamlSupplier=" + yamlSupplier + ", useCommentingWriter=" + useCommentingWriter
-				+ ", charset=" + charset + "]";
+				 + ", commentFormat" + commentFormat + ", charset=" + charset + "]";
 	}
 
 	/**
@@ -104,9 +100,14 @@ public final class SnakeYamlOptions {
 	 */
 	public static class Builder {
 		
-		private Supplier<Yaml> yamlSupplier;
+		private Supplier<Yaml> yamlSupplier = () -> {
+			Representer representer = new Representer();
+			representer.setDefaultFlowStyle(FlowStyle.BLOCK);
+			return new Yaml(representer);
+		};
 		private boolean useCommentingWriter;
-		private Charset charset;
+		private Charset charset = StandardCharsets.UTF_8;
+		private String commentFormat = " # %s";
 		
 		public Builder() {
 			
@@ -120,7 +121,7 @@ public final class SnakeYamlOptions {
 		 * @return this builder
 		 */
 		public Builder yamlSupplier(Supplier<Yaml> yamlSupplier) {
-			this.yamlSupplier = yamlSupplier;
+			this.yamlSupplier = Objects.requireNonNull(yamlSupplier, "yamlSupplier");
 			return this;
 		}
 		
@@ -137,20 +138,52 @@ public final class SnakeYamlOptions {
 			this.useCommentingWriter = useCommentingWriter;
 			return this;
 		}
-		
+
+		/**
+		 * Sets the format used for writing comments. Must be a {@code String.format}
+		 * compatible format string. <br>
+		 * <br>
+		 * By default, comments are formatted as in the example:
+		 * ' # Comment here'. This corresponds to the comment format {@code " # %s"} <br>
+		 * <br>
+		 * <b>Note well,</b> it is caller's responsibility to ensure the comment format results
+		 * in valid YAML.
+		 *
+		 * @param commentFormat the comment format
+		 * @return this builder
+		 * @throws IllegalFormatException if the comment format is an illegal format string
+		 */
+		public Builder commentFormat(String commentFormat) {
+			Objects.requireNonNull(commentFormat, "commentFormat");
+			String.format(commentFormat, "dummy comment");
+			this.commentFormat = commentFormat;
+			return this;
+		}
+
+		/**
+		 * Sets the character encoding used by the factory. Default is UTF 8
+		 *
+		 * @param charset the charset
+		 * @return this builder
+		 */
+		public Builder charset(Charset charset) {
+			this.charset = Objects.requireNonNull(charset, "charset");
+			return this;
+		}
+
 		/**
 		 * Builds the options. May be used repeatedly without side effects
 		 * 
 		 * @return the built options
 		 */
 		public SnakeYamlOptions build() {
-			return new SnakeYamlOptions(this);
+			return new SnakeYamlOptions(yamlSupplier, useCommentingWriter, commentFormat, charset);
 		}
 
 		@Override
 		public String toString() {
-			return "SnakeYamlOptions.Builder [yamlSupplier=" + yamlSupplier + ", useCommentingWriter=" + useCommentingWriter
-					+ ", charset=" + charset + "]";
+			return "SnakeYamlOptions.Builder [yamlSupplier=" + yamlSupplier
+					+ ", useCommentingWriter=" + useCommentingWriter + ", charset=" + charset + "]";
 		}
 		
 	}

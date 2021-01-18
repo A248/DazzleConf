@@ -1,5 +1,5 @@
 
-# DazzleConf [![Maven Central](https://img.shields.io/maven-central/v/space.arim.dazzleconf/dazzleconf-parent?color=brightgreen&label=maven%20central)](https://mvnrepository.com/artifact/space.arim.dazzleconf/dazzleconf-core) [![Javadoc](https://javadoc.io/badge2/space.arim.dazzleconf/dazzleconf-core/javadoc.svg)](https://javadoc.io/doc/space.arim.dazzleconf/dazzleconf-core)
+# DazzleConf [![Maven Central](https://img.shields.io/maven-central/v/space.arim.dazzleconf/dazzleconf-parent?color=brightgreen&label=maven%20central)](https://mvnrepository.com/artifact/space.arim.dazzleconf/dazzleconf-core) [![Javadoc](https://javadoc.io/badge2/space.arim.dazzleconf/dazzleconf-core/javadoc.svg)](https://javadoc.io/doc/space.arim.dazzleconf/dazzleconf-core) [![discord](https://img.shields.io/discord/784154359067443280?label=discord)](https://discord.gg/es9EuHqqNr)
 
 Prepare to be dazzled
 
@@ -52,7 +52,7 @@ public interface MyConfig {
   @DefaultBoolean(true)
   boolean enableUserMessage();
   
-  @IntegerRange(min = 1, max = Integer.MAX_VALUE + 1)
+  @IntegerRange(min = 1, max = Integer.MAX_VALUE - 1)
   @DefaultLong(10)
   long boundedNumeric();
   

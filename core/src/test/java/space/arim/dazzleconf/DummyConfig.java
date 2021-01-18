@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import space.arim.dazzleconf.annote.ConfDefault;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultBoolean;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultInteger;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultIntegers;
@@ -76,6 +77,9 @@ public interface DummyConfig {
 	@DefaultStrings({"string1", "string2"})
 	Set<String> someStrings();
 
+	@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueInteger")
+	int integerUsingDefaultObjectAnnotation();
+
 	@ConfSerialisers(NumericPairSerialiser.class)
 	interface NestedConfig {
 		
@@ -93,6 +97,12 @@ public interface DummyConfig {
 
 		@DefaultMap({"key1", "4:18", "key2", "2:8"})
 		Map<String, NumericPair> extraPairs();
+
+		@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueString")
+		String stringUsingDefaultObjectAnnotation();
+
+		@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueComplex")
+		Map<String, ComplexObject> complexValues();
 		
 	}
 	

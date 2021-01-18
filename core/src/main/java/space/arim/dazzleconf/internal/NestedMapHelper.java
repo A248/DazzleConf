@@ -20,6 +20,7 @@ package space.arim.dazzleconf.internal;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 import space.arim.dazzleconf.error.MissingKeyException;
@@ -44,7 +45,7 @@ public class NestedMapHelper {
 	 * @param topLevelMap the top map
 	 */
 	public NestedMapHelper(Map<String, Object> topLevelMap) {
-		this.topLevelMap = topLevelMap;
+		this.topLevelMap = Objects.requireNonNull(topLevelMap, "topLevelMap");
 	}
 	
 	/**

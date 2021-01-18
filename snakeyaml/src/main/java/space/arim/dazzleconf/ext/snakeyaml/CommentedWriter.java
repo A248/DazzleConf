@@ -1,19 +1,19 @@
-/* 
- * DazzleConf-snakeyaml
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-snakeyaml is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2020 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-snakeyaml is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-snakeyaml. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 package space.arim.dazzleconf.ext.snakeyaml;
@@ -28,21 +28,22 @@ import space.arim.dazzleconf.factory.CommentedWrapper;
 
 class CommentedWriter {
 
-	private final Map<String, Object> rawMap;
 	private final Writer writer;
+	private final String commentFormat;
 	
 	private int depth;
 	
-	CommentedWriter(Map<String, Object> rawMap, Writer writer) {
-		this.rawMap = rawMap;
+	CommentedWriter(Writer writer, String commentFormat) {
 		this.writer = writer;
+		this.commentFormat = commentFormat;
 	}
-	
-	void write() throws IOException {
-		writeMap(rawMap);
-	}
-	
-	private void writeMap(Map<String, Object> map) throws IOException {
+
+	/**
+	 * Writes a config map
+	 *
+	 * @throws IOException if an I/O error occurs
+	 */
+	void writeMap(Map<String, Object> map) throws IOException {
 		for (Map.Entry<String, Object> entry : map.entrySet()) {
 			String key = entry.getKey();
 			Object value = entry.getValue();
@@ -57,12 +58,28 @@ class CommentedWriter {
 			}
 		}
 	}
+
+	/**
+	 * Writes comment lines
+	 *
+	 * @param comments the comments to writer
+	 * @throws IOException if an I/O error occurs
+	 */
+	void writeComments(List<String> comments) throws IOException {
+		CharSequence depthPrefix = depthPrefix();
+		for (String comment : comments) {
+			writer.append(depthPrefix).append(String.format(commentFormat, comment)).append('\n');
+		}
+	}
 	
 	/*
 	 * Depth control
 	 */
 	
 	private CharSequence depthPrefix() {
+		if (depth == 0) {
+			return "";
+		}
 		StringBuilder builder = new StringBuilder();
 		int spaces = 2 * depth;
 		for (int n = 0; n < spaces; n++) {
@@ -72,11 +89,11 @@ class CommentedWriter {
 	}
 	
 	@FunctionalInterface
-	private static interface IORunnable {
+	private interface WriterAction {
 		void run() throws IOException;
 	}
 	
-	private void descendAndDo(IORunnable whenDescended) throws IOException {
+	private void descendAndDo(WriterAction whenDescended) throws IOException {
 		writer.append('\n');
 		depth++;
 		whenDescended.run();
@@ -84,33 +101,11 @@ class CommentedWriter {
 	}
 	
 	/*
-	 * Comments
-	 */
-	
-	private void writeComments(List<String> comments) throws IOException {
-		writeComments0(depthPrefix(), writer, comments);
-	}
-	
-	static void writeCommentsHeader(Writer writer, List<String> comments) throws IOException {
-		writeComments0("", writer, comments);
-	}
-	
-	private static void writeComments0(CharSequence depthPrefix, Writer writer, List<String> comments) throws IOException {
-		for (String comment : comments) {
-			StringBuilder commentBuilder = new StringBuilder(depthPrefix);
-			commentBuilder.append(" # ").append(comment).append('\n');
-			writer.append(commentBuilder);
-		}
-	}
-	
-	/*
 	 * Keys
 	 */
 	
 	private void writeKey(String key) throws IOException {
-		StringBuilder keyBuilder = new StringBuilder(depthPrefix());
-		keyBuilder.append(key).append(':');
-		writer.append(keyBuilder);
+		writer.append(depthPrefix()).append(key).append(':');
 	}
 	
 	/*
@@ -121,35 +116,37 @@ class CommentedWriter {
 		Objects.requireNonNull(value, "Null value in map entry");
 
 		if (value instanceof Map) {
-			descendAndDo(() -> {
-				@SuppressWarnings("unchecked")
-				Map<String, Object> map = (Map<String, Object>) value;
-				writeMap(map);
-			});
-			return;
+			@SuppressWarnings("unchecked")
+			Map<String, Object> map = (Map<String, Object>) value;
+			if (map.isEmpty()) {
+				writer.append(" {}");
+			} else {
+				descendAndDo(() -> writeMap(map));
+			}
+
+		} else if (value instanceof List) {
+			List<?> list = (List<?>) value;
+			if (list.isEmpty()) {
+				writer.append(" []");
+			} else {
+				descendAndDo(() -> {
+					CharSequence depthPrefix = depthPrefix();
+					for (Object element : list) {
+						writer.append(depthPrefix).append("- ");
+						writeSingleValue(element);
+						writer.append('\n');
+					}
+				});
+				return; // Don't write extra \n
+			}
+		} else {
+			writer.append(' ');
+			writeSingleValue(value);
 		}
-		if (value instanceof List) {
-			descendAndDo(() -> {
-				CharSequence depthPrefix = depthPrefix();
-				for (Object element : (List<?>) value) {
-					StringBuilder elementBuilder = new StringBuilder(depthPrefix);
-					elementBuilder.append('-').append(' ');
-					writer.append(elementBuilder);
-					writeSingleValue(element);
-				}
-			});
-			return;
-		}
-		writeSingleValue(value);
-	}
-	
-	private void writeSingleValue(Object value) throws IOException {
-		writer.append(' ');
-		writeSingleValue0(value);
 		writer.append('\n');
 	}
 	
-	private void writeSingleValue0(Object value) throws IOException {
+	private void writeSingleValue(Object value) throws IOException {
 		if (value instanceof String || value instanceof Character) {
 			writer.append('\'');
 			writer.append(value.toString().replace("'", "''"));

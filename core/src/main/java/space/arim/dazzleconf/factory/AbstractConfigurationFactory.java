@@ -29,11 +29,6 @@ import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.ConfigFormatSyntaxException;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
-import space.arim.dazzleconf.internal.AbstractConfigurationFactoryImpl;
-import space.arim.dazzleconf.internal.ConfigurationInfo;
-import space.arim.dazzleconf.internal.deprocessor.AddCommentStringBeforeDeprocessor;
-import space.arim.dazzleconf.internal.deprocessor.CommentedDeprocessor;
-import space.arim.dazzleconf.internal.deprocessor.MapDeprocessor;
 
 /**
  * Abstract implementation of {@link ConfigurationFactory} which takes care of IO boilerplate as well as
@@ -42,7 +37,9 @@ import space.arim.dazzleconf.internal.deprocessor.MapDeprocessor;
  * @author A248
  *
  * @param <C> the type of the configuration
+ * @deprecated Superseded by the much better designed {@link HumanReadableConfigurationFactory}
  */
+@Deprecated
 public abstract class AbstractConfigurationFactory<C> extends DelegatingConfigurationFactory<C> {
 	
 	private final ConfigFactoryDelegate delegate;
@@ -59,8 +56,6 @@ public abstract class AbstractConfigurationFactory<C> extends DelegatingConfigur
 	protected AbstractConfigurationFactory(Class<C> configClass, ConfigurationOptions options) {
 		delegate = new ConfigFactoryDelegate(configClass, options);
 	}
-	
-	// Extension
 	
 	/**
 	 * The charset used by this factory
@@ -129,56 +124,45 @@ public abstract class AbstractConfigurationFactory<C> extends DelegatingConfigur
 	 * @return the comment header
 	 */
 	protected List<String> getHeader() {
-		return delegate().getDefinition().getHeader();
+		return delegate.getHeader();
 	}
-	
-	// Delegation
 	
 	@Override
 	ConfigFactoryDelegate delegate() {
 		return delegate;
 	}
 	
-	// Implementation
-	
-	private class ConfigFactoryDelegate extends AbstractConfigurationFactoryImpl<C> {
+	private class ConfigFactoryDelegate extends HumanReadableConfigurationFactory<C> {
 
 		protected ConfigFactoryDelegate(Class<C> configClazz, ConfigurationOptions options) {
 			super(configClazz, options);
 		}
-		
-		@Override
-		protected ConfigurationInfo<C> getDefinition() {
-			return super.getDefinition();
-		}
 
 		@Override
-		protected Charset charset() {
+		public Charset charset() {
 			return AbstractConfigurationFactory.this.charset();
 		}
 
 		@Override
-		protected Map<String, Object> loadMapFromReader(Reader reader) throws IOException, ConfigFormatSyntaxException {
+		public Map<String, Object> loadMap(Reader reader) throws IOException, ConfigFormatSyntaxException {
 			return AbstractConfigurationFactory.this.loadMapFromReader(reader);
 		}
 
 		@Override
-		protected void writeMapToWriter(Map<String, Object> config, Writer writer) throws IOException {
+		public void writeMap(Map<String, Object> config, Writer writer) throws IOException {
 			AbstractConfigurationFactory.this.writeMapToWriter(config, writer);
 		}
-		
+
 		@Override
-		protected MapDeprocessor<C> createMapDeprocessor(C configData) {
-			if (AbstractConfigurationFactory.this.supportsCommentsThroughWrapper()) {
-				return new CommentedDeprocessor<>(getDefinition(), configData);
-			}
-			String pseudoCommentsSuffix = AbstractConfigurationFactory.this.pseudoCommentsSuffix();
-			if (!pseudoCommentsSuffix.isEmpty()) {
-				return new AddCommentStringBeforeDeprocessor<>(getDefinition(), configData, pseudoCommentsSuffix);
-			}
-			return super.createMapDeprocessor(configData);
+		public boolean supportsCommentsThroughWrapper() {
+			return AbstractConfigurationFactory.this.supportsCommentsThroughWrapper();
 		}
-		
+
+		@Override
+		public String pseudoCommentsSuffix() {
+			return AbstractConfigurationFactory.this.pseudoCommentsSuffix();
+		}
+
 	}
 	
 }

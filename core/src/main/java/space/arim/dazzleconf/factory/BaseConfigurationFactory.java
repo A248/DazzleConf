@@ -18,36 +18,66 @@
  */
 package space.arim.dazzleconf.factory;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.InvalidConfigException;
-import space.arim.dazzleconf.internal.BaseConfigurationFactoryImpl;
 
 /**
- * Base implementation of of {@link ConfigurationFactory}. Eliminates some basic boilerplate
+ * Basic abstract implementation of of {@link ConfigurationFactory}. Eliminates some basic boilerplate
  * associated with IO operations.
  * 
  * @author A248
  *
  * @param <C> the type of the configuration
+ * @deprecated Will be removed without replacement in a later release. Contributes
+ * little value on its own.
  */
-public abstract class BaseConfigurationFactory<C> extends BaseConfigurationFactoryImpl<C> {
+@Deprecated
+public abstract class BaseConfigurationFactory<C> implements ConfigurationFactory<C> {
+
+	private final Class<C> configClass;
+	private final ConfigurationOptions options;
 
 	/**
 	 * Creates from a config class and config options
-	 * 
+	 *
 	 * @param configClass the config class
 	 * @param options configuration options
 	 * @throws NullPointerException if {@code configClass} or {@code options} is null
 	 * @throws IllegalArgumentException if {@code configClass} is not an interface
 	 */
 	protected BaseConfigurationFactory(Class<C> configClass, ConfigurationOptions options) {
-		super(configClass, options);
+		Objects.requireNonNull(configClass, "configClazz");
+		if (!configClass.isInterface()) {
+			throw new IllegalArgumentException(configClass.getName() + " is not an interface");
+		}
+		this.configClass = configClass;
+		this.options = Objects.requireNonNull(options, "options");
+	}
+
+	@Override
+	public Class<C> getConfigClass() {
+		return configClass;
+	}
+
+	@Override
+	public ConfigurationOptions getOptions() {
+		return options;
 	}
 	
 	/**
@@ -55,9 +85,12 @@ public abstract class BaseConfigurationFactory<C> extends BaseConfigurationFacto
 	 * 
 	 * @return the charset to use
 	 */
-	@Override
 	protected abstract Charset charset();
-	
+
+	/*
+	 * Reading
+	 */
+
 	/**
 	 * Reads config data from the specified reader
 	 * 
@@ -66,7 +99,6 @@ public abstract class BaseConfigurationFactory<C> extends BaseConfigurationFacto
 	 * @throws IOException if an I/O error occurs
 	 * @throws InvalidConfigException if the configuration is not valid
 	 */
-	@Override
 	protected abstract C loadFromReader(Reader reader) throws IOException, InvalidConfigException;
 	
 	/**
@@ -79,17 +111,82 @@ public abstract class BaseConfigurationFactory<C> extends BaseConfigurationFacto
 	 * @throws IOException if an I/O error occurs
 	 * @throws InvalidConfigException if the configuration is not valid
 	 */
-	@Override
 	protected abstract C loadFromReader(Reader reader, C auxiliaryEntries) throws IOException, InvalidConfigException;
-	
+
+	private C loadConfig(Reader reader) throws IOException, InvalidConfigException {
+		try (Reader reader0 = reader; BufferedReader buffReader = new BufferedReader(reader0)) {
+
+			return loadFromReader(buffReader);
+		}
+	}
+
+	private C loadConfig(Reader reader, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		try (Reader reader0 = reader; BufferedReader buffReader = new BufferedReader(reader0)) {
+
+			return loadFromReader(buffReader, auxiliaryEntries);
+		}
+	}
+
+	private Reader toReader(ReadableByteChannel readChannel) {
+		return Channels.newReader(readChannel, charset().newDecoder(), -1); // Channels.newReader performs null check
+	}
+
+	private Reader toReader(InputStream inputStream) {
+		return new InputStreamReader(inputStream, charset()); // InputStreamReader performs null check
+	}
+
+	@Override
+	public C load(ReadableByteChannel readChannel) throws IOException, InvalidConfigException {
+		return loadConfig(toReader(readChannel));
+	}
+
+	@Override
+	public C load(InputStream inputStream) throws IOException, InvalidConfigException {
+		return loadConfig(toReader(inputStream));
+	}
+
+	@Override
+	public C load(ReadableByteChannel readChannel, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		configClass.cast(Objects.requireNonNull(auxiliaryEntries, "auxiliaryEntries"));
+		return loadConfig(toReader(readChannel), auxiliaryEntries);
+	}
+
+	@Override
+	public C load(InputStream inputStream, C auxiliaryEntries) throws IOException, InvalidConfigException {
+		configClass.cast(Objects.requireNonNull(auxiliaryEntries, "auxiliaryEntries"));
+		return loadConfig(toReader(inputStream), auxiliaryEntries);
+	}
+
+	/*
+	 * Writing
+	 */
+
 	/**
 	 * Writes config data to the specified writer
-	 * 
+	 *
 	 * @param configData the configuration data to write
 	 * @param writer the stream writer
 	 * @throws IOException if an I/O error occurs
 	 */
-	@Override
 	protected abstract void writeToWriter(C configData, Writer writer) throws IOException;
+
+	private void writeConfig(C configData, Writer writer) throws IOException {
+		try (Writer writer0 = writer; BufferedWriter buffWriter = new BufferedWriter(writer0)) {
+
+			writeToWriter(configData, buffWriter);
+		}
+	}
+
+	@Override
+	public void write(C configData, WritableByteChannel writableChannel) throws IOException {
+		configClass.cast(Objects.requireNonNull(configData, "configData"));
+		writeConfig(configData, Channels.newWriter(writableChannel, charset().newEncoder(), -1)); // Channels.newWriter performs null check
+	}
+
+	@Override
+	public void write(C configData, OutputStream outputStream) throws IOException {
+		configClass.cast(Objects.requireNonNull(configData, "configData"));
+		writeConfig(configData, new OutputStreamWriter(outputStream, charset())); // OutputStreamWriter performs null check
+	}
 	
 }

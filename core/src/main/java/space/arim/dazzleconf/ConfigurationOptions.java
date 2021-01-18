@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import space.arim.dazzleconf.annote.ConfSerialisers;
 import space.arim.dazzleconf.annote.ConfValidator;
@@ -46,13 +47,15 @@ public final class ConfigurationOptions {
 	private final boolean createSingleElementCollections;
 	
 	private static final ConfigurationOptions DEFAULTS = new ConfigurationOptions.Builder().build();
-	
-	ConfigurationOptions(Builder builder) {
-		serialisers = ValueSerialiserMap.of(builder.serialisers);
-		validators = ImmutableCollections.mapOf(builder.validators);
-		sorter = builder.sorter;
-		strictParseEnums = builder.strictParseEnums;
-		createSingleElementCollections = builder.createSingleElementCollections;
+
+	ConfigurationOptions(ValueSerialiserMap serialisers, Map<String, ValueValidator> validators,
+								ConfigurationSorter sorter, boolean strictParseEnums,
+								boolean createSingleElementCollections) {
+		this.serialisers = serialisers;
+		this.validators = validators;
+		this.sorter = sorter;
+		this.strictParseEnums = strictParseEnums;
+		this.createSingleElementCollections = createSingleElementCollections;
 	}
 	
 	/**
@@ -83,18 +86,29 @@ public final class ConfigurationOptions {
 	public Map<String, ValueValidator> getValidators() {
 		return validators;
 	}
-	
+
 	/**
 	 * Gets the {@link ConfigurationSorter}, or {@code null} for none
-	 * 
+	 *
 	 * @return the sorter or {@code null} if there is none
+	 * @deprecated Use {@link #getConfigurationSorter()} instead
 	 */
+	@Deprecated
 	public ConfigurationSorter getSorter() {
-		return sorter;
+		return getConfigurationSorter().orElse(null);
+	}
+
+	/**
+	 * Gets the configuration sorter
+	 *
+	 * @return the sorter, or an empty optional if there is none
+	 */
+	public Optional<ConfigurationSorter> getConfigurationSorter() {
+		return Optional.ofNullable(sorter);
 	}
 	
 	/**
-	 * Whether enums are strictly parsed
+	 * Whether enums are strictly parsed. See {@link Builder#setStrictParseEnums(boolean)}
 	 * 
 	 * @return true if strictly parsed, false otherwise
 	 */
@@ -116,9 +130,10 @@ public final class ConfigurationOptions {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + (strictParseEnums ? 1231 : 1237);
-		result = prime * result + ((sorter == null) ? 0 : sorter.hashCode());
+		result = prime * result + System.identityHashCode(sorter);
 		result = prime * result + serialisers.hashCode();
 		result = prime * result + validators.hashCode();
+		result = prime * result + (createSingleElementCollections ? 1231 : 1237);
 		return result;
 	}
 
@@ -134,7 +149,8 @@ public final class ConfigurationOptions {
 		return strictParseEnums == other.strictParseEnums
 				&& ((sorter == null) ? other.sorter == null : sorter == other.sorter)
 				&& serialisers.equals(other.serialisers)
-				&& validators.equals(other.validators);
+				&& validators.equals(other.validators)
+				&& createSingleElementCollections == other.createSingleElementCollections;
 	}
 
 	@Override
@@ -152,12 +168,21 @@ public final class ConfigurationOptions {
 	 */
 	public static class Builder {
 		
-		final Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>();
-		final Map<String, ValueValidator> validators = new HashMap<>();
-		ConfigurationSorter sorter;
-		boolean strictParseEnums;
-		boolean createSingleElementCollections;
-		
+		private final Map<Class<?>, ValueSerialiser<?>> serialisers = new HashMap<>();
+		private final Map<String, ValueValidator> validators = new HashMap<>();
+		private ConfigurationSorter sorter;
+		private boolean strictParseEnums;
+		private boolean createSingleElementCollections;
+
+		/**
+		 * Creates the builder. <br>
+		 * <br>
+		 * <b>Subclassing this builder is deprecated, and will be removed in a later release.</b>
+		 */
+		public Builder() {
+
+		}
+
 		/**
 		 * Adds the specified value serialiser to this builder
 		 * 
@@ -259,7 +284,7 @@ public final class ConfigurationOptions {
 		 * Sets the {@link ConfigurationSorter} to use when writing the configuration to a stream or channel. <br>
 		 * By default there is no sorter (null)
 		 * 
-		 * @param sorter the configuration sorter to use
+		 * @param sorter the configuration sorter to use, or {@code null} for none
 		 * @return this builder
 		 */
 		public Builder sorter(ConfigurationSorter sorter) {
@@ -270,7 +295,7 @@ public final class ConfigurationOptions {
 		/**
 		 * Specifies whether enum values should be strictly parsed. By default this is {@code false}. <br>
 		 * <br>
-		 * If {@code true}, enum values must be have proper case. Otherwise they are validated ignoring case.
+		 * When {@code false}, enum values are parsed ignoring case. Otherwise, they must have correct case.
 		 * 
 		 * @param strictParseEnums whether to strictly parse enums
 		 * @return this builder
@@ -294,12 +319,16 @@ public final class ConfigurationOptions {
 		}
 		
 		/**
-		 * Builds a {@code ValidationOptions} from the contents of this builder
+		 * Builds a {@code ValidationOptions} from the contents of this builder. <br>
+		 * <br>
+		 * May be used repeatedly without side effects.
 		 * 
 		 * @return built options
 		 */
 		public ConfigurationOptions build() {
-			return new ConfigurationOptions(this);
+			return new ConfigurationOptions(
+					ValueSerialiserMap.of(serialisers), ImmutableCollections.mapOf(validators),
+					sorter, strictParseEnums, createSingleElementCollections);
 		}
 
 		@Override

@@ -19,6 +19,7 @@
 package space.arim.dazzleconf;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.MalformedURLException;
@@ -34,10 +35,26 @@ import space.arim.dazzleconf.DummyConfig.NestedConfig;
 
 public class DummyConfigDefaults {
 
+	public static int defaultValueInteger() {
+		return -1;
+	}
+
+	public static String defaultValueString() {
+		return "default value";
+	}
+
+	private static final Map<String, ComplexObject> DEFAULT_VALUE_COMPLEX = Map.of(
+			"object1", new ComplexObject(3, "name1", true),
+			"otherkey", new ComplexObject(-5, "name2", false)
+		);
+	public static Map<String, ComplexObject> defaultValueComplex() {
+		return DEFAULT_VALUE_COMPLEX;
+	}
+
 	public void assertDefaultValues(DummyConfig defaultConf) {
 		assertEquals("let's see", defaultConf.myString());
 		assertEquals(3, defaultConf.myInteger());
-		assertEquals(true, defaultConf.configBool());
+		assertTrue(defaultConf.configBool());
 		assertEquals(ValueEnum.FIRST_ENTRY, defaultConf.enumFirstEntry());
 		assertEquals(ValueEnum.ANOTHER, defaultConf.enumIgnoreCase());
 		assertEquals(defaultConf.myInteger(), defaultConf.defaultMethod());
@@ -50,6 +67,7 @@ public class DummyConfigDefaults {
 		}
 		assertEquals(Map.of(ValueEnum.ANOTHER, "value", ValueEnum.THIRD, "more"), defaultConf.enumMap());
 		assertEquals(Set.of("string1", "string2"), defaultConf.someStrings());
+		assertEquals(defaultValueInteger(), defaultConf.integerUsingDefaultObjectAnnotation());
 
 		NestedConfig nestedConf = defaultConf.subSection();
 		assertEquals("ahaha", nestedConf.nestedValue());
@@ -57,6 +75,8 @@ public class DummyConfigDefaults {
 		assertEquals(List.of(1, 2, 3), nestedConf.ordered123());
 		assertEquals(new NumericPair(1, 3), nestedConf.numericPair());
 		assertEquals(Map.of("key1", new NumericPair(4, 18), "key2", new NumericPair(2, 8)), nestedConf.extraPairs());
+		assertEquals(defaultValueString(), nestedConf.stringUsingDefaultObjectAnnotation());
+		assertEquals(defaultValueComplex(), nestedConf.complexValues());
 	}
 
 	public void assumeDefaultValues(DummyConfig defaultConf) {
@@ -65,6 +85,10 @@ public class DummyConfigDefaults {
 		} catch (AssertionFailedError ex) {
 			throw new TestAbortedException("Aborting due to failed assumption of default values", ex);
 		}
+	}
+
+	public static ConfigurationOptions createOptions() {
+		return new ConfigurationOptions.Builder().addSerialiser(new ComplexObjectSerialiser()).build();
 	}
 
 }

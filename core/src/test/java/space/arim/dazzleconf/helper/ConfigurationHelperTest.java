@@ -30,7 +30,7 @@ import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.DummyConfig;
 import space.arim.dazzleconf.DummyConfigDefaults;
 import space.arim.dazzleconf.error.InvalidConfigException;
-import space.arim.dazzleconf.internal.SerialisationFactory;
+import space.arim.dazzleconf.factory.SerialisationFactory;
 
 public class ConfigurationHelperTest {
 
@@ -44,7 +44,7 @@ public class ConfigurationHelperTest {
 	@BeforeEach
 	public void setup() {
 		helper = new ConfigurationHelper<>(tempDir, "config.yml",
-				new SerialisationFactory<>(DummyConfig.class, ConfigurationOptions.defaults()));
+				new SerialisationFactory<>(DummyConfig.class, DummyConfigDefaults.createOptions()));
 	}
 
 	@Test

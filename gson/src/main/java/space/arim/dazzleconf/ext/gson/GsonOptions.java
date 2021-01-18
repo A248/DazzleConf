@@ -34,17 +34,13 @@ import com.google.gson.GsonBuilder;
 public final class GsonOptions {
 
 	private final Gson gson;
-	private final boolean pseudoComments;
+	private final String pseudoCommentsSuffix;
 	private final Charset charset;
 	
-	GsonOptions(Builder builder) {
-		Gson gson = builder.gson;
-		this.gson = (gson != null) ? gson : new GsonBuilder().setPrettyPrinting().setLenient().create();
-
-		this.pseudoComments = builder.pseudoComments;
-
-		Charset charset = builder.charset;
-		this.charset = (charset != null) ? charset : StandardCharsets.UTF_8;
+	GsonOptions(Gson gson, String pseudoCommentsSuffix, Charset charset) {
+		this.gson = gson;
+		this.pseudoCommentsSuffix = pseudoCommentsSuffix;
+		this.charset = charset;
 	}
 	
 	/**
@@ -55,15 +51,28 @@ public final class GsonOptions {
 	public Gson gson() {
 		return gson;
 	}
-	
+
+	/**
+	 * Gets the pseudo comments suffix. See {@link Builder#pseudoCommentsSuffix(String)} 
+	 * for a finer description of pseudo comments.
+	 *
+	 * @return the pseudo comment suffix if enabled, an empty string otherwise
+	 */
+	public String pseudoCommentsSuffix() {
+		return pseudoCommentsSuffix;
+	}
+
 	/**
 	 * Gets whether pseudo comments are enabled. See {@link Builder#pseudoComments(boolean)}
 	 * for a finer description of pseudo comments.
 	 * 
 	 * @return true if enabled, false otherwise
+	 * @deprecated Use {@link #pseudoCommentsSuffix()} which takes into account more than
+	 * whether pseudo comments are merely enabled.
 	 */
+	@Deprecated
 	public boolean pseudoComments() {
-		return pseudoComments;
+		return !pseudoCommentsSuffix().isEmpty();
 	}
 	
 	/**
@@ -77,7 +86,8 @@ public final class GsonOptions {
 
 	@Override
 	public String toString() {
-		return "GsonOptions [pseudoComments=" + pseudoComments + ", charset=" + charset + ", gson=" + gson + "]";
+		return "GsonOptions [gson=" + gson + ", pseudoCommentsSuffix=" + pseudoCommentsSuffix
+				+ ", charset=" + charset + "]";
 	}
 
 	/**
@@ -87,10 +97,13 @@ public final class GsonOptions {
 	 *
 	 */
 	public static class Builder {
-		
+
+		/**
+		 * Null for the default gson instance
+		 */
 		private Gson gson;
-		private boolean pseudoComments;
-		private Charset charset;
+		private String pseudoCommentsSuffix = "";
+		private Charset charset = StandardCharsets.UTF_8;
 		
 		public Builder() {
 			
@@ -122,37 +135,65 @@ public final class GsonOptions {
 		 * 
 		 * @param pseudoComments true to enable pseudo comments
 		 * @return this builder
+		 * @deprecated Use {@link #pseudoCommentsSuffix(String)} which allows customizing the comment suffix.
 		 */
+		@Deprecated
 		public Builder pseudoComments(boolean pseudoComments) {
-			this.pseudoComments = pseudoComments;
+			return pseudoCommentsSuffix((pseudoComments) ? "-comment" : "");
+		}
+
+		/**
+		 * JSON does not support comments normally. This option controls whether to enable "pseudo comments"
+		 * to hack comments into generated json. False by default. <br>
+		 * <br>
+		 * If enabled, a "comment" is added as a string value before the configuration entry which is to be commented.
+		 * The key of the "comment" will be that of the key it is supposed to comment on, with the comments suffix
+		 * appended. For example, using "{@literal -comment}" as the suffix: <br>
+		 * <br>
+		 * <pre>
+		 *   retries-comment: "determines the amount of retries"
+		 *   retries: 3
+		 * </pre>
+		 *
+		 * @param pseudoCommentsSuffix the pseudo comments suffix, or an empty string to disable
+		 * @return this builder
+		 */
+		public Builder pseudoCommentsSuffix(String pseudoCommentsSuffix) {
+			this.pseudoCommentsSuffix = Objects.requireNonNull(pseudoCommentsSuffix, "pseudoCommentsSuffix");
 			return this;
 		}
-		
+
 		/**
-		 * Sets the charset used by the factory. Default is UTF 8
-		 * 
+		 * Sets the character encoding used by the factory. Default is UTF 8
+		 *
 		 * @param charset the charset
 		 * @return this builder
 		 */
 		public Builder charset(Charset charset) {
-			this.charset = charset;
+			this.charset = Objects.requireNonNull(charset, "charset");
 			return this;
 		}
-		
+
 		/**
 		 * Builds the options. May be used repeatedly without side effects
 		 * 
 		 * @return the built options
 		 */
 		public GsonOptions build() {
-			return new GsonOptions(this);
+			Gson gson = this.gson;
+			if (gson == null) {
+				// Default Gson
+				gson = new GsonBuilder().setPrettyPrinting().setLenient().disableHtmlEscaping().create();
+			}
+			return new GsonOptions(gson, pseudoCommentsSuffix, charset);
 		}
 
 		@Override
 		public String toString() {
-			return "GsonOptions.Builder [gson=" + gson + ", pseudoComments=" + pseudoComments + ", charset=" + charset + "]";
+			return "GsonOptions.Builder [gson=" + gson + ", pseudoCommentsSuffix=" + pseudoCommentsSuffix
+					+ ", charset=" + charset + "]";
 		}
-		
+
 	}
 	
 }

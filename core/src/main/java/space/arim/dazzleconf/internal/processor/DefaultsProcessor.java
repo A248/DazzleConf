@@ -18,21 +18,18 @@
  */
 package space.arim.dazzleconf.internal.processor;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.annote.ConfDefault.*;
-import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.error.ImproperEntryException;
 import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.SingleConfEntry;
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DefaultsProcessor<C> extends ProcessorBase<C> {
 
@@ -93,11 +90,16 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 		if (ofStrings != null) {
 			return ImmutableCollections.listOf(ofStrings.value());
 		}
+		DefaultObjectHelper helper = new DefaultObjectHelper(entry);
 		DefaultMap ofMap = method.getAnnotation(DefaultMap.class);
 		if (ofMap != null) {
-			return toMap(entry, ofMap.value());
+			return helper.toMap(ofMap.value());
 		}
-		throw new IllDefinedConfigException("No default value annotation present on " + entry.getQualifiedMethodName());
+		DefaultObject ofMethod = method.getAnnotation(DefaultObject.class);
+		if (ofMethod != null) {
+			return helper.toObject(ofMethod.value());
+		}
+		throw helper.badDefault("No default value annotation present");
 	}
 	
 	private static List<Boolean> toList(boolean[] booleanArray) {
@@ -130,23 +132,6 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 			doubles.add(d);
 		}
 		return doubles;
-	}
-	
-	private static Map<String, String> toMap(SingleConfEntry entry, String[] values) {
-		Map<String, String> result = new HashMap<>(values.length / 2);
-		String key = null;
-		for (String value : values) {
-			if (key == null) {
-				key = value;
-			} else {
-				result.put(key, value);
-				key = null;
-			}
-		}
-		if (key != null) {
-			throw new IllDefinedConfigException("@DefaultMap on " + entry.getQualifiedMethodName() + " is incomplete");
-		}
-		return result;
 	}
 
 }
