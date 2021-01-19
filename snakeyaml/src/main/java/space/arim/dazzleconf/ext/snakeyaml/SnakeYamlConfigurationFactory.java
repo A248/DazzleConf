@@ -89,6 +89,8 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 	 * @param configClass the config class
 	 * @param options the config options
 	 * @param yamlOptions the snake yaml options
+	 * @param <C> the configuration type
+	 * @return the configuration factory
 	 * @throws IllegalArgumentException if {@code configClass} is not an interface
 	 * @throws IllDefinedConfigException if a configuration entry in {@code configClass} is not defined properly
 	 */
@@ -104,6 +106,8 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 	 *
 	 * @param configClass the config class
 	 * @param options the config options
+	 * @param <C> the configuration type
+	 * @return the configuration factory
 	 * @throws IllegalArgumentException if {@code configClass} is not an interface
 	 * @throws IllDefinedConfigException if a configuration entry in {@code configClass} is not defined properly
 	 */

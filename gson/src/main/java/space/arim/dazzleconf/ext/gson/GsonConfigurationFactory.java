@@ -96,6 +96,8 @@ public class GsonConfigurationFactory<C> extends AbstractConfigurationFactory<C>
 	 * @param configClass the config class
 	 * @param options the config options
 	 * @param gsonOptions the gson options
+	 * @param <C> the configuration type
+	 * @return the configuration factory
 	 * @throws IllegalArgumentException if {@code configClass} is not an interface
 	 * @throws IllDefinedConfigException if a configuration entry in {@code configClass} is not defined properly
 	 */
@@ -111,6 +113,8 @@ public class GsonConfigurationFactory<C> extends AbstractConfigurationFactory<C>
 	 *
 	 * @param configClass the config class
 	 * @param options the config options
+	 * @param <C> the configuration type
+	 * @return the configuration factory
 	 * @throws IllegalArgumentException if {@code configClass} is not an interface
 	 * @throws IllDefinedConfigException if a configuration entry in {@code configClass} is not defined properly
 	 */
