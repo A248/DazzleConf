@@ -197,6 +197,7 @@
 		<module>core</module>
 		<module>gson</module>
 		<module>snakeyaml</module>
+		<module>tomlj</module>
 	</modules>
 	
 	<dependencyManagement>
