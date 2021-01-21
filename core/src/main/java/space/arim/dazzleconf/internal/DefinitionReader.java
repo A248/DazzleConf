@@ -82,6 +82,9 @@ public class DefinitionReader<C> {
 			throw new IllDefinedConfigException("Circular nested configuration for " + configClass.getName());
 		}
 		for (Method method : configClass.getMethods()) {
+			if (Modifier.isStatic(method.getModifiers())) {
+				continue;
+			}
 			if (MethodUtil.isDefault(method)) {
 				defaultMethods.add(method);
 				continue;
