@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigRenderOptions;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
 public final class HoconOptions {
   private final ConfigParseOptions configParseOptions;
@@ -64,7 +65,7 @@ public final class HoconOptions {
      * @return this builder
      */
     public Builder configParseOptions(ConfigParseOptions options) {
-      this.configParseOptions = options;
+      this.configParseOptions = Objects.requireNonNull(options);
       return this;
     }
 
@@ -75,7 +76,7 @@ public final class HoconOptions {
      * @return this builder
      */
     public Builder configRenderOptions(ConfigRenderOptions options) {
-      this.configRenderOptions = options;
+      this.configRenderOptions = Objects.requireNonNull(options);
       return this;
     }
 
@@ -86,7 +87,7 @@ public final class HoconOptions {
      * @return this builder
      */
     public Builder charset(Charset charset) {
-      this.charset = charset;
+      this.charset = Objects.requireNonNull(charset);
       return this;
     }
 
