@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigRenderOptions;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-public class HoconOptions {
+public final class HoconOptions {
   private final ConfigParseOptions configParseOptions;
   private final ConfigRenderOptions configRenderOptions;
   private final Charset charset;

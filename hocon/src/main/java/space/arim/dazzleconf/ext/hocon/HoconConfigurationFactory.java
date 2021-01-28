@@ -24,7 +24,7 @@ import space.arim.dazzleconf.error.MissingValueException;
 import space.arim.dazzleconf.factory.CommentedWrapper;
 import space.arim.dazzleconf.factory.HumanReadableConfigurationFactory;
 
-public class HoconConfigurationFactory<C> extends HumanReadableConfigurationFactory<C> {
+public final class HoconConfigurationFactory<C> extends HumanReadableConfigurationFactory<C> {
 
   private final HoconOptions hoconOptions;
 
