@@ -49,7 +49,7 @@ public final class HoconOptions {
    *
    * @author CDFN
    */
-  public static class Builder {
+  public final static class Builder {
     ConfigParseOptions configParseOptions = ConfigParseOptions.defaults();
     ConfigRenderOptions configRenderOptions = ConfigRenderOptions.defaults()
         .setOriginComments(false)
