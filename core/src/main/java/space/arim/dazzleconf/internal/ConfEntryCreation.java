@@ -20,10 +20,15 @@ package space.arim.dazzleconf.internal;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.List;
+import java.util.function.Supplier;
 
+import space.arim.dazzleconf.annote.ConfComments;
+import space.arim.dazzleconf.annote.ConfKey;
 import space.arim.dazzleconf.annote.ConfValidator;
 import space.arim.dazzleconf.annote.SubSection;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
+import space.arim.dazzleconf.internal.util.ImmutableCollections;
 import space.arim.dazzleconf.internal.util.MethodUtil;
 import space.arim.dazzleconf.validator.ValueValidator;
 
@@ -50,25 +55,38 @@ class ConfEntryCreation {
 			throw new IllDefinedConfigException(
 					getQualifiedMethodName() + " has non-public return type " + returnType.getName());
 		}
-		return create0();
-	}
-
-	private ConfEntry create0() {
 		if (method.getAnnotation(SubSection.class) != null) {
 			Class<?> configClass = method.getReturnType();
 			if (!configClass.isInterface()) {
 				throw new IllDefinedConfigException(configClass.getName() + " is not an interface");
 			}
-			DefinitionReader<?> nestedReader = reader.createNestedReader(configClass);
-			return new NestedConfEntry<>(method, nestedReader.read());
+			ConfigurationDefinition<?> nestedDefinition = reader.createNestedReader(configClass).read();
+			return new NestedConfEntry<>(
+					method, findKey(), findComments(nestedDefinition::getHeader),
+					nestedDefinition);
 		}
 		ValueValidator validator = getValidator();
-		return new SingleConfEntry(method, validator);
+		return new SingleConfEntry(
+				method, findKey(), findComments(ImmutableCollections::emptyList),
+				validator);
 	}
 
 	private ValueValidator getValidator() {
 		ConfValidator chosenValidator = method.getAnnotation(ConfValidator.class);
 		return (chosenValidator == null) ? null : reader.instantiate(ValueValidator.class, chosenValidator.value());
+	}
+
+	private String findKey() {
+		ConfKey confKey = method.getAnnotation(ConfKey.class);
+		return (confKey != null) ? confKey.value() : method.getName();
+	}
+
+	private List<String> findComments(Supplier<List<String>> headerSupplier) {
+		ConfComments commentsAnnotation = method.getAnnotation(ConfComments.class);
+		if (commentsAnnotation != null) {
+			return ImmutableCollections.listOf(commentsAnnotation.value());
+		}
+		return headerSupplier.get();
 	}
 
 }

@@ -165,8 +165,7 @@ public abstract class ProcessorBase<C> {
 	
 	private <N> N getNestedAuxiliaryValue(NestedConfEntry<N> nestedEntry) {
 		Class<N> configClass = nestedEntry.getDefinition().getConfigClass();
-		ConfEntry entry = nestedEntry;
-		return configClass.cast(getAuxiliaryValue(entry));
+		return configClass.cast(getAuxiliaryValue(nestedEntry));
 	}
 	
 	/**

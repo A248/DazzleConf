@@ -29,13 +29,7 @@ import space.arim.dazzleconf.validator.ValueValidator;
 public class SingleConfEntry extends ConfEntry {
 	
 	private final ValueValidator validator;
-	
-	SingleConfEntry(Method method, ValueValidator validator) {
-		super(method);
-		this.validator = validator;
-	}
 
-	// Used for testing purposes
 	public SingleConfEntry(Method method, String key, List<String> comments, ValueValidator validator) {
 		super(method, key, comments);
 		this.validator = validator;

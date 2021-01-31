@@ -19,6 +19,7 @@
 package space.arim.dazzleconf.internal;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 /**
  * Nested configuration entry
@@ -31,8 +32,8 @@ public class NestedConfEntry<N> extends ConfEntry {
 
 	private final ConfigurationDefinition<N> configDefinition;
 	
-	NestedConfEntry(Method method, ConfigurationDefinition<N> configDefinition) {
-		super(method, configDefinition::getHeader);
+	NestedConfEntry(Method method, String key, List<String> comments, ConfigurationDefinition<N> configDefinition) {
+		super(method, key, comments);
 		this.configDefinition = configDefinition;
 	}
 	
