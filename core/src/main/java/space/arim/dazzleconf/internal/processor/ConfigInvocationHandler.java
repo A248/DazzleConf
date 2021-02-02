@@ -37,6 +37,9 @@ class ConfigInvocationHandler implements InvocationHandler {
 	@Override
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		if (method.getDeclaringClass() == Object.class) {
+			if (method.getName().equals("equals")) {
+				return proxy == args[0];
+			}
 			return invokeMethodOnSelf(method, args);
 		}
 		assert args == null : Arrays.deepToString(args);
