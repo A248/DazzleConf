@@ -28,7 +28,31 @@ import java.lang.annotation.Target;
 /**
  * Specifies either that the config entry is a configuration section,
  * or that a generic parameter of a collection (a collection element or map value)
- * is a configuration section.
+ * is a configuration section. <br>
+ * <br>
+ * Examples: <br>
+ * <pre>
+ * {@code
+ * public interface MyConfig {
+ *
+ *   @SubSection
+ *   ConfigSection mySubSection();
+ *
+ *   @DefaultObject("com.mypackage.MyConfigDefaults.sectionMapDefaults") // See @DefaultObject
+ *   Map<String, @SubSection ConfigSection> sectionMap();
+ *
+ *   interface ConfigSection {
+ *
+ *     @DefaultInteger(3)
+ *     int someValue();
+ *
+ *     @DefaultBoolean(true)
+ *     boolean toggle();
+ *
+ *   }
+ * }
+ * }
+ * </pre>
  * 
  * @author A248
  *
