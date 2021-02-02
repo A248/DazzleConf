@@ -22,7 +22,9 @@ package space.arim.dazzleconf.internal.processor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
-import space.arim.dazzleconf.internal.SingleConfEntry;
+import space.arim.dazzleconf.internal.ConfEntry;
+import space.arim.dazzleconf.internal.type.SimpleTypeReturnType;
+import space.arim.dazzleconf.internal.type.TypeInfoCreation;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -38,7 +40,12 @@ public class DefaultObjectHelperTest {
 	@BeforeEach
 	public void setup() throws NoSuchMethodException {
 		Method method = getClass().getMethod("setup");
-		helper = new DefaultObjectHelper(new SingleConfEntry(method, "key", List.of(), null));
+		helper = new DefaultObjectHelper(
+				new ConfEntry(method, "key", List.of(),
+						new SimpleTypeReturnType<>(
+								new TypeInfoCreation(method.getAnnotatedReturnType()).create(method.getReturnType())
+						),
+						null));
 	}
 
 	@Test

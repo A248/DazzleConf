@@ -28,7 +28,7 @@ import space.arim.dazzleconf.annote.ConfHeader;
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
 import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 
-public class ConfigurationDefinition<C> {
+public final class ConfigurationDefinition<C> {
 
 	private final Class<C> configClass;
 	private final Map<String, ConfEntry> entries;
@@ -87,8 +87,16 @@ public class ConfigurationDefinition<C> {
 		if (object == null || getClass() != object.getClass()) {
 			return false;
 		}
-		// Changes here should be updated likewise in ConfigurationInfo
 		return configClass == ((ConfigurationDefinition<?>) object).configClass;
 	}
-	
+
+	@Override
+	public String toString() {
+		return "ConfigurationDefinition{" +
+				"configClass=" + configClass +
+				", entries=" + entries +
+				", defaultMethods=" + defaultMethods +
+				", serialisers=" + serialisers +
+				'}';
+	}
 }

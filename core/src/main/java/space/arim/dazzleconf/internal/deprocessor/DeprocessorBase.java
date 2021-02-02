@@ -20,51 +20,45 @@ package space.arim.dazzleconf.internal.deprocessor;
 
 import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
-import space.arim.dazzleconf.internal.NestedConfEntry;
-import space.arim.dazzleconf.internal.SingleConfEntry;
+import space.arim.dazzleconf.internal.NestedMapHelper;
 import space.arim.dazzleconf.internal.util.ConfigurationInvoker;
 
-/**
- * Base class for deprocessors. A deprocessor is responsible for serialising config values. While this
- * class handles most of such, subclasses are tasked with handling the config values post deprocessing.
- * 
- * @author A248
- *
- * @param <C> the type of the configuration
- */
-abstract class DeprocessorBase<C> {
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+public abstract class DeprocessorBase<C> {
 
 	private final ConfigurationDefinition<C> definition;
 	private final ConfigurationInvoker<C> configDataInvoker;
+
+	final NestedMapHelper mapHelper = new NestedMapHelper(new LinkedHashMap<>());
 	
 	DeprocessorBase(ConfigurationDefinition<C> definition, C configData) {
 		this.definition = definition;
-		configDataInvoker = new ConfigurationInvoker<>(configData);
+		this.configDataInvoker = new ConfigurationInvoker<>(configData);
 	}
-	
-	abstract void finishSingle(SingleConfEntry entry, Object value);
-	
-	abstract <N> void continueNested(NestedConfEntry<N> childEntry, N childConf);
-	
-	void deprocess() {
+
+	abstract Object wrapValue(ConfEntry entry, Object value);
+
+	abstract <N> DeprocessorBase<N> createChildDeprocessor(ConfigurationDefinition<N> childDefinition, N childConfig);
+
+	public Map<String, Object> deprocess() {
 		for (ConfEntry entry : definition.getEntries()) {
-			Object value = configDataInvoker.getEntryValue(entry);
-			if (entry instanceof NestedConfEntry) {
-				continueNestedCast((NestedConfEntry<?>) entry, value);
-			} else {
-				deprocessSingleEntry((SingleConfEntry) entry, value);
-			}
+			String key = entry.getKey();
+			Object deprocessedValue = getDeprocessedValue(entry, configDataInvoker.getEntryValue(entry));
+			mapHelper.put(key, wrapValue(entry, deprocessedValue));
 		}
+		return mapHelper.getTopLevelMap();
 	}
-	
-	private <N> void continueNestedCast(NestedConfEntry<N> childEntry, Object childConf) {
-		continueNested(childEntry, childEntry.getDefinition().getConfigClass().cast(childConf));
-	}
-	
-	private void deprocessSingleEntry(SingleConfEntry entry, Object value) {
+
+	private Object getDeprocessedValue(ConfEntry entry, Object value) {
 		DecomposerImpl decomposer = new DecomposerImpl(entry.getKey(), definition.getSerialisers());
-		Object postValue = new Decomposition(entry, value, decomposer).deprocessObject();
-		finishSingle(entry, postValue);
+		Decomposition decomposition = new Decomposition(this, entry, value, decomposer);
+		return decomposition.deprocessObject();
+	}
+
+	<N> Map<String, Object> deprocessNested(ConfigurationDefinition<N> childDefinition, N childConfig) {
+		return createChildDeprocessor(childDefinition, childConfig).deprocess();
 	}
 	
 }

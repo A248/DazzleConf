@@ -20,11 +20,13 @@ package space.arim.dazzleconf.internal.processor;
 
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.annote.ConfDefault.*;
-import space.arim.dazzleconf.error.ImproperEntryException;
+import space.arim.dazzleconf.error.IllDefinedConfigException;
+import space.arim.dazzleconf.error.InvalidConfigException;
 import space.arim.dazzleconf.error.MissingKeyException;
+import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
-import space.arim.dazzleconf.internal.NestedConfEntry;
-import space.arim.dazzleconf.internal.SingleConfEntry;
+import space.arim.dazzleconf.internal.type.ReturnType;
+import space.arim.dazzleconf.internal.type.SimpleSubSectionReturnType;
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
 
 import java.lang.reflect.Method;
@@ -38,57 +40,82 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 	}
 	
 	@Override
-	<N> ProcessorBase<N> continueNested(ConfigurationOptions options, NestedConfEntry<N> childEntry,
-			N nestedAuxiliaryValues) throws ImproperEntryException {
+	<N> N createChildConfig(ConfigurationOptions options, ConfigurationDefinition<N> childDefinition,
+							String key, Object preValue, N nestedAuxiliaryValues) throws InvalidConfigException {
 		if (nestedAuxiliaryValues != null) {
 			throw new AssertionError("Internal error: DefaultsProcessor does not handle auxiliary entries");
 		}
-		return new DefaultsProcessor<>(options, childEntry.getDefinition());
+		if (preValue instanceof ConfigurationDefinition) {
+			// Simple sub-section
+			return createFromProcessor(new DefaultsProcessor<>(options, childDefinition));
+		} else {
+			// Sub-section in a collection
+			Class<N> configClass = childDefinition.getConfigClass();
+			if (!configClass.isInstance(preValue)) {
+				throw new IllDefinedConfigException(
+						"Default value at " + key + " must be an instance of " + configClass);
+			}
+			return configClass.cast(preValue);
+		}
 	}
 
 	@Override
-	Object getValueFromSources(SingleConfEntry entry) throws MissingKeyException {
+	Object getValueFromSources(ConfEntry entry) throws MissingKeyException {
+		ReturnType<?> returnType = entry.returnType();
+		if (returnType instanceof SimpleSubSectionReturnType) {
+			// Signal to #createChildProcessor that this is a simple sub-section
+			return ((SimpleSubSectionReturnType<?>) returnType).configDefinition();
+		}
 		Method method = entry.getMethod();
-
-		DefaultBoolean ofBoolean = method.getAnnotation(DefaultBoolean.class);
-		if (ofBoolean != null) {
-			return ofBoolean.value();
+		{
+			DefaultBoolean ofBoolean = method.getAnnotation(DefaultBoolean.class);
+			if (ofBoolean != null) {
+				return ofBoolean.value();
+			}
+			DefaultBooleans ofBooleans = method.getAnnotation(DefaultBooleans.class);
+			if (ofBooleans != null) {
+				return toList(ofBooleans.value());
+			}
 		}
-		DefaultBooleans ofBooleans = method.getAnnotation(DefaultBooleans.class);
-		if (ofBooleans != null) {
-			return toList(ofBooleans.value());
+		{
+			DefaultInteger ofInteger = method.getAnnotation(DefaultInteger.class);
+			if (ofInteger != null) {
+				return ofInteger.value();
+			}
+			DefaultIntegers ofIntegers = method.getAnnotation(DefaultIntegers.class);
+			if (ofIntegers != null) {
+				return toList(ofIntegers.value());
+			}
 		}
-		DefaultInteger ofInteger = method.getAnnotation(DefaultInteger.class);
-		if (ofInteger != null) {
-			return ofInteger.value();
+		{
+			DefaultLong ofLong = method.getAnnotation(DefaultLong.class);
+			if (ofLong != null) {
+				return ofLong.value();
+			}
+			DefaultLongs ofLongs = method.getAnnotation(DefaultLongs.class);
+			if (ofLongs != null) {
+				return toList(ofLongs.value());
+			}
 		}
-		DefaultIntegers ofIntegers = method.getAnnotation(DefaultIntegers.class);
-		if (ofIntegers != null) {
-			return toList(ofIntegers.value());
+		{
+			DefaultDouble ofDouble = method.getAnnotation(DefaultDouble.class);
+			if (ofDouble != null) {
+				return ofDouble.value();
+			}
+			DefaultDoubles ofDoubles = method.getAnnotation(DefaultDoubles.class);
+			if (ofDoubles != null) {
+				return toList(ofDoubles.value());
+			}
 		}
-		DefaultLong ofLong = method.getAnnotation(DefaultLong.class);
-		if (ofLong != null) {
-			return ofLong.value();
-		}
-		DefaultLongs ofLongs = method.getAnnotation(DefaultLongs.class);
-		if (ofLongs != null) {
-			return toList(ofLongs.value());
-		}
-		DefaultDouble ofDouble = method.getAnnotation(DefaultDouble.class);
-		if (ofDouble != null) {
-			return ofDouble.value();
-		}
-		DefaultDoubles ofDoubles = method.getAnnotation(DefaultDoubles.class);
-		if (ofDoubles != null) {
-			return toList(ofDoubles.value());
-		}
-		DefaultString ofString = method.getAnnotation(DefaultString.class);
-		if (ofString != null) {
-			return ofString.value();
-		}
-		DefaultStrings ofStrings = method.getAnnotation(DefaultStrings.class);
-		if (ofStrings != null) {
-			return ImmutableCollections.listOf(ofStrings.value());
+		{
+			DefaultString ofString = method.getAnnotation(DefaultString.class);
+			if (ofString != null) {
+				return ofString.value();
+			}
+			DefaultStrings ofStrings = method.getAnnotation(DefaultStrings.class);
+			if (ofStrings != null) {
+				return ImmutableCollections.listOf(ofStrings.value());
+			}
 		}
 		DefaultObjectHelper helper = new DefaultObjectHelper(entry);
 		DefaultMap ofMap = method.getAnnotation(DefaultMap.class);

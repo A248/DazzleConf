@@ -18,31 +18,36 @@
  */
 package space.arim.dazzleconf.internal;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.List;
-import java.util.function.Supplier;
-
 import space.arim.dazzleconf.annote.ConfComments;
 import space.arim.dazzleconf.annote.ConfKey;
 import space.arim.dazzleconf.annote.ConfValidator;
-import space.arim.dazzleconf.annote.SubSection;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
+import space.arim.dazzleconf.internal.type.ReturnType;
+import space.arim.dazzleconf.internal.type.ReturnTypeCreation;
+import space.arim.dazzleconf.internal.type.SimpleSubSectionReturnType;
+import space.arim.dazzleconf.internal.type.TypeInfo;
+import space.arim.dazzleconf.internal.type.TypeInfoCreation;
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
 import space.arim.dazzleconf.internal.util.MethodUtil;
 import space.arim.dazzleconf.validator.ValueValidator;
+
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.function.Supplier;
 
 class ConfEntryCreation {
 
 	private final DefinitionReader<?> reader;
 	private final Method method;
+	private final TypeInfoCreation typeInfoCreation;
 
-	ConfEntryCreation(DefinitionReader<?> reader, Method method) {
+	ConfEntryCreation(DefinitionReader<?> reader, Method method, TypeInfoCreation typeInfoCreation) {
 		this.reader = reader;
 		this.method = method;
+		this.typeInfoCreation = typeInfoCreation;
 	}
 
-	String getQualifiedMethodName() {
+	private String getQualifiedMethodName() {
 		return MethodUtil.getQualifiedName(method);
 	}
 
@@ -50,25 +55,22 @@ class ConfEntryCreation {
 		if (method.getParameterCount() > 0) {
 			throw new IllDefinedConfigException(getQualifiedMethodName() + " should not have parameters");
 		}
-		Class<?> returnType = method.getReturnType();
-		if (!Modifier.isPublic(returnType.getModifiers())) {
+		TypeInfo<?> returnTypeInfo = typeInfoCreation.create(method.getReturnType());
+		if (!returnTypeInfo.isTypeAccessible()) {
 			throw new IllDefinedConfigException(
-					getQualifiedMethodName() + " has non-public return type " + returnType.getName());
+					getQualifiedMethodName() + " has inaccessible return type " + returnTypeInfo.rawType());
 		}
-		if (method.getAnnotation(SubSection.class) != null) {
-			Class<?> configClass = method.getReturnType();
-			if (!configClass.isInterface()) {
-				throw new IllDefinedConfigException(configClass.getName() + " is not an interface");
-			}
-			ConfigurationDefinition<?> nestedDefinition = reader.createNestedReader(configClass).read();
-			return new NestedConfEntry<>(
-					method, findKey(), findComments(nestedDefinition::getHeader),
-					nestedDefinition);
+		ReturnType<?> returnType = new ReturnTypeCreation(reader, returnTypeInfo).create(method);
+		List<String> comments;
+		if (returnType instanceof SimpleSubSectionReturnType) {
+			// Simple sub-section; use comment header for entry comments
+			ConfigurationDefinition<?> configDefinition = ((SimpleSubSectionReturnType<?>) returnType).configDefinition();
+			comments = findComments(configDefinition::getHeader);
+		} else {
+			// Everything else
+			comments = findComments(ImmutableCollections::emptyList);
 		}
-		ValueValidator validator = getValidator();
-		return new SingleConfEntry(
-				method, findKey(), findComments(ImmutableCollections::emptyList),
-				validator);
+		return new ConfEntry(method, findKey(), comments, returnType, getValidator());
 	}
 
 	private ValueValidator getValidator() {
@@ -81,12 +83,12 @@ class ConfEntryCreation {
 		return (confKey != null) ? confKey.value() : method.getName();
 	}
 
-	private List<String> findComments(Supplier<List<String>> headerSupplier) {
+	private List<String> findComments(Supplier<List<String>> backupSupplier) {
 		ConfComments commentsAnnotation = method.getAnnotation(ConfComments.class);
 		if (commentsAnnotation != null) {
 			return ImmutableCollections.listOf(commentsAnnotation.value());
 		}
-		return headerSupplier.get();
+		return backupSupplier.get();
 	}
 
 }

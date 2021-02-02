@@ -95,7 +95,7 @@ class DecomposerImpl implements Decomposer {
 
 	@Override
 	public <K, V> Map<Object, Object> decomposeMap(Class<K> keyType, Class<V> valueType, Map<? extends K, ? extends V> map) {
-		Map<Object, Object> serialised = new LinkedHashMap<>(map.size());
+		Map<Object, Object> serialised = new LinkedHashMap<>((int) (map.size() / 0.74f));
 		for (Map.Entry<? extends K, ? extends V> mapEntry : map.entrySet()) {
 			serialised.put(
 					decompose(keyType, mapEntry.getKey()),

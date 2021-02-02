@@ -18,22 +18,29 @@
  */
 package space.arim.dazzleconf.internal;
 
+import space.arim.dazzleconf.internal.type.ReturnType;
 import space.arim.dazzleconf.internal.util.MethodUtil;
 import space.arim.dazzleconf.sorter.SortableConfigurationEntry;
+import space.arim.dazzleconf.validator.ValueValidator;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Optional;
 
-public abstract class ConfEntry implements SortableConfigurationEntry {
+public final class ConfEntry implements SortableConfigurationEntry {
 
 	private final Method method;
-	private transient final String key;
-	private transient final List<String> comments;
+	private final String key;
+	private final List<String> comments;
+	private final ReturnType<?> returnType;
+	private final ValueValidator validator;
 
-	ConfEntry(Method method, String key, List<String> comments) {
+	public ConfEntry(Method method, String key, List<String> comments, ReturnType<?> returnType, ValueValidator validator) {
 		this.method = method;
 		this.key = key;
 		this.comments = comments;
+		this.returnType = returnType;
+		this.validator = validator;
 	}
 
 	@Override
@@ -50,7 +57,15 @@ public abstract class ConfEntry implements SortableConfigurationEntry {
 	public List<String> getComments() {
 		return comments;
 	}
-	
+
+	public ReturnType<?> returnType() {
+		return returnType;
+	}
+
+	public Optional<ValueValidator> getValidator() {
+		return Optional.ofNullable(validator);
+	}
+
 	/**
 	 * Gets the fully qualified name of the method this entry represents
 	 * 
@@ -84,5 +99,5 @@ public abstract class ConfEntry implements SortableConfigurationEntry {
 	public String toString() {
 		return "ConfEntry [method=" + method + "]";
 	}
-	
+
 }

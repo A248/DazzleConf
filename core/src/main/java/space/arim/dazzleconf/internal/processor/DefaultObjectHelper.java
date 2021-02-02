@@ -20,7 +20,7 @@
 package space.arim.dazzleconf.internal.processor;
 
 import space.arim.dazzleconf.error.IllDefinedConfigException;
-import space.arim.dazzleconf.internal.SingleConfEntry;
+import space.arim.dazzleconf.internal.ConfEntry;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -30,9 +30,9 @@ import java.util.Map;
 
 class DefaultObjectHelper {
 
-	private final SingleConfEntry entry;
+	private final ConfEntry entry;
 
-	DefaultObjectHelper(SingleConfEntry entry) {
+	DefaultObjectHelper(ConfEntry entry) {
 		this.entry = entry;
 	}
 

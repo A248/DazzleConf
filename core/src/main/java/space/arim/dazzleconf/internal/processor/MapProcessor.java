@@ -18,16 +18,15 @@
  */
 package space.arim.dazzleconf.internal.processor;
 
-import java.util.Map;
-
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.BadValueException;
 import space.arim.dazzleconf.error.ImproperEntryException;
-import space.arim.dazzleconf.error.MissingKeyException;
+import space.arim.dazzleconf.error.InvalidConfigException;
+import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
-import space.arim.dazzleconf.internal.NestedConfEntry;
 import space.arim.dazzleconf.internal.NestedMapHelper;
-import space.arim.dazzleconf.internal.SingleConfEntry;
+
+import java.util.Map;
 
 public class MapProcessor<C> extends ProcessorBase<C> {
 
@@ -45,26 +44,20 @@ public class MapProcessor<C> extends ProcessorBase<C> {
 	}
 	
 	@Override
-	<N> ProcessorBase<N> continueNested(ConfigurationOptions options, NestedConfEntry<N> childEntry,
-			N nestedAuxiliaryValues) throws ImproperEntryException {
-		Map<String, Object> childMap = getChildMapFromSources(childEntry, mapHelper);
-		return new MapProcessor<>(options, childEntry.getDefinition(), childMap, nestedAuxiliaryValues);
-	}
-	
-	@SuppressWarnings("unchecked")
-	private static Map<String, Object> getChildMapFromSources(NestedConfEntry<?> entry, NestedMapHelper mapHelper)
-			throws ImproperEntryException {
-		String key = entry.getKey();
-		Object childObject = mapHelper.get(key);
-		if (!(childObject instanceof Map)) {
+	<N> N createChildConfig(ConfigurationOptions options, ConfigurationDefinition<N> childDefinition,
+							String key, Object preValue, N nestedAuxiliaryValues) throws InvalidConfigException {
+		if (!(preValue instanceof Map)) {
 			throw new BadValueException.Builder().key(key)
-					.message("Object " + childObject + " is not a configuration section").build();
+					.message("Object " + preValue + " is not a configuration section").build();
 		}
-		return (Map<String, Object>) childObject;
+		@SuppressWarnings("unchecked")
+		Map<String, Object> childMap = (Map<String, Object>) preValue;
+		return createFromProcessor(
+				new MapProcessor<>(options, childDefinition, childMap, nestedAuxiliaryValues));
 	}
 	
 	@Override
-	Object getValueFromSources(SingleConfEntry entry) throws MissingKeyException {
+	Object getValueFromSources(ConfEntry entry) throws ImproperEntryException {
 		return mapHelper.get(entry.getKey());
 	}
 	
