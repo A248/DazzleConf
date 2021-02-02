@@ -22,7 +22,6 @@ import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.annote.ConfDefault.*;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.error.InvalidConfigException;
-import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.type.ReturnType;
@@ -60,7 +59,7 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 	}
 
 	@Override
-	Object getValueFromSources(ConfEntry entry) throws MissingKeyException {
+	Object getValueFromSources(ConfEntry entry) throws InvalidConfigException {
 		ReturnType<?> returnType = entry.returnType();
 		if (returnType instanceof SimpleSubSectionReturnType) {
 			// Signal to #createChildProcessor that this is a simple sub-section
@@ -117,7 +116,7 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 				return ImmutableCollections.listOf(ofStrings.value());
 			}
 		}
-		DefaultObjectHelper helper = new DefaultObjectHelper(entry);
+		DefaultObjectHelper helper = new DefaultObjectHelper(entry, this);
 		DefaultMap ofMap = method.getAnnotation(DefaultMap.class);
 		if (ofMap != null) {
 			return helper.toMap(ofMap.value());

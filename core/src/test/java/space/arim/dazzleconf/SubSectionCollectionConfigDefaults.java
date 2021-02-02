@@ -27,8 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SubSectionCollectionConfigDefaults {
 
-	private static final Map<String, DummyConfig.NestedConfig> DEFAULT_NESTED_CONFIG_MAP = Map.of(
-			"keyone", new DummyConfig.NestedConfig() {
+	private static final Map<String, NestedConfig> DEFAULT_NESTED_CONFIG_MAP = Map.of(
+			"key-one", new NestedConfig() {
 
 				@Override
 				public String nestedValue() { return ""; }
@@ -52,12 +52,19 @@ public class SubSectionCollectionConfigDefaults {
 				public Map<String, ComplexObject> complexValues() { return Map.of(); }
 			}
 	);
-	public static Map<String, DummyConfig.NestedConfig> defaultNestedConfigMap() {
+	public static Map<String, NestedConfig> defaultNestedConfigMap() {
 		return DEFAULT_NESTED_CONFIG_MAP;
+	}
+
+	public static Map<String, NestedConfig> defaultNestedConfigMapUsingDefaultSection(NestedConfig defaultNestedConfig) {
+		return Map.of("key-two", defaultNestedConfig);
 	}
 
 	public void assertDefaultValues(SubSectionCollectionConfig config) {
 		assertEquals(defaultNestedConfigMap(), config.nestedConfigMap());
+
+		NestedConfig configAtKeyTwo = config.nestedConfigMapUsingDefaultSection().get("key-two");
+		new DummyConfigDefaults().assertDefaultNestedConfigValues(configAtKeyTwo);
 	}
 
 }

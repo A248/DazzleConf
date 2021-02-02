@@ -31,8 +31,6 @@ import java.util.Set;
 import org.opentest4j.AssertionFailedError;
 import org.opentest4j.TestAbortedException;
 
-import space.arim.dazzleconf.DummyConfig.NestedConfig;
-
 public class DummyConfigDefaults {
 
 	public static int defaultValueInteger() {
@@ -69,7 +67,10 @@ public class DummyConfigDefaults {
 		assertEquals(Set.of("string1", "string2"), defaultConf.someStrings());
 		assertEquals(defaultValueInteger(), defaultConf.integerUsingDefaultObjectAnnotation());
 
-		NestedConfig nestedConf = defaultConf.subSection();
+		assertDefaultNestedConfigValues(defaultConf.subSection());
+	}
+
+	void assertDefaultNestedConfigValues(NestedConfig nestedConf) {
 		assertEquals("ahaha", nestedConf.nestedValue());
 		assertEquals(Set.of("1string", "2string", "3string"), nestedConf.someStringsForYou());
 		assertEquals(List.of(1, 2, 3), nestedConf.ordered123());

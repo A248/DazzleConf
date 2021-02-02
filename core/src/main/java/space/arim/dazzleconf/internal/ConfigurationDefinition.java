@@ -35,8 +35,8 @@ public final class ConfigurationDefinition<C> {
 	private final Set<Method> defaultMethods;
 	private final ValueSerialiserMap serialisers;
 	
-	ConfigurationDefinition(Class<C> configClass, Map<String, ConfEntry> entries, Set<Method> defaultMethods,
-			ValueSerialiserMap serialisers) {
+	public ConfigurationDefinition(Class<C> configClass, Map<String, ConfEntry> entries,
+								   Set<Method> defaultMethods, ValueSerialiserMap serialisers) {
 		this.configClass = configClass;
 		this.entries = entries;
 		this.defaultMethods = ImmutableCollections.setOf(defaultMethods);

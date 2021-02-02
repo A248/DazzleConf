@@ -26,7 +26,6 @@ import space.arim.dazzleconf.AuxiliaryKeys;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.BadValueException;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
-import space.arim.dazzleconf.error.ImproperEntryException;
 import space.arim.dazzleconf.error.InvalidConfigException;
 import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.error.MissingValueException;
@@ -101,7 +100,7 @@ public abstract class ProcessorBase<C> {
 		}
 	}
 
-	private Object getPreValue(ConfEntry entry) throws ImproperEntryException {
+	private Object getPreValue(ConfEntry entry) throws InvalidConfigException {
 		Object preValue;
 		try {
 			preValue = getValueFromSources(entry);
@@ -177,6 +176,7 @@ public abstract class ProcessorBase<C> {
 	 * @param nestedAuxiliaryValues any auxiliary values
 	 * @param <N> the nested config type
 	 * @return the child config
+	 * @throws InvalidConfigException if something went wrong
 	 */
 	abstract <N> N createChildConfig(ConfigurationOptions options,
 									 ConfigurationDefinition<N> childDefinition,
@@ -188,8 +188,8 @@ public abstract class ProcessorBase<C> {
 	 * 
 	 * @param entry the config entry
 	 * @return the pre processed value
-	 * @throws ImproperEntryException if the key is missing or the value is bad
+	 * @throws InvalidConfigException if something went wrong
 	 */
-	abstract Object getValueFromSources(ConfEntry entry) throws ImproperEntryException;
+	abstract Object getValueFromSources(ConfEntry entry) throws InvalidConfigException;
 	
 }

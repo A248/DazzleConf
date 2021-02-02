@@ -20,16 +20,34 @@
 package space.arim.dazzleconf;
 
 import space.arim.dazzleconf.annote.ConfDefault;
-import space.arim.dazzleconf.annote.SubSection;
+import space.arim.dazzleconf.annote.ConfSerialisers;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-public interface SubSectionCollectionConfig {
+@ConfSerialisers(NumericPairSerialiser.class)
+public interface NestedConfig {
 
-	@ConfDefault.DefaultObject("space.arim.dazzleconf.SubSectionCollectionConfigDefaults.defaultNestedConfigMap")
-	Map<String, @SubSection NestedConfig> nestedConfigMap();
+	@ConfDefault.DefaultString("ahaha")
+	String nestedValue();
 
-	@ConfDefault.DefaultObject("space.arim.dazzleconf.SubSectionCollectionConfigDefaults.defaultNestedConfigMapUsingDefaultSection")
-	Map<String, @SubSection NestedConfig> nestedConfigMapUsingDefaultSection();
+	@ConfDefault.DefaultStrings({"1string", "2string", "3string"})
+	Set<String> someStringsForYou();
+
+	@ConfDefault.DefaultIntegers({1, 2, 3})
+	List<Integer> ordered123();
+
+	@ConfDefault.DefaultString("1:3")
+	NumericPair numericPair();
+
+	@ConfDefault.DefaultMap({"key1", "4:18", "key2", "2:8"})
+	Map<String, NumericPair> extraPairs();
+
+	@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueString")
+	String stringUsingDefaultObjectAnnotation();
+
+	@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueComplex")
+	Map<String, ComplexObject> complexValues();
 
 }
