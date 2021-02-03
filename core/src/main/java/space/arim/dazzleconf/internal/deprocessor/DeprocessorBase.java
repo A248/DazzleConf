@@ -46,7 +46,14 @@ public abstract class DeprocessorBase<C> {
 		for (ConfEntry entry : definition.getEntries()) {
 			String key = entry.getKey();
 			Object deprocessedValue = getDeprocessedValue(entry, configDataInvoker.getEntryValue(entry));
-			mapHelper.put(key, wrapValue(entry, deprocessedValue));
+			Object wrappedValue = wrapValue(entry, deprocessedValue);
+			if (deprocessedValue instanceof Map) {
+				// Must combine this map with any existing nested maps
+				// This is particularly necessary when users mix qualified keys and nested sub-sections
+				mapHelper.combine(key, wrappedValue);
+			} else {
+				mapHelper.put(key, wrappedValue);
+			}
 		}
 		return mapHelper.getTopLevelMap();
 	}
