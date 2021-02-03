@@ -49,7 +49,7 @@ public final class DefinitionReader<C> {
 	
 	private final Set<Method> defaultMethods = new HashSet<>();
 	private final Map<String, ConfEntry> entries = new LinkedHashMap<>();
-	
+
 	public DefinitionReader(Class<C> configClass, ConfigurationOptions options) {
 		this(configClass, options, new HashSet<>());
 	}
@@ -73,6 +73,9 @@ public final class DefinitionReader<C> {
 
 	public <N> ConfigurationDefinition<N> createChildDefinition(TypeInfo<N> configClassTypeInfo) {
 		Class<N> configClass = configClassTypeInfo.rawType();
+		if (!configClass.isInterface()) {
+			throw new IllDefinedConfigException(configClass.getName() + " is not an interface");
+		}
 		DefinitionReader<N> reader = new DefinitionReader<>(configClass, options, nestedConfigDejaVu);
 		return reader.read();
 	}
