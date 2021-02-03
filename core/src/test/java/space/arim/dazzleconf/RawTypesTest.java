@@ -20,7 +20,7 @@
 package space.arim.dazzleconf;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf.annote.SubSection;
+import space.arim.dazzleconf.annote.ConfDefault;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.factory.SerialisationFactory;
 
@@ -30,55 +30,33 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class BadSubSectionTest {
+public class RawTypesTest {
 
 	@Test
-	public void throwIllegalArgumentException() {
-		assertThrows(IllegalArgumentException.class, () -> {
-			var factory = new SerialisationFactory<>(String.class, ConfigurationOptions.defaults());
-			factory.loadDefaults();
-		});
-	}
-
-	@Test
-	public void throwIllDefinedConfigException() {
+	public void annihilateMapWithRawTypes() {
 		assertThrows(IllDefinedConfigException.class, () -> {
-			var factory = new SerialisationFactory<>(Config.class, ConfigurationOptions.defaults());
-			factory.loadDefaults();
-		});
-	}
-
-	public interface Config {
-
-		@SubSection
-		String notASubSection();
-
-	}
-
-	@Test
-	public void mapKeysCannotBeSubSections() {
-		assertThrows(IllDefinedConfigException.class, () -> {
-			var factory = new SerialisationFactory<>(ConfigWithSubSectionKeys.class, ConfigurationOptions.defaults());
+			var factory = new SerialisationFactory<>(RawTypesMapConfig.class, ConfigurationOptions.defaults());
 			factory.write(Map::of, OutputStream.nullOutputStream());
 		});
 	}
 
-	public interface ConfigWithSubSectionKeys {
+	public interface RawTypesMapConfig {
 
-		Map<@SubSection String, Config> badMap();
+		@ConfDefault.DefaultMap({})
+		Map sadMap();
 	}
 
 	@Test
-	public void collectionsThemselvesCannotBeSubSections() {
+	public void annihilateSetWithRawTypes() {
 		assertThrows(IllDefinedConfigException.class, () -> {
-			var factory = new SerialisationFactory<>(ConfigWithSetItselfASubSection.class, ConfigurationOptions.defaults());
+			var factory = new SerialisationFactory<>(RawTypesSetConfig.class, ConfigurationOptions.defaults());
 			factory.write(Set::of, OutputStream.nullOutputStream());
 		});
 	}
 
-	public interface ConfigWithSetItselfASubSection {
+	public interface RawTypesSetConfig {
 
-		@SubSection
-		Set<String> notASubSection();
+		@ConfDefault.DefaultStrings({})
+		Set sadSet();
 	}
 }

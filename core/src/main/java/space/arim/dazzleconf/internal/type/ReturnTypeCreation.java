@@ -20,10 +20,13 @@
 package space.arim.dazzleconf.internal.type;
 
 import space.arim.dazzleconf.annote.SubSection;
+import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.internal.DefinitionReader;
+import space.arim.dazzleconf.internal.util.MethodUtil;
 
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 public class ReturnTypeCreation {
@@ -37,7 +40,13 @@ public class ReturnTypeCreation {
 	}
 
 	public ReturnType<?> create(Method method) {
-		return createUsingFakeGenerics(method);
+		try {
+			return createUsingFakeGenerics(method);
+		} catch (IllDefinedConfigException ex) {
+			// Rewrap with additional context
+			throw new IllDefinedConfigException(
+					"Unable to analyze return type of " + MethodUtil.getQualifiedName(method), ex);
+		}
 	}
 	
 	private <F1, F2 extends Collection<F1>> ReturnType<?> createUsingFakeGenerics(Method method) {
@@ -54,9 +63,27 @@ public class ReturnTypeCreation {
 		return makeSimpleReturnType(returnTypeInfo, method.isAnnotationPresent(SubSection.class));
 	}
 
+	private void checkCollectionTypeItselfNotSubSectionAnnotated() {
+		if (returnTypeInfo.isAnnotationPresent(SubSection.class)) {
+			throw new IllDefinedConfigException("@SubSection can be placed on collection elements or map values, " +
+					"but it cannot be placed on Collection, List, Set, or Map directly");
+		}
+	}
+
+	private List<TypeInfo<?>> getNonEmptyGenericParameters() {
+		List<TypeInfo<?>> typeArguments = returnTypeInfo.arguments();
+		if (typeArguments.isEmpty()) {
+			String typeName = returnTypeInfo.rawType().getSimpleName();
+			throw new IllDefinedConfigException(typeName + " must have generic parameters. Raw types cannot be used");
+		}
+		return typeArguments;
+	}
+
 	private <E, R extends Collection<E>> CollectionReturnType<E, ?> makeCollectionReturnType(TypeInfo<R> returnTypeInfo) {
+		checkCollectionTypeItselfNotSubSectionAnnotated();
+		List<TypeInfo<?>> typeArguments = getNonEmptyGenericParameters();
 		@SuppressWarnings("unchecked")
-		TypeInfo<E> elementTypeInfo = (TypeInfo<E>) returnTypeInfo.arguments().get(0);
+		TypeInfo<E> elementTypeInfo = (TypeInfo<E>) typeArguments.get(0);
 		if (elementTypeInfo.isAnnotationPresent(SubSection.class)) {
 			return new SubSectionCollectionReturnType<>(returnTypeInfo, reader.createChildDefinition(elementTypeInfo));
 		} else {
@@ -65,8 +92,13 @@ public class ReturnTypeCreation {
 	}
 
 	private <K, V> MapReturnType<K, V> makeMapReturnType(TypeInfo<Map<K, V>> returnTypeInfo) {
+		checkCollectionTypeItselfNotSubSectionAnnotated();
+		List<TypeInfo<?>> typeArguments = getNonEmptyGenericParameters();
+		if (typeArguments.get(0).isAnnotationPresent(SubSection.class)) {
+			throw new IllDefinedConfigException("@SubSection can be placed on map values, but not map keys");
+		}
 		@SuppressWarnings("unchecked")
-		TypeInfo<V> valueTypeInfo = (TypeInfo<V>) returnTypeInfo.arguments().get(1);
+		TypeInfo<V> valueTypeInfo = (TypeInfo<V>) typeArguments.get(1);
 		if (valueTypeInfo.isAnnotationPresent(SubSection.class)) {
 			return new SubSectionMapReturnType<>(returnTypeInfo, reader.createChildDefinition(valueTypeInfo));
 		} else {
