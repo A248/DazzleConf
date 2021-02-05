@@ -27,17 +27,20 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.annote.ConfSerialisers;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
+import space.arim.dazzleconf.internal.type.TypeInfo;
+import space.arim.dazzleconf.internal.type.TypeInfoCreation;
 import space.arim.dazzleconf.internal.util.MethodUtil;
 import space.arim.dazzleconf.serialiser.ValueSerialiser;
 import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 import space.arim.dazzleconf.sorter.ConfigurationSorter;
 
-public class DefinitionReader<C> {
+public final class DefinitionReader<C> {
 
 	private final Class<C> configClass;
 	private final ConfigurationOptions options;
@@ -46,13 +49,17 @@ public class DefinitionReader<C> {
 	
 	private final Set<Method> defaultMethods = new HashSet<>();
 	private final Map<String, ConfEntry> entries = new LinkedHashMap<>();
-	
+
 	public DefinitionReader(Class<C> configClass, ConfigurationOptions options) {
 		this(configClass, options, new HashSet<>());
 	}
 	
 	private DefinitionReader(Class<C> configClass, ConfigurationOptions options,
 			Set<Class<?>> nestedConfigDejaVu) {
+		Objects.requireNonNull(configClass, "config class");
+		if (!configClass.isInterface()) {
+			throw new IllegalArgumentException(configClass.getName() + " is not an interface");
+		}
 		this.configClass = configClass;
 		this.options = options;
 		this.nestedConfigDejaVu = nestedConfigDejaVu;
@@ -62,6 +69,15 @@ public class DefinitionReader<C> {
 		ValueSerialiserMap serialiserMap = readSerialisers();
 		Map<String, ConfEntry> sortedEntries = readAndSortEntries();
 		return new ConfigurationDefinition<>(configClass, sortedEntries, defaultMethods, serialiserMap);
+	}
+
+	public <N> ConfigurationDefinition<N> createChildDefinition(TypeInfo<N> configClassTypeInfo) {
+		Class<N> configClass = configClassTypeInfo.rawType();
+		if (!configClass.isInterface()) {
+			throw new IllDefinedConfigException(configClass.getName() + " is not an interface");
+		}
+		DefinitionReader<N> reader = new DefinitionReader<>(configClass, options, nestedConfigDejaVu);
+		return reader.read();
 	}
 	
 	private ValueSerialiserMap readSerialisers() {
@@ -112,15 +128,14 @@ public class DefinitionReader<C> {
 	}
 	
 	private void create(Method method) {
-		ConfEntry entry = new ConfEntryCreation(this, method).create();
+		ConfEntryCreation entryCreation = new ConfEntryCreation(
+				this, method,
+				new TypeInfoCreation(method.getAnnotatedReturnType()));
+		ConfEntry entry = entryCreation.create();
 		ConfEntry previous = entries.put(entry.getKey(), entry);
 		if (previous != null) {
 			throw new IllDefinedConfigException("Duplicate key " + entry.getKey());
 		}
-	}
-	
-	<N> DefinitionReader<N> createNestedReader(Class<N> configClass) {
-		return new DefinitionReader<>(configClass, options, nestedConfigDejaVu);
 	}
 	
 	<V> V instantiate(Class<V> intf, Class<? extends V> impl) {

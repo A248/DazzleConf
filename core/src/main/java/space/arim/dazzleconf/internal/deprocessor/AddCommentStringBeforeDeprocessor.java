@@ -22,9 +22,8 @@ import java.util.List;
 
 import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
-import space.arim.dazzleconf.internal.NestedConfEntry;
 
-public class AddCommentStringBeforeDeprocessor<C> extends MapDeprocessor<C> {
+public class AddCommentStringBeforeDeprocessor<C> extends DeprocessorBase<C> {
 
 	private final String suffix;
 
@@ -36,15 +35,15 @@ public class AddCommentStringBeforeDeprocessor<C> extends MapDeprocessor<C> {
 	@Override
 	Object wrapValue(ConfEntry entry, Object value) {
 		List<String> comments = entry.getComments();
-		if (comments.size() > 0) {
+		if (!comments.isEmpty()) {
 			mapHelper.put(entry.getKey() + suffix, String.join("\n", comments));
 		}
 		return value;
 	}
 	
 	@Override
-	<N> MapDeprocessor<N> createChildDeprocessor(NestedConfEntry<N> childEntry, N childConf) {
-		return new AddCommentStringBeforeDeprocessor<>(childEntry.getDefinition(), childConf, suffix);
+	<N> DeprocessorBase<N> createChildDeprocessor(ConfigurationDefinition<N> childDefinition, N childConf) {
+		return new AddCommentStringBeforeDeprocessor<>(childDefinition, childConf, suffix);
 	}
 
 }

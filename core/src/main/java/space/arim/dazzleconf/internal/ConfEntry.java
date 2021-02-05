@@ -18,34 +18,29 @@
  */
 package space.arim.dazzleconf.internal;
 
-import java.lang.reflect.Method;
-import java.util.List;
-import java.util.function.Supplier;
-
-import space.arim.dazzleconf.annote.ConfComments;
-import space.arim.dazzleconf.annote.ConfKey;
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import space.arim.dazzleconf.internal.type.ReturnType;
 import space.arim.dazzleconf.internal.util.MethodUtil;
 import space.arim.dazzleconf.sorter.SortableConfigurationEntry;
+import space.arim.dazzleconf.validator.ValueValidator;
 
-public abstract class ConfEntry implements SortableConfigurationEntry {
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Optional;
+
+public final class ConfEntry implements SortableConfigurationEntry {
 
 	private final Method method;
-	private transient final String key;
-	private transient final List<String> comments;
+	private final String key;
+	private final List<String> comments;
+	private final ReturnType<?> returnType;
+	private final ValueValidator validator;
 
-	ConfEntry(Method method, String key, List<String> comments) {
+	public ConfEntry(Method method, String key, List<String> comments, ReturnType<?> returnType, ValueValidator validator) {
 		this.method = method;
 		this.key = key;
 		this.comments = comments;
-	}
-
-	ConfEntry(Method method, Supplier<List<String>> headerSupplier) {
-		this(method, findKey(method), findComments(method, headerSupplier));
-	}
-	
-	ConfEntry(Method method) {
-		this(method, ImmutableCollections::emptyList);
+		this.returnType = returnType;
+		this.validator = validator;
 	}
 
 	@Override
@@ -62,20 +57,15 @@ public abstract class ConfEntry implements SortableConfigurationEntry {
 	public List<String> getComments() {
 		return comments;
 	}
-	
-	private static String findKey(Method method) {
-		ConfKey confKey = method.getAnnotation(ConfKey.class);
-		return (confKey != null) ? confKey.value() : method.getName();
+
+	public ReturnType<?> returnType() {
+		return returnType;
 	}
-	
-	private static List<String> findComments(Method method, Supplier<List<String>> headerSupplier) {
-		ConfComments commentsAnnotation = method.getAnnotation(ConfComments.class);
-		if (commentsAnnotation != null) {
-			return ImmutableCollections.listOf(commentsAnnotation.value());
-		}
-		return headerSupplier.get();
+
+	public Optional<ValueValidator> getValidator() {
+		return Optional.ofNullable(validator);
 	}
-	
+
 	/**
 	 * Gets the fully qualified name of the method this entry represents
 	 * 
@@ -109,5 +99,5 @@ public abstract class ConfEntry implements SortableConfigurationEntry {
 	public String toString() {
 		return "ConfEntry [method=" + method + "]";
 	}
-	
+
 }

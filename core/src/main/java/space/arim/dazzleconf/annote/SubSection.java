@@ -19,19 +19,46 @@
 package space.arim.dazzleconf.annote;
 
 import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE_USE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * Specifies the config entry is a nested configuration section
+ * Specifies either that the config entry is a configuration section,
+ * or that a generic parameter of a collection (a collection element or map value)
+ * is a configuration section. <br>
+ * <br>
+ * Examples: <br>
+ * <pre>
+ * {@code
+ * public interface MyConfig {
+ *
+ *   @SubSection
+ *   ConfigSection mySubSection();
+ *
+ *   @DefaultObject("com.mypackage.MyConfigDefaults.sectionMapDefaults") // See @DefaultObject
+ *   Map<String, @SubSection ConfigSection> sectionMap();
+ *
+ *   interface ConfigSection {
+ *
+ *     @DefaultInteger(3)
+ *     int someValue();
+ *
+ *     @DefaultBoolean(true)
+ *     boolean toggle();
+ *
+ *   }
+ * }
+ * }
+ * </pre>
  * 
  * @author A248
  *
  */
 @Retention(RUNTIME)
-@Target(METHOD)
+@Target({METHOD, TYPE_USE})
 public @interface SubSection {
 	
 }
