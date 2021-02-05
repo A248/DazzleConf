@@ -74,8 +74,5 @@ public interface DummyConfig {
 
 	@DefaultStrings({"string1", "string2"})
 	Set<String> someStrings();
-
-	@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueInteger")
-	int integerUsingDefaultObjectAnnotation();
 	
 }

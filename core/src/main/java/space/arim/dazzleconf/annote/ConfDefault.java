@@ -141,10 +141,15 @@ public final class ConfDefault {
 	}
 
 	/**
-	 * Specifies the fully qualified name of the static method returning the default value. <br>
+	 * Specifies the qualified name of the static method returning the default value. <br>
 	 * <br>
 	 * The method must be static, and it must be visible.
 	 * When the default configuration is loaded, the method will be invoked. <br>
+	 * <br>
+	 * If the method is in the same class as the config interface this annotation is placed
+	 * in, the value is this annotation is the method name (the class name can be omitted).
+	 * Otherwise, the value of this annotation must be the fully qualified class name,
+	 * followed by a '{@literal .}', followed by the method name. <br>
 	 * <br>
 	 * For example, {@literal @DefaultObject("com.mypackage.ConfigDefaults.someObject")}
 	 * will invoke the public static method called 'someObject' in the class ConfigDefaults. <br>

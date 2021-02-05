@@ -18,7 +18,7 @@
  */
 package space.arim.dazzleconf;
 
-public class NumericPair {
+public final class NumericPair {
 
 	private final int value1;
 	private final int value2;

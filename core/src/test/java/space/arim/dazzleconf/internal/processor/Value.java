@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2020 Anand Beh
+ * Copyright © 2021 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -19,9 +19,30 @@
 
 package space.arim.dazzleconf.internal.processor;
 
-class InvisibleDefaults {
+import java.util.Objects;
 
-	public static Value insidePrivateClass() {
-		return new Value("inside private class");
+public final class Value {
+
+	private final String value;
+
+	public Value(String value) {
+		this.value = Objects.requireNonNull(value);
+	}
+
+	public String value() {
+		return value;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Value value1 = (Value) o;
+		return value.equals(value1.value);
+	}
+
+	@Override
+	public int hashCode() {
+		return value.hashCode();
 	}
 }

@@ -44,7 +44,7 @@ public class DefaultObjectHelperTest {
 
 	@BeforeEach
 	public void setup() throws NoSuchMethodException {
-		Method method = getClass().getMethod("setup");
+		Method method = getClass().getMethod("methodInQuestion");
 		helper = new DefaultObjectHelper(
 				new ConfEntry(method, "key", List.of(),
 						new SimpleTypeReturnType<>(
@@ -55,6 +55,10 @@ public class DefaultObjectHelperTest {
 						ConfigurationOptions.defaults(),
 						new ConfigurationDefinition<>(
 								DefaultObjectHelperTest.class, Map.of(), Set.of(), ValueSerialiserMap.empty())));
+	}
+
+	public Value methodInQuestion() {
+		return new Value("");
 	}
 
 	@Test
@@ -92,7 +96,6 @@ public class DefaultObjectHelperTest {
 	@Test
 	public void toObjectValidMethod() throws InvalidConfigException {
 		assertEquals(PublicDefaults.validMethod(), toObject(PublicDefaults.class, "validMethod"));
-		assertEquals(PublicDefaults.validMethodPrimitive(), toObject(PublicDefaults.class, "validMethodPrimitive"));
 	}
 
 }

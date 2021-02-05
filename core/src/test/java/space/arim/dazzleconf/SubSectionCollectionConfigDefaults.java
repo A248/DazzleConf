@@ -46,10 +46,10 @@ public class SubSectionCollectionConfigDefaults {
 				public Map<String, NumericPair> extraPairs() { return Map.of(); }
 
 				@Override
-				public String stringUsingDefaultObjectAnnotation() { return ""; }
+				public Map<String, ComplexObject> complexValues() { return Map.of(); }
 
 				@Override
-				public Map<String, ComplexObject> complexValues() { return Map.of(); }
+				public NumericPair numericPairDefaultInSameClass() { return new NumericPair(0, 0); }
 			}
 	);
 	public static Map<String, NestedConfig> defaultNestedConfigMap() {

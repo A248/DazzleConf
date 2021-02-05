@@ -44,10 +44,14 @@ public interface NestedConfig {
 	@ConfDefault.DefaultMap({"key1", "4:18", "key2", "2:8"})
 	Map<String, NumericPair> extraPairs();
 
-	@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueString")
-	String stringUsingDefaultObjectAnnotation();
-
 	@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueComplex")
 	Map<String, ComplexObject> complexValues();
+
+	@ConfDefault.DefaultObject("numericPairDefaultInSameClassDefault")
+	NumericPair numericPairDefaultInSameClass();
+
+	static NumericPair numericPairDefaultInSameClassDefault() {
+		return new NumericPair(13, 109);
+	}
 
 }

@@ -24,6 +24,8 @@ import space.arim.dazzleconf.error.InvalidConfigException;
 import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.type.ReturnType;
 import space.arim.dazzleconf.internal.type.ReturnTypeWithConfigDefinition;
+import space.arim.dazzleconf.internal.util.AccessChecking;
+import space.arim.dazzleconf.internal.util.MethodUtil;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -41,16 +43,17 @@ class DefaultObjectHelper {
 		this.processor = processor;
 	}
 
+	private String reasonToExceptionMessage(String reason) {
+		return "Issue with defaults annotation on " + entry.getQualifiedMethodName()
+				+ ". Reason: " + reason;
+	}
+
 	IllDefinedConfigException badDefault(String reason) {
-		return new IllDefinedConfigException(
-				"Invalid defaults annotation on " + entry.getQualifiedMethodName()
-						+ ". Reason: " + reason);
+		return new IllDefinedConfigException(reasonToExceptionMessage(reason));
 	}
 
 	private IllDefinedConfigException badDefault(String reason, Throwable cause) {
-		return new IllDefinedConfigException(
-				"Invalid defaults annotation on " + entry.getQualifiedMethodName()
-						+ ". Reason: " + reason, cause);
+		return new IllDefinedConfigException(reasonToExceptionMessage(reason), cause);
 	}
 
 	Map<String, String> toMap(String...values) {
@@ -72,21 +75,32 @@ class DefaultObjectHelper {
 	}
 
 	private Method locateMethod(String fullyQualifiedMethodName) {
-		int index = fullyQualifiedMethodName.lastIndexOf('.');
-		if (index == -1 || index == fullyQualifiedMethodName.length() - 1) {
-			throw badDefault("Malformed method name specified by @DefaultObject. " +
-					"Check to ensure the value of @DefaultObject is a fully qualified method name.");
-		}
-		String className = fullyQualifiedMethodName.substring(0, index);
-		String methodName = fullyQualifiedMethodName.substring(index + 1);
 		Class<?> clazz;
-		try {
-			clazz = Class.forName(className);
-		} catch (ClassNotFoundException ex) {
-			throw badDefault("Class " + className + " not found", ex);
-		}
-		if (!Modifier.isPublic(clazz.getModifiers())) {
-			throw badDefault("Method " + entry.getQualifiedMethodName() + " must be in a public class");
+		String methodName;
+
+		int index = fullyQualifiedMethodName.lastIndexOf('.');
+		if (index == -1) {
+			// Method is inside the same config class
+			clazz = entry.getMethod().getDeclaringClass(); // config class
+			methodName = fullyQualifiedMethodName;
+
+		} else if (index == fullyQualifiedMethodName.length() - 1) {
+			throw badDefault(
+					"Malformed method name " + fullyQualifiedMethodName + " specified by @DefaultObject. " +
+							"Please ensure the value of @DefaultObject is a fully qualified method name.");
+		} else {
+			// Method is in another class
+			String className = fullyQualifiedMethodName.substring(0, index);
+			methodName = fullyQualifiedMethodName.substring(index + 1);
+			Class<?> configClass = entry.getMethod().getDeclaringClass();
+			try {
+				clazz = Class.forName(className, true, configClass.getClassLoader());
+			} catch (ClassNotFoundException ex) {
+				throw badDefault("Class " + className + " not found", ex);
+			}
+			if (!AccessChecking.isAccessible(clazz)) {
+				throw badDefault("Method " + fullyQualifiedMethodName + " must be in an accessible class");
+			}
 		}
 		/*
 		 * Support 2 kinds of default object-producing methods:
@@ -104,40 +118,58 @@ class DefaultObjectHelper {
 		// Look for method with config class parameter, if possible
 		ReturnType<?> returnType = entry.returnType();
 		if (!(returnType instanceof ReturnTypeWithConfigDefinition)) {
-			throw badDefault("Method " + methodName + " not found in class " + className, attemptOneEx);
+			throw badDefault("Method " + methodName + " not found in class " + clazz.getName(), attemptOneEx);
 		}
 		Class<?> configClass = ((ReturnTypeWithConfigDefinition<?, ?>) returnType).configDefinition().getConfigClass();
 		try {
 			return clazz.getDeclaredMethod(methodName, configClass);
 		} catch (NoSuchMethodException ex) {
 			ex.addSuppressed(attemptOneEx);
-			throw badDefault("Method " + methodName + " not found in class " + className, ex);
+			throw badDefault("Method " + methodName + " not found in class " + clazz.getName(), ex);
 		}
 	}
 
 	Object toObject(String methodName) throws InvalidConfigException {
+		Class<?> targetType = entry.returnType().typeInfo().rawType();
+		if (targetType.isPrimitive() || targetType.equals(String.class)) {
+			throw new IllDefinedConfigException(
+					"@DefaultObject cannot be used for primitives or strings. " +
+					"Use one of @DefaultBoolean for boolean, @DefaultInteger for int/short/byte, " +
+					"@DefaultLong for long, @DefaultDouble for double/float, or @DefaultString for String/char");
+		}
 		Method method = locateMethod(methodName);
 		int modifiers = method.getModifiers();
 		if (!Modifier.isStatic(modifiers) || !Modifier.isPublic(modifiers)) {
-			throw badDefault("Method " + entry.getQualifiedMethodName() + " must be public and static");
+			throw badDefault("Method " + MethodUtil.getQualifiedName(method) + " must be public and static");
 		}
 		method.setAccessible(true);
+		Object result = fromMethod(method);
+		if (result == null) {
+			throw badDefault("Object returned from @DefaultObject was null");
+		}
+		if (!targetType.isInstance(result)) {
+			throw badDefault("Object returned from @DefaultObject must be an instance of " +
+					"the return type of the config method.");
+		}
+		return result;
+	}
 
+	private Object fromMethod(Method method) throws InvalidConfigException {
 		// Based on #locateMethod, this method may or may not take the config class as a parameter
 		if (method.getParameterCount() == 0) {
-			try {
-				return method.invoke(null);
-			} catch (IllegalAccessException | InvocationTargetException ex) {
-				throw badDefault("Exception invoking method " + entry.getQualifiedMethodName(), ex);
-			}
+			return invokeStaticMethod(method);
 		} else {
 			ReturnTypeWithConfigDefinition<?, ?> returnType = (ReturnTypeWithConfigDefinition<?, ?>) entry.returnType();
 			Object config = processor.createNested(entry, returnType, DefaultsProcessor.CREATE_DEFAULT_SECTION);
-			try {
-				return method.invoke(null, config);
-			} catch (IllegalAccessException | InvocationTargetException ex) {
-				throw badDefault("Exception invoking method " + entry.getQualifiedMethodName(), ex);
-			}
+			return invokeStaticMethod(method, config);
+		}
+	}
+
+	private Object invokeStaticMethod(Method method, Object...args) {
+		try {
+			return method.invoke(null, args);
+		} catch (IllegalAccessException | InvocationTargetException ex) {
+			throw badDefault("Exception invoking method " + MethodUtil.getQualifiedName(method), ex);
 		}
 	}
 
