@@ -131,8 +131,8 @@ class DefaultObjectHelper {
 				throw badDefault("Exception invoking method " + entry.getQualifiedMethodName(), ex);
 			}
 		} else {
-			ReturnTypeWithConfigDefinition<?, ?> returnTypeWithDefinition = (ReturnTypeWithConfigDefinition<?, ?>) entry.returnType();
-			Object config = processor.createNested(entry, returnTypeWithDefinition, returnTypeWithDefinition.configDefinition());
+			ReturnTypeWithConfigDefinition<?, ?> returnType = (ReturnTypeWithConfigDefinition<?, ?>) entry.returnType();
+			Object config = processor.createNested(entry, returnType, DefaultsProcessor.CREATE_DEFAULT_SECTION);
 			try {
 				return method.invoke(null, config);
 			} catch (IllegalAccessException | InvocationTargetException ex) {

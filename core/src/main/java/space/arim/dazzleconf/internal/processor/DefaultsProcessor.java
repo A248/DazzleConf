@@ -34,6 +34,11 @@ import java.util.List;
 
 public class DefaultsProcessor<C> extends ProcessorBase<C> {
 
+	/**
+	 * A {@code preValue} which signals to #createChildConfig to create the default config section
+	 */
+	static final Object CREATE_DEFAULT_SECTION = new Object();
+
 	public DefaultsProcessor(ConfigurationOptions options, ConfigurationDefinition<C> definition) {
 		super(options, definition, null);
 	}
@@ -44,8 +49,7 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 		if (nestedAuxiliaryValues != null) {
 			throw new AssertionError("Internal error: DefaultsProcessor does not handle auxiliary entries");
 		}
-		if (preValue instanceof ConfigurationDefinition) {
-			// Simple sub-section
+		if (preValue  == CREATE_DEFAULT_SECTION) {
 			return createFromProcessor(new DefaultsProcessor<>(options, childDefinition));
 		} else {
 			// Sub-section in a collection
@@ -62,8 +66,7 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 	Object getValueFromSources(ConfEntry entry) throws InvalidConfigException {
 		ReturnType<?> returnType = entry.returnType();
 		if (returnType instanceof SimpleSubSectionReturnType) {
-			// Signal to #createChildProcessor that this is a simple sub-section
-			return ((SimpleSubSectionReturnType<?>) returnType).configDefinition();
+			return CREATE_DEFAULT_SECTION;
 		}
 		Method method = entry.getMethod();
 		{
