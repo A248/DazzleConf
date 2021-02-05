@@ -37,6 +37,9 @@ class ConfigInvocationHandler implements InvocationHandler {
 	@Override
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		if (method.getDeclaringClass() == Object.class) {
+			if (method.getName().equals("equals")) {
+				return implementEquals(proxy, args[0]);
+			}
 			return invokeMethodOnSelf(method, args);
 		}
 		assert args == null : Arrays.deepToString(args);
@@ -57,6 +60,39 @@ class ConfigInvocationHandler implements InvocationHandler {
 				throw ex;
 			}
 		}
+	}
+
+	/**
+	 * Determines equality with another object
+	 *
+	 * @param ourProxy our proxy
+	 * @param theirConfig their config, may be a proxy
+	 * @return true if equal, false otherwise
+	 */
+	private static boolean implementEquals(Object ourProxy, Object theirConfig) {
+		/*
+		 * Equals implementation - identity equality.
+		 * There is no better way to implement .equals in accordance with
+		 * the reflexivity contract.
+		 *
+		 * Ruled out possbilities:
+		 * - Attempt to invoke all the methods on the other config. Fails
+		 *   because the other config could implement an extended config
+		 *   interface.
+		 * - Check if the other object is a proxy, and then analyze whether
+		 *   the configMap of its invocation handler is the same. Fails
+		 *   because the other config could implement a config interface
+		 *   which has the same method names, but is a different interface.
+		 * - Building on the previous attempts, perform additional analysis of the
+		 *   implementing proxy class in order to determine whether both proxies
+		 *   implement the same interfaces. Since java.lang.reflect.Proxy uses
+		 *   a cache of interfaces -> generated proxy classes, proxy.getClass()
+		 *   will be identical for proxies implementing the same interfaces.
+		 *   Fails because it relies on an implementation detail which could change
+		 *   in a later JDK version.
+		 *
+		 */
+		return ourProxy == theirConfig;
 	}
 	
 	@Override
