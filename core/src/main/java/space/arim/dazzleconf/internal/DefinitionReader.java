@@ -38,7 +38,6 @@ import space.arim.dazzleconf.internal.type.TypeInfoCreation;
 import space.arim.dazzleconf.internal.util.MethodUtil;
 import space.arim.dazzleconf.serialiser.ValueSerialiser;
 import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
-import space.arim.dazzleconf.sorter.ConfigurationSorter;
 
 public final class DefinitionReader<C> {
 
@@ -58,7 +57,7 @@ public final class DefinitionReader<C> {
 			Set<Class<?>> nestedConfigDejaVu) {
 		Objects.requireNonNull(configClass, "config class");
 		if (!configClass.isInterface()) {
-			throw new IllegalArgumentException(configClass.getName() + " is not an interface");
+			throw new IllDefinedConfigException(configClass.getName() + " is not an interface");
 		}
 		this.configClass = configClass;
 		this.options = options;
@@ -67,15 +66,12 @@ public final class DefinitionReader<C> {
 	
 	public ConfigurationDefinition<C> read() {
 		ValueSerialiserMap serialiserMap = readSerialisers();
-		Map<String, ConfEntry> sortedEntries = readAndSortEntries();
+		List<ConfEntry> sortedEntries = readAndSortEntries();
 		return new ConfigurationDefinition<>(configClass, sortedEntries, defaultMethods, serialiserMap);
 	}
 
 	public <N> ConfigurationDefinition<N> createChildDefinition(TypeInfo<N> configClassTypeInfo) {
 		Class<N> configClass = configClassTypeInfo.rawType();
-		if (!configClass.isInterface()) {
-			throw new IllDefinedConfigException(configClass.getName() + " is not an interface");
-		}
 		DefinitionReader<N> reader = new DefinitionReader<>(configClass, options, nestedConfigDejaVu);
 		return reader.read();
 	}
@@ -93,7 +89,7 @@ public final class DefinitionReader<C> {
 		return ValueSerialiserMap.of(serialisers);
 	}
 	
-	private Map<String, ConfEntry> readAndSortEntries() {
+	private List<ConfEntry> readAndSortEntries() {
 		if (!nestedConfigDejaVu.add(configClass)) {
 			throw new IllDefinedConfigException("Circular nested configuration for " + configClass.getName());
 		}
@@ -113,18 +109,9 @@ public final class DefinitionReader<C> {
 		/*
 		 * Sort entries
 		 */
-		ConfigurationSorter sorter = options.getConfigurationSorter().orElse(null);
-		if (sorter == null) {
-			return entries;
-		}
 		List<ConfEntry> entriesList = new ArrayList<>(entries.values());
-		entriesList.sort(sorter);
-
-		Map<String, ConfEntry> sortedEntries = new LinkedHashMap<>(entriesList.size());
-		for (ConfEntry entry : entriesList) {
-			sortedEntries.put(entry.getKey(), entry);
-		}
-		return sortedEntries;
+		options.getConfigurationSorter().ifPresent(entriesList::sort);
+		return entriesList;
 	}
 	
 	private void create(Method method) {

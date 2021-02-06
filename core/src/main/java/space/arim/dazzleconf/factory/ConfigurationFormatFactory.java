@@ -66,7 +66,6 @@ import java.util.Objects;
  */
 public abstract class ConfigurationFormatFactory<C> implements ConfigurationFactory<C> {
 
-	private final Class<C> configClass;
 	private final ConfigurationOptions options;
 	private final ConfigurationDefinition<C> definition;
 
@@ -80,14 +79,16 @@ public abstract class ConfigurationFormatFactory<C> implements ConfigurationFact
 	 * @throws IllDefinedConfigException if the configuration entries defined in the config class are invalid
 	 */
 	protected ConfigurationFormatFactory(Class<C> configClass, ConfigurationOptions options) {
-		this.configClass = configClass;
+		if (!configClass.isInterface()) {
+			throw new IllegalArgumentException(configClass.getName() + " is not an interface");
+		}
 		this.options = Objects.requireNonNull(options, "options");
 		definition = new DefinitionReader<>(configClass, options).read();
 	}
 
 	@Override
 	public final Class<C> getConfigClass() {
-		return configClass;
+		return definition.getConfigClass();
 	}
 
 	@Override
@@ -121,13 +122,13 @@ public abstract class ConfigurationFormatFactory<C> implements ConfigurationFact
 
 	@Override
 	public final C load(ReadableByteChannel readChannel, C auxiliaryEntries) throws IOException, InvalidConfigException {
-		Objects.requireNonNull(configClass.cast(auxiliaryEntries), "auxiliaryEntries");
+		Objects.requireNonNull(getConfigClass().cast(auxiliaryEntries), "auxiliaryEntries");
 		return fromRawMap(loadMap(readChannel), auxiliaryEntries);
 	}
 
 	@Override
 	public final C load(InputStream inputStream, C auxiliaryEntries) throws IOException, InvalidConfigException {
-		Objects.requireNonNull(configClass.cast(auxiliaryEntries), "auxiliaryEntries");
+		Objects.requireNonNull(getConfigClass().cast(auxiliaryEntries), "auxiliaryEntries");
 		return fromRawMap(loadMap(inputStream), auxiliaryEntries);
 	}
 
@@ -179,13 +180,13 @@ public abstract class ConfigurationFormatFactory<C> implements ConfigurationFact
 
 	@Override
 	public final void write(C configData, WritableByteChannel writeChannel) throws IOException {
-		Objects.requireNonNull(configClass.cast(configData), "configData");
+		Objects.requireNonNull(getConfigClass().cast(configData), "configData");
 		writeMap(toRawMap(configData), writeChannel);
 	}
 
 	@Override
 	public final void write(C configData, OutputStream outputStream) throws IOException {
-		Objects.requireNonNull(configClass.cast(configData), "configData");
+		Objects.requireNonNull(getConfigClass().cast(configData), "configData");
 		writeMap(toRawMap(configData), outputStream);
 	}
 

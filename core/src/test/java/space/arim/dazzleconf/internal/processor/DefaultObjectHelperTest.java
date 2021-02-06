@@ -54,7 +54,7 @@ public class DefaultObjectHelperTest {
 				new DefaultsProcessor<>(
 						ConfigurationOptions.defaults(),
 						new ConfigurationDefinition<>(
-								DefaultObjectHelperTest.class, Map.of(), Set.of(), ValueSerialiserMap.empty())));
+								DefaultObjectHelperTest.class, List.of(), Set.of(), ValueSerialiserMap.empty())));
 	}
 
 	public Value methodInQuestion() {

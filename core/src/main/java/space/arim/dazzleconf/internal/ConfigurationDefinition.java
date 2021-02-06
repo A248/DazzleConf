@@ -21,7 +21,6 @@ package space.arim.dazzleconf.internal;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import space.arim.dazzleconf.annote.ConfHeader;
@@ -31,14 +30,14 @@ import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 public final class ConfigurationDefinition<C> {
 
 	private final Class<C> configClass;
-	private final Map<String, ConfEntry> entries;
+	private final List<ConfEntry> entries;
 	private final Set<Method> defaultMethods;
 	private final ValueSerialiserMap serialisers;
 	
-	public ConfigurationDefinition(Class<C> configClass, Map<String, ConfEntry> entries,
+	public ConfigurationDefinition(Class<C> configClass, List<ConfEntry> entries,
 								   Set<Method> defaultMethods, ValueSerialiserMap serialisers) {
 		this.configClass = configClass;
-		this.entries = entries;
+		this.entries = ImmutableCollections.listOf(entries);
 		this.defaultMethods = ImmutableCollections.setOf(defaultMethods);
 		this.serialisers = serialisers;
 	}
@@ -53,7 +52,7 @@ public final class ConfigurationDefinition<C> {
 	}
 	
 	public Collection<ConfEntry> getEntries() {
-		return entries.values();
+		return entries;
 	}
 	
 	public boolean hasDefaultMethods() {
