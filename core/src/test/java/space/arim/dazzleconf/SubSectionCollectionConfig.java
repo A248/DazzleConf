@@ -22,7 +22,10 @@ package space.arim.dazzleconf;
 import space.arim.dazzleconf.annote.ConfDefault;
 import space.arim.dazzleconf.annote.SubSection;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface SubSectionCollectionConfig {
 
@@ -31,5 +34,26 @@ public interface SubSectionCollectionConfig {
 
 	@ConfDefault.DefaultObject("space.arim.dazzleconf.SubSectionCollectionConfigDefaults.defaultNestedConfigMapUsingDefaultSection")
 	Map<String, @SubSection NestedConfig> nestedConfigMapUsingDefaultSection();
+
+	@ConfDefault.DefaultObject("nestedConfigSetDefaults")
+	Set<@SubSection NestedConfig> nestedConfigSet();
+
+	static Set<NestedConfig> nestedConfigSetDefaults(NestedConfig defaultNestedConfig) {
+		return Set.of(defaultNestedConfig);
+	}
+
+	@ConfDefault.DefaultObject("nestedConfigListDefaults")
+	List<@SubSection NestedConfig> nestedConfigList();
+
+	static List<NestedConfig> nestedConfigListDefaults(NestedConfig defaultNestedConfig) {
+		return List.of(defaultNestedConfig);
+	}
+
+	@ConfDefault.DefaultObject("nestedConfigCollectionDefaults")
+	Collection<@SubSection NestedConfig> nestedConfigCollection();
+
+	static Collection<NestedConfig> nestedConfigCollectionDefaults(NestedConfig defaultNestedConfig) {
+		return Set.of(defaultNestedConfig);
+	}
 
 }
