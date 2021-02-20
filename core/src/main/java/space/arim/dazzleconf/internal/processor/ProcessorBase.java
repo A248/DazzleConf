@@ -92,7 +92,16 @@ public abstract class ProcessorBase<C> {
 	private void process() throws InvalidConfigException {
 		for (ConfEntry entry : definition.getEntries()) {
 			String methodName = entry.getMethod().getName();
-			Object value = getProcessedValue(entry, getPreValue(entry));
+			Object value;
+			try {
+				value = getProcessedValue(entry, getPreValue(entry));
+			} catch (MissingKeyException mke) {
+				// If missing and auxiliary entries are provided, use auxiliary value
+				if (auxiliaryValues == null) {
+					throw mke;
+				}
+				value = getAuxiliaryValue(entry);
+			}
 			Object formerValue = result.put(methodName, value);
 			if (formerValue != null) {
 				throw new IllDefinedConfigException("Duplicate method name " + methodName);
@@ -101,16 +110,7 @@ public abstract class ProcessorBase<C> {
 	}
 
 	private Object getPreValue(ConfEntry entry) throws InvalidConfigException {
-		Object preValue;
-		try {
-			preValue = getValueFromSources(entry);
-		} catch (MissingKeyException mke) {
-			// If missing and auxiliary entries are provided, return auxiliary value
-			if (auxiliaryValues == null) {
-				throw mke;
-			}
-			return getAuxiliaryValue(entry);
-		}
+		Object preValue = getValueFromSources(entry);
 		String key = entry.getKey();
 		if (preValue == null) {
 			throw MissingValueException.forKey(key);
