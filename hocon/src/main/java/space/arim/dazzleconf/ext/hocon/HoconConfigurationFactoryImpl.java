@@ -3,8 +3,6 @@ package space.arim.dazzleconf.ext.hocon;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigObject;
-import com.typesafe.config.ConfigOrigin;
-import com.typesafe.config.ConfigOriginFactory;
 import com.typesafe.config.ConfigValue;
 import com.typesafe.config.ConfigValueFactory;
 import java.io.IOException;
@@ -18,7 +16,6 @@ import java.util.Objects;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.BadValueException;
 import space.arim.dazzleconf.error.ConfigFormatSyntaxException;
-import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.error.InvalidConfigException;
 import space.arim.dazzleconf.error.MissingValueException;
 import space.arim.dazzleconf.factory.CommentedWrapper;
@@ -43,27 +40,22 @@ final class HoconConfigurationFactoryImpl<C> extends HumanReadableConfigurationF
   public Map<String, Object> loadMap(Reader reader) throws IOException, InvalidConfigException {
     try {
       return ConfigFactory.parseReader(reader, hoconOptions.configParseOptions()).root().unwrapped();
+
+    } catch (ConfigException.BadValue | ConfigException.Null e) {
+      throw new BadValueException.Builder().cause(e).build();
+
+    } catch (ConfigException.IO e) {
+      throw new IOException(e);
+
+    } catch (ConfigException.Missing e) {
+      MissingValueException mve = MissingValueException.forKey("unknown");
+      mve.initCause(e);
+      throw mve;
+
+    } catch (ConfigException.Parse e) {
+      throw new ConfigFormatSyntaxException(e);
+
     } catch (ConfigException e) {
-      if (e instanceof ConfigException.BadValue) {
-        throw new BadValueException.Builder().cause(e).build();
-      }
-
-      if (e instanceof ConfigException.IO) {
-        throw new IOException(e);
-      }
-
-      if (e instanceof ConfigException.Null) {
-        throw new BadValueException.Builder().cause(e.getCause()).message(e.getMessage()).build();
-      }
-
-      if (e instanceof ConfigException.Missing) {
-        throw MissingValueException.forKeyAndMessage("unknown", e.getMessage());
-      }
-
-      if (e instanceof ConfigException.Parse) {
-        throw new ConfigFormatSyntaxException(e);
-      }
-
       throw new IOException("Unexpected ConfigException subclass", e);
     }
   }
