@@ -45,6 +45,15 @@ public final class HoconOptions {
     return charset;
   }
 
+  @Override
+  public String toString() {
+    return "HoconOptions{" +
+           "configParseOptions=" + configParseOptions +
+           ", configRenderOptions=" + configRenderOptions +
+           ", charset=" + charset +
+           '}';
+  }
+
   /**
    * Builder of {@code HoconOptions}
    *
@@ -98,6 +107,15 @@ public final class HoconOptions {
      */
     public HoconOptions build() {
       return new HoconOptions(this);
+    }
+
+    @Override
+    public String toString() {
+      return "HoconOptions.Builder{" +
+             "configParseOptions=" + configParseOptions +
+             ", configRenderOptions=" + configRenderOptions +
+             ", charset=" + charset +
+             '}';
     }
   }
 }
