@@ -21,12 +21,19 @@ package space.arim.dazzleconf.internal.processor;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
-import space.arim.dazzleconf.internal.SingleConfEntry;
+import space.arim.dazzleconf.error.InvalidConfigException;
+import space.arim.dazzleconf.internal.ConfEntry;
+import space.arim.dazzleconf.internal.ConfigurationDefinition;
+import space.arim.dazzleconf.internal.type.SimpleTypeReturnType;
+import space.arim.dazzleconf.internal.type.TypeInfoCreation;
+import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -37,8 +44,21 @@ public class DefaultObjectHelperTest {
 
 	@BeforeEach
 	public void setup() throws NoSuchMethodException {
-		Method method = getClass().getMethod("setup");
-		helper = new DefaultObjectHelper(new SingleConfEntry(method, "key", List.of(), null));
+		Method method = getClass().getMethod("methodInQuestion");
+		helper = new DefaultObjectHelper(
+				new ConfEntry(method, "key", List.of(),
+						new SimpleTypeReturnType<>(
+								new TypeInfoCreation(method.getAnnotatedReturnType()).create(method.getReturnType())
+						),
+						null),
+				new DefaultsProcessor<>(
+						ConfigurationOptions.defaults(),
+						new ConfigurationDefinition<>(
+								DefaultObjectHelperTest.class, List.of(), Set.of(), ValueSerialiserMap.empty())));
+	}
+
+	public Value methodInQuestion() {
+		return new Value("");
 	}
 
 	@Test
@@ -49,7 +69,7 @@ public class DefaultObjectHelperTest {
 		assertThrows(IllDefinedConfigException.class, () -> helper.toMap("key1", "true", "key2noValue"));
 	}
 
-	private Object toObject(Class<?> clazz, String methodName) {
+	private Object toObject(Class<?> clazz, String methodName) throws InvalidConfigException {
 		return helper.toObject(clazz.getName() + "." + methodName);
 	}
 
@@ -74,9 +94,8 @@ public class DefaultObjectHelperTest {
 	}
 
 	@Test
-	public void toObjectValidMethod() {
+	public void toObjectValidMethod() throws InvalidConfigException {
 		assertEquals(PublicDefaults.validMethod(), toObject(PublicDefaults.class, "validMethod"));
-		assertEquals(PublicDefaults.validMethodPrimitive(), toObject(PublicDefaults.class, "validMethodPrimitive"));
 	}
 
 }

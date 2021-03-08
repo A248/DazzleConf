@@ -21,24 +21,23 @@ package space.arim.dazzleconf.internal;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import space.arim.dazzleconf.annote.ConfHeader;
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
 import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 
-public class ConfigurationDefinition<C> {
+public final class ConfigurationDefinition<C> {
 
 	private final Class<C> configClass;
-	private final Map<String, ConfEntry> entries;
+	private final List<ConfEntry> entries;
 	private final Set<Method> defaultMethods;
 	private final ValueSerialiserMap serialisers;
 	
-	ConfigurationDefinition(Class<C> configClass, Map<String, ConfEntry> entries, Set<Method> defaultMethods,
-			ValueSerialiserMap serialisers) {
+	public ConfigurationDefinition(Class<C> configClass, List<ConfEntry> entries,
+								   Set<Method> defaultMethods, ValueSerialiserMap serialisers) {
 		this.configClass = configClass;
-		this.entries = entries;
+		this.entries = ImmutableCollections.listOf(entries);
 		this.defaultMethods = ImmutableCollections.setOf(defaultMethods);
 		this.serialisers = serialisers;
 	}
@@ -53,7 +52,7 @@ public class ConfigurationDefinition<C> {
 	}
 	
 	public Collection<ConfEntry> getEntries() {
-		return entries.values();
+		return entries;
 	}
 	
 	public boolean hasDefaultMethods() {
@@ -87,8 +86,16 @@ public class ConfigurationDefinition<C> {
 		if (object == null || getClass() != object.getClass()) {
 			return false;
 		}
-		// Changes here should be updated likewise in ConfigurationInfo
 		return configClass == ((ConfigurationDefinition<?>) object).configClass;
 	}
-	
+
+	@Override
+	public String toString() {
+		return "ConfigurationDefinition{" +
+				"configClass=" + configClass +
+				", entries=" + entries +
+				", defaultMethods=" + defaultMethods +
+				", serialisers=" + serialisers +
+				'}';
+	}
 }

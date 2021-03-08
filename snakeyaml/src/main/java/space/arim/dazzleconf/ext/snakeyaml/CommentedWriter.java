@@ -20,6 +20,7 @@ package space.arim.dazzleconf.ext.snakeyaml;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,6 +33,13 @@ class CommentedWriter {
 	private final String commentFormat;
 	
 	private int depth;
+	/**
+	 * Indicates that the next value about to be written is a map entry
+	 * which is part of a map which is part of a list. Comments for the entry
+	 * have already been written on the list element, and leading whitespace
+	 * has also already been written before the key.
+	 */
+	private boolean firstMapEntryIsPartOfList;
 	
 	CommentedWriter(Writer writer, String commentFormat) {
 		this.writer = writer;
@@ -44,15 +52,24 @@ class CommentedWriter {
 	 * @throws IOException if an I/O error occurs
 	 */
 	void writeMap(Map<String, Object> map) throws IOException {
-		for (Map.Entry<String, Object> entry : map.entrySet()) {
+		writeRemainingMapEntries(map.entrySet().iterator());
+	}
+
+	private void writeRemainingMapEntries(Iterator<Map.Entry<String, Object>> entryIterator) throws IOException {
+		while (entryIterator.hasNext()) {
+			Map.Entry<String, Object> entry = entryIterator.next();
 			String key = entry.getKey();
 			Object value = entry.getValue();
-			if (value instanceof CommentedWrapper) { 
+
+			if (!firstMapEntryIsPartOfList && value instanceof CommentedWrapper) {
 				CommentedWrapper commentWrapper = (CommentedWrapper) value;
-				writeComments(commentWrapper.getComments());
+				writeComments(commentWrapper);
 				writeKey(key);
 				writeValue(commentWrapper.getValue());
 			} else {
+				if (firstMapEntryIsPartOfList && value instanceof CommentedWrapper) {
+					value = ((CommentedWrapper) value).getValue();
+				}
 				writeKey(key);
 				writeValue(value);
 			}
@@ -70,6 +87,10 @@ class CommentedWriter {
 		for (String comment : comments) {
 			writer.append(depthPrefix).append(String.format(commentFormat, comment)).append('\n');
 		}
+	}
+
+	private void writeComments(CommentedWrapper commentWrapper) throws IOException {
+		writeComments(commentWrapper.getComments());
 	}
 	
 	/*
@@ -94,7 +115,6 @@ class CommentedWriter {
 	}
 	
 	private void descendAndDo(WriterAction whenDescended) throws IOException {
-		writer.append('\n');
 		depth++;
 		whenDescended.run();
 		depth--;
@@ -105,7 +125,12 @@ class CommentedWriter {
 	 */
 	
 	private void writeKey(String key) throws IOException {
-		writer.append(depthPrefix()).append(key).append(':');
+		if (firstMapEntryIsPartOfList) {
+			firstMapEntryIsPartOfList = false;
+		} else {
+			writer.append(depthPrefix());
+		}
+		writer.append(key).append(':');
 	}
 	
 	/*
@@ -121,32 +146,61 @@ class CommentedWriter {
 			if (map.isEmpty()) {
 				writer.append(" {}");
 			} else {
+				writer.append('\n');
 				descendAndDo(() -> writeMap(map));
 			}
-
 		} else if (value instanceof List) {
 			List<?> list = (List<?>) value;
 			if (list.isEmpty()) {
 				writer.append(" []");
 			} else {
+				writer.append('\n');
 				descendAndDo(() -> {
 					CharSequence depthPrefix = depthPrefix();
 					for (Object element : list) {
-						writer.append(depthPrefix).append("- ");
-						writeSingleValue(element);
+						if (element instanceof Map) {
+							@SuppressWarnings("unchecked")
+							Map<String, Object> map = (Map<String, Object>) element;
+							if (map.isEmpty()) {
+								writer.append(depthPrefix).append("- {}");
+							} else {
+								/*
+								 * All of this is necessary because comments on the first entry
+								 * of the map must be written before the list element
+								 */
+								Iterator<Map.Entry<String, Object>> entryIterator = map.entrySet().iterator();
+								// Perform a Iterator.peek()
+								Map.Entry<String, Object> firstEntry = entryIterator.next();
+								Object firstEntryValue = firstEntry.getValue();
+								if (firstEntryValue instanceof CommentedWrapper) {
+									descendAndDo(() -> writeComments((CommentedWrapper) firstEntryValue));
+								}
+								// Put the element back; completing the peek()
+								Iterator<Map.Entry<String, Object>> newIterator
+										= new IteratorWithElementPrepended<>(firstEntry, entryIterator);
+
+								// Actually write the values
+								writer.append(depthPrefix).append("- ");
+								firstMapEntryIsPartOfList = true;
+								descendAndDo(() -> writeRemainingMapEntries(newIterator));
+							}
+						} else {
+							writer.append(depthPrefix).append('-');
+							writeSingleValue(element);
+						}
 						writer.append('\n');
 					}
 				});
 				return; // Don't write extra \n
 			}
 		} else {
-			writer.append(' ');
 			writeSingleValue(value);
 		}
 		writer.append('\n');
 	}
 	
 	private void writeSingleValue(Object value) throws IOException {
+		writer.append(' ');
 		if (value instanceof String || value instanceof Character) {
 			writer.append('\'');
 			writer.append(value.toString().replace("'", "''"));

@@ -18,42 +18,58 @@
  */
 package space.arim.dazzleconf.internal.processor;
 
-import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import space.arim.dazzleconf.annote.CollectionSize;
 import space.arim.dazzleconf.annote.IntegerRange;
 import space.arim.dazzleconf.annote.NumericRange;
 import space.arim.dazzleconf.error.BadValueException;
-import space.arim.dazzleconf.internal.SingleConfEntry;
+import space.arim.dazzleconf.error.InvalidConfigException;
+import space.arim.dazzleconf.internal.ConfEntry;
+import space.arim.dazzleconf.internal.type.CollectionKind;
+import space.arim.dazzleconf.internal.type.CollectionReturnType;
+import space.arim.dazzleconf.internal.type.MapReturnType;
+import space.arim.dazzleconf.internal.type.ReturnType;
+import space.arim.dazzleconf.internal.type.SimpleSubSectionReturnType;
+import space.arim.dazzleconf.internal.type.SubSectionCollectionReturnType;
+import space.arim.dazzleconf.internal.type.SubSectionMapReturnType;
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import space.arim.dazzleconf.internal.util.UncheckedInvalidConfigException;
 import space.arim.dazzleconf.serialiser.FlexibleType;
 import space.arim.dazzleconf.serialiser.FlexibleTypeFunction;
+import space.arim.dazzleconf.serialiser.FlexibleTypeMapEntryFunction;
+
+import java.util.Collection;
+import java.util.Map;
 
 class Composition {
 
-	private final SingleConfEntry entry;
+	private final ProcessorBase<?> processor;
+	private final ConfEntry entry;
+	private final Object preValue;
 	private final FlexibleType flexType;
 	
-	Composition(SingleConfEntry entry, FlexibleType flexType) {
+	Composition(ProcessorBase<?> processor, ConfEntry entry, Object preValue, FlexibleType flexType) {
+		this.processor = processor;
 		this.entry = entry;
+		this.preValue = preValue;
 		this.flexType = flexType;
 	}
 	
-	Object processObject() throws BadValueException {
-		return processObjectWithGoal(entry.getMethod().getReturnType());
-	}
-	
-	private Method method() {
-		return entry.getMethod();
-	}
-	
-	private <G> Object processObjectWithGoal(Class<G> goal)
-			throws BadValueException {
-		// Numerics types can't be delegated to FlexibleType, since @IntegerRange/@NumericRange need to be checked
+	Object processObject() throws InvalidConfigException {
+		ReturnType<?> returnType = entry.returnType();
+		if (returnType instanceof SimpleSubSectionReturnType) {
+			return processor.createNested(entry, (SimpleSubSectionReturnType<?>) returnType, preValue);
+		}
+		/*
+		 * For numerics types, collections, and maps, the validation annotations
+		 * @IntegerRange, @NumericRange, and @CollectionSize need to be checked
+		 */
+		if (returnType instanceof CollectionReturnType) {
+			return getCollection((CollectionReturnType<?, ?>) returnType);
+		}
+		if (returnType instanceof MapReturnType) {
+			return getMap((MapReturnType<?, ?>) returnType);
+		}
+		Class<?> goal = returnType.typeInfo().rawType();
 		if (goal == int.class || goal == Integer.class) {
 			return getAsNumber().intValue();
 		} else if (goal == long.class || goal == Long.class) {
@@ -68,55 +84,87 @@ class Composition {
 		} else if (goal == float.class || goal == Float.class) {
 			return getAsNumber().floatValue();
 		}
-		/*
-		 * Same goes for Collections and Maps with @CollectionSize.
-		 * Collections and Maps also need to call getList/getSet/getCollection/getMap.
-		 */
-		if (goal == List.class || goal == Set.class || goal == Collection.class) {
-			Class<?> elementType = entry.getCollectionElementType();
-			return getCollection(goal, elementType);
-		}
-		if (goal == Map.class) {
-			Class<?> keyType = entry.getMapKeyType();
-			Class<?> valueType = entry.getMapValueType();
-			return getMap(keyType, valueType);
-		}
-
 		// Everything else
 		return flexType.getObject(goal);
 	}
 	
-	private <E> Collection<E> getCollection(Class<?> goal, Class<E> elementType)
-			throws BadValueException {
-
-		FlexibleTypeFunction<E> function = (element) -> element.getObject(elementType);
-		Collection<E> collection;
-		if (goal == List.class) {
-			collection = flexType.getList(function);
-		} else if (goal == Set.class) {
-			collection = flexType.getSet(function);
-		} else if (goal == Collection.class) { 
-			collection = flexType.getCollection(function);
+	private <E, R extends Collection<E>> R getCollection(CollectionReturnType<E, R> returnType)
+			throws InvalidConfigException {
+		FlexibleTypeFunction<E> function;
+		if (returnType instanceof SubSectionCollectionReturnType) {
+			SubSectionCollectionReturnType<E, R> subSectionReturnType = (SubSectionCollectionReturnType<E, R>) returnType;
+			function = (element) -> {
+				try {
+					return processor.createNested(entry, subSectionReturnType, element.getObject(Object.class));
+				} catch (InvalidConfigException ex) {
+					throw new UncheckedInvalidConfigException(ex);
+				}
+			};
 		} else {
-			throw new IllegalArgumentException("Internal error: Unknown goal " + goal + ", expected List/Set/Collection");
+			Class<E> rawElementType = returnType.elementTypeInfo().rawType();
+			function = (element) -> element.getObject(rawElementType);
+		}
+		Collection<E> collection;
+		try {
+			collection = getCollectionUsing(returnType.collectionKind(), function);
+		} catch (UncheckedInvalidConfigException ex) {
+			throw ex.getCause();
 		}
 		checkSize(collection.size());
-		return collection;
+		@SuppressWarnings("unchecked")
+		R castedCollection = (R) collection;
+		return castedCollection;
+	}
+
+	private <E> Collection<E> getCollectionUsing(CollectionKind kind,
+												 FlexibleTypeFunction<E> function) throws BadValueException {
+		switch (kind) {
+		case COLLECTION:
+			return flexType.getCollection(function);
+		case SET:
+			return flexType.getSet(function);
+		case LIST:
+			return flexType.getList(function);
+		default:
+			throw new IllegalArgumentException("Internal error: Unknown collection kind " + kind);
+		}
 	}
 	
-	private <K, V> Map<K, V> getMap(Class<K> keyType, Class<V> valueType)
-			throws BadValueException {
-		Map<K, V> map = flexType.getMap((flexibleKey, flexibleValue) -> {
-			K key = flexibleKey.getObject(keyType);
-			V value = flexibleValue.getObject(valueType);
-			return ImmutableCollections.mapEntryOf(key, value);
-		});
+	private <K, V> Map<K, V> getMap(MapReturnType<K, V> returnType) throws InvalidConfigException {
+		Class<K> rawKeyType = returnType.keyTypeInfo().rawType();
+		FlexibleTypeMapEntryFunction<K, V> function;
+		if (returnType instanceof SubSectionMapReturnType) {
+			SubSectionMapReturnType<K, V> subSectionReturnType = (SubSectionMapReturnType<K, V>) returnType;
+			function = (flexibleKey, flexibleValue) -> {
+				K key = flexibleKey.getObject(rawKeyType);
+				V value;
+				try {
+					value = processor.createNested(entry, subSectionReturnType, flexibleValue.getObject(Object.class));
+				} catch (InvalidConfigException ex) {
+					throw new UncheckedInvalidConfigException(ex);
+				}
+				return ImmutableCollections.mapEntryOf(key, value);
+			};
+		} else {
+			Class<V> rawValueType = returnType.valueTypeInfo().rawType();
+			function = (flexibleKey, flexibleValue) -> {
+				K key = flexibleKey.getObject(rawKeyType);
+				V value = flexibleValue.getObject(rawValueType);
+				return ImmutableCollections.mapEntryOf(key, value);
+			};
+		}
+		Map<K, V> map;
+		try {
+			map = flexType.getMap(function);
+		} catch (UncheckedInvalidConfigException ex) {
+			throw ex.getCause();
+		}
 		checkSize(map.size());
 		return map;
 	}
 	
 	private void checkSize(int size) throws BadValueException {
-		CollectionSize sizing = method().getAnnotation(CollectionSize.class);
+		CollectionSize sizing = entry.getMethod().getAnnotation(CollectionSize.class);
 		if (sizing != null) {
 			if (size < sizing.min()) {
 				throw flexType.badValueExceptionBuilder()
@@ -136,7 +184,7 @@ class Composition {
 	}
 	
 	private void checkRange(Number number) throws BadValueException {
-		NumericRange numericRange = method().getAnnotation(NumericRange.class);
+		NumericRange numericRange = entry.getMethod().getAnnotation(NumericRange.class);
 		if (numericRange != null) {
 			double asDouble = number.doubleValue();
 			if (asDouble < numericRange.min()) {
@@ -148,7 +196,7 @@ class Composition {
 						.message("value's size " + asDouble + " is more than maximum size " + numericRange.max()).build();
 			}
 		}
-		IntegerRange intRange = method().getAnnotation(IntegerRange.class);
+		IntegerRange intRange = entry.getMethod().getAnnotation(IntegerRange.class);
 		if (intRange != null) {
 			long asLong = number.longValue();
 			if (asLong < intRange.min()) {

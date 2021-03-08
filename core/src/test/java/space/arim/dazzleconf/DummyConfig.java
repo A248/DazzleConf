@@ -18,15 +18,9 @@
  */
 package space.arim.dazzleconf;
 
-import java.net.URL;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import space.arim.dazzleconf.annote.ConfDefault;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultBoolean;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultInteger;
-import space.arim.dazzleconf.annote.ConfDefault.DefaultIntegers;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultMap;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultString;
 import space.arim.dazzleconf.annote.ConfDefault.DefaultStrings;
@@ -34,6 +28,10 @@ import space.arim.dazzleconf.annote.ConfKey;
 import space.arim.dazzleconf.annote.ConfSerialisers;
 import space.arim.dazzleconf.annote.SubSection;
 import space.arim.dazzleconf.serialiser.URLValueSerialiser;
+
+import java.net.URL;
+import java.util.Map;
+import java.util.Set;
 
 @ConfSerialisers(URLValueSerialiser.class)
 public interface DummyConfig {
@@ -76,34 +74,5 @@ public interface DummyConfig {
 
 	@DefaultStrings({"string1", "string2"})
 	Set<String> someStrings();
-
-	@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueInteger")
-	int integerUsingDefaultObjectAnnotation();
-
-	@ConfSerialisers(NumericPairSerialiser.class)
-	interface NestedConfig {
-		
-		@DefaultString("ahaha")
-		String nestedValue();
-		
-		@DefaultStrings({"1string", "2string", "3string"})
-		Set<String> someStringsForYou();
-		
-		@DefaultIntegers({1, 2, 3})
-		List<Integer> ordered123();
-
-		@DefaultString("1:3")
-		NumericPair numericPair();
-
-		@DefaultMap({"key1", "4:18", "key2", "2:8"})
-		Map<String, NumericPair> extraPairs();
-
-		@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueString")
-		String stringUsingDefaultObjectAnnotation();
-
-		@ConfDefault.DefaultObject("space.arim.dazzleconf.DummyConfigDefaults.defaultValueComplex")
-		Map<String, ComplexObject> complexValues();
-		
-	}
 	
 }

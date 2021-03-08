@@ -21,7 +21,7 @@ package space.arim.dazzleconf.internal.processor;
 
 class InvisibleDefaults {
 
-	public static Object insidePrivateClass() {
-		return new Object();
+	public static Value insidePrivateClass() {
+		return new Value("inside private class");
 	}
 }

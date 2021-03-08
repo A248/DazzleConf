@@ -24,15 +24,15 @@ import java.util.Map;
 
 import space.arim.dazzleconf.AuxiliaryKeys;
 import space.arim.dazzleconf.ConfigurationOptions;
+import space.arim.dazzleconf.error.BadValueException;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
-import space.arim.dazzleconf.error.ImproperEntryException;
 import space.arim.dazzleconf.error.InvalidConfigException;
 import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.error.MissingValueException;
 import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
-import space.arim.dazzleconf.internal.NestedConfEntry;
-import space.arim.dazzleconf.internal.SingleConfEntry;
+import space.arim.dazzleconf.internal.type.ReturnTypeWithConfigDefinition;
+import space.arim.dazzleconf.internal.type.SimpleSubSectionReturnType;
 import space.arim.dazzleconf.internal.util.ConfigurationInvoker;
 import space.arim.dazzleconf.serialiser.FlexibleType;
 import space.arim.dazzleconf.validator.ValueValidator;
@@ -60,9 +60,6 @@ public abstract class ProcessorBase<C> {
 		this.definition = definition;
 		this.auxiliaryValues = (auxiliaryValues == null) ? null : new ConfigurationInvoker<>(auxiliaryValues);
 	}
-	
-	abstract <N> ProcessorBase<N> continueNested(ConfigurationOptions options, NestedConfEntry<N> childEntry,
-			N nestedAuxiliaryValues) throws ImproperEntryException;
 	
 	/**
 	 * Creates a configuration
@@ -96,10 +93,14 @@ public abstract class ProcessorBase<C> {
 		for (ConfEntry entry : definition.getEntries()) {
 			String methodName = entry.getMethod().getName();
 			Object value;
-			if (entry instanceof NestedConfEntry) {
-				value = getNestedSection((NestedConfEntry<?>) entry);
-			} else {
-				value = getSingleValue((SingleConfEntry) entry);
+			try {
+				value = getProcessedValue(entry, getPreValue(entry));
+			} catch (MissingKeyException mke) {
+				// If missing and auxiliary entries are provided, use auxiliary value
+				if (auxiliaryValues == null) {
+					throw mke;
+				}
+				value = getAuxiliaryValue(entry);
 			}
 			Object formerValue = result.put(methodName, value);
 			if (formerValue != null) {
@@ -107,54 +108,37 @@ public abstract class ProcessorBase<C> {
 			}
 		}
 	}
-	
-	private <N> N getNestedSection(NestedConfEntry<N> nestedEntry) throws InvalidConfigException {
-		N nestedAuxiliary = (auxiliaryValues == null) ? null
-				: getNestedAuxiliaryValue(nestedEntry); // Pass along auxiliary entries
 
-		ProcessorBase<N> childProcessor;
-		try {
-			childProcessor = continueNested(options, nestedEntry, nestedAuxiliary);
-		} catch (MissingKeyException mke) {
-			if (auxiliaryValues == null) {
-				throw mke;
-			}
-			return nestedAuxiliary;
-		}
-		N nestedSection = childProcessor.createConfig();
-		if (childProcessor.usedAuxiliary) {
-			usedAuxiliary = true; // propagate auxiliary usage flag upward
-		}
-		return nestedSection;
-	}
-	
-	private Object getSingleValue(SingleConfEntry entry) throws InvalidConfigException {
-		// Get pre value; if missing and auxiliary entries are provided, return auxiliary value
-		Object preValue;
-		try {
-			preValue = getValueFromSources(entry);
-		} catch (MissingKeyException mke) {
-			if (auxiliaryValues == null) {
-				throw mke;
-			}
-			return getAuxiliaryValue(entry);
-		}
+	private Object getPreValue(ConfEntry entry) throws InvalidConfigException {
+		Object preValue = getValueFromSources(entry);
 		String key = entry.getKey();
 		if (preValue == null) {
 			throw MissingValueException.forKey(key);
 		}
+		return preValue;
+	}
+	
+	private Object getProcessedValue(ConfEntry entry, Object preValue) throws InvalidConfigException {
+		String key = entry.getKey();
 
-		FlexibleType flexType = new FlexibleTypeImpl(key, preValue, options, definition.getSerialisers());
-		Object value = new Composition(entry, flexType).processObject();
+		FlexibleType flexibleType = new FlexibleTypeImpl(key, preValue, options, definition.getSerialisers());
+		Composition composition = new Composition(this, entry, preValue, flexibleType);
+		Object value = composition.processObject();
+		validate(entry, value);
+		return value;
+	}
 
-		ValueValidator validator = entry.getValidator();
-		if (validator == null) {
-			validator = options.getValidators().get(key);
+	private void validate(ConfEntry entry, Object value) throws BadValueException {
+		if (entry.returnType() instanceof SimpleSubSectionReturnType) {
+			// ValueValidator not supported for simple sub sections
+			return;
 		}
+		String key = entry.getKey();
+		// Cannot use Optional#or due to JDK 8 compatibility
+		ValueValidator validator = entry.getValidator().orElseGet(() -> options.getValidators().get(key));
 		if (validator != null) {
 			validator.validate(key, value);
 		}
-		return value;
 	}
 	
 	private Object getAuxiliaryValue(ConfEntry entry) {
@@ -162,20 +146,50 @@ public abstract class ProcessorBase<C> {
 		usedAuxiliary = true;
 		return auxiliaryValue;
 	}
-	
-	private <N> N getNestedAuxiliaryValue(NestedConfEntry<N> nestedEntry) {
-		Class<N> configClass = nestedEntry.getDefinition().getConfigClass();
-		ConfEntry entry = nestedEntry;
-		return configClass.cast(getAuxiliaryValue(entry));
+
+	<N> N createNested(ConfEntry nestedEntry, ReturnTypeWithConfigDefinition<N, ?> returnType, Object preValue)
+			throws InvalidConfigException {
+		ConfigurationDefinition<N> nestedDefinition = returnType.configDefinition();
+		N nestedAuxiliary = null;
+		if (auxiliaryValues != null && returnType instanceof SimpleSubSectionReturnType) {
+			Object auxiliaryValue = getAuxiliaryValue(nestedEntry);
+			nestedAuxiliary = nestedDefinition.getConfigClass().cast(auxiliaryValue);
+		}
+		return createChildConfig(options, nestedDefinition, nestedEntry.getKey(), preValue, nestedAuxiliary);
 	}
+
+	<N> N createFromProcessor(ProcessorBase<N> childProcessor) throws InvalidConfigException {
+		N childConfig = childProcessor.createConfig();
+		if (childProcessor.usedAuxiliary) {
+			usedAuxiliary = true; // propagate auxiliary usage flag upward
+		}
+		return childConfig;
+	}
+
+	/**
+	 * Creates a child config from the following information
+	 *
+	 * @param options the configuration options
+	 * @param childDefinition the child definition
+	 * @param key the key, purely informative
+	 * @param preValue the pre processing value
+	 * @param nestedAuxiliaryValues any auxiliary values
+	 * @param <N> the nested config type
+	 * @return the child config
+	 * @throws InvalidConfigException if something went wrong
+	 */
+	abstract <N> N createChildConfig(ConfigurationOptions options,
+									 ConfigurationDefinition<N> childDefinition,
+									 String key, Object preValue,
+									 N nestedAuxiliaryValues) throws InvalidConfigException;
 	
 	/**
 	 * Retrieves the pre processing value for a config entry
 	 * 
 	 * @param entry the config entry
 	 * @return the pre processed value
-	 * @throws MissingKeyException if the key is not defined
+	 * @throws InvalidConfigException if something went wrong
 	 */
-	abstract Object getValueFromSources(SingleConfEntry entry) throws MissingKeyException;
+	abstract Object getValueFromSources(ConfEntry entry) throws InvalidConfigException;
 	
 }

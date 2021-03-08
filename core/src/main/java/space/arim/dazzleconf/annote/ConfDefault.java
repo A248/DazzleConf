@@ -141,14 +141,48 @@ public final class ConfDefault {
 	}
 
 	/**
-	 * Specifies the fully qualified name of the static method returning the default value. <br>
+	 * Specifies the qualified name of the static method returning the default value. <br>
 	 * <br>
-	 * The method must be static, and it must be visible. It cannot have parameters.
+	 * The method must be static, and it must be visible.
 	 * When the default configuration is loaded, the method will be invoked. <br>
 	 * <br>
+	 * If the method is in the same class as the config interface this annotation is placed
+	 * in, the value is this annotation is the method name (the class name can be omitted).
+	 * Otherwise, the value of this annotation must be the fully qualified class name,
+	 * followed by a '{@literal .}', followed by the method name. <br>
+	 * <br>
 	 * For example, {@literal @DefaultObject("com.mypackage.ConfigDefaults.someObject")}
-	 * will invoke the public static method called 'someObject' in the class ConfigDefaults.
+	 * will invoke the public static method called 'someObject' in the class ConfigDefaults. <br>
+	 * <br>
+	 * <b>Parameters</b> <br>
+	 * Normally, the method cannot have parameters. <br>
+	 * <br>
+	 * The exception to this is config entries which involve a {@code SubSection} as a
+	 * collection element or map value. When this is the case, the method may optionally take
+	 * the sub section itself as a parameter. This allows using the default section inside the
+	 * collection or map returned by the method. In these cases, a method without any parameters
+	 * will be searched for first. If it is not found, a method with the parameter of the type of
+	 * sub section will be searched for. For example: <br>
+	 * <pre>
+	 * {@code
+	 * public interface MyConfig {
+	 *   @DefaultObject("com.mypackage.MyConfigDefaults.sectionMapDefaults")
+	 *   Map<String, @SubSection ConfigSection> sectionMap();
 	 *
+	 *   interface ConfigSection {
+	 *     @DefaultInteger(3)
+	 *     int someValue();
+	 *   }
+	 * }
+	 *
+	 * public class MyConfigDefaults {
+	 *
+	 *   public static Map<String, ConfigSection> sectionMapDefaults(ConfigSection defaultConfigSection) {
+	 *     return Map.of("key-one", defaultConfigSection);
+	 *   }
+	 * }
+	 * }
+	 * </pre>
 	 */
 	@Retention(RUNTIME)
 	@Target(METHOD)

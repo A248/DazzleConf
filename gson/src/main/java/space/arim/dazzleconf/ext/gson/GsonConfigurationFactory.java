@@ -42,7 +42,11 @@ import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.factory.AbstractConfigurationFactory;
 
 /**
- * A {@link ConfigurationFactory} implementation using Gson to load a json configuration
+ * A {@link ConfigurationFactory} implementation using Gson to load a json configuration. <br>
+ * <br>
+ * <b>Note: Relying on the identity of this class is deprecated</b>, for example relying on
+ * this class implementing {@code ConfigurationFactory}. In a future major release, the implementation
+ * of the factory returned from the {@code create} methods may be refactored.
  * 
  * @author A248
  *
@@ -59,10 +63,12 @@ public class GsonConfigurationFactory<C> extends AbstractConfigurationFactory<C>
 	 * @param configClazz the config class
 	 * @param options the config options
 	 * @param gsonOptions the gson options
-	 * @throws NullPointerException if {@code configClazz}, {@code options}, or {@code gsonOptions} is null
 	 * @throws IllegalArgumentException if {@code configClazz} is not an interface
 	 * @throws IllDefinedConfigException if a configuration entry in {@code configClazz} is not defined properly
+	 * @deprecated Use {@link #create(Class, ConfigurationOptions, GsonOptions)}. Subclassing should not
+	 * be used; prefer the delegation pattern instead. See the class javadoc for more info.
 	 */
+	@Deprecated
 	public GsonConfigurationFactory(Class<C> configClazz, ConfigurationOptions options, GsonOptions gsonOptions) {
 		super(configClazz, options);
 		this.gsonOptions = Objects.requireNonNull(gsonOptions, "gsonOptions");
@@ -74,12 +80,46 @@ public class GsonConfigurationFactory<C> extends AbstractConfigurationFactory<C>
 	 * 
 	 * @param configClazz the config class
 	 * @param options the config options
-	 * @throws NullPointerException if {@code configClazz} or {@code options} is null
 	 * @throws IllegalArgumentException if {@code configClazz} is not an interface
 	 * @throws IllDefinedConfigException if a configuration entry in {@code configClazz} is not defined properly
+	 * @deprecated Use {@link #create(Class, ConfigurationOptions)}. Subclassing should not be used;
+	 * prefer the delegation pattern instead. See the class javadoc for more info.
 	 */
+	@Deprecated
 	public GsonConfigurationFactory(Class<C> configClazz, ConfigurationOptions options) {
 		this(configClazz, options, new GsonOptions.Builder().build());
+	}
+
+	/**
+	 * Creates from a configuration class, config options, and {@link GsonOptions}
+	 *
+	 * @param configClass the config class
+	 * @param options the config options
+	 * @param gsonOptions the gson options
+	 * @param <C> the configuration type
+	 * @return the configuration factory
+	 * @throws IllegalArgumentException if {@code configClass} is not an interface
+	 * @throws IllDefinedConfigException if a configuration entry in {@code configClass} is not defined properly
+	 */
+	public static <C> ConfigurationFactory<C> create(Class<C> configClass, ConfigurationOptions options,
+													 GsonOptions gsonOptions) {
+		return new GsonConfigurationFactory<>(configClass, options, gsonOptions);
+	}
+
+	/**
+	 * Creates from a configuration class and config options. <br>
+	 * <br>
+	 * Uses the default gson options, which include pretty printing, UTF 8, and disabled html escaping.
+	 *
+	 * @param configClass the config class
+	 * @param options the config options
+	 * @param <C> the configuration type
+	 * @return the configuration factory
+	 * @throws IllegalArgumentException if {@code configClass} is not an interface
+	 * @throws IllDefinedConfigException if a configuration entry in {@code configClass} is not defined properly
+	 */
+	public static <C> ConfigurationFactory<C> create(Class<C> configClass, ConfigurationOptions options) {
+		return create(configClass, options, new GsonOptions.Builder().build());
 	}
 	
 	@Override

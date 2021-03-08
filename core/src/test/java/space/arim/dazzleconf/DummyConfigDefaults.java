@@ -31,17 +31,7 @@ import java.util.Set;
 import org.opentest4j.AssertionFailedError;
 import org.opentest4j.TestAbortedException;
 
-import space.arim.dazzleconf.DummyConfig.NestedConfig;
-
 public class DummyConfigDefaults {
-
-	public static int defaultValueInteger() {
-		return -1;
-	}
-
-	public static String defaultValueString() {
-		return "default value";
-	}
 
 	private static final Map<String, ComplexObject> DEFAULT_VALUE_COMPLEX = Map.of(
 			"object1", new ComplexObject(3, "name1", true),
@@ -67,16 +57,18 @@ public class DummyConfigDefaults {
 		}
 		assertEquals(Map.of(ValueEnum.ANOTHER, "value", ValueEnum.THIRD, "more"), defaultConf.enumMap());
 		assertEquals(Set.of("string1", "string2"), defaultConf.someStrings());
-		assertEquals(defaultValueInteger(), defaultConf.integerUsingDefaultObjectAnnotation());
 
-		NestedConfig nestedConf = defaultConf.subSection();
+		assertDefaultNestedConfigValues(defaultConf.subSection());
+	}
+
+	void assertDefaultNestedConfigValues(NestedConfig nestedConf) {
 		assertEquals("ahaha", nestedConf.nestedValue());
 		assertEquals(Set.of("1string", "2string", "3string"), nestedConf.someStringsForYou());
 		assertEquals(List.of(1, 2, 3), nestedConf.ordered123());
 		assertEquals(new NumericPair(1, 3), nestedConf.numericPair());
 		assertEquals(Map.of("key1", new NumericPair(4, 18), "key2", new NumericPair(2, 8)), nestedConf.extraPairs());
-		assertEquals(defaultValueString(), nestedConf.stringUsingDefaultObjectAnnotation());
 		assertEquals(defaultValueComplex(), nestedConf.complexValues());
+		assertEquals(NestedConfig.numericPairDefaultInSameClassDefault(), nestedConf.numericPairDefaultInSameClass());
 	}
 
 	public void assumeDefaultValues(DummyConfig defaultConf) {

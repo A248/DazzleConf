@@ -93,6 +93,19 @@ public class CommentedWriterTest {
 	}
 
 	@Test
+	public void writeListWithMaps() throws IOException {
+		Map<String, Object> mapInList = new LinkedHashMap<>();
+		mapInList.put("key1", "value");
+		mapInList.put("key2", 3);
+		commentedWriter.writeMap(Map.of("config", List.of(mapInList)));
+		assertLinesMatch(Stream.of(
+				"config:",
+				"  - key1: 'value'",
+				"    key2: 3",
+				""), stringWriter.toString().lines());
+	}
+
+	@Test
 	public void writeComments() throws IOException {
 		Map<String, Object> map = new LinkedHashMap<>();
 		map.put("first-key", -3);

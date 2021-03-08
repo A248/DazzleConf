@@ -21,12 +21,19 @@ package space.arim.dazzleconf.ext.snakeyaml.ness;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.yaml.snakeyaml.Yaml;
 import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
+import space.arim.dazzleconf.error.InvalidConfigException;
 import space.arim.dazzleconf.ext.snakeyaml.SnakeYamlConfigurationFactory;
 import space.arim.dazzleconf.ext.snakeyaml.SnakeYamlOptions;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -99,12 +106,36 @@ public class NessConfigTest {
 		assertEquals("Bot Attack Detected! By NESS Reloaded", antiBot.kickMessage());
 		assertEquals(10, antiBot.timeUntilTrusted());
 
-		AutoClickConfig autoClick = nessConfig.autoClick();
+		assertDefaultAutoClickConfig(nessConfig.autoClick());
+	}
+
+	private static void assertDefaultAutoClickConfig(AutoClickConfig autoClick) {
 		assertEquals(32, autoClick.totalRetentionSecs());
 		assertEquals(Set.of(new HardLimitEntry(35, 2)), autoClick.hardLimits());
 		AutoClickConfig.Constancy autoClickConstancy = autoClick.constancy();
 		assertEquals(Set.of(new DeviationEntry(30, 10)), autoClickConstancy.deviationRequirements());
 		assertEquals(Set.of(new DeviationEntry(60, 10)), autoClickConstancy.superDeviationRequirements());
+	}
+
+	@Test
+	public void auxiliarySubSectionReplacement() throws IOException, InvalidConfigException {
+		/*
+		 * Get the default config as a Map, remove the autoclick section,
+		 * then reload the configuration using the default config for auxiliary values
+		 */
+		NessConfig defaultConfig = factory.loadDefaults();
+		ByteArrayOutputStream defaultConfigOutput = new ByteArrayOutputStream();
+		factory.write(defaultConfig, defaultConfigOutput);
+
+		Map<?, ?> configMap = (Map<?, ?>) new Yaml().load(new ByteArrayInputStream(defaultConfigOutput.toByteArray()));
+		configMap.remove("autoclick");
+		String configWithAutoClickRemoved = new Yaml().dump(configMap);
+
+		NessConfig reloadedConfig = factory.load(
+				new ByteArrayInputStream(configWithAutoClickRemoved.getBytes(StandardCharsets.UTF_8)),
+				defaultConfig);
+		assertEquals(defaultConfig.autoClick(), reloadedConfig.autoClick());
+		assertDefaultAutoClickConfig(reloadedConfig.autoClick());
 	}
 
 }

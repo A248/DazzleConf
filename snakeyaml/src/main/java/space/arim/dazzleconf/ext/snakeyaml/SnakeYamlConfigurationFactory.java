@@ -35,7 +35,11 @@ import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.factory.AbstractConfigurationFactory;
 
 /**
- * A {@link ConfigurationFactory} implementation using SnakeYAML to load a yaml configuration
+ * A {@link ConfigurationFactory} implementation using SnakeYAML to load a yaml configuration. <br>
+ * <br>
+ * <b>Note: Relying on the identity of this class is deprecated</b>, for example relying on
+ * this class implementing {@code ConfigurationFactory}. In a future major release, the implementation
+ * of the factory returned from the {@code create} methods may be refactored.
  * 
  * @author A248
  *
@@ -52,10 +56,12 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 	 * @param configClazz the config class
 	 * @param options the config options
 	 * @param yamlOptions the snake yaml options
-	 * @throws NullPointerException if {@code configClazz}, {@code options}, or {@code yamlOptions} is null
 	 * @throws IllegalArgumentException if {@code configClazz} is not an interface
 	 * @throws IllDefinedConfigException if a configuration entry in {@code configClazz} is not defined properly
+	 * @deprecated Use {@link #create(Class, ConfigurationOptions, SnakeYamlOptions)}. Subclassing should not
+	 * be used; prefer the delegation pattern instead. See the class javadoc for more info.
 	 */
+	@Deprecated
 	public SnakeYamlConfigurationFactory(Class<C> configClazz, ConfigurationOptions options, SnakeYamlOptions yamlOptions) {
 		super(configClazz, options);
 		this.yamlOptions = Objects.requireNonNull(yamlOptions, "yamlOptions");
@@ -67,12 +73,46 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 	 * 
 	 * @param configClazz the config class
 	 * @param options the config options
-	 * @throws NullPointerException if {@code configClazz} or {@code options} is null
 	 * @throws IllegalArgumentException if {@code configClazz} is not an interface
 	 * @throws IllDefinedConfigException if a configuration entry in {@code configClazz} is not defined properly
+	 * @deprecated Use {@link #create(Class, ConfigurationOptions)}. Subclassing should not be used;
+	 * prefer the delegation pattern instead. See the class javadoc for more info.
 	 */
+	@Deprecated
 	public SnakeYamlConfigurationFactory(Class<C> configClazz, ConfigurationOptions options) {
 		this(configClazz, options, new SnakeYamlOptions.Builder().build());
+	}
+
+	/**
+	 * Creates from a configuration class, config options, and {@link SnakeYamlOptions}
+	 *
+	 * @param configClass the config class
+	 * @param options the config options
+	 * @param yamlOptions the snake yaml options
+	 * @param <C> the configuration type
+	 * @return the configuration factory
+	 * @throws IllegalArgumentException if {@code configClass} is not an interface
+	 * @throws IllDefinedConfigException if a configuration entry in {@code configClass} is not defined properly
+	 */
+	public static <C> ConfigurationFactory<C> create(Class<C> configClass, ConfigurationOptions options,
+												 SnakeYamlOptions yamlOptions) {
+		return new SnakeYamlConfigurationFactory<>(configClass, options, yamlOptions);
+	}
+
+	/**
+	 * Creates from a configuration class and config options. <br>
+	 * <br>
+	 * Uses the default yaml options, which include "block" flow style and UTF 8 encoding
+	 *
+	 * @param configClass the config class
+	 * @param options the config options
+	 * @param <C> the configuration type
+	 * @return the configuration factory
+	 * @throws IllegalArgumentException if {@code configClass} is not an interface
+	 * @throws IllDefinedConfigException if a configuration entry in {@code configClass} is not defined properly
+	 */
+	public static <C> ConfigurationFactory<C> create(Class<C> configClass, ConfigurationOptions options) {
+		return create(configClass, options, new SnakeYamlOptions.Builder().build());
 	}
 	
 	@Override

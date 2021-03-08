@@ -19,34 +19,26 @@
 
 package space.arim.dazzleconf.internal.processor;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 @SuppressWarnings("unused")
 public class PublicDefaults {
 
-	private static final int PRIMITIVE_VALUE = ThreadLocalRandom.current().nextInt();
-
-	public static int validMethodPrimitive() {
-		return PRIMITIVE_VALUE;
+	public static Value validMethod() {
+		return new Value("working");
 	}
 
-	public static String validMethod() {
-		return "working";
-	}
-
-	public static String throwsException() {
+	public static Value throwsException() {
 		throw new RuntimeException();
 	}
 
-	private static String privateMethod() {
-		return "needs to be public";
+	private static Value privateMethod() {
+		return new Value("needs to be public");
 	}
 
-	public String publicInstanceMethod() {
-		return "needs to be static";
+	public Value publicInstanceMethod() {
+		return new Value("needs to be static");
 	}
 
-	private String privateNonStaticMethod() {
-		return "clueless";
+	private Value privateNonStaticMethod() {
+		return new Value("clueless");
 	}
 }

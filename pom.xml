@@ -92,6 +92,40 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>3.0.0-M3</version>
+				<executions>
+					<execution>
+						<id>enforce-rules</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<rules>
+						<requireJavaVersion>
+							<version>15.0.1</version>
+							<message>
+								While this library maintains compatibility with Java 8,
+								it requires JDK 15 as a build-time requirement, because
+								of the need to conditionally access newer APIs as well as
+								javadoc limitations on older versions.
+							</message>
+						</requireJavaVersion>
+						<requireNoRepositories>
+							<message>Third-party repositories are not allowed</message>
+						</requireNoRepositories>
+						<requireReleaseDeps>
+							<message>No snapshot dependencies are allowed</message>
+							<!-- Prevent false positives on self-dependencies -->
+							<onlyWhenRelease>true</onlyWhenRelease>
+						</requireReleaseDeps>
+					</rules>
+				</configuration>
+			</plugin>
 		</plugins>
 		<pluginManagement>
 			<plugins>

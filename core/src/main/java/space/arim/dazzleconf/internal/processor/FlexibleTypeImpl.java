@@ -202,17 +202,18 @@ class FlexibleTypeImpl implements FlexibleType {
 	private <E> Collection<E> getCollection0(boolean ordered, FlexibleTypeFunction<? extends E> elementProcessor)
 			throws BadValueException {
 		Objects.requireNonNull(elementProcessor, "elementProcessor");
-		List<?> list;
-		if (value instanceof List) {
-			list = (List<?>) value;
+		Collection<?> collection;
+		if (value instanceof Collection) {
+			collection = (Collection<?>) value;
 		} else if (options.createSingleElementCollections()) {
 			E singleResult = elementProcessor.getResult(this);
 			return (ordered) ? ImmutableCollections.listOf(singleResult) : ImmutableCollections.setOf(singleResult);
 		} else {
-			throw badValueExceptionBuilder().message("value " + value + " is not a List").build();
+			throw badValueExceptionBuilder().message(
+					"value " + value + " must be a collection or group of elements (List, Collection, Set)").build();
 		}
-		Collection<E> result = (ordered) ? new ArrayList<>(list.size()) : new HashSet<>(list.size());
-		for (Object element : list) {
+		Collection<E> result = (ordered) ? new ArrayList<>(collection.size()) : new HashSet<>(collection.size());
+		for (Object element : collection) {
 			result.add(elementProcessor.getResult(deriveFlexibleObject(element)));
 		}
 		return (ordered) ? ImmutableCollections.listOf(result) : ImmutableCollections.setOf(result);

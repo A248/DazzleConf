@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Java 8 users are the reason this class exists. Please update to JDK 11 or later.
+ */
 public final class ImmutableCollections {
 	
 	private static final boolean PRE_JAVA_10;
