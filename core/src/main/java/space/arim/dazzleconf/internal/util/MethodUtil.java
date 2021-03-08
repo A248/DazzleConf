@@ -72,7 +72,7 @@ public final class MethodUtil {
 					.unreflectSpecial(method, declaringClass);
 		} catch (IllegalAccessException ex) {
 			throw new IllDefinedConfigException(
-					"Unable to generate default method accessor for " + method.getName(), ex);
+					"Unable to generate default method accessor for " + getQualifiedName(method), ex);
 		}
 	}
 	
@@ -108,7 +108,7 @@ public final class MethodUtil {
 
 			} catch (IllegalAccessException | InstantiationException | InvocationTargetException ex) {
 				throw new IllDefinedConfigException(
-						"Unable to generate default method accessor for " + method.getName(), ex);
+						"Unable to generate default method accessor for " + getQualifiedName(method), ex);
 			}
 		}
 	}
