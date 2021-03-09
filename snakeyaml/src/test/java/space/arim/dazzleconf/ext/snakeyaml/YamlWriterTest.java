@@ -59,12 +59,8 @@ public class YamlWriterTest {
 	}
 
 	private String quoteValue(String value) {
-		if (writer instanceof CommentedWriter) {
-			value = "'" + value + "'";
-		}
-		return value;
+		return (writer instanceof CommentedWriter) ? ("'" + value + "'") : value;
 	}
-
 
 	/**
 	 * Provides leniency in case there is an extra new line in {@code actualLines}
@@ -207,7 +203,7 @@ public class YamlWriterTest {
 				"# Header 2",
 				"# Comment on entry",
 				"key: " + quoteValue("value")),
-				resultString.lines().peek(System.out::println));
+				resultString.lines());
 	}
 	
 	private static void assertConfigMapsEqual(Map<String, Object> map1, Map<String, Object> map2) {
