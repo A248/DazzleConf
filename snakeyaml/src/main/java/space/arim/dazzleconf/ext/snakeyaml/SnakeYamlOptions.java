@@ -20,7 +20,6 @@ package space.arim.dazzleconf.ext.snakeyaml;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.IllegalFormatException;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -37,15 +36,15 @@ import org.yaml.snakeyaml.representer.Representer;
 public final class SnakeYamlOptions {
 
 	private final Supplier<Yaml> yamlSupplier;
+	private final CommentMode commentMode;
 	private final boolean useCommentingWriter;
-	private final String commentFormat;
 	private final Charset charset;
 	
-	SnakeYamlOptions(Supplier<Yaml> yamlSupplier, boolean useCommentingWriter, String commentFormat,
+	SnakeYamlOptions(Supplier<Yaml> yamlSupplier, CommentMode commentMode, boolean useCommentingWriter,
 					 Charset charset) {
 		this.yamlSupplier = yamlSupplier;
+		this.commentMode = commentMode;
 		this.useCommentingWriter = useCommentingWriter;
-		this.commentFormat = commentFormat;
 		this.charset = charset;
 	}
 
@@ -57,24 +56,28 @@ public final class SnakeYamlOptions {
 	public Supplier<Yaml> yamlSupplier() {
 		return yamlSupplier;
 	}
+
+	/**
+	 * Gets the comment mode used. The mode exposes no data but may be used
+	 * for comparison with other comment modes via {@code equals}
+	 *
+	 * @return the comment mode
+	 */
+	public CommentMode commentMode() {
+		return commentMode;
+	}
 	
 	/**
 	 * Whether the commenting alternative writer should be used. See {@link Builder#useCommentingWriter(boolean)}
 	 * for more details.
 	 * 
 	 * @return whether the alternative yaml writer is enabled
+	 * @deprecated The choice of comments is no longer limited to whether the alternate writer is used.
+	 * Use {@link CommentMode} instead
 	 */
+	@Deprecated
 	public boolean useCommentingWriter() {
 		return useCommentingWriter;
-	}
-
-	/**
-	 * Gets the format of written comments. See {@link Builder#commentFormat(String)} for details.
-	 *
-	 * @return the comment format
-	 */
-	public String commentFormat() {
-		return commentFormat;
 	}
 
 	/**
@@ -88,8 +91,12 @@ public final class SnakeYamlOptions {
 
 	@Override
 	public String toString() {
-		return "SnakeYamlOptions [yamlSupplier=" + yamlSupplier + ", useCommentingWriter=" + useCommentingWriter
-				 + ", commentFormat" + commentFormat + ", charset=" + charset + "]";
+		return "SnakeYamlOptions{" +
+				"yamlSupplier=" + yamlSupplier +
+				", commentMode=" + commentMode +
+				", useCommentingWriter=" + useCommentingWriter +
+				", charset=" + charset +
+				'}';
 	}
 
 	/**
@@ -105,9 +112,9 @@ public final class SnakeYamlOptions {
 			representer.setDefaultFlowStyle(FlowStyle.BLOCK);
 			return new Yaml(representer);
 		};
+		private CommentMode commentMode = CommentMode.headerOnly();
 		private boolean useCommentingWriter;
 		private Charset charset = StandardCharsets.UTF_8;
-		private String commentFormat = " # %s";
 		
 		public Builder() {
 			
@@ -124,6 +131,18 @@ public final class SnakeYamlOptions {
 			this.yamlSupplier = Objects.requireNonNull(yamlSupplier, "yamlSupplier");
 			return this;
 		}
+
+		/**
+		 * Sets the comment mode used for writing comments. The available modes
+		 * are obtainable via static factory methods in {@link CommentMode}
+		 *
+		 * @param commentMode the comment mode to use
+		 * @return this builder
+		 */
+		public Builder commentMode(CommentMode commentMode) {
+			this.commentMode = Objects.requireNonNull(commentMode, "commentMode");
+			return this;
+		}
 		
 		/**
 		 * SnakeYaml does not support writing comments. This option enables an alternative yaml writer
@@ -133,30 +152,13 @@ public final class SnakeYamlOptions {
 		 * 
 		 * @param useCommentingWriter true to use the commenting alternate writer, false otherwise
 		 * @return this builder
+		 * @deprecated Comments are now handled via the comment mode. Use {@link #commentMode(CommentMode)}
+		 * with {@code CommentMode.alternativeWriter()} to replace 'true' calls to this method.
 		 */
+		@Deprecated
 		public Builder useCommentingWriter(boolean useCommentingWriter) {
 			this.useCommentingWriter = useCommentingWriter;
-			return this;
-		}
-
-		/**
-		 * Sets the format used for writing comments. Must be a {@code String.format}
-		 * compatible format string. <br>
-		 * <br>
-		 * By default, comments are formatted as in the example:
-		 * ' # Comment here'. This corresponds to the comment format {@code " # %s"} <br>
-		 * <br>
-		 * <b>Note well,</b> it is caller's responsibility to ensure the comment format results
-		 * in valid YAML.
-		 *
-		 * @param commentFormat the comment format
-		 * @return this builder
-		 * @throws IllegalFormatException if the comment format is an illegal format string
-		 */
-		public Builder commentFormat(String commentFormat) {
-			Objects.requireNonNull(commentFormat, "commentFormat");
-			String.format(commentFormat, "dummy comment");
-			this.commentFormat = commentFormat;
+			commentMode = (useCommentingWriter) ? CommentMode.alternativeWriter() : CommentMode.headerOnly();
 			return this;
 		}
 
@@ -177,15 +179,18 @@ public final class SnakeYamlOptions {
 		 * @return the built options
 		 */
 		public SnakeYamlOptions build() {
-			return new SnakeYamlOptions(yamlSupplier, useCommentingWriter, commentFormat, charset);
+			return new SnakeYamlOptions(yamlSupplier, commentMode, useCommentingWriter, charset);
 		}
 
 		@Override
 		public String toString() {
-			return "SnakeYamlOptions.Builder [yamlSupplier=" + yamlSupplier
-					+ ", useCommentingWriter=" + useCommentingWriter + ", charset=" + charset + "]";
+			return "Builder{" +
+					"yamlSupplier=" + yamlSupplier +
+					", commentMode=" + commentMode +
+					", useCommentingWriter=" + useCommentingWriter +
+					", charset=" + charset +
+					'}';
 		}
-		
 	}
 	
 }

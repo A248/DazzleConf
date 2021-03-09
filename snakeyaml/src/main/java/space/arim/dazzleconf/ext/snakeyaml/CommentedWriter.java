@@ -27,7 +27,7 @@ import java.util.Objects;
 
 import space.arim.dazzleconf.factory.CommentedWrapper;
 
-class CommentedWriter {
+final class CommentedWriter implements YamlWriter {
 
 	private final Writer writer;
 	private final String commentFormat;
@@ -44,6 +44,44 @@ class CommentedWriter {
 	CommentedWriter(Writer writer, String commentFormat) {
 		this.writer = writer;
 		this.commentFormat = commentFormat;
+	}
+
+	static final class Factory implements YamlWriter.Factory {
+
+		private final String commentFormat;
+
+		Factory(String commentFormat) {
+			this.commentFormat = commentFormat;
+		}
+
+		@Override
+		public CommentedWriter newWriter(SnakeYamlOptions yamlOptions, Writer writer) {
+			return new CommentedWriter(writer, commentFormat);
+		}
+
+		@Override
+		public boolean supportsComments() {
+			return true;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			Factory factory = (Factory) o;
+			return commentFormat.equals(factory.commentFormat);
+		}
+
+		@Override
+		public int hashCode() {
+			return commentFormat.hashCode();
+		}
+	}
+
+	@Override
+	public void writeData(Map<String, Object> configMap, List<String> headerComments) throws IOException {
+		writeComments(headerComments);
+		writeMap(configMap);
 	}
 
 	/**

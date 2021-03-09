@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
+import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.error.YAMLException;
 
 import space.arim.dazzleconf.ConfigurationFactory;
@@ -117,7 +118,7 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 	
 	@Override
 	protected boolean supportsCommentsThroughWrapper() {
-		return yamlOptions.useCommentingWriter();
+		return yamlOptions.commentMode().supportsComments();
 	}
 	
 	@Override
@@ -127,9 +128,10 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 	
 	@Override
 	protected Map<String, Object> loadMapFromReader(Reader reader) throws IOException, ConfigFormatSyntaxException {
+		Yaml yaml = yamlOptions.yamlSupplier().get();
 		Map<String, Object> map;
 		try {
-			map = yamlOptions.yamlSupplier().get().load(reader);
+			map = yaml.load(reader);
 		} catch (YAMLException ex) {
 			Throwable cause = ex.getCause();
 			if (cause instanceof IOException) {
@@ -143,23 +145,7 @@ public class SnakeYamlConfigurationFactory<C> extends AbstractConfigurationFacto
 
 	@Override
 	protected void writeMapToWriter(Map<String, Object> rawMap, Writer writer) throws IOException {
-		CommentedWriter commentedWriter = new CommentedWriter(writer, yamlOptions.commentFormat());
-		commentedWriter.writeComments(getHeader());
-
-		if (yamlOptions.useCommentingWriter()) {
-			commentedWriter.writeMap(rawMap);
-
-		} else {
-			try {
-				yamlOptions.yamlSupplier().get().dump(rawMap, writer);
-			} catch (YAMLException ex) {
-				Throwable cause = ex.getCause();
-				if (cause instanceof IOException) {
-					throw (IOException) cause;
-				}
-				throw new IOException("Unexpected YAMLException while writing to stream", ex);
-			}
-		}
+		yamlOptions.commentMode().writerFactory().newWriter(yamlOptions, writer).writeData(rawMap, getHeader());
 	}
 
 }

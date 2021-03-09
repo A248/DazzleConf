@@ -28,6 +28,7 @@ import org.junit.jupiter.api.io.TempDir;
 import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.InvalidConfigException;
+import space.arim.dazzleconf.ext.snakeyaml.CommentMode;
 import space.arim.dazzleconf.ext.snakeyaml.ConfigToLines;
 import space.arim.dazzleconf.ext.snakeyaml.SnakeYamlConfigurationFactory;
 import space.arim.dazzleconf.ext.snakeyaml.SnakeYamlOptions;
@@ -48,9 +49,9 @@ public class BlueTreeConfigTest {
 
 	@BeforeEach
 	public void setup() {
-		factory = new SnakeYamlConfigurationFactory<>(BlueTreeConfig.class,
+		factory = SnakeYamlConfigurationFactory.create(BlueTreeConfig.class,
 				new ConfigurationOptions.Builder().sorter(new AnnotationBasedSorter()).build(),
-				new SnakeYamlOptions.Builder().useCommentingWriter(true).commentFormat("\n # %s").build());
+				new SnakeYamlOptions.Builder().commentMode(CommentMode.alternativeWriter("\n # %s")).build());
 	}
 
 	@Test
