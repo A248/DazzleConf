@@ -29,7 +29,7 @@ A type-safe, thread-safe, fail-fast, user-oriented, easy to setup, extensible an
 * Immutable and thread safe by design. Values loaded once and never modified thereafter.
 * Readable for programmers and users. Annotation-driven and supports comments.
 * Configuration objects are format-independent.
-* Support for writing configs as YAML and JSON out of the box, but allows easy extension with more formats.
+* Support for YAML, HOCON, and JSON out of the box, and allows easy extension with more formats.
 * Identify the precise cause of user errors.
 * Use a decoupled and testable config interface.
 
