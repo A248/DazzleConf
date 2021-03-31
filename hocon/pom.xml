@@ -6,7 +6,7 @@
     <parent>
         <artifactId>dazzleconf-parent</artifactId>
         <groupId>space.arim.dazzleconf</groupId>
-        <version>1.2.0-M2</version>
+        <version>1.2.0-RC1</version>
     </parent>
 
     <artifactId>dazzleconf-ext-hocon</artifactId>
