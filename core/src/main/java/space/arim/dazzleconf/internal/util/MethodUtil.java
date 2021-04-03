@@ -63,32 +63,53 @@ public final class MethodUtil {
 	 * @throws IllDefinedConfigException if unable to generate the default method handle
 	 */
 	public static MethodHandle createDefaultMethodHandle(Method method) {
-		if (IS_JAVA_8) {
-			return Java8DefaultMethodHandle.getMethodHandle(method);
-		}
-		Class<?> declaringClass = method.getDeclaringClass();
 		try {
-			return MethodHandles.privateLookupIn(declaringClass, MethodHandles.lookup())
-					.unreflectSpecial(method, declaringClass);
-		} catch (IllegalAccessException ex) {
+			return DEFAULT_METHOD_PROVIDER.getMethodHandle(method);
+		} catch (IllegalAccessException | InstantiationException | InvocationTargetException ex) {
 			throw new IllDefinedConfigException(
 					"Unable to generate default method accessor for " + getQualifiedName(method), ex);
 		}
 	}
 	
-	private static final boolean IS_JAVA_8;
-	
-	static {
-		boolean isJava8 = false;
+	private static final DefaultMethodProvider DEFAULT_METHOD_PROVIDER = createDefaultMethodProvider();
+
+	private static DefaultMethodProvider createDefaultMethodProvider() {
 		try {
 			MethodHandles.class.getDeclaredMethod("privateLookupIn", Class.class, MethodHandles.Lookup.class);
+			return new Java11DefaultMethodProvider();
 		} catch (NoSuchMethodException nsme) {
-			isJava8 = true;
+			return new Java8DefaultMethodProvider();
 		}
-		IS_JAVA_8 = isJava8;
+	}
+
+	interface DefaultMethodProvider {
+
+		MethodHandle getMethodHandle(Method method)
+				throws IllegalAccessException, InstantiationException, InvocationTargetException;
+
+	}
+
+	private static class Java11DefaultMethodProvider implements DefaultMethodProvider {
+
+		@Override
+		public MethodHandle getMethodHandle(Method method) throws IllegalAccessException {
+			/*
+			* privateLookupIn requires the calling module read the target module
+			* This will indeed result in a cyclic module dependency. Luckily,
+			* JPMS permits cyclic dependencies created through readability edges
+			* (addReads) even though it strictly forbids cycles during initialization
+			* of the module graph.
+			* https://openjdk.java.net/projects/jigsaw/spec/issues/#CyclicDependences
+			*/
+			Class<?> declaringClass = method.getDeclaringClass();
+			MethodUtil.class.getModule().addReads(declaringClass.getModule());
+			return MethodHandles.privateLookupIn(declaringClass, MethodHandles.lookup())
+					.unreflectSpecial(method, declaringClass);
+		}
+
 	}
 	
-	private static class Java8DefaultMethodHandle {
+	private static class Java8DefaultMethodProvider implements DefaultMethodProvider {
 		
 		private static final Constructor<MethodHandles.Lookup> lookupConstructor;
 		
@@ -100,16 +121,12 @@ public final class MethodUtil {
 				throw new ExceptionInInitializerError(ex);
 			}
 		}
-		
-		static MethodHandle getMethodHandle(Method method) {
-			Class<?> declaringClass = method.getDeclaringClass();
-			try {
-				return lookupConstructor.newInstance(declaringClass).unreflectSpecial(method, declaringClass);
 
-			} catch (IllegalAccessException | InstantiationException | InvocationTargetException ex) {
-				throw new IllDefinedConfigException(
-						"Unable to generate default method accessor for " + getQualifiedName(method), ex);
-			}
+		@Override
+		public MethodHandle getMethodHandle(Method method)
+				throws IllegalAccessException, InvocationTargetException, InstantiationException {
+			Class<?> declaringClass = method.getDeclaringClass();
+			return lookupConstructor.newInstance(declaringClass).unreflectSpecial(method, declaringClass);
 		}
 	}
 	
