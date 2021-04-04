@@ -16,16 +16,17 @@
  * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
-package space.arim.dazzleconf.factory;
+package com.integration.java8;
+
+import space.arim.dazzleconf.ConfigurationOptions;
+import space.arim.dazzleconf.error.ConfigFormatSyntaxException;
+import space.arim.dazzleconf.factory.HumanReadableConfigurationFactory;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.Map;
-
-import space.arim.dazzleconf.ConfigurationOptions;
-import space.arim.dazzleconf.error.ConfigFormatSyntaxException;
 
 public class DefaultsOnlyFactory<C> extends HumanReadableConfigurationFactory<C> {
 
