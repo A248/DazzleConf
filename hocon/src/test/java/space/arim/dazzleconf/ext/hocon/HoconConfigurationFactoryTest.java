@@ -21,13 +21,17 @@ package space.arim.dazzleconf.ext.hocon;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.InvalidConfigException;
+import space.arim.dazzleconf.error.MissingKeyException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -86,6 +90,23 @@ public class HoconConfigurationFactoryTest {
         });
         assertEquals(defaults.someOption(), reloaded.someOption());
         assertEquals(defaults.sectionOne().someFlag(), reloaded.sectionOne().someFlag());
+    }
+
+    private InputStream streamFor(String content) {
+        return new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "    ", " \n "})
+    public void loadEmptyDocument(String emptyString) {
+        var stream = streamFor(emptyString);
+        assertThrows(MissingKeyException.class, () -> factory.load(stream));
+    }
+
+    @Test
+    public void loadMissingKeys() {
+        var stream = streamFor("some-option: 'some-value'");
+        assertThrows(MissingKeyException.class, () -> factory.load(stream));
     }
 
 }
