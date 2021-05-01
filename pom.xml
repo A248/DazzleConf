@@ -16,12 +16,12 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-		<junit.version>5.7.0</junit.version>
+		<junit.version>5.7.1</junit.version>
 	</properties>
 	
 	<scm>
 		<connection>scm:git:git://github.com/A248/DazzleConf.git</connection>
-		<developerConnection>scm:git:ssh://github.com:A248/DazzleConf.git</developerConnection>
+		<developerConnection>scm:git:https://github.com/A248/DazzleConf.git</developerConnection>
 		<url>http://github.com/A248/DazzleConf/tree/master</url>
 	</scm>
 	
@@ -163,7 +163,7 @@
 				<version>3.0.0-M1</version>
 				<configuration>
 					<autoVersionSubmodules>true</autoVersionSubmodules>
-					<pushChanges>false</pushChanges>
+					<tagNameFormat>@{project.version}</tagNameFormat>
 					<goals>deploy</goals>
 				</configuration>
 			</plugin>
