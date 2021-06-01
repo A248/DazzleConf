@@ -1,6 +1,6 @@
-module com.integration.jpms {
+module space.arim.dazzleconf.core.it.jpms {
 
 	requires space.arim.dazzleconf;
-	opens com.integration.jpms to space.arim.dazzleconf;
-	exports com.integration.jpms.exported;
+	opens space.arim.dazzleconf.core.it.jpms to space.arim.dazzleconf;
+	exports space.arim.dazzleconf.core.it.jpms.exported;
 }

@@ -20,12 +20,12 @@ package space.arim.dazzleconf.internal.util;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 import space.arim.dazzleconf.error.IllDefinedConfigException;
+import space.arim.dazzleconf.internal.util.jdk11.Java11DefaultMethodProvider;
 
 public final class MethodUtil {
 
@@ -82,52 +82,4 @@ public final class MethodUtil {
 		}
 	}
 
-	interface DefaultMethodProvider {
-
-		MethodHandle getMethodHandle(Method method)
-				throws IllegalAccessException, InstantiationException, InvocationTargetException;
-
-	}
-
-	private static class Java11DefaultMethodProvider implements DefaultMethodProvider {
-
-		@Override
-		public MethodHandle getMethodHandle(Method method) throws IllegalAccessException {
-			/*
-			* privateLookupIn requires the calling module read the target module
-			* This will indeed result in a cyclic module dependency. Luckily,
-			* JPMS permits cyclic dependencies created through readability edges
-			* (addReads) even though it strictly forbids cycles during initialization
-			* of the module graph.
-			* https://openjdk.java.net/projects/jigsaw/spec/issues/#CyclicDependences
-			*/
-			Class<?> declaringClass = method.getDeclaringClass();
-			MethodUtil.class.getModule().addReads(declaringClass.getModule());
-			return MethodHandles.privateLookupIn(declaringClass, MethodHandles.lookup())
-					.unreflectSpecial(method, declaringClass);
-		}
-
-	}
-	
-	private static class Java8DefaultMethodProvider implements DefaultMethodProvider {
-		
-		private static final Constructor<MethodHandles.Lookup> lookupConstructor;
-		
-		static {
-			try {
-				lookupConstructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class);
-				lookupConstructor.setAccessible(true);
-			} catch (NoSuchMethodException | SecurityException ex) {
-				throw new ExceptionInInitializerError(ex);
-			}
-		}
-
-		@Override
-		public MethodHandle getMethodHandle(Method method)
-				throws IllegalAccessException, InvocationTargetException, InstantiationException {
-			Class<?> declaringClass = method.getDeclaringClass();
-			return lookupConstructor.newInstance(declaringClass).unreflectSpecial(method, declaringClass);
-		}
-	}
-	
 }

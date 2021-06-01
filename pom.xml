@@ -169,38 +169,26 @@
 		</plugins>
 		<pluginManagement>
 			<plugins>
-				<!-- JAR creation -->
 				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>3.8.1</version>
 					<configuration>
-						<source>1.8</source>
-						<target>1.8</target>
+						<!-- Compile module descriptor and tests with Java 11 -->
+						<release>11</release>
 					</configuration>
 					<executions>
-						<execution>
-							<id>default-compile</id>
-							<configuration>
-								<source>11</source>
-								<target>11</target>
-							</configuration>
-						</execution>
+						<!-- Compile everything else with Java 8 compatibility -->
 						<execution>
 							<id>base-compile</id>
 							<goals>
 								<goal>compile</goal>
 							</goals>
 							<configuration>
+								<release>8</release>
 								<excludes>
 									<exclude>module-info.java</exclude>
 								</excludes>
-							</configuration>
-						</execution>
-						<execution>
-							<id>default-testCompile</id>
-							<configuration>
-								<source>11</source>
-								<target>11</target>
 							</configuration>
 						</execution>
 					</executions>

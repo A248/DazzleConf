@@ -29,111 +29,72 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
+ * This class is present in the multirelease directory, so changes to method signatures
+ * should be done exactly likewise there. <br>
+ * <br>
  * Java 8 users are the reason this class exists. Please update to JDK 11 or later.
  */
 public final class ImmutableCollections {
-	
-	private static final boolean PRE_JAVA_10;
-	
-	static {
-		boolean preJava10 = false;
-		try {
-			List.copyOf(List.of());
-		} catch (NoSuchMethodError nsme) {
-			preJava10 = true;
-		}
-		PRE_JAVA_10 = preJava10;
-	}
 
 	private ImmutableCollections() {}
 	
 	public static <E> List<E> emptyList() {
-		if (PRE_JAVA_10) {
-			return Collections.emptyList();
-		}
-		return List.of();
+		return Collections.emptyList();
 	}
 	
 	public static <E> List<E> listOf(E element) {
-		if (PRE_JAVA_10) {
-			Objects.requireNonNull(element, "element");
-			return Collections.singletonList(element);
-		}
-		return List.of(element);
+		Objects.requireNonNull(element, "element");
+		return Collections.singletonList(element);
 	}
 	
 	@SafeVarargs
 	public static <E> List<E> listOf(E...elements) {
-		if (PRE_JAVA_10) {
-			elements = elements.clone();
-			for (E element : elements) {
-				Objects.requireNonNull(element, "element");
-			}
-			return Collections.unmodifiableList(Arrays.asList(elements));
+		elements = elements.clone();
+		for (E element : elements) {
+			Objects.requireNonNull(element, "element");
 		}
-		return List.of(elements);
+		return Collections.unmodifiableList(Arrays.asList(elements));
 	}
 	
 	@SuppressWarnings("unchecked")
 	public static <E> List<E> listOf(Collection<? extends E> coll) {
-		if (PRE_JAVA_10) {
-			return (List<E>) listOf(coll.toArray());
-		}
-		return List.copyOf(coll);
+		return (List<E>) listOf(coll.toArray());
 	}
 	
 	public static <E> Set<E> emptySet() {
-		if (PRE_JAVA_10) {
-			return Collections.emptySet();
-		}
-		return Set.of();
+		return Collections.emptySet();
 	}
 	
 	public static <E> Set<E> setOf(E element) {
-		if (PRE_JAVA_10) {
-			Objects.requireNonNull(element, "element");
-			return Collections.singleton(element);
-		}
-		return Set.of(element);
+		Objects.requireNonNull(element, "element");
+		return Collections.singleton(element);
 	}
 	
 	public static <E> Set<E> setOf(Collection<? extends E> coll) {
-		if (PRE_JAVA_10) {
-			Set<E> hashSet = new HashSet<>(coll);
-			for (E element : hashSet) {
-				Objects.requireNonNull(element, "element");
-			}
-			return Collections.unmodifiableSet(hashSet);
+		Set<E> copy = new HashSet<>(coll);
+		for (E element : copy) {
+			Objects.requireNonNull(element, "element");
 		}
-		return Set.copyOf(coll);
+		return Collections.unmodifiableSet(copy);
 	}
 	
 	public static <K, V> Map<K, V> emptyMap() {
-		if (PRE_JAVA_10) {
-			return Collections.emptyMap();
-		}
-		return Map.of();
+		return Collections.emptyMap();
 	}
 	
 	public static <K, V> Map<K, V> mapOf(Map<? extends K, ? extends V> map) {
-		if (PRE_JAVA_10) {
-			Map<K, V> hashMap = new HashMap<>(map);
-			for (Map.Entry<K, V> entry : hashMap.entrySet()) {
-				Objects.requireNonNull(entry.getKey(), "key");
-				Objects.requireNonNull(entry.getValue(), "value");
-			}
-			return Collections.unmodifiableMap(hashMap);
+		Map<K, V> copy = new HashMap<>(map);
+		for (Map.Entry<K, V> entry : copy.entrySet()) {
+			Objects.requireNonNull(entry.getKey(), "key");
+			Objects.requireNonNull(entry.getValue(), "value");
 		}
-		return Map.copyOf(map);
+		return Collections.unmodifiableMap(copy);
 	}
 	
 	public static <K, V> Map.Entry<K, V> mapEntryOf(K key, V value) {
-		if (PRE_JAVA_10) {
-			Objects.requireNonNull(key, "key");
-			Objects.requireNonNull(value, "value");
-			return new java.util.AbstractMap.SimpleImmutableEntry<>(key, value);
-		}
-		return Map.entry(key, value);
+		Objects.requireNonNull(key, "key");
+		Objects.requireNonNull(value, "value");
+		return new java.util.AbstractMap.SimpleImmutableEntry<>(key, value);
 	}
 	
 }
