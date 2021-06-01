@@ -17,35 +17,14 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.internal.util;
+package space.arim.dazzleconf.internal.util.jdk11;
 
-import space.arim.dazzleconf.internal.util.jdk11.AccessCheckingJPMS;
+public final class AccessCheckingJPMS {
 
-import java.lang.reflect.Modifier;
-
-/**
- * Java 8 users are the reason this class exists. Please update to JDK 11 or later.
- */
-public final class AccessChecking {
-
-	private static final boolean JPMS;
-
-	static {
-		boolean jpms;
-		try {
-			Class.forName("java.lang.Module");
-			jpms = true;
-		} catch (ClassNotFoundException java8) {
-			jpms = false;
-		}
-		JPMS = jpms;
-	}
-
-	private AccessChecking() {}
+	private AccessCheckingJPMS() { }
 
 	public static boolean isAccessible(Class<?> type) {
-		return Modifier.isPublic(type.getModifiers())
-				&& (!JPMS || AccessCheckingJPMS.isAccessible(type));
+		return type.getModule().isExported(type.getPackageName(), AccessCheckingJPMS.class.getModule());
 	}
 
 }

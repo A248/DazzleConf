@@ -19,33 +19,13 @@
 
 package space.arim.dazzleconf.internal.util;
 
-import space.arim.dazzleconf.internal.util.jdk11.AccessCheckingJPMS;
+import java.lang.invoke.MethodHandle;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
-import java.lang.reflect.Modifier;
+public interface DefaultMethodProvider {
 
-/**
- * Java 8 users are the reason this class exists. Please update to JDK 11 or later.
- */
-public final class AccessChecking {
-
-	private static final boolean JPMS;
-
-	static {
-		boolean jpms;
-		try {
-			Class.forName("java.lang.Module");
-			jpms = true;
-		} catch (ClassNotFoundException java8) {
-			jpms = false;
-		}
-		JPMS = jpms;
-	}
-
-	private AccessChecking() {}
-
-	public static boolean isAccessible(Class<?> type) {
-		return Modifier.isPublic(type.getModifiers())
-				&& (!JPMS || AccessCheckingJPMS.isAccessible(type));
-	}
+	MethodHandle getMethodHandle(Method method)
+			throws IllegalAccessException, InstantiationException, InvocationTargetException;
 
 }
