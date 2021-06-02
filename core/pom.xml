@@ -47,28 +47,6 @@
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-toolchains-plugin</artifactId>
-				<version>3.0.0</version>
-				<executions>
-					<execution>
-						<id>check-toolchains-for-its</id>
-						<!-- Toolchains are needed for ITs run by the maven-invoker-plugin -->
-						<phase>pre-integration-test</phase>
-						<goals>
-							<goal>toolchain</goal>
-						</goals>
-						<configuration>
-							<toolchains>
-								<jdk>
-									<version>1.8</version>
-								</jdk>
-							</toolchains>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-invoker-plugin</artifactId>
 				<version>3.2.2</version>
 				<executions>
