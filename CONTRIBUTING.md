@@ -27,7 +27,9 @@ With regards to code style, it is best to:
 
 ### A Note on Toolchains
 
-Running `mvn verify` requires that you have a toolchain for JDK 8 installed. Setting up toolchains is not difficult. Use this:
+Running `mvn verify` requires that you have a toolchain for JDK 8 installed. Setting up toolchains is not difficult.
+
+Place this in `~/.m2/toolchains.xml`:
 
 ```xml
 <?xml version="1.0" encoding="UTF8"?>
