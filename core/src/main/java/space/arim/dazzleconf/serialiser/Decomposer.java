@@ -18,6 +18,8 @@
  */
 package space.arim.dazzleconf.serialiser;
 
+import space.arim.dazzleconf.error.IllDefinedConfigException;
+
 import java.util.Collection;
 import java.util.Map;
 
@@ -60,12 +62,16 @@ public interface Decomposer {
 	<K, V> Map<Object, Object> decomposeMap(Class<K> keyType, Class<V> valueType, Map<? extends K, ? extends V> map);
 	
 	/**
-	 * Decomposes an object of a certain type, using a value serialiser if necessary
-	 * 
+	 * Decomposes an object of a certain type, using a value serializer if necessary. <br>
+	 * <br>
+	 * If the type in question is not a String, primitive, or enum, then the appropriate value serializer
+	 * is used. If no value serializer for {@code type} exists, IllDefinedConfigException is thrown.
+	 *
 	 * @param <T> the type according to which to serialise
 	 * @param type the type of the object according to which to serialise
 	 * @param value the object to serialise
 	 * @return the serialised form of the object
+	 * @throws IllDefinedConfigException if no value serializer could be found for the type
 	 */
 	<T> Object decompose(Class<T> type, T value);
 	

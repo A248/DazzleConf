@@ -25,6 +25,7 @@ import java.util.Set;
 
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.BadValueException;
+import space.arim.dazzleconf.error.IllDefinedConfigException;
 
 /**
  * A type which may be adapted to some other. Inbuilt type conversion is extended by the {@link ValueSerialiser}s. <br>
@@ -228,12 +229,14 @@ public interface FlexibleType {
 	 * have been configured for the defined type. <br>
 	 * <br>
 	 * If {@code clazz} is String, a primitive, or an enum, this is the same as calling {@link #getString()},
-	 * the corresponding primitive getter, or {@link #getEnum(Class)}.
+	 * the corresponding primitive getter, or {@link #getEnum(Class)}. Otherwise, the appropriate serializer
+	 * is used; if none is found, {@code IllDefinedConfigException} is thrown.
 	 * 
 	 * @param <T> the target type of the object
 	 * @param clazz the target type's class
 	 * @return the object
 	 * @throws BadValueException if type conversion failed
+	 * @throws IllDefinedConfigException if no value serializer could be found for the type
 	 * @throws NullPointerException if {@code clazz} is null
 	 */
 	<T> T getObject(Class<T> clazz) throws BadValueException;
