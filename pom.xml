@@ -14,7 +14,9 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-		<junit.version>5.7.1</junit.version>
+		<junit.version>5.7.2</junit.version>
+		<mockito.version>3.11.0</mockito.version>
+		<equalsverifier.version>3.6.1</equalsverifier.version>
 	</properties>
 	
 	<scm>
@@ -106,13 +108,9 @@
 				<configuration>
 					<rules>
 						<requireJavaVersion>
-							<version>15.0.1</version>
-							<message>
-								While this library maintains compatibility with Java 8,
-								it requires JDK 15 as a build-time requirement, because
-								of the need to conditionally access newer APIs as well as
-								javadoc limitations on older versions.
-							</message>
+							<version>16</version>
+							<message>While this library maintains runtime compatibility with Java 8,
+								it requires JDK 16 as a build-time requirement.</message>
 						</requireJavaVersion>
 						<requireNoRepositories>
 							<message>Third-party repositories are not allowed</message>
@@ -174,7 +172,7 @@
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>3.8.1</version>
 					<configuration>
-						<!-- Compile module descriptor and tests with Java 11 -->
+						<!-- Compile module descriptor with Java 11 -->
 						<release>11</release>
 					</configuration>
 					<executions>
@@ -189,6 +187,12 @@
 								<excludes>
 									<exclude>module-info.java</exclude>
 								</excludes>
+							</configuration>
+						</execution>
+						<execution>
+							<id>default-testCompile</id>
+							<configuration>
+								<release>16</release>
 							</configuration>
 						</execution>
 					</executions>
@@ -238,6 +242,18 @@
 				<groupId>org.junit.jupiter</groupId>
 				<artifactId>junit-jupiter-params</artifactId>
 				<version>${junit.version}</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-junit-jupiter</artifactId>
+				<version>${mockito.version}</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>nl.jqno.equalsverifier</groupId>
+				<artifactId>equalsverifier</artifactId>
+				<version>${equalsverifier.version}</version>
 				<scope>test</scope>
 			</dependency>
 		</dependencies>

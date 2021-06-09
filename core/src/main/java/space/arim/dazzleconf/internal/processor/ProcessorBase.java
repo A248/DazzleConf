@@ -101,6 +101,7 @@ public abstract class ProcessorBase<C> {
 					throw mke;
 				}
 				value = getAuxiliaryValue(entry);
+				usedAuxiliary = true;
 			}
 			Object formerValue = result.put(methodName, value);
 			if (formerValue != null) {
@@ -142,9 +143,7 @@ public abstract class ProcessorBase<C> {
 	}
 	
 	private Object getAuxiliaryValue(ConfEntry entry) {
-		Object auxiliaryValue = auxiliaryValues.getEntryValue(entry);
-		usedAuxiliary = true;
-		return auxiliaryValue;
+		return auxiliaryValues.getEntryValue(entry);
 	}
 
 	<N> N createNested(ConfEntry nestedEntry, ReturnTypeWithConfigDefinition<N, ?> returnType, Object preValue)
