@@ -49,6 +49,7 @@
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.factory=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.internal=ALL-UNNAMED
+						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.internal.processor=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.internal.type=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.serialiser=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.sorter=ALL-UNNAMED
@@ -100,8 +101,8 @@
 					</execution>
 				</executions>
 				<configuration>
-					<coverageThreshold>70</coverageThreshold>
-					<mutationThreshold>70</mutationThreshold>
+					<coverageThreshold>75</coverageThreshold>
+					<mutationThreshold>75</mutationThreshold>
 					<threads>2</threads>
 				</configuration>
 				<dependencies>

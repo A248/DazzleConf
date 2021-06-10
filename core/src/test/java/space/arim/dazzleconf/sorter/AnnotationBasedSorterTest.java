@@ -37,7 +37,7 @@ public class AnnotationBasedSorterTest {
 		List<String> entries = Arrays.stream(SortableConfig.class.getDeclaredMethods())
 				.map(SimpleEntry::new).sorted(new AnnotationBasedSorter())
 				.map(SimpleEntry::getMethod).map(Method::getName).toList();
-		assertEquals(List.of("two", "four", "five", "thirteen"), entries);
+		assertEquals(List.of("two", "four", "five", "thirteen", "eighteen", "last"), entries);
 	}
 
 	public interface SortableConfig {
@@ -51,8 +51,13 @@ public class AnnotationBasedSorterTest {
 		@AnnotationBasedSorter.Order(2)
 		String two();
 
+		String last();
+
 		@AnnotationBasedSorter.Order(5)
 		String five();
+
+		@AnnotationBasedSorter.Order(18)
+		String eighteen();
 
 	}
 

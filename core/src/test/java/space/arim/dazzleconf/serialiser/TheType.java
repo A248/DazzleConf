@@ -19,5 +19,18 @@
 
 package space.arim.dazzleconf.serialiser;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public final class TheType {
+
+	private static final AtomicInteger INSTANCE = new AtomicInteger(0);
+
+	private final int instance = INSTANCE.incrementAndGet();
+
+	@Override
+	public String toString() {
+		return "TheType{" +
+				"instance=" + instance +
+				'}';
+	}
 }

@@ -19,11 +19,14 @@
 
 package space.arim.dazzleconf.serialiser;
 
-public interface Config {
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
+import org.junit.jupiter.api.Test;
 
-	TheType value();
+public class ValueSerialiserMapTest {
 
-	static Config withValue(TheType value) {
-		return () -> value;
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(ValueSerialiserMap.class).suppress(Warning.NULL_FIELDS).verify();
 	}
 }

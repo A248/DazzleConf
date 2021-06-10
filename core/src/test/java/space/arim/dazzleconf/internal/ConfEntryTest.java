@@ -17,13 +17,17 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.serialiser;
+package space.arim.dazzleconf.internal;
 
-public interface Config {
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
+import org.junit.jupiter.api.Test;
 
-	TheType value();
+public class ConfEntryTest {
 
-	static Config withValue(TheType value) {
-		return () -> value;
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(ConfEntry.class).withOnlyTheseFields("method").suppress(Warning.NULL_FIELDS).verify();
 	}
+
 }

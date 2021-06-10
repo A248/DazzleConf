@@ -21,45 +21,32 @@ package space.arim.dazzleconf;
 
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.annote.ConfDefault;
+import space.arim.dazzleconf.annote.SubSection;
 import space.arim.dazzleconf.factory.DefaultsOnlyFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-public class EqualityTest {
-
-	private <C> ConfigurationFactory<C> factoryFor(Class<C> configClass) {
-		return new DefaultsOnlyFactory<>(configClass, ConfigurationOptions.defaults());
-	}
+public class SubSectionPlacementTest {
 
 	@Test
-	public void equals() {
-		Config config = factoryFor(Config.class).loadDefaults();
-		assertEquals(config, config);
-	}
-
-	@Test
-	public void notEquals() {
-		Config config = factoryFor(Config.class).loadDefaults();
-		Config configAlso = factoryFor(Config.class).loadDefaults();
-		assertNotEquals(config, configAlso);
-	}
-
-	@Test
-	public void notEqualsSimilarValues() {
-		Config config = factoryFor(Config.class).loadDefaults();
-		ConfigTwo configTwo = factoryFor(ConfigTwo.class).loadDefaults();
-		assertNotEquals(config, configTwo);
+	public void subSectionPlacement() {
+		Config config = new DefaultsOnlyFactory<>(Config.class, ConfigurationOptions.defaults()).loadDefaults();
+		assertEquals("val", config.value());
+		assertEquals("nestedVal", config.subConfig().nestedValue());
 	}
 
 	public interface Config {
-		@ConfDefault.DefaultString("default value")
+
+		@ConfDefault.DefaultString("val")
 		String value();
+
+		SubConfig subConfig();
 	}
 
-	public interface ConfigTwo {
-		@ConfDefault.DefaultString("default value")
-		String value();
-	}
+	@SubSection
+	public interface SubConfig {
 
+		@ConfDefault.DefaultString("nestedVal")
+		String nestedValue();
+	}
 }

@@ -39,7 +39,7 @@ import space.arim.dazzleconf.serialiser.FlexibleTypeMapEntryFunction;
 import space.arim.dazzleconf.serialiser.ValueSerialiser;
 import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 
-class FlexibleTypeImpl implements FlexibleType {
+final class FlexibleTypeImpl implements FlexibleType {
 
 	private final String key;
 	/**
