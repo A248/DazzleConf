@@ -29,6 +29,14 @@ import java.nio.channels.WritableByteChannel;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * A factory for test purposes which, instead of writing to the output stream,
+ * writes to the given {@code MapReceiver}. <br>
+ * <br>
+ * Does not implement loading
+ *
+ * @param <C> the config class
+ */
 public class TransparentWriterFactory<C> extends ConfigurationFormatFactory<C> {
 
 	private final MapReceiver mapReceiver;

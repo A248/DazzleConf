@@ -28,6 +28,14 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Map;
 
+/**
+ * A factory for test purposes which, instead of loading from input stream, returns
+ * the same data consistently. <br>
+ * <br>
+ * Does not implement writing
+ *
+ * @param <C> the config class
+ */
 public class FixedLoaderFactory<C> extends ConfigurationFormatFactory<C> {
 
 	private final Map<String, Object> map;

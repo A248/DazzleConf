@@ -23,8 +23,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.factory.CommentedWrapper;
+import space.arim.dazzleconf.internal.error.DeveloperError;
 
 /**
  * Helper class for working with nested hierarchical maps
@@ -62,7 +64,7 @@ public class NestedMapHelper {
 	 * 
 	 * @param key the key
 	 * @param value the value
-	 * @throws IllegalStateException if there was another object at the key or the wrong object at some key
+	 * @throws IllDefinedConfigException if there was another object at the key or the wrong object at some key
 	 */
 	public void put(String key, Object value) {
 		put0(key, value, false);
@@ -73,7 +75,7 @@ public class NestedMapHelper {
 	 * 
 	 * @param key the key
 	 * @param object the map to combine with. May be wrapped in {@link CommentedWrapper} (therefore an Object)
-	 * @throws IllegalStateException if there was another object at the key or the wrong object at some key
+	 * @throws IllDefinedConfigException if there was another object at the key or the wrong object at some key
 	 */
 	public void combine(String key, Object object) {
 		put0(key, object, true);
@@ -91,10 +93,10 @@ public class NestedMapHelper {
 
 		int lastIndex = keyParts.length - 1;
 		for (int n = 0; n < lastIndex; n++) {
-			currentMap = computeMapOrFail(currentMap, keyParts[n]);
+			currentMap = computeMapOrFail(key, currentMap, keyParts[n]);
 		}
 		if (combine) {
-			Map<String, Object> toCombineOriginal = computeMapOrFail(currentMap, keyParts[lastIndex]);
+			Map<String, Object> toCombineOriginal = computeMapOrFail(key, currentMap, keyParts[lastIndex]);
 			Map<String, Object> toCombine = (toCombineOriginal instanceof LinkedHashMap) ?
 					toCombineOriginal : new LinkedHashMap<>(toCombineOriginal);
 
@@ -113,18 +115,20 @@ public class NestedMapHelper {
 		} else {
 			Object previous = currentMap.put(keyParts[lastIndex], value);
 			if (previous != null) {
-				throw new IllegalStateException("Replaced object " + previous + " at " + key + " with " + value);
+				throw DeveloperError.REPLACED_OBJECT.toIllDefinedConfigException(
+						"Replaced object " + previous + " at " + key + " with " + value);
 			}
 		}
 	}
 	
-	private static Map<String, Object> computeMapOrFail(Map<String, Object> currentMap, String keyPart) {
+	private static Map<String, Object> computeMapOrFail(String fullKey, Map<String, Object> currentMap, String keyPart) {
 		Object shouldBeMap = currentMap.computeIfAbsent(keyPart, (k) -> new LinkedHashMap<>());
 		if (shouldBeMap instanceof CommentedWrapper) {
 			shouldBeMap = ((CommentedWrapper) shouldBeMap).getValue();
 		}
 		if (!(shouldBeMap instanceof Map)) {
-			throw new IllegalStateException("Value " + shouldBeMap + " is not a Map");
+			throw DeveloperError.EXPECTED_MAP_WHILE_WRITE.toIllDefinedConfigException(
+					"Value " + shouldBeMap + " along the path of " + fullKey + " is not a Map");
 		}
 		return (Map<String, Object>) shouldBeMap;
 	}
@@ -141,6 +145,7 @@ public class NestedMapHelper {
 	 * @param key the key
 	 * @return the object
 	 * @throws MissingKeyException if the key is not present in the map
+	 * @throws IllDefinedConfigException if a simple object was present where a map was expected
 	 */
 	public Object get(String key) throws MissingKeyException {
 		Map<String, Object> currentMap = topLevelMap;
@@ -148,10 +153,14 @@ public class NestedMapHelper {
 		int lastIndex = keyParts.length - 1;
 		for (int n = 0; n < lastIndex; n++) {
 			String keyPart = keyParts[n];
-			currentMap = (Map<String, Object>) currentMap.get(keyPart);
-			if (currentMap == null) {
+			Object nextMap = currentMap.get(keyPart);
+			if (nextMap == null) {
 				throw MissingKeyException.forKey(key);
 			}
+			if (!(nextMap instanceof Map)) {
+				throw DeveloperError.EXPECTED_MAP_WHILE_LOAD.toIllDefinedConfigException("At key " + key);
+			}
+			currentMap = (Map<String, Object>) nextMap;
 		}
 		Object value = currentMap.get(keyParts[lastIndex]);
 		if (value == null) {

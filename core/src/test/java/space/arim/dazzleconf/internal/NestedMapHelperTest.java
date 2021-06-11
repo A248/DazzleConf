@@ -19,6 +19,7 @@
 package space.arim.dazzleconf.internal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
@@ -35,7 +36,7 @@ public class NestedMapHelperTest {
 	private final NestedMapHelper mapHelper = new NestedMapHelper(new HashMap<String, Object>());
 	
 	@Test
-	public void testBasicPutAndCombine() {
+	public void basicPutAndCombine() {
 		Object firstValue = new Object();
 
 		// Test basic put/get
@@ -56,7 +57,7 @@ public class NestedMapHelperTest {
 	}
 
 	@Test
-	public void testGetMapAndCombineComments() {
+	public void getMapAndCombineComments() {
 		// Test get map
 		Map<String, Object> toInsert = Map.of("somekey", "somevalue", "anotherkey", true);
 		mapHelper.put("category.subkey", toInsert);
@@ -71,6 +72,13 @@ public class NestedMapHelperTest {
 				new CommentedWrapper(List.of("comment1, comment2"), Map.of(
 					"somekey", "somevalue", "anotherkey", true,
 					"addedkey", "addedvalue", "moresubsections", Map.of("verynestedboolean", true))));
+	}
+
+	@Test
+	public void missingMapDuringGet() {
+		mapHelper.put("section.subKey.keyTwo", "value");
+		assertEntry("section", Map.of("subKey", Map.of("keyTwo", "value")));
+		assertThrows(MissingKeyException.class, () -> mapHelper.get("section.nonExistentKey.otherKey"));
 	}
 	
 }
