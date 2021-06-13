@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2020 Anand Beh
+ * Copyright © 2021 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -19,21 +19,17 @@
 
 package space.arim.dazzleconf.ext.snakeyaml;
 
-import space.arim.dazzleconf.annote.ConfDefault;
-import space.arim.dazzleconf.sorter.AnnotationBasedSorter;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
 
-public interface Config {
+import java.util.stream.Stream;
 
-	@AnnotationBasedSorter.Order(3)
-	@ConfDefault.DefaultString("three")
-	String optionThree();
+public final class CommentModeArgumentsProvider implements ArgumentsProvider {
 
-	@AnnotationBasedSorter.Order(2)
-	@ConfDefault.DefaultString("two")
-	String optionTwo();
-
-	@AnnotationBasedSorter.Order(1)
-	@ConfDefault.DefaultString("one")
-	String optionOne();
-
+	@Override
+	public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) throws Exception {
+		return Stream.of(CommentMode.headerOnly(), CommentMode.alternativeWriter(), CommentMode.fullComments())
+				.map(Arguments::of);
+	}
 }

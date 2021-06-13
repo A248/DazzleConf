@@ -18,7 +18,10 @@
 						--add-exports
 						space.arim.dazzleconf.ext.snakeyaml/space.arim.dazzleconf.ext.snakeyaml.ness=space.arim.dazzleconf
 						--add-exports
-						space.arim.dazzleconf.ext.snakeyaml/space.arim.dazzleconf.ext.snakeyaml.mooeypoo=space.arim.dazzleconf</argLine>
+						space.arim.dazzleconf.ext.snakeyaml/space.arim.dazzleconf.ext.snakeyaml.mooeypoo=space.arim.dazzleconf
+						--add-exports
+						space.arim.dazzleconf.ext.snakeyaml/space.arim.dazzleconf.ext.snakeyaml.arturekdev=space.arim.dazzleconf
+					</argLine>
 				</configuration>
 			</plugin>
 		</plugins>

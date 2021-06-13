@@ -89,14 +89,14 @@ final class CommentedWriter implements YamlWriter {
 	 *
 	 * @throws IOException if an I/O error occurs
 	 */
-	void writeMap(Map<String, Object> map) throws IOException {
+	void writeMap(Map<?, ?> map) throws IOException {
 		writeRemainingMapEntries(map.entrySet().iterator());
 	}
 
-	private void writeRemainingMapEntries(Iterator<Map.Entry<String, Object>> entryIterator) throws IOException {
+	private <K, V> void writeRemainingMapEntries(Iterator<Map.Entry<K, V>> entryIterator) throws IOException {
 		while (entryIterator.hasNext()) {
-			Map.Entry<String, Object> entry = entryIterator.next();
-			String key = entry.getKey();
+			Map.Entry<K, V> entry = entryIterator.next();
+			K key = entry.getKey();
 			Object value = entry.getValue();
 
 			if (!firstMapEntryIsPartOfList && value instanceof CommentedWrapper) {
@@ -162,13 +162,13 @@ final class CommentedWriter implements YamlWriter {
 	 * Keys
 	 */
 	
-	private void writeKey(String key) throws IOException {
+	private void writeKey(Object key) throws IOException {
 		if (firstMapEntryIsPartOfList) {
 			firstMapEntryIsPartOfList = false;
 		} else {
 			writer.append(depthPrefix());
 		}
-		writer.append(key).append(':');
+		writer.append(key.toString()).append(':');
 	}
 	
 	/*
@@ -179,8 +179,7 @@ final class CommentedWriter implements YamlWriter {
 		Objects.requireNonNull(value, "Null value in map entry");
 
 		if (value instanceof Map) {
-			@SuppressWarnings("unchecked")
-			Map<String, Object> map = (Map<String, Object>) value;
+			Map<?, ?> map = (Map<?, ?>) value;
 			if (map.isEmpty()) {
 				writer.append(" {}");
 			} else {
@@ -197,30 +196,11 @@ final class CommentedWriter implements YamlWriter {
 					CharSequence depthPrefix = depthPrefix();
 					for (Object element : list) {
 						if (element instanceof Map) {
-							@SuppressWarnings("unchecked")
-							Map<String, Object> map = (Map<String, Object>) element;
+							Map<?, ?> map = (Map<?, ?>) element;
 							if (map.isEmpty()) {
 								writer.append(depthPrefix).append("- {}");
 							} else {
-								/*
-								 * All of this is necessary because comments on the first entry
-								 * of the map must be written before the list element
-								 */
-								Iterator<Map.Entry<String, Object>> entryIterator = map.entrySet().iterator();
-								// Perform a Iterator.peek()
-								Map.Entry<String, Object> firstEntry = entryIterator.next();
-								Object firstEntryValue = firstEntry.getValue();
-								if (firstEntryValue instanceof CommentedWrapper) {
-									descendAndDo(() -> writeComments((CommentedWrapper) firstEntryValue));
-								}
-								// Put the element back; completing the peek()
-								Iterator<Map.Entry<String, Object>> newIterator
-										= new IteratorWithElementPrepended<>(firstEntry, entryIterator);
-
-								// Actually write the values
-								writer.append(depthPrefix).append("- ");
-								firstMapEntryIsPartOfList = true;
-								descendAndDo(() -> writeRemainingMapEntries(newIterator));
+								writeMapWhichIsListElement(map);
 							}
 						} else {
 							writer.append(depthPrefix).append('-');
@@ -235,6 +215,28 @@ final class CommentedWriter implements YamlWriter {
 			writeSingleValue(value);
 		}
 		writer.append('\n');
+	}
+
+	/*
+	 * Using this separate method is necessary because comments on the first entry
+	 * in the map must be written before the list element which is the map
+	 */
+	private <K, V> void writeMapWhichIsListElement(Map<K, V> map) throws IOException {
+		Iterator<Map.Entry<K, V>> entryIterator = map.entrySet().iterator();
+		// Perform a Iterator.peek()
+		Map.Entry<K, V> firstEntry = entryIterator.next();
+		Object firstEntryValue = firstEntry.getValue();
+		if (firstEntryValue instanceof CommentedWrapper) {
+			descendAndDo(() -> writeComments((CommentedWrapper) firstEntryValue));
+		}
+		// Put the element back; completing the peek()
+		Iterator<Map.Entry<K, V>> newIterator
+				= new IteratorWithElementPrepended<>(firstEntry, entryIterator);
+
+		// Actually write the values
+		writer.append(depthPrefix()).append("- ");
+		firstMapEntryIsPartOfList = true;
+		descendAndDo(() -> writeRemainingMapEntries(newIterator));
 	}
 	
 	private void writeSingleValue(Object value) throws IOException {

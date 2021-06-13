@@ -25,6 +25,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import space.arim.dazzleconf.ConfigurationFactory;
 import space.arim.dazzleconf.ConfigurationOptions;
+import space.arim.dazzleconf.annote.ConfDefault;
 import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.sorter.AnnotationBasedSorter;
 
@@ -72,6 +73,22 @@ public class SnakeYamlConfigurationFactoryTest {
 	public void loadMissingKeys() {
 		var stream = streamFor("optionThree: 'three'");
 		assertThrows(MissingKeyException.class, () -> factory.load(stream));
+	}
+
+	public interface Config {
+
+		@AnnotationBasedSorter.Order(3)
+		@ConfDefault.DefaultString("three")
+		String optionThree();
+
+		@AnnotationBasedSorter.Order(2)
+		@ConfDefault.DefaultString("two")
+		String optionTwo();
+
+		@AnnotationBasedSorter.Order(1)
+		@ConfDefault.DefaultString("one")
+		String optionOne();
+
 	}
 
 }

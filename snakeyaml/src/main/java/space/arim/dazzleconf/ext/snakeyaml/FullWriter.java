@@ -77,7 +77,7 @@ final class FullWriter implements YamlWriter {
 		}
 	}
 
-	private Node mapToNode(Map<String, Object> configMap) {
+	private Node mapToNode(Map<?, Object> configMap) {
 		List<NodeTuple> keyValuePairs = new ArrayList<>(configMap.size());
 		configMap.forEach((key, value) -> {
 			Node keyNode = yaml.represent(key);
@@ -96,8 +96,7 @@ final class FullWriter implements YamlWriter {
 	private Node valueToNode(Object value) {
 		if (value instanceof Map) {
 			@SuppressWarnings("unchecked")
-			Map<String, Object> map = (Map<String, Object>) value;
-
+			Map<?, Object> map = (Map<?, Object>) value;
 			return mapToNode(map);
 		}
 		return yaml.represent(value);
