@@ -21,46 +21,47 @@ package space.arim.dazzleconf.serialiser;
 import space.arim.dazzleconf.error.BadValueException;
 
 /**
- * Functional interface for serialising and deserialising configuration entries. <br>
+ * User{@literal -}implemented interface for serializing and deserializing configuration entries. <br>
  * <br>
- * It should always be the case that if deserialisation succeeds, serialising the same value should succeed.
+ * It should always be the case that if deserialization succeeds, serializing the same value should succeed.
  * That is, {@code deserialise} and {@code serialise} should be inverse operations.
  * 
  * @author A248
  *
- * @param <T> the target type of deserialisation
+ * @param <T> the target type of deserialization
  */
 public interface ValueSerialiser<T> {
 
 	/**
-	 * Gets the target type of deserialisation
+	 * Gets the target type of deserialization
 	 * 
 	 * @return the target class type
 	 */
 	Class<T> getTargetClass();
 	
 	/**
-	 * Deserialises a value from a flexible type representing a raw config value. <br>
+	 * Deserializes a value from a flexible type representing a raw config value. <br>
 	 * <br>
-	 * The key ({@link FlexibleType#getAssociatedKey()}) is informative. It should not affect the deserialisation, but should
-	 * be included in thrown {@code BadValueException}s to inform the user which key is in question.
+	 * The key ({@link FlexibleType#getAssociatedKey()}) is informative. It should not affect the deserialization, but should
+	 * be included in thrown {@code BadValueException}s to inform the user which key is in question. To easily include
+	 * the key in a {@code BadValueException}, use {@link FlexibleType#badValueExceptionBuilder()}
 	 * 
 	 * @param flexibleType the flexible type
-	 * @return the deserialised value, never {@code null}
-	 * @throws BadValueException if the value could not be deserialised
+	 * @return the deserialized value, never null
+	 * @throws BadValueException if the value could not be deserialized
 	 */
 	T deserialise(FlexibleType flexibleType) throws BadValueException;
 	
 	/**
-	 * Serialises a value to a raw config value. Should be the inverse operation of {@link #deserialise(FlexibleType)}
-	 * in that if the result of this method were wrapped in a {@link FlexibleType}, it could be deserialised. <br>
+	 * Serializes a value to a raw config value. Should be the inverse operation of {@link #deserialise(FlexibleType)}
+	 * in that if the result of this method were wrapped in a {@link FlexibleType}, it could be deserialized. <br>
 	 * <br>
-	 * If this serialiser serialises values by converting from another custom type, then the provided {@code decomposer}
-	 * should be used to reserialise such custom types.
+	 * If this serializer serializes values by converting from another custom type, then the provided {@code decomposer}
+	 * should be used to reserialize such custom types.
 	 * 
 	 * @param value the value
 	 * @param decomposer the decomposer used to help breakdown the value
-	 * @return the serialised value
+	 * @return the serialized value
 	 */
 	Object serialise(T value, Decomposer decomposer);
 	

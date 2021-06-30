@@ -38,14 +38,20 @@ import space.arim.dazzleconf.error.IllDefinedConfigException;
 public interface FlexibleType {
 
 	/**
-	 * Gets the key associated with this flexible type. This is the key used to construct {@link BadValueException}s
+	 * Gets the key associated with this flexible type. This is not necessarily the key this object
+	 * is actually located at. Rather, the associated key is intended to inform the user where the
+	 * error took place. The returned string may be an absolute key path; its exact details are
+	 * not specified. <br>
+	 * <br>
+	 * Use {@link #badValueExceptionBuilder()} to include the key in {@link BadValueException}s
 	 * 
-	 * @return the key
+	 * @return the informative key for this flexible type
 	 */
 	String getAssociatedKey();
 	
 	/**
-	 * Helper method to begin creating a {@link BadValueException} from {@link #getAssociatedKey()}
+	 * Helper method to begin creating a {@link BadValueException} which describes this value.
+	 * Uses {@link #getAssociatedKey()}
 	 * 
 	 * @return an exception builder for {@link BadValueException} with the key already set
 	 */
