@@ -1,21 +1,22 @@
-/* 
- * DazzleConf-core
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-core is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2021 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-core is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
+
 package space.arim.dazzleconf.internal.processor;
 
 import java.text.NumberFormat;
@@ -31,7 +32,11 @@ import java.util.Set;
 
 import space.arim.dazzleconf.ConfigurationOptions;
 import space.arim.dazzleconf.error.BadValueException;
-import space.arim.dazzleconf.error.IllDefinedConfigException;
+import space.arim.dazzleconf.internal.error.DeveloperError;
+import space.arim.dazzleconf.internal.error.ElementaryType;
+import space.arim.dazzleconf.internal.error.EnumType;
+import space.arim.dazzleconf.internal.error.Errors;
+import space.arim.dazzleconf.internal.error.UserError;
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
 import space.arim.dazzleconf.serialiser.FlexibleType;
 import space.arim.dazzleconf.serialiser.FlexibleTypeFunction;
@@ -50,7 +55,7 @@ final class FlexibleTypeImpl implements FlexibleType {
 	private final Object value;
 	private transient final ConfigurationOptions options;
 	private transient final ValueSerialiserMap serialisers;
-	
+
 	FlexibleTypeImpl(String key, Object value, ConfigurationOptions options,
 			ValueSerialiserMap serialisers) {
 		this.key = key;
@@ -58,7 +63,7 @@ final class FlexibleTypeImpl implements FlexibleType {
 		this.options = options;
 		this.serialisers = serialisers;
 	}
-	
+
 	@Override
 	public String getAssociatedKey() {
 		return key;
@@ -83,7 +88,9 @@ final class FlexibleTypeImpl implements FlexibleType {
 				return false;
 			}
 		}
-		throw badValueExceptionBuilder().message("value " + value + " is not a boolean").build();
+		throw badValueExceptionBuilder()
+				.message(UserError.wrongType(ElementaryType.BOOLEAN, value))
+				.build();
 	}
 
 	@Override
@@ -115,7 +122,7 @@ final class FlexibleTypeImpl implements FlexibleType {
 	public double getDouble() throws BadValueException {
 		return getNumber().doubleValue();
 	}
-	
+
 	private Number getNumber() throws BadValueException {
 		if (value instanceof Number) {
 			return (Number) value;
@@ -126,12 +133,18 @@ final class FlexibleTypeImpl implements FlexibleType {
 				parsed = NumberFormat.getInstance().parse((String) value);
 			} catch (ParseException ex) {
 				throw badValueExceptionBuilder()
-						.message("value " + value + " is not a Number and cannot be converted to one").cause(ex)
+						.message(
+								UserError.wrongType(ElementaryType.NUMBER, value)
+										.withExtraInfo("Attempted to convert to a number, but failed")
+						)
+						.cause(ex)
 						.build();
 			}
 			return parsed;
 		}
-		throw badValueExceptionBuilder().message("value " + value + " is not a Number").build();
+		throw badValueExceptionBuilder()
+		  .message(UserError.wrongType(ElementaryType.NUMBER, value))
+			.build();
 	}
 
 	@Override
@@ -141,7 +154,9 @@ final class FlexibleTypeImpl implements FlexibleType {
 		}
 		String string = getString();
 		if (string.length() != 1) {
-			throw badValueExceptionBuilder().message("value " + value + " is not a single character").build();
+			throw badValueExceptionBuilder()
+					.message(UserError.wrongType(ElementaryType.CHARACTER, value))
+					.build();
 		}
 		return string.charAt(0);
 	}
@@ -161,9 +176,11 @@ final class FlexibleTypeImpl implements FlexibleType {
 				return enumConstant;
 			}
 		}
-		throw badValueExceptionBuilder().message("value " + parsable + " is not a " + enumClass.getName()).build();
+		throw badValueExceptionBuilder()
+				.message(UserError.wrongType(new EnumType(enumClass), value))
+				.build();
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private <T, E extends Enum<E>> T getEnumUnchecked(Class<T> enumClass) throws BadValueException {
 		return enumClass.cast(getEnum((Class<E>) enumClass));
@@ -173,7 +190,7 @@ final class FlexibleTypeImpl implements FlexibleType {
 	public List<FlexibleType> getList() throws BadValueException {
 		return getList((flexType) -> flexType);
 	}
-	
+
 	@Override
 	public <E> List<E> getList(FlexibleTypeFunction<? extends E> elementProcessor) throws BadValueException {
 		return (List<E>) this.<E>getCollection0(true, elementProcessor);
@@ -183,7 +200,7 @@ final class FlexibleTypeImpl implements FlexibleType {
 	public Set<FlexibleType> getSet() throws BadValueException {
 		return getSet((flexType) -> flexType);
 	}
-	
+
 	@Override
 	public <E> Set<E> getSet(FlexibleTypeFunction<? extends E> elementProcessor) throws BadValueException {
 		return (Set<E>) this.<E>getCollection0(false, elementProcessor);
@@ -193,12 +210,12 @@ final class FlexibleTypeImpl implements FlexibleType {
 	public Collection<FlexibleType> getCollection() throws BadValueException {
 		return getCollection((flexType) -> flexType);
 	}
-	
+
 	@Override
 	public <E> Collection<E> getCollection(FlexibleTypeFunction<? extends E> elementProcessor) throws BadValueException {
 		return getCollection0(false, elementProcessor);
 	}
-	
+
 	private <E> Collection<E> getCollection0(boolean ordered, FlexibleTypeFunction<? extends E> elementProcessor)
 			throws BadValueException {
 		Objects.requireNonNull(elementProcessor, "elementProcessor");
@@ -209,8 +226,9 @@ final class FlexibleTypeImpl implements FlexibleType {
 			E singleResult = elementProcessor.getResult(this);
 			return (ordered) ? ImmutableCollections.listOf(singleResult) : ImmutableCollections.setOf(singleResult);
 		} else {
-			throw badValueExceptionBuilder().message(
-					"value " + value + " must be a collection or group of elements (List, Collection, Set)").build();
+			throw badValueExceptionBuilder()
+					.message(UserError.wrongType(ElementaryType.LIST, value))
+					.build();
 		}
 		Collection<E> result = (ordered) ? new ArrayList<>(collection.size()) : new HashSet<>(collection.size());
 		for (Object element : collection) {
@@ -218,17 +236,19 @@ final class FlexibleTypeImpl implements FlexibleType {
 		}
 		return (ordered) ? ImmutableCollections.listOf(result) : ImmutableCollections.setOf(result);
 	}
-	
+
 	@Override
 	public Map<FlexibleType, FlexibleType> getMap() throws BadValueException {
 		return getMap(ImmutableCollections::mapEntryOf);
 	}
-	
+
 	@Override
 	public <K, V> Map<K, V> getMap(FlexibleTypeMapEntryFunction<? extends K, ? extends V> entryProcessor) throws BadValueException {
 		Objects.requireNonNull(entryProcessor, "entryProcessor");
 		if (!(value instanceof Map)) {
-			throw badValueExceptionBuilder().message("value " + value + " is not a Map").build();
+			throw badValueExceptionBuilder()
+					.message(UserError.wrongType(ElementaryType.SECTION, value))
+					.build();
 		}
 		Map<?, ?> map = (Map<?, ?>) value;
 		Map<K, V> result = new HashMap<>(map.size());
@@ -239,7 +259,7 @@ final class FlexibleTypeImpl implements FlexibleType {
 		}
 		return ImmutableCollections.mapOf(result);
 	}
-	
+
 	private FlexibleTypeImpl deriveFlexibleObject(Object value) {
 		return new FlexibleTypeImpl(key, value, options, serialisers);
 	}
@@ -249,7 +269,7 @@ final class FlexibleTypeImpl implements FlexibleType {
 	public <T> T getObject(Class<T> clazz) throws BadValueException {
 		return (T) getObject0(Objects.requireNonNull(clazz, "clazz"));
 	}
-	
+
 	private <G> Object getObject0(Class<G> goal) throws BadValueException {
 		if (goal == Object.class) {
 			return value;
@@ -293,17 +313,21 @@ final class FlexibleTypeImpl implements FlexibleType {
 		}
 		return goal.cast(fromSerialiser(getSerialiser(goal)));
 	}
-	
+
 	private <G> ValueSerialiser<G> getSerialiser(Class<G> goal) {
-		return serialisers.getSerialiserFor(goal).orElseThrow(
-				() -> new IllDefinedConfigException("No ValueSerialiser for " + goal + " at entry " + key));
+		ValueSerialiser<G> serialiser = serialisers.getSerialiserFor(goal).orElse(null);
+		if (serialiser == null) {
+			throw DeveloperError.noSerializerFound(Errors.When.LOAD_CONFIG, key, goal)
+					.toConfigException();
+		}
+		return serialiser;
 	}
-	
+
 	private <G> G fromSerialiser(ValueSerialiser<G> serialiser) throws BadValueException {
 		G deserialised = serialiser.deserialise(this);
 		if (deserialised == null) {
-			throw new IllDefinedConfigException(
-					"At key " + key + ", ValueSerialiser#deserialise for " + serialiser + " returned null");
+			throw DeveloperError.serializerReturnedNull(Errors.When.LOAD_CONFIG, key, serialiser)
+					.toConfigException();
 		}
 		return deserialised;
 	}
@@ -333,5 +357,5 @@ final class FlexibleTypeImpl implements FlexibleType {
 	public String toString() {
 		return "FlexibleTypeImpl [key=" + key + ", value=" + value + "]";
 	}
-	
+
 }

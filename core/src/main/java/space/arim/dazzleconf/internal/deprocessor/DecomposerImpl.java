@@ -26,6 +26,8 @@ import java.util.LinkedHashMap;
 import java.util.Set;
 
 import space.arim.dazzleconf.error.IllDefinedConfigException;
+import space.arim.dazzleconf.internal.error.DeveloperError;
+import space.arim.dazzleconf.internal.error.Errors;
 import space.arim.dazzleconf.serialiser.Decomposer;
 import space.arim.dazzleconf.serialiser.ValueSerialiser;
 import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
@@ -71,15 +73,19 @@ class DecomposerImpl implements Decomposer {
 	}
 	
 	private <T> ValueSerialiser<T> getSerialiser(Class<T> clazz) {
-		return serialisers.getSerialiserFor(clazz).orElseThrow(
-				() -> new IllDefinedConfigException("No ValueSerialiser for " + clazz + " at entry " + key));
+		ValueSerialiser<T> serialiser = serialisers.getSerialiserFor(clazz).orElse(null);
+		if (serialiser == null) {
+			throw DeveloperError.noSerializerFound(Errors.When.WRITE_CONFIG, key, clazz)
+					.toConfigException();
+		}
+		return serialiser;
 	}
-	
+
 	private <T> Object fromSerialiser(ValueSerialiser<T> serialiser, T value) {
 		Object serialised = serialiser.serialise(value, this);
 		if (serialised == null) {
-			throw new IllDefinedConfigException(
-					"At key " + key + ", ValueSerialiser#serialise for " + serialiser + " returned null");
+			throw DeveloperError.serializerReturnedNull(Errors.When.WRITE_CONFIG, key, serialiser)
+					.toConfigException();
 		}
 		return serialised;
 	}

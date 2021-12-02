@@ -22,7 +22,9 @@ package space.arim.dazzleconf.internal.error;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
+import space.arim.dazzleconf.serialiser.URLValueSerialiser;
 
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
@@ -30,6 +32,21 @@ public class StandardErrorArgumentsProvider implements ArgumentsProvider {
 
 	@Override
 	public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) throws Exception {
-		return Arrays.stream(DeveloperError.values()).map(Arguments::of);
+		var developerErrors = Stream.of(
+				DeveloperError.expectedMap(Errors.When.LOAD_CONFIG, "key", new Object()),
+				DeveloperError.replacedObject("key", "replaced", "replacement"),
+				DeveloperError.noSerializerFound(Errors.When.WRITE_CONFIG, "key", ArgumentsProvider.class),
+				DeveloperError.serializerReturnedNull(Errors.When.LOAD_CONFIG, "key", URLValueSerialiser.getInstance())
+		);
+		var userErrors = Stream.concat(
+				Stream.of(
+						UserError.sizeTooBig(3, 2),
+						UserError.sizeTooSmall(2, 3)),
+				Stream.concat(
+						Arrays.stream(ElementaryType.values()),
+						Stream.of(new EnumType(StandardCopyOption.class))
+				).map((type) -> UserError.wrongType(type, new Object()))
+		);
+		return Stream.concat(developerErrors, userErrors).map(Arguments::of);
 	}
 }

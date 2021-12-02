@@ -19,40 +19,28 @@
 
 package space.arim.dazzleconf.internal.error;
 
-public final class Errors {
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
-	private Errors() {}
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-	public enum When {
-		LOAD_CONFIG("loading the configuration"),
-		WRITE_CONFIG("writing or creating the configuration");
+public class ElementaryTypeTest {
 
-		private final String display;
+  @ParameterizedTest
+  @EnumSource(ElementaryType.class)
+  public void examples(ElementaryType elementaryType) {
+    String[] examples = assertDoesNotThrow(elementaryType::examples);
+    assertNotNull(examples);
+    for (String example : examples) {
+      assertNotNull(example);
+    }
+  }
 
-		private When(String display) {
-			this.display = display;
-		}
-
-		@Override
-		public String toString() {
-			return display;
-		}
-
-	}
-
-	public interface StandardError extends CharSequence {
-
-		When when();
-
-		String message();
-
-		default String withExtraInfo(String extraInfo) {
-			String extra = (extraInfo.isEmpty()) ? "None" : extraInfo;
-			return "Encountered an error while " + when() + ". \n" +
-					"Reason: " + message() + "\n" +
-					"Extra info: " + extra;
-		}
-
-	}
-
+  @ParameterizedTest
+  @EnumSource(ElementaryType.class)
+  public void toString(ElementaryType elementaryType) {
+    String toString = assertDoesNotThrow(elementaryType::toString);
+    assertNotNull(toString);
+  }
 }

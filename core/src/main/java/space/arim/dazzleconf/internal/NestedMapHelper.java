@@ -27,6 +27,7 @@ import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.error.MissingKeyException;
 import space.arim.dazzleconf.factory.CommentedWrapper;
 import space.arim.dazzleconf.internal.error.DeveloperError;
+import space.arim.dazzleconf.internal.error.Errors;
 
 /**
  * Helper class for working with nested hierarchical maps
@@ -115,8 +116,7 @@ public class NestedMapHelper {
 		} else {
 			Object previous = currentMap.put(keyParts[lastIndex], value);
 			if (previous != null) {
-				throw DeveloperError.REPLACED_OBJECT.toIllDefinedConfigException(
-						"Replaced object " + previous + " at " + key + " with " + value);
+				throw DeveloperError.replacedObject(key, previous, value).toConfigException();
 			}
 		}
 	}
@@ -127,8 +127,8 @@ public class NestedMapHelper {
 			shouldBeMap = ((CommentedWrapper) shouldBeMap).getValue();
 		}
 		if (!(shouldBeMap instanceof Map)) {
-			throw DeveloperError.EXPECTED_MAP_WHILE_WRITE.toIllDefinedConfigException(
-					"Value " + shouldBeMap + " along the path of " + fullKey + " is not a Map");
+			throw DeveloperError.expectedMap(Errors.When.WRITE_CONFIG, fullKey, shouldBeMap)
+					.toConfigException();
 		}
 		return (Map<String, Object>) shouldBeMap;
 	}
@@ -155,18 +155,22 @@ public class NestedMapHelper {
 			String keyPart = keyParts[n];
 			Object nextMap = currentMap.get(keyPart);
 			if (nextMap == null) {
-				throw MissingKeyException.forKey(key);
+				throw MissingKeyException.forKeyAndMessage(key, MISSING_KEY_MESSAGE);
 			}
 			if (!(nextMap instanceof Map)) {
-				throw DeveloperError.EXPECTED_MAP_WHILE_LOAD.toIllDefinedConfigException("At key " + key);
+				throw DeveloperError.expectedMap(Errors.When.LOAD_CONFIG, key, nextMap)
+						.toConfigException();
 			}
 			currentMap = (Map<String, Object>) nextMap;
 		}
 		Object value = currentMap.get(keyParts[lastIndex]);
 		if (value == null) {
-			throw MissingKeyException.forKey(key);
+			throw MissingKeyException.forKeyAndMessage(key, MISSING_KEY_MESSAGE);
 		}
 		return value;
 	}
-	
+	// This message will be prefixed with "For key <the key>, "
+	private static final String MISSING_KEY_MESSAGE = "the configuration option was deleted. " +
+			"You need to recreate the configuration option at this key, then set it to a valid value.";
+
 }

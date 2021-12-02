@@ -24,6 +24,7 @@ import space.arim.dazzleconf.annote.NumericRange;
 import space.arim.dazzleconf.error.BadValueException;
 import space.arim.dazzleconf.error.InvalidConfigException;
 import space.arim.dazzleconf.internal.ConfEntry;
+import space.arim.dazzleconf.internal.error.UserError;
 import space.arim.dazzleconf.internal.type.CollectionKind;
 import space.arim.dazzleconf.internal.type.CollectionReturnType;
 import space.arim.dazzleconf.internal.type.MapReturnType;
@@ -168,11 +169,13 @@ class Composition {
 		if (sizing != null) {
 			if (size < sizing.min()) {
 				throw flexType.badValueExceptionBuilder()
-						.message("value's size " + size + " is less than minimum size " + sizing.min()).build();
+						.message(UserError.sizeTooSmall(size, sizing.min()))
+						.build();
 			}
 			if (size > sizing.max()) {
-				throw flexType.badValueExceptionBuilder().message(
-						"value's size " + size + " is more than maximum size " + sizing.max()).build();
+				throw flexType.badValueExceptionBuilder()
+						.message(UserError.sizeTooBig(size, sizing.max()))
+						.build();
 			}
 		}
 	}
@@ -189,11 +192,13 @@ class Composition {
 			double asDouble = number.doubleValue();
 			if (asDouble < numericRange.min()) {
 				throw flexType.badValueExceptionBuilder()
-						.message("value's size " + asDouble + " is less than minimum size " + numericRange.min()).build();
+						.message(UserError.sizeTooSmall(asDouble, numericRange.min()))
+						.build();
 			}
 			if (asDouble > numericRange.max()) {
 				throw flexType.badValueExceptionBuilder()
-						.message("value's size " + asDouble + " is more than maximum size " + numericRange.max()).build();
+						.message(UserError.sizeTooBig(asDouble, numericRange.max()))
+						.build();
 			}
 		}
 		IntegerRange intRange = entry.getMethod().getAnnotation(IntegerRange.class);
@@ -201,11 +206,13 @@ class Composition {
 			long asLong = number.longValue();
 			if (asLong < intRange.min()) {
 				throw flexType.badValueExceptionBuilder()
-						.message("value's size " + asLong + " is less than minimum size " + intRange.min()).build();
+						.message(UserError.sizeTooSmall(asLong, intRange.min()))
+						.build();
 			}
 			if (asLong > intRange.max()) {
 				throw flexType.badValueExceptionBuilder()
-						.message("value's size " + asLong + " is more than maximum size " + intRange.max()).build();
+						.message(UserError.sizeTooBig(asLong, intRange.max()))
+						.build();
 			}
 		}
 	}

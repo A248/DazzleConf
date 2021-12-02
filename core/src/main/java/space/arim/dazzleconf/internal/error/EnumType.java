@@ -19,40 +19,24 @@
 
 package space.arim.dazzleconf.internal.error;
 
-public final class Errors {
+import java.util.Arrays;
+import java.util.Objects;
 
-	private Errors() {}
+public final class EnumType implements UserType {
 
-	public enum When {
-		LOAD_CONFIG("loading the configuration"),
-		WRITE_CONFIG("writing or creating the configuration");
+	private final Class<? extends Enum<?>> enumClass;
 
-		private final String display;
-
-		private When(String display) {
-			this.display = display;
-		}
-
-		@Override
-		public String toString() {
-			return display;
-		}
-
+	public EnumType(Class<? extends Enum<?>> enumClass) {
+		this.enumClass = Objects.requireNonNull(enumClass, "enumClass");
 	}
 
-	public interface StandardError extends CharSequence {
-
-		When when();
-
-		String message();
-
-		default String withExtraInfo(String extraInfo) {
-			String extra = (extraInfo.isEmpty()) ? "None" : extraInfo;
-			return "Encountered an error while " + when() + ". \n" +
-					"Reason: " + message() + "\n" +
-					"Extra info: " + extra;
-		}
-
+	@Override
+	public String[] examples() {
+		return Arrays.stream(enumClass.getEnumConstants()).map(Enum::name).toArray(String[]::new);
 	}
 
+	@Override
+	public String toString() {
+		return "an enum value";
+	}
 }

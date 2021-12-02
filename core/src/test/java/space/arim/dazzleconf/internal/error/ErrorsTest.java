@@ -19,33 +19,16 @@
 
 package space.arim.dazzleconf.internal.error;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ErrorsTest {
-
-	@Test
-	public void pad1() {
-		assertEquals("A0014", Errors.pad('A', 4, 0x14).toString());
-	}
-
-	@Test
-	public void pad2() {
-		assertEquals("A10", Errors.pad('A', 2, 0x10).toString());
-	}
-
-	@Test
-	public void pad3() {
-		assertEquals("A01C", Errors.pad('A', 3, 0x1C).toString());
-	}
 
 	@ParameterizedTest
 	@EnumSource(Errors.When.class)
@@ -58,14 +41,14 @@ public class ErrorsTest {
 	@ParameterizedTest
 	@ArgumentsSource(StandardErrorArgumentsProvider.class)
 	public void fullMessage(Errors.StandardError error) {
-		assertDoesNotThrow(() -> error.fullMessage(""));
+		assertDoesNotThrow(error::toString);
 	}
 
 	@ParameterizedTest
 	@ArgumentsSource(StandardErrorArgumentsProvider.class)
 	public void fullMessageIncludesInfo(Errors.StandardError error) {
 		String extraInfo = "something you will never see in an actual error message";
-		String message = error.fullMessage(extraInfo);
+		String message = error.withExtraInfo(extraInfo);
 		assertTrue(message.contains(extraInfo));
 	}
 
@@ -73,7 +56,7 @@ public class ErrorsTest {
 	@ArgumentsSource(StandardErrorArgumentsProvider.class)
 	public void fullMessageIncludesWhen(Errors.StandardError error) {
 		String extraInfo = "something you will never see in an actual error message";
-		String message = error.fullMessage(extraInfo);
+		String message = error.withExtraInfo(extraInfo);
 		assertTrue(message.contains(error.when().toString()));
 	}
 }

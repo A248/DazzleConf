@@ -44,7 +44,7 @@ class DefaultObjectHelper {
 	}
 
 	private String reasonToExceptionMessage(String reason) {
-		return "Issue with defaults annotation on " + entry.getQualifiedMethodName()
+		return "Encountered an issue with the defaults annotation on " + entry.getQualifiedMethodName()
 				+ ". Reason: " + reason;
 	}
 
@@ -69,7 +69,8 @@ class DefaultObjectHelper {
 			}
 		}
 		if (key != null) {
-			throw badDefault("@DefaultMap must consist of key-value pairs");
+			throw badDefault(
+					"@DefaultMap must consist of key-value pairs. (Therefore, it must have an even number of strings)");
 		}
 		return result;
 	}
@@ -86,7 +87,7 @@ class DefaultObjectHelper {
 
 		} else if (index == fullyQualifiedMethodName.length() - 1) {
 			throw badDefault(
-					"Malformed method name " + fullyQualifiedMethodName + " specified by @DefaultObject. " +
+					"A malformed method name " + fullyQualifiedMethodName + " was specified by @DefaultObject. " +
 							"Please ensure the value of @DefaultObject is a fully qualified method name.");
 		} else {
 			// Method is in another class
@@ -96,10 +97,13 @@ class DefaultObjectHelper {
 			try {
 				clazz = Class.forName(className, true, configClass.getClassLoader());
 			} catch (ClassNotFoundException ex) {
-				throw badDefault("Class " + className + " not found", ex);
+				throw badDefault(
+						"Class " + className + " specified by @DefaultObject cannot be found", ex);
 			}
 			if (!AccessChecking.isAccessible(clazz)) {
-				throw badDefault("Method " + fullyQualifiedMethodName + " must be in an accessible class");
+				throw badDefault(
+						"Method " + fullyQualifiedMethodName + " must be in an accessible class. " +
+						"The class specified is inaccessible.");
 			}
 		}
 		/*
@@ -118,14 +122,16 @@ class DefaultObjectHelper {
 		// Look for method with config class parameter, if possible
 		ReturnType<?> returnType = entry.returnType();
 		if (!(returnType instanceof ReturnTypeWithConfigDefinition)) {
-			throw badDefault("Method " + methodName + " not found in class " + clazz.getName(), attemptOneEx);
+			throw badDefault(
+					"The method " + methodName + " (with no parameters) does not exist in class " + clazz.getName(), attemptOneEx);
 		}
 		Class<?> configClass = ((ReturnTypeWithConfigDefinition<?, ?>) returnType).configDefinition().getConfigClass();
 		try {
 			return clazz.getDeclaredMethod(methodName, configClass);
 		} catch (NoSuchMethodException ex) {
 			ex.addSuppressed(attemptOneEx);
-			throw badDefault("Method " + methodName + " not found in class " + clazz.getName(), ex);
+			throw badDefault(
+					"The method " + methodName + " (with acceptable parameters) does not exist in class " + clazz.getName(), ex);
 		}
 	}
 
@@ -140,16 +146,17 @@ class DefaultObjectHelper {
 		Method method = locateMethod(methodName);
 		int modifiers = method.getModifiers();
 		if (!Modifier.isStatic(modifiers) || !Modifier.isPublic(modifiers)) {
-			throw badDefault("Method " + MethodUtil.getQualifiedName(method) + " must be public and static");
+			throw badDefault("The method " + MethodUtil.getQualifiedName(method) + " must be public and static");
 		}
 		method.setAccessible(true);
 		Object result = fromMethod(method);
 		if (result == null) {
-			throw badDefault("Object returned from @DefaultObject was null");
+			throw badDefault("The object returned from @DefaultObject was null");
 		}
 		if (!targetType.isInstance(result)) {
-			throw badDefault("Object returned from @DefaultObject must be an instance of " +
-					"the return type of the config method.");
+			throw badDefault(
+					"The object returned from @DefaultObject must be an instance of " +
+					"the return type of the config method. However, " + result + " was received");
 		}
 		return result;
 	}

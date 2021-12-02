@@ -1,21 +1,22 @@
-/* 
- * DazzleConf-core
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-core is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2021 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-core is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
+
 package space.arim.dazzleconf.internal;
 
 import java.lang.reflect.InvocationTargetException;
@@ -43,16 +44,16 @@ public final class DefinitionReader<C> {
 
 	private final Class<C> configClass;
 	private final ConfigurationOptions options;
-	
+
 	private final Set<Class<?>> nestedConfigDejaVu;
-	
+
 	private final Set<Method> defaultMethods = new HashSet<>();
 	private final Map<String, ConfEntry> entries = new LinkedHashMap<>();
 
 	public DefinitionReader(Class<C> configClass, ConfigurationOptions options) {
 		this(configClass, options, new HashSet<>());
 	}
-	
+
 	private DefinitionReader(Class<C> configClass, ConfigurationOptions options,
 			Set<Class<?>> nestedConfigDejaVu) {
 		Objects.requireNonNull(configClass, "config class");
@@ -63,7 +64,7 @@ public final class DefinitionReader<C> {
 		this.options = options;
 		this.nestedConfigDejaVu = nestedConfigDejaVu;
 	}
-	
+
 	public ConfigurationDefinition<C> read() {
 		ValueSerialiserMap serialiserMap = readSerialisers();
 		List<ConfEntry> sortedEntries = readAndSortEntries();
@@ -75,7 +76,7 @@ public final class DefinitionReader<C> {
 		DefinitionReader<N> reader = new DefinitionReader<>(configClass, options, nestedConfigDejaVu);
 		return reader.read();
 	}
-	
+
 	private ValueSerialiserMap readSerialisers() {
 		ConfSerialisers confSerialisers = configClass.getAnnotation(ConfSerialisers.class);
 		if (confSerialisers == null) {
@@ -88,7 +89,7 @@ public final class DefinitionReader<C> {
 		}
 		return ValueSerialiserMap.of(serialisers);
 	}
-	
+
 	private List<ConfEntry> readAndSortEntries() {
 		if (!nestedConfigDejaVu.add(configClass)) {
 			throw new IllDefinedConfigException("Circular nested configuration for " + configClass.getName());
@@ -113,7 +114,7 @@ public final class DefinitionReader<C> {
 		options.getConfigurationSorter().ifPresent(entriesList::sort);
 		return entriesList;
 	}
-	
+
 	private void create(Method method) {
 		ConfEntryCreation entryCreation = new ConfEntryCreation(
 				this, method,
@@ -121,10 +122,12 @@ public final class DefinitionReader<C> {
 		ConfEntry entry = entryCreation.create();
 		ConfEntry previous = entries.put(entry.getKey(), entry);
 		if (previous != null) {
-			throw new IllDefinedConfigException("Duplicate key " + entry.getKey());
+			throw new IllDefinedConfigException(
+					"Duplicate key " + entry.getKey() + ". " +
+					"It is not possible to have multiple configuration options using the same key.");
 		}
 	}
-	
+
 	<V> V instantiate(Class<V> intf, Class<? extends V> impl) {
 		try {
 			Method createMethod = impl.getDeclaredMethod("getInstance");
@@ -143,10 +146,10 @@ public final class DefinitionReader<C> {
 			throw uninstantiable(intf, impl, ex);
 		}
 	}
-	
+
 	private <V> IllDefinedConfigException uninstantiable(Class<V> intf, Class<? extends V> impl, Throwable cause) {
 		return new IllDefinedConfigException(
 				"Unable to instantiate " + intf.getSimpleName() + " implemented by " + impl.getName(), cause);
 	}
-	
+
 }

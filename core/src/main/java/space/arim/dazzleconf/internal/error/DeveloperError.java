@@ -20,24 +20,42 @@
 package space.arim.dazzleconf.internal.error;
 
 import space.arim.dazzleconf.error.IllDefinedConfigException;
+import space.arim.dazzleconf.serialiser.ValueSerialiser;
 
-public enum DeveloperError implements Errors.StandardError {
+import java.util.stream.IntStream;
 
-	EXPECTED_MAP_WHILE_WRITE(0x1A, Errors.When.WRITE_CONFIG,
-			"Expected a configuration section inside the data, but a simple object was present."),
-	REPLACED_OBJECT(0x1B, Errors.When.WRITE_CONFIG,
-			"Replaced a configuration object with another one."),
-	EXPECTED_MAP_WHILE_LOAD(0x1C, Errors.When.LOAD_CONFIG,
-			"Expected a configuration section inside the data, but a simple object was present.");
+public final class DeveloperError implements Errors.StandardError {
 
-	private final int errorCode;
 	private final Errors.When when;
 	private final String message;
 
-	DeveloperError(int errorCode, Errors.When when, String message) {
-		this.errorCode = errorCode;
+	private DeveloperError(Errors.When when, String message) {
 		this.when = when;
 		this.message = message;
+	}
+
+	public static DeveloperError expectedMap(Errors.When when, String fullKey, Object actualValue) {
+		return new DeveloperError(Errors.When.LOAD_CONFIG,
+				"Expected a configuration section inside the data, but a simple object was present. " +
+						"Key: " + fullKey + ". Actual value: " + actualValue);
+	}
+
+	public static DeveloperError replacedObject(String key, Object replaced, Object replacement) {
+		return new DeveloperError(Errors.When.WRITE_CONFIG, "Unexpectedly replaced object " + replaced +
+				" at key " + key + " with " + replacement + ". No objects should be replaced during " +
+				"writing of the configuration, so this indicates an issue.");
+	}
+
+	public static DeveloperError noSerializerFound(Errors.When when, String key, Class<?> type) {
+		return new DeveloperError(when,
+				"No ValueSerialiser was found for " + type + " at entry " + key + ". " +
+						"To use custom types, a relevant ValueSerialiser must exist.");
+	}
+
+	public static DeveloperError serializerReturnedNull(Errors.When when, String key, ValueSerialiser<?> serialiser) {
+		return new DeveloperError(when,
+				"At key " + key + ", the ValueSerialiser (" + serialiser + ") returned null. " +
+						"This is a breach of contract; ValueSerialisers should never return null");
 	}
 
 	@Override
@@ -46,17 +64,43 @@ public enum DeveloperError implements Errors.StandardError {
 	}
 
 	@Override
-	public CharSequence errorCodeDisplay() {
-		return Errors.pad('D', 2, errorCode);
+	public String message() {
+		return message + "\n(This is an error on behalf of the developer)";
+	}
+
+	public IllDefinedConfigException toConfigException() {
+		return new IllDefinedConfigException(toString());
+	}
+
+	// CharSequence implementation
+
+	@Override
+	public String toString() {
+		return withExtraInfo("");
 	}
 
 	@Override
-	public String message() {
-		return message;
+	public int length() {
+		return toString().length();
 	}
 
-	public IllDefinedConfigException toIllDefinedConfigException(String extraInfo) {
-		return new IllDefinedConfigException(fullMessage(extraInfo));
+	@Override
+	public char charAt(int index) {
+		return toString().charAt(index);
 	}
 
+	@Override
+	public CharSequence subSequence(int start, int end) {
+		return toString().subSequence(start, end);
+	}
+
+	@Override
+	public IntStream chars() {
+		return toString().chars();
+	}
+
+	@Override
+	public IntStream codePoints() {
+		return toString().codePoints();
+	}
 }

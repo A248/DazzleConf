@@ -69,7 +69,11 @@ public final class BadValueException extends ImproperEntryException {
 			this.message = message;
 			return this;
 		}
-		
+
+		public Builder message(CharSequence message) {
+			return message(message.toString());
+		}
+
 		public Builder cause(Throwable cause) {
 			this.cause = cause;
 			return this;

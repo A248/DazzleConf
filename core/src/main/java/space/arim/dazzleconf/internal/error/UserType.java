@@ -19,40 +19,10 @@
 
 package space.arim.dazzleconf.internal.error;
 
-public final class Errors {
+public interface UserType {
 
-	private Errors() {}
+	String[] examples();
 
-	public enum When {
-		LOAD_CONFIG("loading the configuration"),
-		WRITE_CONFIG("writing or creating the configuration");
-
-		private final String display;
-
-		private When(String display) {
-			this.display = display;
-		}
-
-		@Override
-		public String toString() {
-			return display;
-		}
-
-	}
-
-	public interface StandardError extends CharSequence {
-
-		When when();
-
-		String message();
-
-		default String withExtraInfo(String extraInfo) {
-			String extra = (extraInfo.isEmpty()) ? "None" : extraInfo;
-			return "Encountered an error while " + when() + ". \n" +
-					"Reason: " + message() + "\n" +
-					"Extra info: " + extra;
-		}
-
-	}
-
+	@Override
+	String toString();
 }

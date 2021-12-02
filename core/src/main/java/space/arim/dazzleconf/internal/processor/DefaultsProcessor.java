@@ -1,21 +1,22 @@
-/* 
- * DazzleConf-core
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-core is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2021 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-core is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
+
 package space.arim.dazzleconf.internal.processor;
 
 import space.arim.dazzleconf.ConfigurationOptions;
@@ -42,7 +43,7 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 	public DefaultsProcessor(ConfigurationOptions options, ConfigurationDefinition<C> definition) {
 		super(options, definition, null);
 	}
-	
+
 	@Override
 	<N> N createChildConfig(ConfigurationOptions options, ConfigurationDefinition<N> childDefinition,
 							String key, Object preValue, N nestedAuxiliaryValues) throws InvalidConfigException {
@@ -56,7 +57,8 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 			Class<N> configClass = childDefinition.getConfigClass();
 			if (!configClass.isInstance(preValue)) {
 				throw new IllDefinedConfigException(
-						"Default value at " + key + " must be an instance of " + configClass);
+						"The default value at " + key + " must be an instance of " + configClass +
+						", in accordance with the defined configuration");
 			}
 			return configClass.cast(preValue);
 		}
@@ -128,9 +130,9 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 		if (ofMethod != null) {
 			return helper.toObject(ofMethod.value());
 		}
-		throw helper.badDefault("No default value annotation present");
+		throw helper.badDefault("No default value annotation is present");
 	}
-	
+
 	private static List<Boolean> toList(boolean[] booleanArray) {
 		List<Boolean> booleans = new ArrayList<>(booleanArray.length);
 		for (boolean b : booleanArray) {
@@ -138,7 +140,7 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 		}
 		return booleans;
 	}
-	
+
 	private static List<Integer> toList(int[] integerArray) {
 		List<Integer> integers = new ArrayList<>(integerArray.length);
 		for (int i : integerArray) {
@@ -146,7 +148,7 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 		}
 		return integers;
 	}
-	
+
 	private static List<Long> toList(long[] longArray) {
 		List<Long> longs = new ArrayList<>(longArray.length);
 		for (long l : longArray) {
@@ -154,7 +156,7 @@ public class DefaultsProcessor<C> extends ProcessorBase<C> {
 		}
 		return longs;
 	}
-	
+
 	private static List<Double> toList(double[] doubleArray) {
 		List<Double> doubles = new ArrayList<>(doubleArray.length);
 		for (double d : doubleArray) {
