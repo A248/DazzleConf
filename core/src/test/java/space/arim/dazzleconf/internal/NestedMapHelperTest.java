@@ -1,21 +1,22 @@
-/* 
- * DazzleConf-core
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-core is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2021 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-core is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
+
 package space.arim.dazzleconf.internal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,6 +30,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import space.arim.dazzleconf.error.MissingKeyException;
+import space.arim.dazzleconf.error.MissingValueException;
 import space.arim.dazzleconf.factory.CommentedWrapper;
 
 public class NestedMapHelperTest {
@@ -51,7 +53,7 @@ public class NestedMapHelperTest {
 	private void assertEntry(String key, Object value) {
 		try {
 			assertEquals(value, mapHelper.get(key));
-		} catch (MissingKeyException ex) {
+		} catch (MissingKeyException | MissingValueException ex) {
 			fail(ex);
 		}
 	}
@@ -80,5 +82,12 @@ public class NestedMapHelperTest {
 		assertEntry("section", Map.of("subKey", Map.of("keyTwo", "value")));
 		assertThrows(MissingKeyException.class, () -> mapHelper.get("section.nonExistentKey.otherKey"));
 	}
-	
+
+	@Test
+	public void nullValue() throws MissingValueException, MissingKeyException {
+		mapHelper.put("section.subKey.keyOne", "nonnull-value");
+		mapHelper.put("section.subKey.nullKey", null);
+		assertEquals("nonnull-value", mapHelper.get("section.subKey.keyOne"));
+		assertThrows(MissingValueException.class, () -> mapHelper.get("section.subKey.nullKey"));
+	}
 }

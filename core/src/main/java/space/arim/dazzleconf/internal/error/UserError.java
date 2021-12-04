@@ -65,6 +65,12 @@ public final class UserError implements Errors.StandardError {
 				"The value's size of " + actual + " must be less than the maximum size of " + maximum);
 	}
 
+	public static UserError missingKey(String key) {
+		return new UserError(Errors.When.LOAD_CONFIG,
+				"The configuration option was deleted. You need to recreate " +
+						"the configuration option at " + key + ", then set it to a valid value.");
+	}
+
 	@Override
 	public Errors.When when() {
 		return when;

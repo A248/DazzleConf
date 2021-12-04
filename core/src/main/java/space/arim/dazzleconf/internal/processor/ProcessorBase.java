@@ -1,21 +1,22 @@
-/* 
- * DazzleConf-core
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-core is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2021 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-core is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
+
 package space.arim.dazzleconf.internal.processor;
 
 import java.lang.reflect.Proxy;
@@ -28,7 +29,6 @@ import space.arim.dazzleconf.error.BadValueException;
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.error.InvalidConfigException;
 import space.arim.dazzleconf.error.MissingKeyException;
-import space.arim.dazzleconf.error.MissingValueException;
 import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.ConfigurationDefinition;
 import space.arim.dazzleconf.internal.type.ReturnTypeWithConfigDefinition;
@@ -112,9 +112,8 @@ public abstract class ProcessorBase<C> {
 
 	private Object getPreValue(ConfEntry entry) throws InvalidConfigException {
 		Object preValue = getValueFromSources(entry);
-		String key = entry.getKey();
 		if (preValue == null) {
-			throw MissingValueException.forKey(key);
+			throw new NullPointerException("Internal error: Did not expect null value at " + entry);
 		}
 		return preValue;
 	}

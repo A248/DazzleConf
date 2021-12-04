@@ -62,4 +62,16 @@ public class MissingKeyException extends ImproperEntryException {
 		return new MissingKeyException(key, message);
 	}
 
+	/**
+	 * Creates the exception with the given key and message
+	 *
+	 * @param key the key
+	 * @param message the message
+	 * @return the exception
+	 * @throws NullPointerException if {@code key} or {@code message} is null
+	 */
+	public static MissingKeyException forKeyAndMessage(String key, CharSequence message) {
+		return forKeyAndMessage(key, message.toString());
+	}
+
 }

@@ -1,21 +1,22 @@
-/* 
- * DazzleConf-core
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-core is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2021 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-core is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
+
 package space.arim.dazzleconf.internal;
 
 import java.util.LinkedHashMap;
@@ -25,9 +26,11 @@ import java.util.regex.Pattern;
 
 import space.arim.dazzleconf.error.IllDefinedConfigException;
 import space.arim.dazzleconf.error.MissingKeyException;
+import space.arim.dazzleconf.error.MissingValueException;
 import space.arim.dazzleconf.factory.CommentedWrapper;
 import space.arim.dazzleconf.internal.error.DeveloperError;
 import space.arim.dazzleconf.internal.error.Errors;
+import space.arim.dazzleconf.internal.error.UserError;
 
 /**
  * Helper class for working with nested hierarchical maps
@@ -147,7 +150,7 @@ public class NestedMapHelper {
 	 * @throws MissingKeyException if the key is not present in the map
 	 * @throws IllDefinedConfigException if a simple object was present where a map was expected
 	 */
-	public Object get(String key) throws MissingKeyException {
+	public Object get(String key) throws MissingKeyException, MissingValueException {
 		Map<String, Object> currentMap = topLevelMap;
 		String[] keyParts = PERIOD_PATTERN.split(key);
 		int lastIndex = keyParts.length - 1;
@@ -155,7 +158,7 @@ public class NestedMapHelper {
 			String keyPart = keyParts[n];
 			Object nextMap = currentMap.get(keyPart);
 			if (nextMap == null) {
-				throw MissingKeyException.forKeyAndMessage(key, MISSING_KEY_MESSAGE);
+				throw MissingKeyException.forKeyAndMessage(key, UserError.missingKey(key));
 			}
 			if (!(nextMap instanceof Map)) {
 				throw DeveloperError.expectedMap(Errors.When.LOAD_CONFIG, key, nextMap)
@@ -165,12 +168,15 @@ public class NestedMapHelper {
 		}
 		Object value = currentMap.get(keyParts[lastIndex]);
 		if (value == null) {
-			throw MissingKeyException.forKeyAndMessage(key, MISSING_KEY_MESSAGE);
+			if (currentMap.containsKey(keyParts[lastIndex])) {
+				// Null value
+				throw MissingValueException.forKeyAndMessage(key, UserError.missingKey(key));
+			} else {
+				// Absent value
+				throw MissingKeyException.forKeyAndMessage(key, UserError.missingKey(key));
+			}
 		}
 		return value;
 	}
-	// This message will be prefixed with "For key <the key>, "
-	private static final String MISSING_KEY_MESSAGE = "the configuration option was deleted. " +
-			"You need to recreate the configuration option at this key, then set it to a valid value.";
 
 }

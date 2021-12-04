@@ -41,7 +41,9 @@ public class StandardErrorArgumentsProvider implements ArgumentsProvider {
 		var userErrors = Stream.concat(
 				Stream.of(
 						UserError.sizeTooBig(3, 2),
-						UserError.sizeTooSmall(2, 3)),
+						UserError.sizeTooSmall(2, 3),
+						UserError.missingKey("key")
+				),
 				Stream.concat(
 						Arrays.stream(ElementaryType.values()),
 						Stream.of(new EnumType(StandardCopyOption.class))
