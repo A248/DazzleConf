@@ -170,7 +170,7 @@ public class NestedMapHelper {
 		if (value == null) {
 			if (currentMap.containsKey(keyParts[lastIndex])) {
 				// Null value
-				throw MissingValueException.forKeyAndMessage(key, UserError.missingKey(key));
+				throw MissingValueException.forKeyAndMessage(key, UserError.nullValue(key));
 			} else {
 				// Absent value
 				throw MissingKeyException.forKeyAndMessage(key, UserError.missingKey(key));

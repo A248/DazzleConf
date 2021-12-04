@@ -19,9 +19,9 @@
 
 package space.arim.dazzleconf.ext.snakeyaml;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.ConfigurationOptions;
+import space.arim.dazzleconf.error.BadValueException;
 import space.arim.dazzleconf.error.InvalidConfigException;
 
 import java.io.ByteArrayInputStream;
@@ -29,12 +29,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class NullListElementTest {
 
-	@Disabled("Fix scheduled for 1.3.0. See https://github.com/A248/DazzleConf/issues/23")
 	@Test
 	public void readLiteralNullListElement() throws IOException, InvalidConfigException {
 		String content = """
@@ -43,11 +41,10 @@ public class NullListElementTest {
 				  - 'value2'
 				  """;
 		var factory = SnakeYamlConfigurationFactory.create(ListConfig.class, ConfigurationOptions.defaults());
-		ListConfig config = factory.load(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
-		assertEquals(List.of("value2"), config.list());
+		var data = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+		assertThrows(BadValueException.class, () -> factory.load(data));
 	}
 
-	@Disabled("See prior")
 	@Test
 	public void readImplicitNullListElement() throws IOException, InvalidConfigException {
 		String content = """
@@ -56,8 +53,8 @@ public class NullListElementTest {
 				  -\040
 				  """;
 		var factory = SnakeYamlConfigurationFactory.create(ListConfig.class, ConfigurationOptions.defaults());
-		ListConfig config = factory.load(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
-		assertEquals(List.of("value1"), config.list());
+		var data = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+		assertThrows(BadValueException.class, () -> factory.load(data));
 	}
 
 	public interface ListConfig {

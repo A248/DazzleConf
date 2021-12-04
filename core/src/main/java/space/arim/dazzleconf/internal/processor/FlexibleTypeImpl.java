@@ -58,10 +58,10 @@ final class FlexibleTypeImpl implements FlexibleType {
 
 	FlexibleTypeImpl(String key, Object value, ConfigurationOptions options,
 			ValueSerialiserMap serialisers) {
-		this.key = key;
-		this.value = value;
-		this.options = options;
-		this.serialisers = serialisers;
+		this.key = Objects.requireNonNull(key, "key");
+		this.value = Objects.requireNonNull(value, "value");
+		this.options = Objects.requireNonNull(options, "options");
+		this.serialisers = Objects.requireNonNull(serialisers, "serialisers");
 	}
 
 	@Override
@@ -260,7 +260,12 @@ final class FlexibleTypeImpl implements FlexibleType {
 		return ImmutableCollections.mapOf(result);
 	}
 
-	private FlexibleTypeImpl deriveFlexibleObject(Object value) {
+	private FlexibleTypeImpl deriveFlexibleObject(Object value) throws BadValueException {
+		if (value == null) {
+			throw badValueExceptionBuilder()
+					.message(UserError.nullValue(key))
+					.build();
+		}
 		return new FlexibleTypeImpl(key, value, options, serialisers);
 	}
 

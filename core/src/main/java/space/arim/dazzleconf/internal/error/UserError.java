@@ -71,6 +71,12 @@ public final class UserError implements Errors.StandardError {
 						"the configuration option at " + key + ", then set it to a valid value.");
 	}
 
+	public static UserError nullValue(String key) {
+		return new UserError(Errors.When.LOAD_CONFIG,
+				"The configuration option at " + key + " was set to an empty value. " +
+						"You must set it to a valid value - it cannot be empty.");
+	}
+
 	@Override
 	public Errors.When when() {
 		return when;
