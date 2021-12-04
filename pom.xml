@@ -108,9 +108,9 @@
 				<configuration>
 					<rules>
 						<requireJavaVersion>
-							<version>16</version>
+							<version>17</version>
 							<message>While this library maintains runtime compatibility with Java 8,
-								it requires JDK 16 as a build-time requirement.</message>
+								it requires JDK 17 as a build-time requirement.</message>
 						</requireJavaVersion>
 						<requireNoRepositories>
 							<message>Third-party repositories are not allowed</message>
