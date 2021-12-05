@@ -38,6 +38,7 @@ A type-safe, thread-safe, fail-fast, user-oriented, easy to setup, extensible an
 ### Example
 
 ```java
+@ConfSerialisers(URLSerialiser.class)
 public interface MyConfig {
 
   @DefaultInteger(3)
@@ -61,8 +62,7 @@ public interface MyConfig {
   
   @SubSection
   NestedSection nestedConfigSection();
-  
-  @ConfSerialiser(URLSerialiser.class)
+
   @DefaultString("https://github.com")
   URL validUrl();
 
