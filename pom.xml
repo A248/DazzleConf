@@ -15,7 +15,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<junit.version>5.9.2</junit.version>
-		<mockito.version>3.11.0</mockito.version>
+		<mockito.version>5.1.1</mockito.version>
 		<equalsverifier.version>3.6.1</equalsverifier.version>
 	</properties>
 	
