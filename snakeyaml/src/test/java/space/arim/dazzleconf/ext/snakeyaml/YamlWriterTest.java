@@ -1,7 +1,6 @@
-
 /*
  * DazzleConf
- * Copyright © 2020 Anand Beh
+ * Copyright © 2023 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -75,7 +74,7 @@ public class YamlWriterTest {
 			expectedLines = new ArrayList<>(expectedLines);
 			expectedLines.add("");
 		}
-		Assertions.assertLinesMatch(expectedLines, actualLines);
+		Assertions.assertLinesMatch(expectedLines, actualLines, "expected:\n" + expectedLines + "\nbut received:\n" + actualLines);
 	}
 
 	@ParameterizedTest
