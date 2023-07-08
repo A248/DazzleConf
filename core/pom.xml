@@ -59,39 +59,14 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-invoker-plugin</artifactId>
-				<version>3.2.2</version>
-				<executions>
-					<execution>
-						<id>install-artifacts</id>
-						<goals>
-							<goal>install</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>test-api-consumers</id>
-						<goals>
-							<goal>integration-test</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>verify-api-consumers</id>
-						<goals>
-							<goal>verify</goal>
-						</goals>
-					</execution>
-				</executions>
 				<configuration>
-					<cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
-					<localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
-					<settingsFile>src/it/settings.xml</settingsFile>
 					<parallelThreads>2</parallelThreads>
-					<goals>verify</goals>
 				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.pitest</groupId>
 				<artifactId>pitest-maven</artifactId>
-				<version>1.6.7</version>
+				<version>1.11.1</version>
 				<executions>
 					<execution>
 						<goals>
@@ -108,7 +83,7 @@
 					<dependency>
 						<groupId>org.pitest</groupId>
 						<artifactId>pitest-junit5-plugin</artifactId>
-						<version>0.14</version>
+						<version>1.1.2</version>
 					</dependency>
 				</dependencies>
 			</plugin>

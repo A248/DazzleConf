@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2021 Anand Beh
+ * Copyright © 2023 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -19,7 +19,7 @@
 
 package space.arim.dazzleconf.ext.snakeyaml;
 
-import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.DumperOptions.FlowStyle;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.comments.CommentLine;
 import org.yaml.snakeyaml.comments.CommentType;
@@ -90,7 +90,7 @@ final class FullWriter implements YamlWriter {
 			Node valueNode = valueToNode(value);
 			keyValuePairs.add(new NodeTuple(keyNode, valueNode));
 		});
-		return new MappingNode(Tag.MAP, keyValuePairs, DumperOptions.FlowStyle.BLOCK);
+		return new MappingNode(Tag.MAP, keyValuePairs, FlowStyle.AUTO);
 	}
 
 	private Node valueToNode(Object value) {

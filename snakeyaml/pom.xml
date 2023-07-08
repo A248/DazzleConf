@@ -24,6 +24,13 @@
 					</argLine>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-invoker-plugin</artifactId>
+				<configuration>
+					<parallelThreads>3</parallelThreads>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 	
@@ -35,7 +42,7 @@
 		<dependency>
 			<groupId>org.yaml</groupId>
 			<artifactId>snakeyaml</artifactId>
-			<version>1.28</version>
+			<version>1.33</version>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>

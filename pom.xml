@@ -14,9 +14,9 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-		<junit.version>5.7.2</junit.version>
-		<mockito.version>3.11.0</mockito.version>
-		<equalsverifier.version>3.6.1</equalsverifier.version>
+		<junit.version>5.9.2</junit.version>
+		<mockito.version>5.1.1</mockito.version>
+		<equalsverifier.version>3.13.2</equalsverifier.version>
 	</properties>
 	
 	<scm>
@@ -65,7 +65,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>3.2.0</version>
+				<version>3.2.1</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -78,7 +78,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>3.2.0</version>
+				<version>3.5.0</version>
 				<configuration>
 					<source>8</source>
 					<excludePackageNames>space.arim.dazzleconf.internal:space.arim.dazzleconf.internal.*</excludePackageNames>
@@ -96,7 +96,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-enforcer-plugin</artifactId>
-				<version>3.0.0-M3</version>
+				<version>3.2.1</version>
 				<executions>
 					<execution>
 						<id>enforce-rules</id>
@@ -126,7 +126,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
-				<version>1.6</version>
+				<version>3.0.1</version>
 				<executions>
 					<execution>
 						<id>sign-artifacts</id>
@@ -146,7 +146,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-release-plugin</artifactId>
-				<version>3.0.0-M1</version>
+				<version>3.0.0-M7</version>
 				<configuration>
 					<autoVersionSubmodules>true</autoVersionSubmodules>
 					<tagNameFormat>@{project.version}</tagNameFormat>
@@ -160,10 +160,11 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.8.1</version>
+					<version>3.10.1</version>
 					<configuration>
 						<!-- Compile module descriptor with Java 11 -->
 						<release>11</release>
+						<testRelease>17</testRelease>
 					</configuration>
 					<executions>
 						<!-- Compile everything else with Java 8 compatibility -->
@@ -179,19 +180,13 @@
 								</excludes>
 							</configuration>
 						</execution>
-						<execution>
-							<id>default-testCompile</id>
-							<configuration>
-								<release>16</release>
-							</configuration>
-						</execution>
 					</executions>
 				</plugin>
 				<!-- Testing -->
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
-					<version>3.0.0-M5</version>
+					<version>3.0.0-M9</version>
 					<configuration>
 						<trimStackTrace>false</trimStackTrace>
 						<argLine>-XX:TieredStopAtLevel=1 -XX:-TieredCompilation</argLine>
@@ -203,6 +198,37 @@
 							<version>${junit.version}</version>
 						</dependency>
 					</dependencies>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-invoker-plugin</artifactId>
+					<version>3.6.0</version>
+					<executions>
+						<execution>
+							<id>install-artifacts</id>
+							<goals>
+								<goal>install</goal>
+							</goals>
+						</execution>
+						<execution>
+							<id>test-api-consumers</id>
+							<goals>
+								<goal>integration-test</goal>
+							</goals>
+						</execution>
+						<execution>
+							<id>verify-api-consumers</id>
+							<goals>
+								<goal>verify</goal>
+							</goals>
+						</execution>
+					</executions>
+					<configuration>
+						<cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+						<localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
+						<settingsFile>src/it/settings.xml</settingsFile>
+						<goals>verify</goals>
+					</configuration>
 				</plugin>
 			</plugins>
 		</pluginManagement>

@@ -1,7 +1,6 @@
-
 /*
  * DazzleConf
- * Copyright © 2020 Anand Beh
+ * Copyright © 2023 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -69,13 +68,13 @@ public class YamlWriterTest {
 	 * @param actual the actual lines
 	 */
 	private static void assertLinesMatch(Stream<String> expected, Stream<String> actual) {
-		List<String> expectedLines = expected.collect(Collectors.toUnmodifiableList());
-		List<String> actualLines = actual.collect(Collectors.toUnmodifiableList());
+		List<String> expectedLines = expected.collect(Collectors.toCollection(ArrayList::new));
+		List<String> actualLines = actual.toList();
 		if (actualLines.size() == expectedLines.size() + 1) {
-			expectedLines = new ArrayList<>(expectedLines);
 			expectedLines.add("");
 		}
-		Assertions.assertLinesMatch(expectedLines, actualLines);
+		Assertions.assertLinesMatch(expectedLines, actualLines,
+				() -> "expected:\n" + expectedLines + "\nbut received:\n" + actualLines);
 	}
 
 	@ParameterizedTest

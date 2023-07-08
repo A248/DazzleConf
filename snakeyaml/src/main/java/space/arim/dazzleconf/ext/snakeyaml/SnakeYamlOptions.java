@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2020 Anand Beh
+ * Copyright © 2023 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -16,16 +16,15 @@
  * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
+
 package space.arim.dazzleconf.ext.snakeyaml;
+
+import org.yaml.snakeyaml.Yaml;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.function.Supplier;
-
-import org.yaml.snakeyaml.DumperOptions.FlowStyle;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.representer.Representer;
 
 /**
  * Options for SnakeYAML configurations
@@ -107,11 +106,7 @@ public final class SnakeYamlOptions {
 	 */
 	public static class Builder {
 		
-		private Supplier<Yaml> yamlSupplier = () -> {
-			Representer representer = new Representer();
-			representer.setDefaultFlowStyle(FlowStyle.BLOCK);
-			return new Yaml(representer);
-		};
+		private Supplier<Yaml> yamlSupplier;
 		private CommentMode commentMode = CommentMode.headerOnly();
 		private boolean useCommentingWriter;
 		private Charset charset = StandardCharsets.UTF_8;
@@ -122,7 +117,8 @@ public final class SnakeYamlOptions {
 		
 		/**
 		 * Sets the {@code Yaml} supplier for this builder to the specified one. The default is a
-		 * supplier which returns a {@code Yaml} instance with block flow style.
+		 * supplier which returns a {@code Yaml} instance with block flow style, and comments enabled
+		 * if comments are supported.
 		 * 
 		 * @param yamlSupplier the yaml supplier
 		 * @return this builder
@@ -179,6 +175,10 @@ public final class SnakeYamlOptions {
 		 * @return the built options
 		 */
 		public SnakeYamlOptions build() {
+			Supplier<Yaml> yamlSupplier = this.yamlSupplier;
+			if (yamlSupplier == null) {
+				yamlSupplier = DefaultYaml.SUPPLIER;
+			}
 			return new SnakeYamlOptions(yamlSupplier, commentMode, useCommentingWriter, charset);
 		}
 
