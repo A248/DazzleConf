@@ -20,8 +20,8 @@
 	</properties>
 	
 	<scm>
-		<connection>scm:git:git://github.com/A248/DazzleConf.git</connection>
-		<developerConnection>scm:git:https://github.com/A248/DazzleConf.git</developerConnection>
+		<connection>scm:git:ssh://git@github.com/A248/DazzleConf.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com/A248/DazzleConf.git</developerConnection>
 		<url>http://github.com/A248/DazzleConf/tree/master</url>
 	  <tag>HEAD</tag>
   </scm>
