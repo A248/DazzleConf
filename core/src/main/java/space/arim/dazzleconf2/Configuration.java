@@ -19,11 +19,16 @@
 
 package space.arim.dazzleconf2;
 
+import space.arim.dazzleconf2.migration.Migration;
 import space.arim.dazzleconf2.reflect.Instantiator;
 
-public interface Configuration {
+import java.util.List;
+
+public interface Configuration<C> {
 
     Instantiator getInstantiator();
+
+    List<Migration<?, C>> getMigrations();
 
     /**
      * Convenience method for building a configuration

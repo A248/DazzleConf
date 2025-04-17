@@ -19,18 +19,25 @@
 
 package space.arim.dazzleconf2.data;
 
+import space.arim.dazzleconf2.LoadResult;
+
 import java.io.IOException;
-import java.io.Reader;
-import java.nio.charset.Charset;
 
-public final class PathDataInput implements ReadableDataInput {
-    @Override
-    public String readToString(Charset charset) throws IOException {
-        return "";
-    }
+public interface DataSource {
 
-    @Override
-    public Reader openReader(Charset charset) throws IOException {
-        return null;
-    }
+    /**
+     * Writes the provided data tree to the source
+     *
+     * @param tree the data tree
+     * @throws IOException upon I/O failure
+     */
+    void writeTree(DataTree tree) throws IOException;
+
+    /**
+     * Reads a load result
+     *
+     * @return a load result of the data tree
+     */
+    LoadResult<DataTree> readTree();
+
 }

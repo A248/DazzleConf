@@ -17,7 +17,15 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.data;
+package space.arim.dazzleconf2.migration;
 
-public interface BinaryDataInput {
+import space.arim.dazzleconf2.LoadResult;
+
+import java.io.IOException;
+
+public class ConfigurationMigrateSource<C> implements MigrateSource<C> {
+    @Override
+    public LoadResult<C> load() throws IOException {
+        return null;
+    }
 }

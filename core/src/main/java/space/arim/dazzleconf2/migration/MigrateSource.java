@@ -17,27 +17,14 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.error;
+package space.arim.dazzleconf2.migration;
 
-/**
- * Thrown whenever a preventable problem in how the configuration was constructed or defined arises at runtime.
- */
-public final class DeveloperMistakeException extends RuntimeException {
+import space.arim.dazzleconf2.LoadResult;
 
-    /**
-     * Creates from the given message
-     * @param message the message
-     */
-    public DeveloperMistakeException(String message) {
-        super(message);
-    }
+import java.io.IOException;
 
-    /**
-     * Creates from a message and cause
-     * @param message the message
-     * @param cause the cause
-     */
-    public DeveloperMistakeException(String message, Throwable cause) {
-        super(message, cause);
-    }
+public interface MigrateSource<C> {
+
+    LoadResult<C> load() throws IOException;
+
 }

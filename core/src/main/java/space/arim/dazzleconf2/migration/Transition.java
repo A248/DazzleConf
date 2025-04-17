@@ -19,6 +19,11 @@
 
 package space.arim.dazzleconf2.migration;
 
+/**
+ * Converter interface for moving from one configuration object to another
+ * @param <C_OLD> the old config type
+ * @param <C_NEW> the new config type
+ */
 public interface Transition<C_OLD, C_NEW> {
 
     /**
@@ -29,4 +34,22 @@ public interface Transition<C_OLD, C_NEW> {
      */
     C_NEW migrateFrom(C_OLD previous);
 
+    /**
+     * Chains on another transition after this one
+     *
+     * @param next the next transition
+     * @return the combined product
+     * @param <C_NEWER> the newest config type
+     */
+    default <C_NEWER> Transition<C_OLD, C_NEWER> chain(Transition<C_NEW, C_NEWER> next) {
+        class Chained implements Transition<C_OLD, C_NEWER> {
+
+            @Override
+            public C_NEWER migrateFrom(C_OLD previous) {
+                C_NEW intermediate = Transition.this.migrateFrom(previous);
+                return next.migrateFrom(intermediate);
+            }
+        }
+        return new Chained();
+    }
 }

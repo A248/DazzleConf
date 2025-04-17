@@ -17,21 +17,7 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.data;
+package space.arim.dazzleconf2.liaison;
 
-import space.arim.dazzleconf2.LoadResult;
-
-public interface FormatBackend {
-
-    LoadResult<DataTree> loadTreeFrom(HumanReadableRoot dataInput);
-
-    /**
-     * Whether comments are supported in the following location. If comments are not supported there, this format
-     * backend is free to ignore them during the serialization process.
-     *
-     * @param location where are we talking about
-     * @return if comments are supported in this location
-     */
-    boolean supportsComments(DataTree.CommentLocation location);
-
+public interface TypeLiaison {
 }

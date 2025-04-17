@@ -17,36 +17,27 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.data;
-
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.nio.charset.Charset;
-import java.util.Objects;
+package space.arim.dazzleconf2;
 
 /**
- * Implementation of data input for a string
+ * Thrown whenever a preventable problem in how the configuration was constructed or defined arises at runtime.
  */
-public final class StringDataInput implements ReadableDataInput {
-
-    private final String content;
+public final class DeveloperMistakeException extends RuntimeException {
 
     /**
-     * Creates from the given nonnull content
-     * @param content the content
+     * Creates from the given message
+     * @param message the message
      */
-    public StringDataInput(String content) {
-        this.content = Objects.requireNonNull(content);
+    public DeveloperMistakeException(String message) {
+        super(message);
     }
 
-    @Override
-    public String readToString(Charset charset) throws IOException {
-        return content;
-    }
-
-    @Override
-    public Reader openReader(Charset charset) throws IOException {
-        return new StringReader(content);
+    /**
+     * Creates from a message and cause
+     * @param message the message
+     * @param cause the cause
+     */
+    public DeveloperMistakeException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

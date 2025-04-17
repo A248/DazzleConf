@@ -21,30 +21,48 @@ package space.arim.dazzleconf2.data;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.nio.charset.Charset;
+import java.io.Writer;
 
 /**
  * Unifying interface for string based data input.
  *
  */
-public interface ReadableDataInput {
+public interface HumanReadableRoot extends DataRoot {
 
     /**
-     * Reads to a string using the given charset
+     * Reads to a string
      *
-     * @param charset the character set to use
      * @return the read content
      * @throws IOException upon failure to open
      */
-    String readToString(Charset charset) throws IOException;
+    String readToString() throws IOException;
 
     /**
-     * Opens a reader to the data using the character set
+     * Opens a reader to the data
      *
-     * @param charset the character set to use
-     * @return the reader, which should be closed when finished
+     * @param <R> the result type
+     * @param operation the operation
+     * @return the operation result
      * @throws IOException upon failure to open
      */
-    Reader openReader(Charset charset) throws IOException;
+    <R> R useReader(Operation<R, Reader> operation) throws IOException;
+
+    /**
+     * Writes to a string
+     *
+     * @param content the content to write
+     * @throws IOException upon failure to write
+     */
+    void writeString(String content) throws IOException;
+
+    /**
+     * Opens a writer for the data
+     *
+     * @param <R> the result type
+     * @param operation the operation
+     * @return the operation result
+     * @throws IOException upon failure to open
+     */
+    <R> R openWriter(Operation<R, Writer> operation) throws IOException;
 
 }

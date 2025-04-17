@@ -21,8 +21,10 @@ package space.arim.dazzleconf2;
 
 /**
  * Builder for {@link Configuration}
+ *
+ * @param <C> the configuration type
  */
-public final class ConfigurationBuilder {
+public final class ConfigurationBuilder<C> {
 
     /**
      * Creates
