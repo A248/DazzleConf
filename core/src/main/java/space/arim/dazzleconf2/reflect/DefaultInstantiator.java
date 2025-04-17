@@ -32,12 +32,12 @@ import java.util.Set;
  * Default implementation of {@link Instantiator} using standard proxy reflection
  *
  */
-public final class ProxyReflectionInstantiator implements Instantiator {
+public final class DefaultInstantiator implements Instantiator {
 
     /**
      * Creates
      */
-    public ProxyReflectionInstantiator() {}
+    public DefaultInstantiator() {}
 
     @Override
     public Object generate(ClassLoader classLoader, Set<Class<?>> targets, MethodYield methodYield) {
@@ -61,20 +61,20 @@ public final class ProxyReflectionInstantiator implements Instantiator {
                 }
             }
         }
-        ProxyAgentToValues proxyAgent = new ProxyAgentToValues(fastValues);
-        Object proxy = Proxy.newProxyInstance(classLoader, targets.toArray(Class[]::new), proxyAgent);
+        ProxyHandlerToValues proyHandler = new ProxyHandlerToValues(fastValues);
+        Object proxy = Proxy.newProxyInstance(classLoader, targets.toArray(Class[]::new), proyHandler);
         if (defaultMethods != null) {
-            proxyAgent.initDefaultMethods(proxy, defaultMethods);
+            proyHandler.initDefaultMethods(proxy, defaultMethods);
         }
         return proxy;
     }
 
     @Override
     public <I> ReloadShell<I> generateShell(ClassLoader classLoader, Class<I> iface, Set<MethodId> methods) {
-        ProxyAgentToDelegate<I> proxyAgent = new ProxyAgentToDelegate<>();
+        ProxyHandlerToDelegate<I> proxyHandler = new ProxyHandlerToDelegate<>();
         @SuppressWarnings("unchecked")
-        I shell = (I) Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyAgent);
-        return proxyAgent.new AsReloadShell(shell);
+        I shell = (I) Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
+        return proxyHandler.new AsReloadShell(shell);
     }
 
 }

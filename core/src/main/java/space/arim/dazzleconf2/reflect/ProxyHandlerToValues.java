@@ -28,12 +28,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-final class ProxyAgentToValues extends ProxyAgent {
+final class ProxyHandlerToValues extends ProxyHandler {
 
     private final Map<String, Object> fastValues;
     private Map<Method, MethodHandle> defaultMethodsMap;
 
-    ProxyAgentToValues(Map<String, Object> fastValues) {
+    ProxyHandlerToValues(Map<String, Object> fastValues) {
         this.fastValues = ImmutableCollections.mapOf(fastValues);
     }
 

@@ -19,6 +19,12 @@
 
 package space.arim.dazzleconf2;
 
+import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.reflect.DefaultInstantiator;
+import space.arim.dazzleconf2.reflect.Instantiator;
+
+import java.util.Objects;
+
 /**
  * Builder for {@link Configuration}
  *
@@ -26,10 +32,30 @@ package space.arim.dazzleconf2;
  */
 public final class ConfigurationBuilder<C> {
 
+    private final Class<C> configClass;
+
+    // Everything here has defaults
+    private Instantiator instantiator = new DefaultInstantiator();
+
     /**
      * Creates
      */
-    public ConfigurationBuilder() {}
+    public ConfigurationBuilder(Class<C> configClass) {
+        this.configClass = Objects.requireNonNull(configClass, "config class");
+    }
 
+    public FinalStep<C> backend(Backend backend) {
+        return new FinalStep<>(this, backend);
+    }
 
+    public static final class FinalStep<C> {
+
+        private final ConfigurationBuilder<C> builder;
+        private final Backend backend;
+
+        FinalStep(ConfigurationBuilder<C> builder, Backend backend) {
+            this.builder = builder;
+            this.backend = Objects.requireNonNull(backend, "backend");
+        }
+    }
 }

@@ -17,7 +17,7 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.data;
+package space.arim.dazzleconf2.backend;
 
 import java.io.*;
 import java.nio.channels.Channels;
@@ -34,7 +34,7 @@ import java.util.Objects;
  * Data root from a path
  *
  */
-public final class PathRoot implements HumanReadableRoot, BinaryRoot {
+public final class PathRoot implements ReadableRoot, BinaryRoot {
 
     private final Path path;
     private final Charset charset;

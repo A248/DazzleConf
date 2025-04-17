@@ -17,7 +17,7 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.data;
+package space.arim.dazzleconf2.backend;
 
 import java.io.*;
 import java.util.Objects;
@@ -25,7 +25,7 @@ import java.util.Objects;
 /**
  * Implementation of data root for a string
  */
-public final class StringRoot implements HumanReadableRoot {
+public final class StringRoot implements ReadableRoot {
 
     private String content;
 

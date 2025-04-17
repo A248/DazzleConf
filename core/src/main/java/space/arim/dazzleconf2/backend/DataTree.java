@@ -17,7 +17,7 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.data;
+package space.arim.dazzleconf2.backend;
 
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
 
@@ -81,6 +81,13 @@ public final class DataTree {
      */
     public Collection<Object> keySetView() {
         return Collections.unmodifiableSet(data.keySet());
+    }
+
+    /**
+     * Clears all data
+     */
+    public void clear() {
+        data.clear();
     }
 
     /**

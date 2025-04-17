@@ -17,52 +17,52 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.data;
+package space.arim.dazzleconf2.backend;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
+import java.io.*;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
-/**
- * Unifying interface for string based data input.
- *
- */
-public interface HumanReadableRoot extends DataRoot {
+public interface BinaryRoot extends DataRoot {
 
     /**
-     * Reads to a string
-     *
-     * @return the read content
-     * @throws IOException upon failure to open
-     */
-    String readToString() throws IOException;
-
-    /**
-     * Opens a reader to the data
+     * Opens a read channel for the data
      *
      * @param <R> the result type
      * @param operation the operation
      * @return the operation result
      * @throws IOException upon failure to open
      */
-    <R> R useReader(Operation<R, Reader> operation) throws IOException;
+    <R> R openReadChannel(Operation<R, ReadableByteChannel> operation) throws IOException;
 
     /**
-     * Writes to a string
-     *
-     * @param content the content to write
-     * @throws IOException upon failure to write
-     */
-    void writeString(String content) throws IOException;
-
-    /**
-     * Opens a writer for the data
+     * Opens an input stream for the data
      *
      * @param <R> the result type
      * @param operation the operation
      * @return the operation result
      * @throws IOException upon failure to open
      */
-    <R> R openWriter(Operation<R, Writer> operation) throws IOException;
+    <R> R openInputStream(Operation<R, InputStream> operation) throws IOException;
+
+    /**
+     * Opens a write channel to the data
+     *
+     * @param <R> the result type
+     * @param operation the operation
+     * @return the operation result
+     * @throws IOException upon failure to open
+     */
+    <R> R openWriteChannel(Operation<R, WritableByteChannel> operation) throws IOException;
+
+    /**
+     * Opens an output stream to the data
+     *
+     * @param <R> the result type
+     * @param operation the operation
+     * @return the operation result
+     * @throws IOException upon failure to open
+     */
+    <R> R openOutputStream(Operation<R, OutputStream> operation) throws IOException;
 
 }

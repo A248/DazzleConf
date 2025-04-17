@@ -24,7 +24,7 @@ import space.arim.dazzleconf2.ReloadShell;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-final class ProxyAgentToDelegate<I> extends ProxyAgent {
+final class ProxyHandlerToDelegate<I> extends ProxyHandler {
 
     private volatile I delegate;
 
@@ -55,7 +55,7 @@ final class ProxyAgentToDelegate<I> extends ProxyAgent {
 
         @Override
         public void setCurrentDelegate(I delegate) {
-            ProxyAgentToDelegate.this.delegate = delegate;
+            ProxyHandlerToDelegate.this.delegate = delegate;
         }
 
         @Override

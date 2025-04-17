@@ -17,36 +17,36 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.data;
+package space.arim.dazzleconf2.backend;
+
+import space.arim.dazzleconf2.LoadResult;
 
 import java.io.IOException;
 
-public interface DataRoot {
+public interface Backend {
 
     /**
-     * IO proof, functional interface for use with reader/writer methods
-     * @param <R> the result type
-     * @param <U> the utility type
+     * Writes the provided data tree to the source
+     *
+     * @param tree the data tree
+     * @throws IOException upon I/O failure
      */
-    interface Operation<R, U> {
+    void writeTree(DataTree tree) throws IOException;
 
-        /**
-         * Instructs the caller that this implementation does not buffer its calls to the utility in
-         * {@link #operateUsing(Object)}
-         *
-         * @return whether this implementation buffers of its own accord
-         */
-        default boolean handlesBuffering() {
-            return false;
-        }
+    /**
+     * Reads a load result
+     *
+     * @return a load result of the data tree
+     */
+    LoadResult<DataTree> readTree();
 
-        /**
-         * Performs the operation
-         * @param utility the utility with which it happens
-         * @return the return value
-         * @throws IOException upon failure
-         */
-        R operateUsing(U utility) throws IOException;
-    }
+    /**
+     * Whether comments are supported in the following location. If comments are not supported there, this format
+     * backend is free to ignore them during {@link #writeTree(DataTree)}
+     *
+     * @param location where are we talking about
+     * @return if comments are supported in this location
+     */
+    boolean supportsComments(DataTree.CommentLocation location);
 
 }

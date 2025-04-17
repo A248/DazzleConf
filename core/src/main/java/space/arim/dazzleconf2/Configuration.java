@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2;
 
+import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.migration.Migration;
 import space.arim.dazzleconf2.reflect.Instantiator;
 
@@ -30,12 +31,16 @@ public interface Configuration<C> {
 
     List<Migration<?, C>> getMigrations();
 
+    Backend getBackend();
+
     /**
      * Convenience method for building a configuration
+     *
+     * @param <C> the config type
      * @return a config builder
      */
-    static ConfigurationBuilder builder() {
-        return new ConfigurationBuilder();
+    static <C> ConfigurationBuilder<C> builder(Class<C> configClass) {
+        return new ConfigurationBuilder<>(configClass);
     }
 
 }
