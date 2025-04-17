@@ -1,0 +1,72 @@
+/*
+ * DazzleConf
+ * Copyright © 2025 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
+ * and navigate to version 3 of the GNU Lesser General Public License.
+ */
+
+package space.arim.dazzleconf2.migration;
+
+import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.backend.Backend;
+
+import java.io.UncheckedIOException;
+import java.util.Objects;
+
+/**
+ * A migration package
+ *
+ * @param <C_OLD> the old config type
+ * @param <C_NEW> the new config type
+ */
+public final class Migration<C_OLD, C_NEW> {
+
+    private final MigrateSource<C_OLD> migrateSource;
+    private final Transition<C_OLD, C_NEW> transition;
+
+    /**
+     * Creates from a source and transition
+     * @param migrateSource the migration source
+     * @param transition the transition
+     */
+    public Migration(MigrateSource<C_OLD> migrateSource, Transition<C_OLD, C_NEW> transition) {
+        this.migrateSource = Objects.requireNonNull(migrateSource, "migrateSource");
+        this.transition = Objects.requireNonNull(transition, "transition");
+    }
+
+    /**
+     * Tries to migrate. The given backend is the one used for the main configuration, and it may or may not be
+     * necessary to use in the implementation.
+     *
+     * @param mainBackend the backend for the main, up-to-date configuration
+     * @return a load result that yields the newly transitioned configuration
+     */
+    public LoadResult<C_NEW> tryMigrate(Backend mainBackend) {
+        return migrateSource.load(mainBackend).map(transition::migrateFrom);
+    }
+
+    /**
+     * Signals that the migration was fully completed.
+     * <p>
+     * This means that the old config version may not be necessary to keep around. It might be time to delete, or move
+     * to a different place (like config_old.yml) for archival purposes.
+     *
+     * @throws UncheckedIOException upon an I/O failure
+     */
+    public void onCompletion() {
+        migrateSource.onCompletion();
+    }
+
+}

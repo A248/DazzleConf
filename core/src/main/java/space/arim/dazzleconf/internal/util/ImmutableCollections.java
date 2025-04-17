@@ -1,19 +1,19 @@
-/* 
- * DazzleConf-core
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-core is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2025 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-core is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 package space.arim.dazzleconf.internal.util;
@@ -58,7 +58,11 @@ public final class ImmutableCollections {
 	
 	@SuppressWarnings("unchecked")
 	public static <E> List<E> listOf(Collection<? extends E> coll) {
-		return (List<E>) listOf(coll.toArray());
+		Object[] arr = coll.toArray();
+		if (arr.length == 0) {
+			return Collections.emptyList();
+		}
+		return (List<E>) listOf(arr);
 	}
 	
 	public static <E> Set<E> emptySet() {
@@ -71,6 +75,9 @@ public final class ImmutableCollections {
 	}
 	
 	public static <E> Set<E> setOf(Collection<? extends E> coll) {
+		if (coll.isEmpty()) {
+			return Collections.emptySet();
+		}
 		Set<E> copy = new HashSet<>(coll);
 		for (E element : copy) {
 			Objects.requireNonNull(element, "element");
@@ -83,6 +90,9 @@ public final class ImmutableCollections {
 	}
 	
 	public static <K, V> Map<K, V> mapOf(Map<? extends K, ? extends V> map) {
+		if (map.isEmpty()) {
+			return Collections.emptyMap();
+		}
 		Map<K, V> copy = new HashMap<>(map);
 		for (Map.Entry<K, V> entry : copy.entrySet()) {
 			Objects.requireNonNull(entry.getKey(), "key");
