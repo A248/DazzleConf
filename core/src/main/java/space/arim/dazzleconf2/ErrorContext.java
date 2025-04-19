@@ -19,7 +19,10 @@
 
 package space.arim.dazzleconf2;
 
-import java.io.IOException;
+import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import space.arim.dazzleconf2.translation.LibraryLangKey;
+import space.arim.dazzleconf2.translation.LibraryLang;
+
 import java.util.*;
 
 /**
@@ -31,36 +34,59 @@ public interface ErrorContext {
     /**
      * Path of the configuration entry being scanned or operated upon
      */
-    Key<Optional<String>> ENTRY_PATH = new Key<>("Entry path");
+    Key<List<String>> ENTRY_PATH = new Key<>(
+            LibraryLang::entryPath,
+            (value) -> {
+                if (value == null) {
+                    return ImmutableCollections.emptyList();
+                } else {
+                    @SuppressWarnings("unchecked")
+                    List<String> casted = (List<String>) value;
+                    return casted;
+                }
+            },
+            (builder, value) -> {
+                builder.append(String.join(".", value));
+            }
+    );
 
     /**
      * Line number in the source data
      */
-    Key<OptionalInt> LINE_NUMBER = new Key<>("Line number");
+    Key<OptionalInt> LINE_NUMBER = new Key<>(
+            LibraryLang::lineNumber,
+            value -> value == null ? OptionalInt.empty() : OptionalInt.of((Integer) value),
+            (builder, lineNumber) -> {
+                lineNumber.ifPresentOrElse(builder::append, () -> builder.append("<none>"));
+            }
+    );
 
     /**
      * Error message provided by the configuration format backend
      */
-    Key<Optional<String>> BACKEND_MESSAGE = new Key<>("Backend message");
+    Key<Optional<String>> BACKEND_MESSAGE = new Key<>(
+            LibraryLang::backendMessage,
+            value -> Optional.of((String) value),
+            (builder, backendMsg) -> {
+                backendMsg.ifPresentOrElse(builder::append, () -> builder.append("<none>"));
+            }
+    );
 
     /**
-     * IO error, usually thrown by the configuration format backend
-     */
-    Key<List<IOException>> IO_ERROR = new Key<>("IO error");
-
-    /**
-     * Other errors that might happen as part of a "more than one" operation, but are secondary to this error.
-     * <p>
-     * For example, when a configuration cannot be loaded and none of the migrations can be loaded either, a result
-     * is returned where the reasons for the migrations' failure to load become the auxiliary errors.
-     */
-    Key<List<ErrorContext>> AUXILIARIES = new Key<>("Auxiliary errors");
-
-    /**
-     * Gets the main message to display as the reason for this error
+     * Gets the main message to display as the reason for this error. This won't include additional context; for that
+     * see {@link #display}.
+     *
      * @return the message
      */
-    String message();
+    String mainMessage();
+
+    /**
+     * Formats this error context and includes all information. This message is user displayable, and it is also
+     * intended to be sufficiently informative to avert the need for stacktraces.
+     *
+     * @return a displayable
+     */
+    String display();
 
     /**
      * Gets a piece of context from this error context, if it is set
@@ -84,15 +110,21 @@ public interface ErrorContext {
      */
     final class Key<V> {
 
-        private final String id;
+        final LibraryLangKey langKey;
+        final MapReturnValue<V> mapReturnValue;
+        final FormatData<V> formatData;
 
-        Key(String id) {
-            this.id = Objects.requireNonNull(id);
+        Key(LibraryLangKey langKey, MapReturnValue<V> mapReturnValue, FormatData<V> formatData) {
+            this.langKey = langKey;
+            this.mapReturnValue = mapReturnValue;
+            this.formatData = formatData;
         }
 
-        @Override
-        public String toString() {
-            return id;
+        interface MapReturnValue<V> {
+            V map(Object value);
+        }
+        interface FormatData<V> {
+            void format(StringBuilder builder, V value);
         }
     }
 }

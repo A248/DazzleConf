@@ -17,15 +17,17 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.migration;
+package space.arim.dazzleconf2;
 
-import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
-import java.io.IOException;
+final class Definition<C> {
 
-public class ConfigurationMigrateSource<C> implements MigrateSource<C> {
-    @Override
-    public LoadResult<C> load() throws IOException {
-        return null;
+    private final TypeToken<C> configType;
+
+    Definition(TypeToken<C> configType) {
+        this.configType = configType;
     }
+
+
 }

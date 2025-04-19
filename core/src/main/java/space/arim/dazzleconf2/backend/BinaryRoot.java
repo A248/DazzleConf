@@ -23,6 +23,10 @@ import java.io.*;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * Data roots which are capable of working with raw bytes.
+ *
+ */
 public interface BinaryRoot extends DataRoot {
 
     /**

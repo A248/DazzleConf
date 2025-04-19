@@ -17,7 +17,7 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.liaison;
+package space.arim.dazzleconf2.engine;
 
-public interface TypeLiaison {
+public interface MethodStream {
 }

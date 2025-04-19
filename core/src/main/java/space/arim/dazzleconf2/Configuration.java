@@ -20,27 +20,113 @@
 package space.arim.dazzleconf2;
 
 import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.engine.KeyMapper;
+import space.arim.dazzleconf2.engine.TypeLiaison;
+import space.arim.dazzleconf2.engine.UpdateListener;
 import space.arim.dazzleconf2.migration.Migration;
 import space.arim.dazzleconf2.reflect.Instantiator;
+import space.arim.dazzleconf2.reflect.ReifiedType;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
-public interface Configuration<C> {
+/**
+ * Main interface
+ *
+ * @param <C> the configuration type
+ */
+public interface Configuration<C> extends ConfigurationReadWrite<C> {
 
+    /**
+     * Gets the locale used at the library level. This will be used to display error messages such as in
+     * {@link ErrorContext#display()}
+     *
+     * @return the locale for error messages
+     */
+    Locale getLocale();
+
+    /**
+     * Gets all type liaisons. The order of the list is relevant, with earlier values being sought to hande types
+     * before later values.
+     *
+     * @return the type liaisons, which are immutable
+     */
+    List<TypeLiaison> getTypeLiaisons();
+
+    /**
+     * Gets the key mapper if one was specified during construction. Note that a specified key mapper will override
+     * the standard key mapper provided by the backend ({@link Backend#recommendKeyMapper()}
+     *
+     * @return the key mapper if specified
+     */
+    Optional<KeyMapper> getKeyMapper();
+
+    /**
+     * Gets the instantiator responsible for constructing instances
+     *
+     * @return the instantiator
+     */
     Instantiator getInstantiator();
 
+    /**
+     * Gets the migrations. The order of the list is relevant, with earlier migrations being tried before later ones.
+     *
+     * @return the migrations, which are immutable
+     */
     List<Migration<?, C>> getMigrations();
-
-    Backend getBackend();
 
     /**
      * Convenience method for building a configuration
      *
      * @param <C> the config type
+     * @param configType the config class
      * @return a config builder
      */
-    static <C> ConfigurationBuilder<C> builder(Class<C> configClass) {
-        return new ConfigurationBuilder<>(configClass);
+    static <C> ConfigurationBuilder<C> builder(Class<C> configType) {
+        if (configType.getTypeParameters().length != 0) {
+            throw new IllegalArgumentException("Cannot use Configuration.builder(Class) with a generic type.");
+        }
+        return new ConfigurationBuilder<>(new TypeToken<>(new ReifiedType.Annotated(configType, configType)));
     }
+
+    /**
+     * Convenience method for building a configuration
+     *
+     * @param <C> the config type
+     * @param configType the reified type token
+     * @return a config builder
+     */
+    static <C> ConfigurationBuilder<C> builder(TypeToken<C> configType) {
+        return new ConfigurationBuilder<>(configType);
+    }
+
+    /**
+     * Configures, migrates, and/or updates the backend as needed.
+     * <p>
+     * This "all-in-one" function leverages multiple of this library's best features. t checks for migrations and
+     * updates the config as necessary, up to the latest version. If the config was on the latest version, loads it
+     * and substitutes missing values as necessary. Lastly, if any of these operations produced a change, writes the
+     * config back to the backend. Yields the instantiated configuration.
+     *
+     * @param backend the format backend
+     * @return the loaded configuration
+     */
+    LoadResult<C> configureWith(Backend backend);
+
+    /**
+     * Configures, migrates, and/or updates the backend as needed.
+     * <p>
+     * This "all-in-one" function leverages multiple of this library's best features. t checks for migrations and
+     * updates the config as necessary, up to the latest version. If the config was on the latest version, loads it
+     * and substitutes missing values as necessary. Lastly, if any of these operations produced a change, writes the
+     * config back to the backend. Yields the instantiated configuration.
+     *
+     * @param backend the format backend
+     * @param updateListener a listener which informs the caller if certain events happened
+     * @return the loaded configuration
+     */
+    LoadResult<C> configureWith(Backend backend, UpdateListener updateListener);
 
 }

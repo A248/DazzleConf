@@ -22,7 +22,7 @@ package space.arim.dazzleconf2.backend;
 import java.io.IOException;
 
 /**
- * Base interface for {@link BinaryRoot} and {@link ReadableRoot}
+ * The root source of configuration data. This could be a file, a string, or a byte array.
  */
 public interface DataRoot {
 

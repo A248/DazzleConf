@@ -19,17 +19,24 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * A potentially generic type, with its arguments fully specified
+ * A possibly generic type, with its arguments fully specified.
+ * <p>
+ * An equality contract exists for all ReifiedTypes, including subtypes like {@link ReifiedType.Annotated}, based on
+ * the raw type and reified arguments.
  *
  */
-public final class ReifiedType {
+public class ReifiedType {
 
     private final Class<?> rawType;
     private final ReifiedType[] arguments;
+
+    static final ReifiedType[] EMPTY_ARR = new ReifiedType[] {};
 
     /**
      * Builds from nonnull input arguments.
@@ -40,6 +47,16 @@ public final class ReifiedType {
     public ReifiedType(Class<?> rawType, ReifiedType[] arguments) {
         this.rawType = Objects.requireNonNull(rawType, "rawType");
         this.arguments = arguments.clone();
+    }
+
+    /**
+     * Builds from simple raw type
+     *
+     * @param rawType the raw type
+     */
+    public ReifiedType(Class<?> rawType) {
+        this.rawType = Objects.requireNonNull(rawType, "rawType");
+        this.arguments = EMPTY_ARR;
     }
 
     /**
@@ -80,7 +97,7 @@ public final class ReifiedType {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public final boolean equals(Object o) {
         if (!(o instanceof ReifiedType)) return false;
 
         ReifiedType that = (ReifiedType) o;
@@ -88,7 +105,7 @@ public final class ReifiedType {
     }
 
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         int result = rawType.hashCode();
         result = 31 * result + Arrays.hashCode(arguments);
         return result;
@@ -100,5 +117,82 @@ public final class ReifiedType {
                 "rawType=" + rawType +
                 ", arguments=" + Arrays.toString(arguments) +
                 '}';
+    }
+
+    /**
+     * Annotation capable extension to a reified type.
+     */
+    public static final class Annotated extends ReifiedType {
+
+        private final Annotation[] annotations;
+
+        /**
+         * Creates from nonnull input arguments
+         *
+         * @param rawType the raw type
+         * @param arguments, which are copied to ensure immutability
+         * @param annotations the annotations source
+         */
+        public Annotated(Class<?> rawType, ReifiedType.Annotated[] arguments, AnnotatedElement annotations) {
+            super(rawType, arguments);
+            this.annotations = annotations.getAnnotations();
+        }
+
+        /**
+         * Creates from nonnull input arguments
+         *
+         * @param rawType the raw type
+         * @param annotations the annotations source
+         */
+        public Annotated(Class<?> rawType, AnnotatedElement annotations) {
+            super(rawType);
+            this.annotations = annotations.getAnnotations();
+        }
+
+        /**
+         * Gets an annotation if it is set. If multiple are found, the first is returned.
+         * @param annotationClass the annotation class
+         * @return the annotation if present, or null if not found
+         * @param <A> the annotation type
+         */
+        public <A extends Annotation> A getAnnotation(Class<A> annotationClass) {
+            for (Annotation check : annotations) {
+                if (annotationClass.equals(check.annotationType())) {
+                    return annotationClass.cast(check);
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Gets the argument at a certain index
+         *
+         * @param index the index
+         * @return the argument at it
+         * @throws IndexOutOfBoundsException if the index is out of range
+         */
+        @Override
+        public ReifiedType.Annotated argumentAt(int index) {
+            return (ReifiedType.Annotated) super.argumentAt(index);
+        }
+
+        /**
+         * Gets all the arguments
+         *
+         * @return a copy of the arguments
+         */
+        @Override
+        public ReifiedType.Annotated[] arguments() {
+            return (ReifiedType.Annotated[]) super.arguments();
+        }
+
+        @Override
+        public String toString() {
+            return "ReifiedType.Annotated{" +
+                    "rawType=" + rawType() +
+                    ", arguments=" + Arrays.toString(arguments()) +
+                    ", annotations=" + Arrays.toString(annotations) +
+                    '}';
+        }
     }
 }

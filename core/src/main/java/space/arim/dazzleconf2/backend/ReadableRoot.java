@@ -24,7 +24,7 @@ import java.io.Reader;
 import java.io.Writer;
 
 /**
- * Unifying interface for string based data input.
+ * Unifying interface for string based data roots.
  *
  */
 public interface ReadableRoot extends DataRoot {

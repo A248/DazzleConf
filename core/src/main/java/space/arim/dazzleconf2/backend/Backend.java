@@ -19,26 +19,33 @@
 
 package space.arim.dazzleconf2.backend;
 
+import space.arim.dazzleconf2.Configuration;
 import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.engine.KeyMapper;
 
-import java.io.IOException;
+import java.io.UncheckedIOException;
 
+/**
+ * Configuration format backend for reading and writing data trees
+ *
+ */
 public interface Backend {
+
+    /**
+     * Reads a data tree
+     *
+     * @return a load result of the data tree
+     * @throws UncheckedIOException upon I/O failure
+     */
+    LoadResult<DataTree> readTree();
 
     /**
      * Writes the provided data tree to the source
      *
      * @param tree the data tree
-     * @throws IOException upon I/O failure
+     * @throws UncheckedIOException upon I/O failure
      */
-    void writeTree(DataTree tree) throws IOException;
-
-    /**
-     * Reads a load result
-     *
-     * @return a load result of the data tree
-     */
-    LoadResult<DataTree> readTree();
+    void writeTree(DataTree tree);
 
     /**
      * Whether comments are supported in the following location. If comments are not supported there, this format
@@ -48,5 +55,14 @@ public interface Backend {
      * @return if comments are supported in this location
      */
     boolean supportsComments(DataTree.CommentLocation location);
+
+    /**
+     * Recommends a {@link KeyMapper} appropriate to the backend format. When loading a config with
+     * {@link Configuration#configureWith(Backend)}, the recommended key mapper will be selected from this method,
+     * unless the <code>Configuration</code> already declares its own key mapper.
+     *
+     * @return the recommended key mapper
+     */
+    KeyMapper recommendKeyMapper();
 
 }

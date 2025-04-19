@@ -19,12 +19,9 @@
 
 package space.arim.dazzleconf2.reflect;
 
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
-
 import java.lang.reflect.Method;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Unique identifier for a method
@@ -34,19 +31,19 @@ public final class MethodId {
 
     private final Object methodOrName;
     private final ReifiedType returnType;
-    private final List<ReifiedType> arguments;
+    private final ReifiedType[] parameters;
 
     /**
      * Builds from nonnull arguments
      *
      * @param name the method name
      * @param returnType its return type
-     * @param arguments the method arguments, excluding the receiver type
+     * @param parameters the method parameters, excluding the receiver type
      */
-    public MethodId(String name, ReifiedType returnType, List<ReifiedType> arguments) {
+    public MethodId(String name, ReifiedType returnType, ReifiedType[] parameters) {
         this.methodOrName = Objects.requireNonNull(name, "name");
         this.returnType = Objects.requireNonNull(returnType, "returnType");
-        this.arguments = ImmutableCollections.listOf(arguments);
+        this.parameters = parameters.clone();
     }
 
     /**
@@ -54,27 +51,32 @@ public final class MethodId {
      *
      * @param method the method
      * @param returnType its return type
-     * @param arguments the method arguments, excluding the receiver type
+     * @param parameters the method parameters, excluding the receiver type
      * @throws IllegalArgumentException if the method information does not match the return type or arguments
      */
-    public MethodId(Method method, ReifiedType returnType, List<ReifiedType> arguments) {
+    public MethodId(Method method, ReifiedType returnType, ReifiedType[] parameters) {
         if (!method.getReturnType().equals(returnType.rawType())) {
             throw new IllegalArgumentException(
-                    "Return type mismatch; expected " + method.getReturnType() + " but was " + returnType.rawType()
+                    "Return type mismatch; expected " + method.getReturnType() + ", not " + returnType.rawType()
             );
         }
-        for (int n = 0; n < method.getParameterCount(); n++) {
+        if (method.getParameterCount() != parameters.length) {
+            throw new IllegalArgumentException(
+                    "Parameter count mismatch; expected " + method.getParameterCount() + ", not " + parameters.length
+            );
+        }
+        for (int n = 0; n < parameters.length; n++) {
             Class<?> expected = method.getParameterTypes()[n];
-            Class<?> actual = arguments.get(n).rawType();
+            Class<?> actual = parameters[n].rawType();
             if (!expected.equals(actual)) {
                 throw new IllegalArgumentException(
-                        "Argument type mismatch; expected " + expected + " but was " + actual
+                        "Parameter type mismatch; expected " + expected + ", not " + actual
                 );
             }
         }
         this.methodOrName = method;
         this.returnType = Objects.requireNonNull(returnType, "returnType");
-        this.arguments = ImmutableCollections.listOf(arguments);
+        this.parameters = parameters.clone();
     }
 
     /**
@@ -89,14 +91,14 @@ public final class MethodId {
     }
 
     /**
-     * Gets the method if this was constructed with a method via {@link MethodId#MethodId(Method, ReifiedType, List)}
-     * @return the method if constructed with one, or an empty optional
+     * Gets the method if this was constructed with a method via {@link MethodId#MethodId(Method, ReifiedType, ReifiedType[])}
+     * @return the method if constructed with one, or null if unset
      */
-    public Optional<Method> method() {
+    public Method method() {
         if (methodOrName instanceof Method) {
-            return Optional.of((Method) methodOrName);
+            return (Method) methodOrName;
         }
-        return Optional.empty();
+        return null;
     }
 
     /**
@@ -108,11 +110,31 @@ public final class MethodId {
     }
 
     /**
-     * Gets an immmutable view of the arguments
-     * @return the arguments
+     * Gets the parameter at a certain index
+     *
+     * @param index the index
+     * @return the parameter at it
+     * @throws IndexOutOfBoundsException if the index is out of range
      */
-    public List<ReifiedType> arguments() {
-        return arguments;
+    public ReifiedType parameterAt(int index) {
+        return parameters[index];
+    }
+
+    /**
+     * The parameter count
+     * @return the parameter count
+     */
+    public int parameterCount() {
+        return parameters.length;
+    }
+
+    /**
+     * Gets all the parameters
+     *
+     * @return a copy of the parameters
+     */
+    public ReifiedType[] parameters() {
+        return parameters.clone();
     }
 
     @Override
@@ -120,14 +142,15 @@ public final class MethodId {
         if (!(o instanceof MethodId)) return false;
 
         MethodId methodId = (MethodId) o;
-        return name().equals(methodId.name()) && returnType.equals(methodId.returnType) && arguments.equals(methodId.arguments);
+        return name().equals(methodId.name()) && returnType.equals(methodId.returnType)
+                && Arrays.equals(parameters, methodId.parameters);
     }
 
     @Override
     public int hashCode() {
         int result = name().hashCode();
         result = 31 * result + returnType.hashCode();
-        result = 31 * result + arguments.hashCode();
+        result = 31 * result + Arrays.hashCode(parameters);
         return result;
     }
 
@@ -136,7 +159,7 @@ public final class MethodId {
         return "MethodId{" +
                 "name=" + name() +
                 ", returnType=" + returnType +
-                ", arguments=" + arguments +
+                ", arguments=" + Arrays.toString(parameters) +
                 '}';
     }
 }
