@@ -80,7 +80,18 @@ class ConfEntryCreation {
 
 	private String findKey() {
 		ConfKey confKey = method.getAnnotation(ConfKey.class);
-		return (confKey != null) ? confKey.value() : method.getName();
+		if (confKey != null) {
+			String confKeyValue = confKey.value();
+			if (!reader.options.dottedPathInConfKey() && confKeyValue.contains(".")) {
+				throw new IllDefinedConfigException(
+						"Using dotted key paths in @ConfKey is deprecated disabled by defalt in DazzleConf 1.3.0." +
+								"Please see the setting ConfigurationOptions.Builder#setDottedPathInConfKey if you" +
+								"need to restore compatibility."
+				);
+			}
+			return confKeyValue;
+		}
+		return method.getName();
 	}
 
 	private List<String> findComments(Supplier<List<String>> backupSupplier) {

@@ -31,7 +31,8 @@ import space.arim.dazzleconf.serialiser.ValueSerialiser;
  * Attaches a value serialiser to a configuration interface
  * 
  * @author A248
- *
+ * @deprecated This annotation will be removed in DazzleConf 2.0. Since singleton instantiation of value serializers
+ * is awkward and not compatible with the new API model, where serialization is more sophisticated and capable.
  */
 @Retention(RUNTIME)
 @Target(TYPE)

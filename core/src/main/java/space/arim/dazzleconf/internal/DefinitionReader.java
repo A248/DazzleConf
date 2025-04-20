@@ -43,7 +43,7 @@ import space.arim.dazzleconf.serialiser.ValueSerialiserMap;
 public final class DefinitionReader<C> {
 
 	private final Class<C> configClass;
-	private final ConfigurationOptions options;
+	final ConfigurationOptions options;
 
 	private final Set<Class<?>> nestedConfigDejaVu;
 

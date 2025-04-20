@@ -30,10 +30,14 @@ import space.arim.dazzleconf.validator.ValueValidator;
  * Attaches a value validator to a config entry
  * 
  * @author A248
+ * @deprecated Value validators will be removed in DazzleConf 2.0 since they do not fit the new API model. Meanwhile,
+ * you might save time by switching usage of this class to modifying your value serialisers and checking output values
+ * appropriately. If need be, make new types that uphold your requirements.
  *
  */
 @Retention(RUNTIME)
 @Target(METHOD)
+@Deprecated
 public @interface ConfValidator {
 
 	/**

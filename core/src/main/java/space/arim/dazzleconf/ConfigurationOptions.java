@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import space.arim.dazzleconf.annote.ConfKey;
 import space.arim.dazzleconf.annote.ConfSerialisers;
 import space.arim.dazzleconf.annote.ConfValidator;
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
@@ -45,18 +46,20 @@ public final class ConfigurationOptions {
 	private final ConfigurationSorter sorter;
 	private final boolean strictParseEnums;
 	private final boolean createSingleElementCollections;
+	private final boolean dottedPathInConfKey;
 	
 	private static final ConfigurationOptions DEFAULTS = new ConfigurationOptions.Builder().build();
 
 	ConfigurationOptions(ValueSerialiserMap serialisers, Map<String, ValueValidator> validators,
-								ConfigurationSorter sorter, boolean strictParseEnums,
-								boolean createSingleElementCollections) {
+                         ConfigurationSorter sorter, boolean strictParseEnums,
+                         boolean createSingleElementCollections, boolean dottedPathInConfKey) {
 		this.serialisers = serialisers;
 		this.validators = validators;
 		this.sorter = sorter;
 		this.strictParseEnums = strictParseEnums;
 		this.createSingleElementCollections = createSingleElementCollections;
-	}
+        this.dottedPathInConfKey = dottedPathInConfKey;
+    }
 	
 	/**
 	 * Returns the default configuration options
@@ -82,7 +85,9 @@ public final class ConfigurationOptions {
 	 * Validators can also be specified {@link ConfValidator}, which are not included here
 	 * 
 	 * @return the map of value validators, never {@code null}
+	 * @deprecated Value validators are deprecated and will be removed in DazzleConf 2.0.
 	 */
+	@Deprecated
 	public Map<String, ValueValidator> getValidators() {
 		return validators;
 	}
@@ -124,7 +129,18 @@ public final class ConfigurationOptions {
 	public boolean createSingleElementCollections() {
 		return createSingleElementCollections;
 	}
-	
+
+	/**
+	 * See {@link ConfigurationOptions.Builder#setDottedPathInConfKey(boolean)} for information about this deprecated
+	 * option.
+	 *
+	 * @return whether dotted key paths in <code>ConfKey</code> are permitted
+	 * @deprecated See {@link ConfigurationOptions.Builder#setDottedPathInConfKey(boolean)}
+	 */
+	public boolean dottedPathInConfKey() {
+		return dottedPathInConfKey;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -173,6 +189,7 @@ public final class ConfigurationOptions {
 		private ConfigurationSorter sorter;
 		private boolean strictParseEnums;
 		private boolean createSingleElementCollections;
+		private boolean dottedPathInConfKey;
 
 		/**
 		 * Creates the builder. <br>
@@ -249,7 +266,9 @@ public final class ConfigurationOptions {
 		 * @param validator the value validator
 		 * @return this builder
 		 * @throws NullPointerException if either parameter is null
+		 * @deprecated Value validators are deprecated and will be removed in DazzleConf 2.0.
 		 */
+		@Deprecated
 		public Builder addValidator(String key, ValueValidator validator) {
 			validators.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(validator, "validator"));
 			return this;
@@ -261,7 +280,9 @@ public final class ConfigurationOptions {
 		 * @param validators the map of keys at which the validators are placed to the validators themselves
 		 * @return this builder
 		 * @throws NullPointerException if the map, any key, or any value is null
+		 * @deprecated Value validators are deprecated and will be removed in DazzleConf 2.0.
 		 */
+		@Deprecated
 		public Builder addValidators(Map<String, ? extends ValueValidator> validators) {
 			Objects.requireNonNull(validators, "validators");
 			for (Map.Entry<String, ? extends ValueValidator> entry : validators.entrySet()) {
@@ -317,7 +338,24 @@ public final class ConfigurationOptions {
 			this.createSingleElementCollections = createSingleElementCollections;
 			return this;
 		}
-		
+
+		/**
+		 * Since DazzleConf 1.3.0, using dotted paths in {@link ConfKey} has been deprecated and disabled by default.
+		 * <p>
+		 * This option exists to restore the ability to use dotted paths in <code>ConfKey</code>. It is a temporary
+		 * option. Note that using dotted paths is deprecated, discouraged, and will be unsupported in DazzleConf 2.0.
+		 *
+		 * @param dottedPathInConfKey whether to enable dotted paths in <code>ConfKey</code>
+		 * @return this builder
+		 * @deprecated Using dotted paths in <code>ConfKey</code> is a poor design choice, awkwardly implemented, and
+		 * it will be removed in DazzleConf 2.0
+		 */
+		@Deprecated
+		public Builder setDottedPathInConfKey(boolean dottedPathInConfKey) {
+			this.dottedPathInConfKey = dottedPathInConfKey;
+			return this;
+		}
+
 		/**
 		 * Builds a {@code ValidationOptions} from the contents of this builder. <br>
 		 * <br>
@@ -328,7 +366,8 @@ public final class ConfigurationOptions {
 		public ConfigurationOptions build() {
 			return new ConfigurationOptions(
 					ValueSerialiserMap.of(serialisers), ImmutableCollections.mapOf(validators),
-					sorter, strictParseEnums, createSingleElementCollections);
+					sorter, strictParseEnums, createSingleElementCollections, dottedPathInConfKey
+			);
 		}
 
 		@Override
