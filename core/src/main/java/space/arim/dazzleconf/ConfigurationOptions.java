@@ -150,6 +150,7 @@ public final class ConfigurationOptions {
 		result = prime * result + serialisers.hashCode();
 		result = prime * result + validators.hashCode();
 		result = prime * result + (createSingleElementCollections ? 1231 : 1237);
+		result = prime * result + (dottedPathInConfKey ? 1231 : 1237);
 		return result;
 	}
 
@@ -166,14 +167,15 @@ public final class ConfigurationOptions {
 				&& ((sorter == null) ? other.sorter == null : sorter == other.sorter)
 				&& serialisers.equals(other.serialisers)
 				&& validators.equals(other.validators)
-				&& createSingleElementCollections == other.createSingleElementCollections;
+				&& createSingleElementCollections == other.createSingleElementCollections
+				&& dottedPathInConfKey == other.dottedPathInConfKey;
 	}
 
 	@Override
 	public String toString() {
 		return "ConfigurationOptions [serialisers=" + serialisers + ", validators=" + validators + ", sorter=" + sorter
 				+ ", strictParseEnums=" + strictParseEnums + ", createSingleElementCollections="
-				+ createSingleElementCollections + "]";
+				+ createSingleElementCollections + ", dottedPathInConfKey=" + dottedPathInConfKey+  "]";
 	}
 
 	/**
@@ -374,7 +376,9 @@ public final class ConfigurationOptions {
 		public String toString() {
 			return "ConfigurationOptions.Builder [serialisers=" + serialisers + ", validators=" + validators
 					+ ", sorter=" + sorter + ", strictParseEnums=" + strictParseEnums
-					+ ", createSingleElementCollections="+ createSingleElementCollections + "]";
+					+ ", createSingleElementCollections="+ createSingleElementCollections
+					+ ", dottedPathInConfKey=" + dottedPathInConfKey
+					+ "]";
 		}
 		
 	}

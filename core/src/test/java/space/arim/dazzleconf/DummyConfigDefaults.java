@@ -80,7 +80,10 @@ public class DummyConfigDefaults {
 	}
 
 	public static ConfigurationOptions createOptions() {
-		return new ConfigurationOptions.Builder().addSerialiser(new ComplexObjectSerialiser()).build();
+		return new ConfigurationOptions.Builder()
+				.addSerialiser(new ComplexObjectSerialiser())
+				.setDottedPathInConfKey(true)
+				.build();
 	}
 
 }

@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2020 Anand Beh
+ * Copyright © 2025 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -45,7 +45,7 @@ public interface AutoClickConfig {
 	@ConfDefault.DefaultInteger(32)
 	int totalRetentionSecs();
 
-	@ConfKey("hard-limit.cps-and-required-span")
+	@ConfKey("hard-limit")
 	@ConfComments({
 			"These are pairs of CPS limits and required time spans",
 			"",

@@ -16,7 +16,7 @@
 
 		<junit.version>5.9.2</junit.version>
 		<mockito.version>5.1.1</mockito.version>
-		<equalsverifier.version>3.13.2</equalsverifier.version>
+		<equalsverifier.version>3.19.3</equalsverifier.version>
 	</properties>
 	
 	<scm>

@@ -45,9 +45,13 @@ public class ExplosiveConfigTest {
 	These tests are also closely tied to the implementation of NestedMapHelper
 	 */
 
+	private ConfigurationOptions options() {
+		return new ConfigurationOptions.Builder().setDottedPathInConfKey(true).build();
+	}
+
 	@Test
 	public void explosiveConfigWrite() {
-		var factory = new SerialisationFactory<>(ExplosiveConfig.class, ConfigurationOptions.defaults());
+		var factory = new SerialisationFactory<>(ExplosiveConfig.class, options());
 		ExplosiveConfig config = factory.loadDefaults();
 		assertThrows(IllDefinedConfigException.class, () -> factory.write(config, OutputStream.nullOutputStream()));
 	}
@@ -55,7 +59,7 @@ public class ExplosiveConfigTest {
 	@Test
 	public void explosiveConfigLoad() {
 		Map<String, Object> source = Map.of("section", "not really a section");
-		var factory = new FixedLoaderFactory<>(ExplosiveConfig.class, ConfigurationOptions.defaults(), source);
+		var factory = new FixedLoaderFactory<>(ExplosiveConfig.class, options(), source);
 		assertThrows(IllDefinedConfigException.class, () -> factory.load(InputStream.nullInputStream()));
 	}
 
