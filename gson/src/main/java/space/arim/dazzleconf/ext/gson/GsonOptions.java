@@ -1,19 +1,19 @@
-/* 
- * DazzleConf-gson
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-gson is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2025 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-gson is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-gson. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 package space.arim.dazzleconf.ext.gson;
@@ -24,6 +24,7 @@ import java.util.Objects;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 
 /**
  * Options for GSON configurations
@@ -183,7 +184,13 @@ public final class GsonOptions {
 			Gson gson = this.gson;
 			if (gson == null) {
 				// Default Gson
-				gson = new GsonBuilder().setPrettyPrinting().setLenient().disableHtmlEscaping().create();
+				gson = new GsonBuilder()
+						.setPrettyPrinting().setLenient()
+						// #9 - HTML escaping looks weird, since 1.1.1
+						.disableHtmlEscaping()
+						// #44 - Long value precision, since 1.3.0-RC1
+						.setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
+						.create();
 			}
 			return new GsonOptions(gson, pseudoCommentsSuffix, charset);
 		}
