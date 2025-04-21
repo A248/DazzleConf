@@ -26,9 +26,9 @@ import space.arim.dazzleconf2.reflect.TypeToken;
 
 public final class SubConfigTypeLiaison implements TypeLiaison {
     @Override
-    public <V> Agent<V> makeAgent(TypeToken<V> typeToken, Handshake<V> handshake) {
+    public <V> Agent<V> makeAgent(TypeToken<V> typeToken, Handshake handshake) {
         if (typeToken.getReifiedType().getAnnotation(SubSection.class) != null) {
-            return new AgentImpl<>(handshake.childConfiguration());
+            return new AgentImpl<>(handshake.getConfiguration(typeToken));
         }
         return null;
     }
@@ -43,16 +43,15 @@ public final class SubConfigTypeLiaison implements TypeLiaison {
 
         @Override
         public DefaultValues<V> loadDefaultValues() {
-            V defaults = configuration.loadDefaults();
             return new DefaultValues<>() {
                 @Override
                 public V defaultValue() {
-                    return defaults;
+                    return configuration.loadDefaults();
                 }
 
                 @Override
                 public V ifMissing() {
-                    return defaults;
+                    return configuration.loadDefaults();
                 }
             };
         }
@@ -65,17 +64,17 @@ public final class SubConfigTypeLiaison implements TypeLiaison {
         class SerDer implements SerializeDeserialize<V> {
 
             @Override
-            public LoadResult<V> deserialize(OperableObject object) {
-                return object.requireDataTree().flatMap((dataTree -> {
-                    return configuration.readWithKeyMapper(dataTree, object::flagUpdate, object.keyMapper());
+            public LoadResult<V> deserialize(DeserializeInput deser) {
+                return deser.requireDataTree().flatMap((dataTree -> {
+                    return configuration.readWithKeyMapper(dataTree, deser::flagUpdate, deser.keyMapper());
                 }));
             }
 
             @Override
-            public void serialize(V value, SerializeOutput output) {
+            public void serialize(V value, SerializeOutput ser) {
                 DataTreeMut dataTreeMut = new DataTreeMut();
-                configuration.writeWithKeyMapper(value, dataTreeMut, output.keyMapper());
-                output.outDataTree(dataTreeMut);
+                configuration.writeWithKeyMapper(value, dataTreeMut, ser.keyMapper());
+                ser.outDataTree(dataTreeMut);
             }
         }
     }

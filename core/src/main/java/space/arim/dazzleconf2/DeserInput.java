@@ -23,19 +23,35 @@ import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.KeyMapper;
 import space.arim.dazzleconf2.engine.KeyPath;
 import space.arim.dazzleconf2.engine.LoadListener;
-import space.arim.dazzleconf2.engine.OperableObject;
+import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.translation.LibraryLang;
 
-final class Operable implements OperableObject {
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+final class DeserInput implements DeserializeInput {
 
     private final Object object;
-    private final String locationInTree;
+    private final Source source;
     private final Context context;
 
-    Operable(Object object, String locationInTree, Context context) {
+    DeserInput(Object object, Source source, Context context) {
         this.object = object;
-        this.locationInTree = locationInTree;
+        this.source = source;
         this.context = context;
+    }
+
+    static final class Source {
+        private final String[] pathStart;
+        private final String pathLast;
+        private final DataTree.Entry entry;
+
+        Source(String[] pathStart, String pathLast, DataTree.Entry entry) {
+            this.pathStart = pathStart;
+            this.pathLast = pathLast;
+            this.entry = entry;
+        }
     }
 
     static final class Context {
@@ -53,6 +69,13 @@ final class Operable implements OperableObject {
     @Override
     public Object object() {
         return object;
+    }
+
+    @Override
+    public KeyPath absoluteKeyPath() {
+        KeyPath absolutePath = new KeyPath(source.pathStart);
+        absolutePath.addBack(source.pathLast);
+        return absolutePath;
     }
 
     @Override
@@ -74,18 +97,28 @@ final class Operable implements OperableObject {
         if (keyPath == null) {
             keyPath = new KeyPath();
         }
-        keyPath.addFront(locationInTree);
+        keyPath.addFront(source.pathLast);
         context.loadListener.updatedMissingPath(keyPath);
     }
 
     @Override
-    public OperableObject makeChild(Object value) {
-        return new Operable(value, locationInTree + "$child", context);
+    public DeserializeInput makeChild(Object value) {
+        return new DeserInput(value, source, context);
     }
 
     @Override
     public ErrorContext buildError(String message) {
-        return new LoadError(message, context.libraryLang);
+        LoadError loadError = new LoadError(message, context.libraryLang);
+        // Add entry path
+        List<String> fullPath = new ArrayList<>(source.pathStart.length + 1);
+        fullPath.addAll(Arrays.asList(source.pathStart));
+        fullPath.add(source.pathLast);
+        loadError.addDetail(ErrorContext.ENTRY_PATH, fullPath);
+        // Add line number
+        source.entry.lineNumber().ifPresent(lineNumber -> {
+            loadError.addDetail(ErrorContext.LINE_NUMBER, lineNumber);
+        });
+        return loadError;
     }
 
     @Override

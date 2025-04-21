@@ -35,9 +35,12 @@ public final class DataTreeMut extends DataTree {
      *
      * @param key the key
      * @param entry the entry; if null, clears any existing entry
+     * @throws IllegalArgumentException if the provided key is not a valid canonical type
      */
     public void set(Object key, Entry entry) {
-        checkCanonicalSingle(key);
+        if (!validateKey(key)) {
+            throw new IllegalArgumentException("Not a canonical key: " + key);
+        }
         if (entry == null) {
             data.remove(key);
         } else {
@@ -49,9 +52,12 @@ public final class DataTreeMut extends DataTree {
      * Clears any entry at the specified key
      *
      * @param key the key
+     * @throws IllegalArgumentException if the provided key is not a valid canonical type
      */
     public void remove(Object key) {
-        checkCanonicalSingle(key);
+        if (!validateKey(key)) {
+            throw new IllegalArgumentException("Not a canonical key: " + key);
+        }
         data.remove(key);
     }
 

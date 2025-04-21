@@ -29,11 +29,13 @@ public interface LibraryLang {
 
     String entryPath();
 
-    String lineNumber();
+    String line();
 
     String backendMessage();
 
-    String auxiliaryErrors();
+    String causalErrors();
+
+    String moreErrors();
 
     String wrongTypeForValue(Object value, String expectedType, String actualType);
 

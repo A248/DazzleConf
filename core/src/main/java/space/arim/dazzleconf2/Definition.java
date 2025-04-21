@@ -22,23 +22,21 @@ package space.arim.dazzleconf2;
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DataTreeMut;
-import space.arim.dazzleconf2.engine.KeyMapper;
-import space.arim.dazzleconf2.engine.KeyPath;
-import space.arim.dazzleconf2.engine.LoadListener;
-import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.*;
 import space.arim.dazzleconf2.translation.LibraryLang;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 final class Definition<C> implements ConfigurationReadWrite<C> {
 
     private final TypeToken<C> configType;
+    /**
+     * Prefix for where this configuration or subsection is located
+     */
+    private final String[] pathPrefix;
     /**
      * Includes both this type and all its super types
      */
@@ -48,8 +46,10 @@ final class Definition<C> implements ConfigurationReadWrite<C> {
 
     private static final InvokeDefaultValue INVOKE_DEFAULT_VALUE = new InvokeDefaultValue();
 
-    Definition(TypeToken<C> configType, Map<Class<?>, TypeSkeleton> superTypes, LibraryLang libraryLang, Instantiator instantiator) {
+    Definition(TypeToken<C> configType, String[] pathPrefix, Map<Class<?>, TypeSkeleton> superTypes,
+               LibraryLang libraryLang, Instantiator instantiator) {
         this.configType = Objects.requireNonNull(configType);
+        this.pathPrefix = pathPrefix;
         this.superTypes = ImmutableCollections.mapOf(superTypes);
         this.libraryLang = libraryLang;
         this.instantiator = Objects.requireNonNull(instantiator);
@@ -83,36 +83,71 @@ final class Definition<C> implements ConfigurationReadWrite<C> {
 
     @Override
     public LoadResult<C> readWithKeyMapper(DataTree dataTree, LoadListener loadListener, KeyMapper keyMapper) {
+        // What we're building (an instance) and how we're doing that
         MethodYield.Builder methodYield = new MethodYield.Builder();
+        DeserInput.Context deserCtx = new DeserInput.Context(libraryLang, loadListener, keyMapper);
 
+        // Collected errors - get a maximum of 10 before quitting
+        ErrorContext[] collectedErrors = new ErrorContext[10];
+        int errorCount = 0;
+
+        // For each type in the hierarchy
         for (Map.Entry<Class<?>, TypeSkeleton> superTypeEntry : superTypes.entrySet()) {
             Class<?> superType = superTypeEntry.getKey();
             TypeSkeleton typeSkeleton = superTypeEntry.getValue();
 
+            // For each method in that type
             for (TypeSkeleton.MethodNode methodNode : typeSkeleton.methodNodes) {
 
                 Object value;
-                String mappedPath = keyMapper.methodNameToKey(methodNode.methodId.name()).toString();
-                DataTree.Entry dataEntry = dataTree.get(mappedPath);
+                String mappedKey = keyMapper.methodNameToKey(methodNode.methodId.name()).toString();
+                DataTree.Entry dataEntry = dataTree.get(mappedKey);
                 if (dataEntry == null) {
-                    value = methodNode.makeMissingValue(superType);
-                    KeyPath keyPath = new KeyPath();
-                    keyPath.addFront(mappedPath);
-                    loadListener.updatedMissingPath(keyPath);
-                } else {
-                    Operable operable = new Operable(
-                            dataEntry.getValue(), mappedPath, new Operable.Context(libraryLang, loadListener, keyMapper)
-                    );
-                    LoadResult<?> valueResult = methodNode.serializer.deserialize(operable);
-                    if (valueResult.isFailure()) {
-                        return LoadResult.failure(valueResult.getError().orElseThrow());
+                    // No point in continuing if there are previous errors
+                    if (errorCount > 0) continue;
+                    // If non-optional, fetch the missing value
+                    if (methodNode.optional) {
+                        value = Optional.empty();
+                    } else {
+                        value = methodNode.makeMissingValue(superType);
+                        // And signal that path was updated
+                        KeyPath keyPath = new KeyPath();
+                        keyPath.addFront(mappedKey);
+                        loadListener.updatedMissingPath(keyPath);
                     }
-                    value = valueResult.getValue();
+                } else {
+                    // Main deserialization route - most cases go here
+                    LoadResult<?> valueResult = methodNode.serializer.deserialize(new DeserInput(
+                            dataEntry.getValue(), new DeserInput.Source(pathPrefix, mappedKey, dataEntry), deserCtx
+                    ));
+                    // Error handling
+                    if (valueResult.isFailure()) {
+                        // Append all error contexts
+                        List<ErrorContext> errorsToAppend = valueResult.getErrorContexts();
+                        for (ErrorContext errorToAppend : errorsToAppend) {
+                            // Append this error
+                            collectedErrors[errorCount++] = errorToAppend;
+                            // Check if maxed out
+                            if (errorCount == collectedErrors.length) {
+                                return LoadResult.failure(Arrays.asList(collectedErrors));
+                            }
+                        }
+                    }
+                    // Bail out if there are errors
+                    if (errorCount > 0) continue;
+                    // No errors - all good
+                    value = valueResult.getValue().orElseThrow();
                     if (methodNode.optional) value = Optional.of(value);
                 }
                 methodYield.addValue(superType, methodNode.methodId, value);
             }
         }
+        // Error handling
+        if (errorCount > 0) {
+            ErrorContext[] trimmedToSize = Arrays.copyOf(collectedErrors, errorCount);
+            return LoadResult.failure(trimmedToSize);
+        }
+        // No errors - success
         return LoadResult.of(instantiate(methodYield));
     }
 
@@ -135,9 +170,9 @@ final class Definition<C> implements ConfigurationReadWrite<C> {
                 if (methodNode.optional && (value = ((Optional<?>) value).orElse(null)) == null) {
                     continue;
                 }
-                Serialization serialization = new Serialization(keyMapper);
-                serialization.forceFeed(methodNode.serializer, value);
-                Object output = serialization.output;
+                SerOutput serOutput = new SerOutput(keyMapper);
+                serOutput.forceFeed(methodNode.serializer, value);
+                Object output = serOutput.output;
                 if (output == null) {
                     throw new DeveloperMistakeException(
                             "Serializer " + methodNode.serializer + " did not produce any output for " + value
@@ -152,79 +187,4 @@ final class Definition<C> implements ConfigurationReadWrite<C> {
         }
     }
 
-    private static final class Serialization implements SerializeDeserialize.SerializeOutput {
-
-        private Object output;
-        private final KeyMapper keyMapper;
-
-        Serialization(KeyMapper keyMapper) {
-            this.keyMapper = keyMapper;
-        }
-
-        @SuppressWarnings("unchecked")
-        private <V> void forceFeed(SerializeDeserialize<V> serializer, Object value) {
-            serializer.serialize((V) value, this);
-        }
-
-        @Override
-        public KeyMapper keyMapper() {
-            return keyMapper;
-        }
-
-        @Override
-        public void outString(String value) {
-            output = Objects.requireNonNull(value);
-        }
-
-        @Override
-        public void outBoolean(boolean value) {
-            output = value;
-        }
-
-        @Override
-        public void outByte(byte value) {
-            output = value;
-        }
-
-        @Override
-        public void outChar(char value) {
-            output = value;
-        }
-
-        @Override
-        public void outShort(short value) {
-            output = value;
-        }
-
-        @Override
-        public void outInt(int value) {
-            output = value;
-        }
-
-        @Override
-        public void outLong(long value) {
-            output = value;
-        }
-
-        @Override
-        public void outFloat(float value) {
-            output = value;
-        }
-
-        @Override
-        public void outDouble(double value) {
-            output = value;
-        }
-
-        @Override
-        public void outList(List<?> value) {
-            // Canonical check is performed in Entry constructor
-            output = Objects.requireNonNull(value);
-        }
-
-        @Override
-        public void outDataTree(DataTree value) {
-            output = Objects.requireNonNull(value);
-        }
-    }
 }

@@ -32,6 +32,7 @@ import java.util.Collections;
 public final class KeyPath {
 
     // This list is actually in backwards order
+    // TODO Switch to using ArrayDeque to improve performance and readability
     private final ArrayList<String> parts;
 
     /**

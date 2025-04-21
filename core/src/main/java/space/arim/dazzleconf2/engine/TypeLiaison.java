@@ -45,7 +45,7 @@ public interface TypeLiaison {
      * @param handshake the handshake
      * @return the agent if supported, or null otherwise
      */
-    <V> Agent<V> makeAgent(TypeToken<V> typeToken, Handshake<V> handshake);
+    <V> Agent<V> makeAgent(TypeToken<V> typeToken, Handshake handshake);
 
     /**
      * An agent that is ready to handle matters relating to a type
@@ -73,9 +73,8 @@ public interface TypeLiaison {
 
     /**
      * Callback interface allowing {@link Agent} to access certain resources
-     * @param <V> the type being dealt with
      */
-    interface Handshake<V> {
+    interface Handshake {
 
         /**
          * Checks available contexts, such as the declaring method, for the following annotation.
@@ -98,13 +97,13 @@ public interface TypeLiaison {
         <U> SerializeDeserialize<U> getOtherSerializer(TypeToken<U> other);
 
         /**
-         * Makes a child configuration for the type. This function will use the settings from the parent configuration
+         * Gets another configuration. This function will use the settings from the parent configuration
          * for purposes of defining, deserializing/serializing, and instantiating the child.
          *
          * @return a configuration which can be read or written
-         * @throws DeveloperMistakeException if the type being handled is improperly declared or has broken settings
+         * @throws DeveloperMistakeException if the type requested is improperly declared or has broken settings
          */
-        ConfigurationReadWrite<V> childConfiguration();
+        <U> ConfigurationReadWrite<U> getConfiguration(TypeToken<U> other);
 
     }
 }

@@ -22,13 +22,14 @@ package space.arim.dazzleconf2;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.translation.LibraryLang;
 
+import java.io.IOException;
 import java.util.*;
 
 final class LoadError implements ErrorContext {
 
     private final CharSequence message;
     private final LibraryLang libraryLang;
-    private final Map<Key<?>, Object> contexts = new LinkedHashMap<>();
+    private final Map<Key<?, ?>, Object> contexts = new LinkedHashMap<>();
 
     LoadError(CharSequence message, LibraryLang libraryLang) {
         this.message = Objects.requireNonNull(message, "message");
@@ -66,45 +67,86 @@ final class LoadError implements ErrorContext {
         throw new IllegalArgumentException("Not a canonical type " + type);
     }
 
-    void addContext(Key<?> key, Object value) {
-        contexts.put(key, value);
-    }
-
     @Override
     public String mainMessage() {
         return message.toString();
     }
 
     @Override
-    public String display() {
+    public void mainMessage(Appendable output) throws IOException {
+        output.append(message);
+    }
+
+    @Override
+    public void mainMessage(StringBuilder output) {
+        output.append(message);
+    }
+
+    @Override
+    public String displayDetails() {
         StringBuilder builder = new StringBuilder();
-        builder.append(libraryLang.errorIntro());
-        builder.append('\n');
-        builder.append(message);
-        builder.append('\n');
-        builder.append(libraryLang.errorContext());
-        builder.append('\n');
-        for (Key<?> key : allKeys()) {
-            formatKeyData(builder, key);
-            builder.append('\n');
-        }
+        displayDetails(builder);
         return builder.toString();
     }
 
-    private <V> void formatKeyData(StringBuilder builder, Key<V> key) {
-        builder.append(key.langKey.getMessage(libraryLang));
-        builder.append(": ");
-        key.formatData.format(builder, query(key));
-    }
-
-    @SuppressWarnings("unchecked")
     @Override
-    public <V> V query(Key<V> key) {
-        return (V) contexts.get(key);
+    public void displayDetails(Appendable output) throws IOException {
+        for (Key<?, ?> key : allKeys()) {
+            formatKeyData(output, key);
+            output.append('\n');
+        }
     }
 
     @Override
-    public Set<Key<?>> allKeys() {
+    public void displayDetails(StringBuilder output) {
+        try {
+            displayDetails((Appendable) output);
+        } catch (IOException e) {
+            throw new AssertionError("StringBuilder does not throw IOException", e);
+        }
+    }
+
+    private <V, R> void formatKeyData(Appendable output, Key<V, R> key) throws IOException {
+        output.append(key.langKey.getMessage(libraryLang));
+        output.append(": ");
+        key.formatData.format(libraryLang, output, rawQuery(key));
+    }
+
+    private <V> V rawQuery(Key<V, ?> key) {
+        @SuppressWarnings("unchecked")
+        V value = (V) contexts.get(key);
+        return value;
+    }
+
+    @Override
+    public <V, R> R query(Key<V, R> key) {
+        return key.mapReturnValue.map(rawQuery(key));
+    }
+
+    @Override
+    public <V, R> void addDetail(Key<V, R> key, V context) {
+        Objects.requireNonNull(context, "Cannot add null context");
+        contexts.put(key, context);
+    }
+
+    @Override
+    public void clearDetail(Key<?, ?> key) {
+        contexts.remove(key);
+    }
+
+    @Override
+    public void copyDetailsInto(ErrorContext target) {
+        for (Key<?, ?> key :  contexts.keySet()) {
+            copyContextInto(key, target);
+        }
+    }
+
+    private <V> void copyContextInto(Key<V, ?> key, ErrorContext target) {
+        target.addDetail(key, rawQuery(key));
+    }
+
+    @Override
+    public Set<Key<?, ?>> allKeys() {
         return contexts.keySet();
     }
 }

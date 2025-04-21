@@ -150,7 +150,7 @@ public class ReifiedType {
         }
 
         /**
-         * Gets an annotation if it is set. If multiple are found, the first is returned.
+         * Gets a type level annotation if it is set. If multiple are found, the first is returned.
          * @param annotationClass the annotation class
          * @return the annotation if present, or null if not found
          * @param <A> the annotation type

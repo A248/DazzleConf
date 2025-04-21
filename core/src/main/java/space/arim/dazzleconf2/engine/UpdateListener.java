@@ -22,6 +22,8 @@ package space.arim.dazzleconf2.engine;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.migration.Migration;
 
+import java.util.List;
+
 /**
  * Listener that lets the implementor know about various configuration events
  */
@@ -39,10 +41,10 @@ public interface UpdateListener extends LoadListener {
     void migratedFrom(Migration<?, ?> migration);
 
     /**
-     * Notifies that a migration was attempted from a previous version, but unsuccessful
+     * Notifies that a migration was attempted from a previous version, unsuccessfully
      * @param migration the migration
-     * @param failureContext the failure context
+     * @param errorContexts the failure contexts
      */
-    void migrationSkip(Migration<?, ?> migration, ErrorContext failureContext);
+    void migrationSkip(Migration<?, ?> migration, List<ErrorContext> errorContexts);
 
 }

@@ -150,9 +150,8 @@ public final class ConfigurationBuilder<C> {
      * @throws DeveloperMistakeException if the combination or usage of different library features is in error
      */
     public Configuration<C> build() {
-        return new BuiltConfig<>(
-                new DefinitionReader<>(configType).read(typeLiaisons), locale, LibraryLang.loadLang(locale),
-                typeLiaisons, keyMapper, instantiator, migrations
-        );
+        LibraryLang libraryLang = LibraryLang.loadLang(locale);
+        Definition<C> definition = new DefinitionReader<>(configType).read(typeLiaisons);
+        return new BuiltConfig<>(definition, locale, typeLiaisons, keyMapper, instantiator, migrations);
     }
 }

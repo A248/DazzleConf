@@ -19,6 +19,9 @@
 
 package space.arim.dazzleconf2;
 
+import space.arim.dazzleconf.internal.util.ImmutableCollections;
+
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
@@ -36,12 +39,14 @@ import java.util.function.Function;
 public final class LoadResult<R> {
 
     /*
-    ErrorContext if an error occured. R otherwise.
+    List<ErrorContext> if an error occured. R otherwise.
      */
     private final Object value;
+    private final boolean success;
 
-    private LoadResult(Object value) {
+    private LoadResult(Object value, boolean success) {
         this.value = Objects.requireNonNull(value);
+        this.success = success;
     }
 
     /**
@@ -50,24 +55,30 @@ public final class LoadResult<R> {
      * @return the load result
      */
     public static <R> LoadResult<R> of(R success) {
-        return new LoadResult<>(success);
+        return new LoadResult<>(success, true);
     }
 
     /**
-     * Creates a failed load result with the given error coontext
-     * @param reason the error context
+     * Creates a failed load result with the given error contexts
+     * @param reasons the error contexts
      * @return the load result
      */
-    public static <R> LoadResult<R> failure(ErrorContext reason) {
-        return new LoadResult<>(reason);
+    public static <R> LoadResult<R> failure(ErrorContext...reasons) {
+        return new LoadResult<>(ImmutableCollections.listOf(reasons), false);
+    }
+
+    /**
+     * Creates a failed load result with the given error contexts
+     * @param reasons the error contexts
+     * @return the load result
+     */
+    public static <R> LoadResult<R> failure(List<ErrorContext> reasons) {
+        return new LoadResult<>(ImmutableCollections.listOf(reasons), false);
     }
 
     @SuppressWarnings("unchecked")
     private R successValue() {
-        if (value instanceof ErrorContext) {
-            return null;
-        }
-        return (R) value;
+        return success ? (R) value : null;
     }
 
     /**
@@ -76,7 +87,7 @@ public final class LoadResult<R> {
      * @return true if successful
      */
     public boolean isSuccess() {
-        return !(value instanceof ErrorContext);
+        return success;
     }
 
     /**
@@ -85,7 +96,7 @@ public final class LoadResult<R> {
      * @return true if failed and an error is present
      */
     public boolean isFailure() {
-        return value instanceof ErrorContext;
+        return !success;
     }
 
     /**
@@ -98,15 +109,20 @@ public final class LoadResult<R> {
     }
 
     /**
-     * Tries to get at the error value
+     * Gets the error contexts.
+     * <p>
+     * Note that this list may be empty if either the load result was a success, or an empty list of error contexts
+     * were passed.
      *
-     * @return the error value, or an empty optional if it does not exist
+     * @return the error contexts, nonnull and immutable
      */
-    public Optional<ErrorContext> getError() {
-        if (value instanceof ErrorContext) {
-            return Optional.of((ErrorContext) value);
+    public List<ErrorContext> getErrorContexts() {
+        if (success) {
+            return ImmutableCollections.emptyList();
         }
-        return Optional.empty();
+        @SuppressWarnings("unchecked")
+        List<ErrorContext> contexts = (List<ErrorContext>) value;
+        return contexts;
     }
 
     /**
@@ -114,18 +130,18 @@ public final class LoadResult<R> {
      *
      * @param mapper the mapping function
      * @return the new result
-     * @param <R2> the type of the new returnable value
+     * @param <R_NEW> the type of the new returnable value
      */
-    public <R2> LoadResult<R2> map(Function<? super R, R2> mapper) {
+    public <R_NEW> LoadResult<R_NEW> map(Function<? super R, R_NEW> mapper) {
         R current = successValue();
         if (current == null) {
             // We can re-use our own object to pass on the error context
             @SuppressWarnings("unchecked")
-            LoadResult<R2> casted = (LoadResult<R2>) this;
+            LoadResult<R_NEW> casted = (LoadResult<R_NEW>) this;
             return casted;
         }
-        R2 updated = mapper.apply(current);
-        return new LoadResult<>(updated);
+        R_NEW updated = mapper.apply(current);
+        return new LoadResult<>(updated, true);
     }
 
     /**
@@ -133,14 +149,14 @@ public final class LoadResult<R> {
      *
      * @param mapper the mapping function
      * @return the new result
-     * @param <R2> the type of the new returnable value
+     * @param <R_NEW> the type of the new returnable value
      */
-    public <R2> LoadResult<R2> flatMap(Function<? super R, ? extends LoadResult<R2>> mapper) {
+    public <R_NEW> LoadResult<R_NEW> flatMap(Function<? super R, ? extends LoadResult<R_NEW>> mapper) {
         R current = successValue();
         if (current == null) {
             // We can re-use our own object to pass on the error context
             @SuppressWarnings("unchecked")
-            LoadResult<R2> casted = (LoadResult<R2>) this;
+            LoadResult<R_NEW> casted = (LoadResult<R_NEW>) this;
             return casted;
         }
         return mapper.apply(current);
@@ -162,14 +178,12 @@ public final class LoadResult<R> {
      * Unwraps the success value or throws an exception
      *
      * @return the success value
-     * @throws NoSuchElementException if the success value is not present, and the exception message will be set to
-     * the error context display ({@link ErrorContext#display()})
+     * @throws NoSuchElementException if the success value is not present
      */
     public R getOrThrow() {
         R current = successValue();
         if (current == null) {
-            ErrorContext errorContext = (ErrorContext) value;
-            throw new NoSuchElementException(errorContext.display());
+            throw new NoSuchElementException("Success value not present");
         }
         return current;
     }

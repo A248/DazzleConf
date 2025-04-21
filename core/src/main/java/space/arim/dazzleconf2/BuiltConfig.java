@@ -27,7 +27,6 @@ import space.arim.dazzleconf2.backend.DataTreeMut;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.migration.Migration;
 import space.arim.dazzleconf2.reflect.Instantiator;
-import space.arim.dazzleconf2.translation.LibraryLang;
 
 import java.util.*;
 
@@ -35,16 +34,14 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     private final Definition<C> definition;
     private final Locale locale;
-    private final LibraryLang libraryLang;
     private final List<TypeLiaison> typeLiaisons;
     private final KeyMapper keyMapper;
     private final List<Migration<?, C>> migrations;
 
-    BuiltConfig(Definition<C> definition, Locale locale, LibraryLang libraryLang, List<TypeLiaison> typeLiaisons,
+    BuiltConfig(Definition<C> definition, Locale locale, List<TypeLiaison> typeLiaisons,
                 KeyMapper keyMapper, List<Migration<?, C>> migrations) {
         this.definition = Objects.requireNonNull(definition, "definition");
         this.locale = Objects.requireNonNull(locale, "locale");
-        this.libraryLang = libraryLang;
         this.typeLiaisons = ImmutableCollections.listOf(typeLiaisons);
         this.keyMapper = keyMapper;
         this.migrations = ImmutableCollections.listOf(migrations);
@@ -135,7 +132,7 @@ final class BuiltConfig<C> implements Configuration<C> {
         public void migratedFrom(Migration<?, ?> migration) {}
 
         @Override
-        public void migrationSkip(Migration<?, ?> migration, ErrorContext failureContext) {}
+        public void migrationSkip(Migration<?, ?> migration, List<ErrorContext> errorContexts) {}
 
         @Override
         public void updatedMissingPath(KeyPath entryPath) {
@@ -161,8 +158,8 @@ final class BuiltConfig<C> implements Configuration<C> {
             }
 
             @Override
-            public void migrationSkip(Migration<?, ?> migration, ErrorContext failureContext) {
-                delegate.migrationSkip(migration, failureContext);
+            public void migrationSkip(Migration<?, ?> migration, List<ErrorContext> errorContexts) {
+                delegate.migrationSkip(migration, errorContexts);
             }
 
             @Override
@@ -204,7 +201,7 @@ final class BuiltConfig<C> implements Configuration<C> {
                     recordUpdates.migratedFrom(migration);
                     return attempt;
                 }
-                recordUpdates.migrationSkip(migration, attempt.getError().orElseThrow());
+                recordUpdates.migrationSkip(migration, attempt.getErrorContexts());
                 // Keep going
             }
         }

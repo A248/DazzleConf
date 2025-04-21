@@ -20,6 +20,9 @@
 package space.arim.dazzleconf2.backend;
 
 import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import space.arim.dazzleconf2.engine.KeyMapper;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.SerializeOutput;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -28,6 +31,10 @@ import java.util.function.Supplier;
 /**
  * A tree of in-memory configuration data. This tree is essentially a map of keys to values representing in-memory
  * configuration data, with added metadata of line numbers and comments.
+ * <p>
+ * Please keep in mind that a data tree interfaces with the configuration backend. As such, it uses the keys found in
+ * the backend data, and it does <b>NOT</b> take into account method names or {@link KeyMapper}. It is highly
+ * recommend to use <code>KeyMapper</code> where appropriate to interface with this class.
  * <p>
  * Keys are represented as <code>Object</code> and must be one of the canonical types (excl. lists or nested trees).
  * Values are wrapped by {@link Entry}, but are also <code>Object</code> and must be one of the canonical types.
@@ -38,7 +45,8 @@ import java.util.function.Supplier;
  * <li>DataTree for nesting
  * <li>Lists of the above types. The List implementation must be immutable.
  * </ul>
- * Recall that keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime.
+ * Recall that keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime, and they can be
+ * checked using {@link #validateKey(Object)} and {@link #validateValue(Object)}
  * <p>
  * Mutability of this class is <b>not defined</b>. Please use {@link DataTreeImmut} or {@link DataTreeMut} if you need
  * guaranteed mutable or immutable versions.
@@ -51,7 +59,11 @@ public class DataTree {
     DataTree() {}
 
     /**
-     * Gets the entry at the specified key, or null if unset
+     * Gets the entry at the specified key, or null if unset.
+     *
+     * If accessing keys based on method names, it is strongly recommended to use the <code>KeyMapper</code> to map
+     * method names to keys. See {@link DeserializeInput#keyMapper()} for deserialization or
+     * {@link SerializeOutput#keyMapper()} for serialization.
      *
      * @param key the key
      * @return the entry
@@ -117,6 +129,7 @@ public class DataTree {
         /**
          * Creates from a nonnull value
          * @param value the value
+         * @throws IllegalStateException if the value is not of the canonical types
          */
         public Entry(Object value) {
             this(value, null, ImmutableCollections.emptyMap());
@@ -124,7 +137,9 @@ public class DataTree {
 
         private Entry(Object value, Integer lineNumber, Map<CommentLocation, List<String>> comments) {
             this.lineNumber = lineNumber;
-            checkCanonical(value);
+            if (!validateValue(value)) {
+                throw new IllegalArgumentException("Not a canonical value: " + value);
+            }
             this.value = Objects.requireNonNull(value, "value");
             this.comments = comments;
         }
@@ -235,6 +250,39 @@ public class DataTree {
             return;
         }
         checkCanonicalSingle(value);
+    }
+
+    /**
+     * Checks whether the given object is valid as a value in the data tree. Keys must be one of primitive,
+     * <code>String</code>, <code>List</code> with valid elements, or <code>DataTree</code>. Null values are not valid.
+     *
+     * @param value the value
+     * @return true if a valid canonical value, false if not
+     */
+    public static boolean validateValue(Object value) {
+        if (value instanceof List) {
+            for (Object elem : (List<?>) value) {
+                if (!validateValue(elem)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return value instanceof DataTree || validateKey(value);
+    }
+
+    /**
+     * Checks whether the given object is valid as a key in the data tree. Keys must be either primitive or
+     * <code>String</code>. Null values are not accepted as keys.
+     *
+     * @param value the value
+     * @return true if a valid canonical key, false if not
+     */
+    public static boolean validateKey(Object value) {
+        return value instanceof String
+                || value instanceof Boolean || value instanceof Byte || value instanceof Character
+                || value instanceof Short || value instanceof Integer || value instanceof Long
+                || value instanceof Float || value instanceof Double;
     }
 
     static void checkCanonicalSingle(Object value) {

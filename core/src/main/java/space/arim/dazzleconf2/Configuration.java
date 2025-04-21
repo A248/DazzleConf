@@ -44,7 +44,7 @@ public interface Configuration<C> extends ConfigurationReadWrite<C> {
 
     /**
      * Gets the locale used at the library level. This will be used to display error messages such as in
-     * {@link ErrorContext#display()}
+     * {@link ErrorContext#displayDetails()}
      *
      * @return the locale for error messages
      */

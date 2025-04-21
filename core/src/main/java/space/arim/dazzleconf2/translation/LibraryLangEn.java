@@ -29,8 +29,8 @@ public class LibraryLangEn implements LibraryLang {
     }
 
     @Override
-    public String lineNumber() {
-        return "line number";
+    public String line() {
+        return "line";
     }
 
     @Override
@@ -39,8 +39,13 @@ public class LibraryLangEn implements LibraryLang {
     }
 
     @Override
-    public String auxiliaryErrors() {
-        return "auxiliary errors";
+    public String causalErrors() {
+        return "causal errors";
+    }
+
+    @Override
+    public String moreErrors() {
+        return "more error(s) ...";
     }
 
     @Override

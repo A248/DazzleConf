@@ -28,16 +28,24 @@ import space.arim.dazzleconf2.backend.DataTree;
  * An object from a data tree, that is being processed for deserialization. See {@link DataTree}
  *
  */
-public interface OperableObject {
+public interface DeserializeInput {
 
     /**
-     * The actual object which this operable object represents. This is guaranteed to be one of the canonical values
-     * mentioned in {@link DataTree}, i.e. primitives, <code>String</code>, or <code>DataTree</code>, or an immutable
+     * The actual object which is being deserialized. This is guaranteed to be one of the canonical values used in
+     * {@link DataTree}, i.e. primitives, <code>String</code>, or <code>DataTree</code>, or an immutable
      * <code>List</code> of one of those types.
      *
      * @return the object
      */
     Object object();
+
+    /**
+     * Gets the absolute key path where the object was loaded from. This will automatically include all key parts from
+     * the configuration root all the way until the current entry.
+     *
+     * @return an absolute key path
+     */
+    KeyPath absoluteKeyPath();
 
     /**
      * Gets the key mapper.
@@ -67,18 +75,19 @@ public interface OperableObject {
      * <p>
      * If the path being updated is only a sub-path of this one, then that sub-path should be provided.
      *
-     * @param subPath the sub path which has been updated. May be null if none exists
+     * @param subPath the sub path to be updated. May be null or empty if none exists. This path is relative to the
+     *                location of the current object, meaning it should not overlap with {@link #absoluteKeyPath()}
      */
     void flagUpdate(KeyPath subPath);
 
     /**
-     * Makes a child operable object. The child value is supposed to be taken "from" this object. For example, an
-     * element in a list would be a child object of the list.
+     * Makes a child and prepares it for deserialization. The child value is supposed to be taken "from" this object.
+     * For example, an element in a list would be a child object of the list.
      *
      * @param value the child value to wrap
-     * @return an operable object
+     * @return deserializable input
      */
-    OperableObject makeChild(Object value);
+    DeserializeInput makeChild(Object value);
 
     /**
      * Builds an error context based on the implementation
