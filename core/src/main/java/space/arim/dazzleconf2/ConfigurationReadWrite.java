@@ -21,6 +21,7 @@ package space.arim.dazzleconf2;
 
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DataTreeMut;
+import space.arim.dazzleconf2.engine.KeyMapper;
 import space.arim.dazzleconf2.engine.LoadListener;
 
 /**
@@ -37,7 +38,7 @@ public interface ConfigurationReadWrite<C> {
      * default methods).
      *
      * @return a configuration using wholly default values
-     * @throws DeveloperMistakeException if one of the default-providing methods threw an exception
+     * @throws DeveloperMistakeException if one of the default-providing methods threw an exception, or gave null
      */
     C loadDefaults();
 
@@ -48,21 +49,11 @@ public interface ConfigurationReadWrite<C> {
      * is instantiated and returned upon success.
      *
      * @param dataTree the data tree to read from
-     * @return the loaded configuration
-     */
-    LoadResult<C> readFrom(DataTree dataTree);
-
-    /**
-     * A simple, stateless read from a data tree.
-     * <p>
-     * This function loads from the data tree without modifying it, and it does not use migrations. The configuration
-     * is instantiated and returned upon success.
-     *
-     * @param dataTree the data tree to read from
      * @param loadListener a listener which informs the caller if certain events happened
+     * @param keyMapper the key mapper to use which will override any previously set
      * @return the loaded configuration
      */
-    LoadResult<C> readFrom(DataTree dataTree, LoadListener loadListener);
+    LoadResult<C> readWithKeyMapper(DataTree dataTree, LoadListener loadListener, KeyMapper keyMapper);
 
     /**
      * Writes to the given data tree.
@@ -73,7 +64,8 @@ public interface ConfigurationReadWrite<C> {
      *
      * @param config the configuration
      * @param dataTree the data tree to write to
+     * @param keyMapper the key mapper to use which will override any previously set
      */
-    void writeTo(C config, DataTreeMut dataTree);
+    void writeWithKeyMapper(C config, DataTreeMut dataTree, KeyMapper keyMapper);
 
 }

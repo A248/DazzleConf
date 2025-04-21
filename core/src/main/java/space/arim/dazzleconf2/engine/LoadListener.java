@@ -27,7 +27,7 @@ public interface LoadListener {
     /**
      * Called when an option was missing, so the value was supplied with {@link DefaultValues#ifMissing()}
      *
-     * @param entryPath the path components
+     * @param entryPath the path
      */
-    void updatedMissingPath(String[] entryPath);
+    void updatedMissingPath(KeyPath entryPath);
 }

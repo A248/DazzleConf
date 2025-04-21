@@ -38,17 +38,15 @@ final class BuiltConfig<C> implements Configuration<C> {
     private final LibraryLang libraryLang;
     private final List<TypeLiaison> typeLiaisons;
     private final KeyMapper keyMapper;
-    private final Instantiator instantiator;
     private final List<Migration<?, C>> migrations;
 
     BuiltConfig(Definition<C> definition, Locale locale, LibraryLang libraryLang, List<TypeLiaison> typeLiaisons,
-                KeyMapper keyMapper, Instantiator instantiator, List<Migration<?, C>> migrations) {
+                KeyMapper keyMapper, List<Migration<?, C>> migrations) {
         this.definition = Objects.requireNonNull(definition, "definition");
         this.locale = Objects.requireNonNull(locale, "locale");
         this.libraryLang = libraryLang;
         this.typeLiaisons = ImmutableCollections.listOf(typeLiaisons);
         this.keyMapper = keyMapper;
-        this.instantiator = Objects.requireNonNull(instantiator, "instantiator");
         this.migrations = ImmutableCollections.listOf(migrations);
     }
 
@@ -69,7 +67,7 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     @Override
     public Instantiator getInstantiator() {
-        return instantiator;
+        return definition.instantiator;
     }
 
     @Override
@@ -79,33 +77,40 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     @Override
     public C loadDefaults() {
-        return null;
+        return definition.loadDefaults();
+    }
+
+    @Override
+    public LoadResult<C> readWithKeyMapper(DataTree dataTree, LoadListener loadListener, KeyMapper keyMapper) {
+        Objects.requireNonNull(dataTree, "dataTree");
+        Objects.requireNonNull(loadListener, "loadListener");
+        Objects.requireNonNull(keyMapper, "keyMapper");
+        return definition.readWithKeyMapper(dataTree, loadListener, keyMapper);
+    }
+
+    @Override
+    public void writeWithKeyMapper(C config, DataTreeMut dataTree, KeyMapper keyMapper) {
+        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(dataTree, "dataTree");
+        Objects.requireNonNull(keyMapper, "keyMapper");
+        definition.writeWithKeyMapper(config, dataTree, keyMapper);
     }
 
     @Override
     public LoadResult<C> readFrom(DataTree dataTree) {
-        return readFrom(dataTree, new RecordUpdates());
+        return readFrom(dataTree, entryPath -> {});
     }
 
     @Override
     public LoadResult<C> readFrom(DataTree dataTree, LoadListener loadListener) {
-        Objects.requireNonNull(loadListener, "loadListener");
         return readWithKeyMapper(
-                dataTree, new RecordUpdates(), Objects.requireNonNullElseGet(this.keyMapper, DefaultKeyMapper::new)
+                dataTree, loadListener, Objects.requireNonNullElseGet(this.keyMapper, DefaultKeyMapper::new)
         );
     }
 
     @Override
     public void writeTo(C config, DataTreeMut dataTree) {
         writeWithKeyMapper(config, dataTree, Objects.requireNonNullElseGet(this.keyMapper, DefaultKeyMapper::new));
-    }
-
-    private LoadResult<C> readWithKeyMapper(DataTree dataTree, LoadListener loadListener, KeyMapper keyMapper) {
-
-    }
-
-    private void writeWithKeyMapper(C config, DataTreeMut dataTree, KeyMapper keyMapper) {
-
     }
 
     @Override
@@ -133,7 +138,7 @@ final class BuiltConfig<C> implements Configuration<C> {
         public void migrationSkip(Migration<?, ?> migration, ErrorContext failureContext) {}
 
         @Override
-        public void updatedMissingPath(String[] entryPath) {
+        public void updatedMissingPath(KeyPath entryPath) {
             updated = true;
         }
 
@@ -161,7 +166,7 @@ final class BuiltConfig<C> implements Configuration<C> {
             }
 
             @Override
-            public void updatedMissingPath(String[] entryPath) {
+            public void updatedMissingPath(KeyPath entryPath) {
                 delegate.updatedMissingPath(entryPath);
                 updated = true;
             }

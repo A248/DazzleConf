@@ -19,20 +19,51 @@
 
 package space.arim.dazzleconf2;
 
-import space.arim.dazzleconf2.translation.LibraryLangKey;
+import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.translation.LibraryLang;
 
 import java.util.*;
 
 final class LoadError implements ErrorContext {
 
-    private final LibraryLangKey message;
+    private final CharSequence message;
     private final LibraryLang libraryLang;
     private final Map<Key<?>, Object> contexts = new LinkedHashMap<>();
 
-    LoadError(LibraryLangKey message, LibraryLang libraryLang) {
+    LoadError(CharSequence message, LibraryLang libraryLang) {
         this.message = Objects.requireNonNull(message, "message");
         this.libraryLang = Objects.requireNonNull(libraryLang, "libraryLang");
+    }
+
+    static <R> LoadResult<R> wrongTypeForValue(LibraryLang libraryLang, Object value, Class<?> expectedType) {
+        return LoadResult.failure(new LoadError(libraryLang.wrongTypeForValue(
+                value, displayCanonicalType(expectedType, null), displayCanonicalType(value.getClass(), value)
+        ), libraryLang));
+    }
+
+    private static String displayCanonicalType(Class<?> type, Object typeAssist) {
+        if (type.equals(String.class)) {
+            return "text/string";
+        }
+        if (type.equals(Byte.class)) {
+            return "small integer";
+        }
+        if (type.equals(Short.class) || type.equals(Integer.class) || type.equals(Long.class)) {
+            return "integer";
+        }
+        if (type.equals(Character.class)) {
+            return "character";
+        }
+        if (type.equals(Float.class) || type.equals(Double.class)) {
+            return "decimal";
+        }
+        if (typeAssist instanceof List || type.equals(List.class)) {
+            return "list";
+        }
+        if (typeAssist instanceof DataTree || type.equals(DataTree.class)) {
+            return "configuration section";
+        }
+        throw new IllegalArgumentException("Not a canonical type " + type);
     }
 
     void addContext(Key<?> key, Object value) {
@@ -41,7 +72,7 @@ final class LoadError implements ErrorContext {
 
     @Override
     public String mainMessage() {
-        return message.getMessage(libraryLang);
+        return message.toString();
     }
 
     @Override
@@ -49,7 +80,7 @@ final class LoadError implements ErrorContext {
         StringBuilder builder = new StringBuilder();
         builder.append(libraryLang.errorIntro());
         builder.append('\n');
-        builder.append(mainMessage());
+        builder.append(message);
         builder.append('\n');
         builder.append(libraryLang.errorContext());
         builder.append('\n');

@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2;
 
+import space.arim.dazzleconf.internal.DefinitionReader;
 import space.arim.dazzleconf2.engine.KeyMapper;
 import space.arim.dazzleconf2.engine.TypeLiaison;
 import space.arim.dazzleconf2.migration.Migration;
@@ -150,7 +151,7 @@ public final class ConfigurationBuilder<C> {
      */
     public Configuration<C> build() {
         return new BuiltConfig<>(
-                new Definition<>(configType), locale, LibraryLang.loadLang(locale),
+                new DefinitionReader<>(configType).read(typeLiaisons), locale, LibraryLang.loadLang(locale),
                 typeLiaisons, keyMapper, instantiator, migrations
         );
     }

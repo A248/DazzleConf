@@ -23,6 +23,7 @@ import space.arim.dazzleconf.internal.util.ImmutableCollections;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Bank of values yielded when calling an instantiated proxy
@@ -47,8 +48,8 @@ public final class MethodYield {
      * @param implementable the interface being implemented
      * @return the values for method calls on that interface's methods, immutable
      */
-    public Map<MethodId, Object> valuesFor(Class<?> implementable) {
-        return backing.getOrDefault(implementable, ImmutableCollections.emptyMap());
+    public Set<Map.Entry<MethodId, Object>> valuesFor(Class<?> implementable) {
+        return backing.getOrDefault(implementable, ImmutableCollections.emptyMap()).entrySet();
     }
 
     /**

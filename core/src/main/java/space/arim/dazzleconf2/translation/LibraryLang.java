@@ -35,7 +35,7 @@ public interface LibraryLang {
 
     String auxiliaryErrors();
 
-    String wrongTypeForValue(String expected, String actual);
+    String wrongTypeForValue(Object value, String expectedType, String actualType);
 
     String malformattedValue(String reason);
 

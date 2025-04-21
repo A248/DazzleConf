@@ -22,6 +22,7 @@ package space.arim.dazzleconf2.reflect;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Unique identifier for a method
@@ -92,13 +93,37 @@ public final class MethodId {
 
     /**
      * Gets the method if this was constructed with a method via {@link MethodId#MethodId(Method, ReifiedType, ReifiedType[])}
-     * @return the method if constructed with one, or null if unset
+     * @return the method if constructed with one, or null empty unset
      */
-    public Method method() {
+    public Optional<Method> method() {
         if (methodOrName instanceof Method) {
+            return Optional.of((Method) methodOrName);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Gets the {@code java.lang.reflect.Method} for this object. The input parameter MUST be the actual class from
+     * which this method was taken, otherwise behavior is <b>not defined</b>.
+     *
+     * @param enclosingClass the containing class
+     * @return the method
+     * @throws IllegalStateException possibly, if the wrong class was specified
+     */
+    public Method getMethod(Class<?> enclosingClass) {
+        if (methodOrName instanceof Method) {
+            // Fast-path: Most of the time we're here
             return (Method) methodOrName;
         }
-        return null;
+        Class<?>[] rawParams = new Class[parameters.length];
+        for (int n = 0; n < parameters.length; n++) {
+            rawParams[n] = parameters[n].rawType();
+        }
+        try {
+            return enclosingClass.getDeclaredMethod(name(), rawParams);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException("Specified method does not exist on target class", e);
+        }
     }
 
     /**

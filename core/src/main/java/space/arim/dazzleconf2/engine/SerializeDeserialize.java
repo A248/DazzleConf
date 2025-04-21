@@ -50,6 +50,13 @@ public interface SerializeDeserialize<V> {
     interface SerializeOutput {
 
         /**
+         * Gets the key mapper being used
+         *
+         * @return the key mapper
+         */
+        KeyMapper keyMapper();
+
+        /**
          * Outputs a string
          * @param value the string, nonnull
          */

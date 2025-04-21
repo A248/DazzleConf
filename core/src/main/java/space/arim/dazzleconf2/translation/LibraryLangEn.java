@@ -44,8 +44,8 @@ public class LibraryLangEn implements LibraryLang {
     }
 
     @Override
-    public String wrongTypeForValue(String expected, String actual) {
-        return "This value is supposed to be a " + expected + ", but it was actually " + actual;
+    public String wrongTypeForValue(Object value, String expectedType, String actualType) {
+        return "The value < " + value + " > is not a " + expectedType + ", but actually " + actualType;
     }
 
     @Override
@@ -55,7 +55,7 @@ public class LibraryLangEn implements LibraryLang {
 
     @Override
     public String errorIntro() {
-        return "Encountered a user problem loading the configuration. Reason:";
+        return "We found a problem loading the configuration. Reason:";
     }
 
     @Override

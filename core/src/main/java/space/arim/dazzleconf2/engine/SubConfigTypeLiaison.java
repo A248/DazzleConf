@@ -67,14 +67,14 @@ public final class SubConfigTypeLiaison implements TypeLiaison {
             @Override
             public LoadResult<V> deserialize(OperableObject object) {
                 return object.requireDataTree().flatMap((dataTree -> {
-                    return configuration.readFrom(dataTree, entryPath -> object.flagUpdate());
+                    return configuration.readWithKeyMapper(dataTree, object::flagUpdate, object.keyMapper());
                 }));
             }
 
             @Override
             public void serialize(V value, SerializeOutput output) {
                 DataTreeMut dataTreeMut = new DataTreeMut();
-                configuration.writeTo(value, dataTreeMut);
+                configuration.writeWithKeyMapper(value, dataTreeMut, output.keyMapper());
                 output.outDataTree(dataTreeMut);
             }
         }

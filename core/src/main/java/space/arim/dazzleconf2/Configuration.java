@@ -20,7 +20,10 @@
 package space.arim.dazzleconf2;
 
 import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.DataTreeMut;
 import space.arim.dazzleconf2.engine.KeyMapper;
+import space.arim.dazzleconf2.engine.LoadListener;
 import space.arim.dazzleconf2.engine.TypeLiaison;
 import space.arim.dazzleconf2.engine.UpdateListener;
 import space.arim.dazzleconf2.migration.Migration;
@@ -101,6 +104,47 @@ public interface Configuration<C> extends ConfigurationReadWrite<C> {
     static <C> ConfigurationBuilder<C> builder(TypeToken<C> configType) {
         return new ConfigurationBuilder<>(configType);
     }
+
+    /**
+     * A simple, stateless read from a data tree.
+     * <p>
+     * This function loads from the data tree without modifying it, and it does not use migrations. The configuration
+     * is instantiated and returned upon success.
+     * <p>
+     * The key mapper used is either the one set during construction, or the one recommended by the backend.
+     *
+     * @param dataTree the data tree to read from
+     * @return the loaded configuration
+     */
+    LoadResult<C> readFrom(DataTree dataTree);
+
+    /**
+     * A simple, stateless read from a data tree.
+     * <p>
+     * This function loads from the data tree without modifying it, and it does not use migrations. The configuration
+     * is instantiated and returned upon success.
+     * <p>
+     * The key mapper used is either the one set during construction, or the one recommended by the backend.
+     *
+     * @param dataTree the data tree to read from
+     * @param loadListener a listener which informs the caller if certain events happened
+     * @return the loaded configuration
+     */
+    LoadResult<C> readFrom(DataTree dataTree, LoadListener loadListener);
+
+    /**
+     * Writes to the given data tree.
+     * <p>
+     * The output data tree does not need to be empty, but there are no guarantees that existing data will not be
+     * overidden or cleared. The values of the provided configuration are written to it, and it does not matter
+     * how the {@code config} parameter is implemented so long as it returns non-null values.
+     * <p>
+     *  The key mapper used is either the one set during construction, or the one recommended by the backend.
+     *
+     * @param config the configuration
+     * @param dataTree the data tree to write to
+     */
+    void writeTo(C config, DataTreeMut dataTree);
 
     /**
      * Configures, migrates, and/or updates the backend as needed.

@@ -21,6 +21,7 @@ package space.arim.dazzleconf2.engine;
 
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.DataTree;
 
 /**
@@ -38,6 +39,17 @@ public interface OperableObject {
      */
     Object object();
 
+    /**
+     * Gets the key mapper.
+     * <p>
+     * The key mapper is whichever key mapper is being used (or might have been recommended by
+     * {@link Backend#recommendKeyMapper()} even if no key mapper was set on the configuration. It is provided here
+     * for purposes of deserializing child options in configuration subsections.
+     *
+     * @return the key mapper, never
+     */
+    KeyMapper keyMapper();
+
     //LoadResult<String> requireString();
 
     /**
@@ -52,9 +64,12 @@ public interface OperableObject {
     /**
      * Signals that the data tree could use an update with respect to this object. For example, this might happen if
      * missing options were filled in with default values, and those default values need to be written to the backend.
+     * <p>
+     * If the path being updated is only a sub-path of this one, then that sub-path should be provided.
      *
+     * @param subPath the sub path which has been updated. May be null if none exists
      */
-    void flagUpdate();
+    void flagUpdate(KeyPath subPath);
 
     /**
      * Makes a child operable object. The child value is supposed to be taken "from" this object. For example, an
@@ -67,15 +82,19 @@ public interface OperableObject {
 
     /**
      * Builds an error context based on the implementation
+     *
+     * @param message the main error messge
      * @return an error context
      */
-    ErrorContext buildError();
+    ErrorContext buildError(String message);
 
     /**
      * Builds an error context, wraps it in a <code>LoadResult</code> and returns it. This function is named as such
-     * so that your code will look like this: <code>return operable.throwError();</code>
+     * so that your code will look like this: <code>return operable.throwError("failure");</code>
+     *
+     * @param message the main error message
      * @return an error result
      * @param <R> the type of the result value (can be anything since the result will be an error)
      */
-    <R> LoadResult<R> throwError();
+    <R> LoadResult<R> throwError(String message);
 }

@@ -39,16 +39,6 @@ public final class DefaultInstantiator implements Instantiator {
      */
     public DefaultInstantiator() {}
 
-    private static Method getMethod(Class<?> target, MethodId methodId) {
-        Method cached = methodId.method();
-        if (cached != null) {
-            // Fast-path: Most of the time we're here
-            return cached;
-        }
-        Class<?>[] parameters = new Class[methodId.arguments().size()];
-        return target.getMethod(methodId.name(), methodId.arguments())
-    }
-
     @Override
     public Object generate(ClassLoader classLoader, Set<Class<?>> targets, MethodYield methodYield) {
 
@@ -56,16 +46,16 @@ public final class DefaultInstantiator implements Instantiator {
         Set<Method> defaultMethods = null;
 
         for (Class<?> target : targets) {
-            for (Map.Entry<MethodId, Object> entry : methodYield.valuesFor(target).entrySet()) {
+            for (Map.Entry<MethodId, Object> entry : methodYield.valuesFor(target)) {
 
                 MethodId methodId = entry.getKey();
                 Object value = entry.getValue();
 
-                if (value == InvokeDefaultValue.INSTANCE) {
+                if (value instanceof InvokeDefaultValue) {
                     if (defaultMethods == null) {
                         defaultMethods = new HashSet<>();
                     }
-                    defaultMethods.add(getMethod(target, methodId));
+                    defaultMethods.add(methodId.getMethod(target));
                 } else {
                     fastValues.put(methodId.name(), value);
                 }

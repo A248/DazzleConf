@@ -20,12 +20,13 @@
 package space.arim.dazzleconf2.reflect;
 
 /**
- * A special value used for {@link MethodYield} that instructs the {@link Instantiator} to call the default method
+ * A marker value used for {@link MethodYield} that instructs the {@link Instantiator} to call the default method
  *
  */
-public enum InvokeDefaultValue {
+public final class InvokeDefaultValue {
+
     /**
-     * Singleton instance
+     * Creates
      */
-    INSTANCE
+    public InvokeDefaultValue() {}
 }
