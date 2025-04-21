@@ -19,6 +19,10 @@
 
 package space.arim.dazzleconf2.engine;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
+import java.util.Objects;
+
 /**
  * Storage for default values
  *
@@ -31,13 +35,38 @@ public interface DefaultValues<V> {
      *
      * @return the default value
      */
-    V defaultValue();
+    @NonNull V defaultValue();
 
     /**
      * Gets the value if missing in an existing configuration
      *
      * @return the value if missing
      */
-    V ifMissing();
+    @NonNull V ifMissing();
 
+    /**
+     * Creates a simple implementation from the given value.
+     * <p>
+     * The value provided doubles as the default value and the missing value.
+     *
+     * @param defaultValue the value to use
+     * @return a default values implementation
+     * @param <V> the type being provided
+     */
+    static <V> DefaultValues<V> simple(@NonNull V defaultValue) {
+        class Simple implements DefaultValues<V> {
+
+            @Override
+            public @NonNull V defaultValue() {
+                return defaultValue;
+            }
+
+            @Override
+            public @NonNull V ifMissing() {
+                return defaultValue;
+            }
+        }
+        Objects.requireNonNull(defaultValue);
+        return new Simple();
+    }
 }

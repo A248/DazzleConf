@@ -19,8 +19,12 @@
 
 package space.arim.dazzleconf2.backend;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.KeyMapper;
 
 import java.io.UncheckedIOException;
@@ -32,12 +36,15 @@ import java.io.UncheckedIOException;
 public interface Backend {
 
     /**
-     * Reads a data tree
+     * Reads a data tree.
+     * <p>
+     * If no data exists (empty source), a null tree is returned. If the loading failed because the data
+     * exists but was malformatted, this may be reflected by {@link ErrorContext#BACKEND_MESSAGE} in the load result.
      *
      * @return a load result of the data tree
      * @throws UncheckedIOException upon I/O failure
      */
-    LoadResult<DataTree> readTree();
+    @NonNull LoadResult<@Nullable DataTree> readTree();
 
     /**
      * Writes the provided data tree to the source
@@ -45,7 +52,7 @@ public interface Backend {
      * @param tree the data tree
      * @throws UncheckedIOException upon I/O failure
      */
-    void writeTree(DataTree tree);
+    void writeTree(@NonNull DataTree tree);
 
     /**
      * Whether comments are supported in the following location. If comments are not supported there, this format
@@ -54,7 +61,7 @@ public interface Backend {
      * @param location where are we talking about
      * @return if comments are supported in this location
      */
-    boolean supportsComments(DataTree.CommentLocation location);
+    boolean supportsComments(@NonNull CommentLocation location);
 
     /**
      * Recommends a {@link KeyMapper} appropriate to the backend format. When loading a config with
@@ -63,6 +70,6 @@ public interface Backend {
      *
      * @return the recommended key mapper
      */
-    KeyMapper recommendKeyMapper();
+    @NonNull KeyMapper recommendKeyMapper();
 
 }

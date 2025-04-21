@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2.backend;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import java.io.*;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
@@ -37,7 +39,7 @@ public interface BinaryRoot extends DataRoot {
      * @return the operation result
      * @throws IOException upon failure to open
      */
-    <R> R openReadChannel(Operation<R, ReadableByteChannel> operation) throws IOException;
+    <R> R openReadChannel(@NonNull Operation<R, @NonNull ReadableByteChannel> operation) throws IOException;
 
     /**
      * Opens an input stream for the data
@@ -47,7 +49,7 @@ public interface BinaryRoot extends DataRoot {
      * @return the operation result
      * @throws IOException upon failure to open
      */
-    <R> R openInputStream(Operation<R, InputStream> operation) throws IOException;
+    <R> R openInputStream(@NonNull Operation<R, @NonNull InputStream> operation) throws IOException;
 
     /**
      * Opens a write channel to the data
@@ -57,7 +59,7 @@ public interface BinaryRoot extends DataRoot {
      * @return the operation result
      * @throws IOException upon failure to open
      */
-    <R> R openWriteChannel(Operation<R, WritableByteChannel> operation) throws IOException;
+    <R> R openWriteChannel(@NonNull Operation<R, @NonNull WritableByteChannel> operation) throws IOException;
 
     /**
      * Opens an output stream to the data
@@ -67,6 +69,6 @@ public interface BinaryRoot extends DataRoot {
      * @return the operation result
      * @throws IOException upon failure to open
      */
-    <R> R openOutputStream(Operation<R, OutputStream> operation) throws IOException;
+    <R> R openOutputStream(@NonNull Operation<R, @NonNull OutputStream> operation) throws IOException;
 
 }

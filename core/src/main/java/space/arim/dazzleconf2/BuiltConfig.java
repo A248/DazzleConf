@@ -19,107 +19,113 @@
 
 package space.arim.dazzleconf2;
 
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.CachedBackend;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.DataTreeMut;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
+import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.migration.Migration;
 import space.arim.dazzleconf2.reflect.Instantiator;
-import space.arim.dazzleconf2.translation.LibraryLang;
 
 import java.util.*;
 
 final class BuiltConfig<C> implements Configuration<C> {
 
-    private final Definition<C> definition;
+    private final ConfigurationDefinition<C> definition;
     private final Locale locale;
-    private final LibraryLang libraryLang;
     private final List<TypeLiaison> typeLiaisons;
     private final KeyMapper keyMapper;
+    private final Instantiator instantiator;
     private final List<Migration<?, C>> migrations;
 
-    BuiltConfig(Definition<C> definition, Locale locale, LibraryLang libraryLang, List<TypeLiaison> typeLiaisons,
-                KeyMapper keyMapper, List<Migration<?, C>> migrations) {
+    BuiltConfig(ConfigurationDefinition<C> definition, Locale locale, List<TypeLiaison> typeLiaisons,
+                KeyMapper keyMapper, Instantiator instantiator, List<Migration<?, C>> migrations) {
         this.definition = Objects.requireNonNull(definition, "definition");
         this.locale = Objects.requireNonNull(locale, "locale");
-        this.libraryLang = libraryLang;
-        this.typeLiaisons = ImmutableCollections.listOf(typeLiaisons);
+        this.typeLiaisons = typeLiaisons;
         this.keyMapper = keyMapper;
+        this.instantiator = Objects.requireNonNull(instantiator, "instantiator");
         this.migrations = ImmutableCollections.listOf(migrations);
     }
 
     @Override
-    public Locale getLocale() {
+    public @NonNull Locale getLocale() {
         return locale;
     }
 
     @Override
-    public List<TypeLiaison> getTypeLiaisons() {
+    public @NonNull List<@NonNull TypeLiaison> getTypeLiaisons() {
         return typeLiaisons;
     }
 
     @Override
-    public Optional<KeyMapper> getKeyMapper() {
-        return Optional.ofNullable(keyMapper);
+    public @Nullable KeyMapper getKeyMapper() {
+        return keyMapper;
     }
 
     @Override
-    public Instantiator getInstantiator() {
-        return definition.instantiator;
+    public @NonNull Instantiator getInstantiator() {
+        return instantiator;
     }
 
     @Override
-    public List<Migration<?, C>> getMigrations() {
+    public @NonNull List<@NonNull Migration<?, C>> getMigrations() {
         return migrations;
     }
 
     @Override
-    public C loadDefaults() {
+    public @NonNull C loadDefaults() {
         return definition.loadDefaults();
     }
 
     @Override
-    public LoadResult<C> readWithKeyMapper(DataTree dataTree, LoadListener loadListener, KeyMapper keyMapper) {
+    public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree, @NonNull ReadOptions readOptions) {
         Objects.requireNonNull(dataTree, "dataTree");
-        Objects.requireNonNull(loadListener, "loadListener");
-        Objects.requireNonNull(keyMapper, "keyMapper");
-        return definition.readWithKeyMapper(dataTree, loadListener, keyMapper);
+        Objects.requireNonNull(readOptions, "readOptions");
+        return definition.readFrom(dataTree, readOptions);
     }
 
     @Override
-    public void writeWithKeyMapper(C config, DataTreeMut dataTree, KeyMapper keyMapper) {
+    public @NonNull LoadResult<@NonNull C> readWithUpdate(@NonNull DataTreeMut dataTree, @NonNull ReadOptions readOptions) {
+        Objects.requireNonNull(dataTree, "dataTree");
+        Objects.requireNonNull(readOptions, "readOptions");
+        return definition.readWithUpdate(dataTree, readOptions);
+    }
+
+    @Override
+    public void writeTo(@NonNull C config, @NonNull DataTreeMut dataTree, @NonNull WriteOptions writeOptions) {
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(dataTree, "dataTree");
-        Objects.requireNonNull(keyMapper, "keyMapper");
-        definition.writeWithKeyMapper(config, dataTree, keyMapper);
+        Objects.requireNonNull(writeOptions, "writeOptions");
+        definition.writeTo(config, dataTree, writeOptions);
     }
 
     @Override
-    public LoadResult<C> readFrom(DataTree dataTree) {
+    public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree) {
         return readFrom(dataTree, entryPath -> {});
     }
 
     @Override
-    public LoadResult<C> readFrom(DataTree dataTree, LoadListener loadListener) {
-        return readWithKeyMapper(
-                dataTree, loadListener, Objects.requireNonNullElseGet(this.keyMapper, DefaultKeyMapper::new)
-        );
+    public @NonNull LoadResult<C> readFrom(@NonNull DataTree dataTree, @NonNull LoadListener loadListener) {
+        KeyMapper keyMapper = this.keyMapper;
+        if (keyMapper == null) keyMapper = new DefaultKeyMapper();
+        return readFrom(dataTree, new ReadOpts(loadListener, keyMapper));
     }
 
     @Override
-    public void writeTo(C config, DataTreeMut dataTree) {
-        writeWithKeyMapper(config, dataTree, Objects.requireNonNullElseGet(this.keyMapper, DefaultKeyMapper::new));
+    public void writeTo(@NonNull C config, @NonNull DataTreeMut dataTree) {
+        KeyMapper keyMapper = this.keyMapper;
+        if (keyMapper == null) keyMapper = new DefaultKeyMapper();
+        writeTo(config, dataTree, new WriteOpts(keyMapper));
     }
 
     @Override
-    public LoadResult<C> configureWith(Backend backend) {
+    public @NonNull LoadResult<C> configureWith(@NonNull Backend backend) {
         return configureWith0(new CachedBackend(backend), null);
     }
 
     @Override
-    public LoadResult<C> configureWith(Backend backend, UpdateListener updateListener) {
+    public @NonNull LoadResult<C> configureWith(@NonNull Backend backend, @NonNull UpdateListener updateListener) {
         Objects.requireNonNull(updateListener, "updateListener");
         return configureWith0(new CachedBackend(backend), updateListener);
     }
@@ -132,13 +138,13 @@ final class BuiltConfig<C> implements Configuration<C> {
         public void loadedDefaults() {}
 
         @Override
-        public void migratedFrom(Migration<?, ?> migration) {}
+        public void migratedFrom(@NonNull Migration<?, ?> migration) {}
 
         @Override
-        public void migrationSkip(Migration<?, ?> migration, ErrorContext failureContext) {}
+        public void migrationSkip(@NonNull Migration<?, ?> migration, @NonNull List<@NonNull ErrorContext> errorContexts) {}
 
         @Override
-        public void updatedMissingPath(KeyPath entryPath) {
+        public void updatedMissingPath(@NonNull KeyPath entryPath) {
             updated = true;
         }
 
@@ -156,37 +162,30 @@ final class BuiltConfig<C> implements Configuration<C> {
             }
 
             @Override
-            public void migratedFrom(Migration<?, ?> migration) {
+            public void migratedFrom(@NonNull Migration<?, ?> migration) {
                 delegate.migratedFrom(migration);
             }
 
             @Override
-            public void migrationSkip(Migration<?, ?> migration, ErrorContext failureContext) {
-                delegate.migrationSkip(migration, failureContext);
+            public void migrationSkip(@NonNull Migration<?, ?> migration,
+                                      @NonNull List<@NonNull ErrorContext> errorContexts) {
+                delegate.migrationSkip(migration, errorContexts);
             }
 
             @Override
-            public void updatedMissingPath(KeyPath entryPath) {
+            public void updatedMissingPath(@NonNull KeyPath entryPath) {
                 delegate.updatedMissingPath(entryPath);
                 updated = true;
             }
         }
     }
 
-    private LoadResult<C> configureWith0(
-            CachedBackend backend, // Save on read/write operations
-            UpdateListener updateListener // Null for unset
-    ) {
+    private LoadResult<C> configureWith0(@NonNull CachedBackend backend, @Nullable UpdateListener updateListener) {
 
-        ClassLoader cl = null;
-        getClass().getResource("");
-        RecordUpdates recordUpdates;
-        if (updateListener == null) {
-            recordUpdates = new RecordUpdates();
-        } else {
-            recordUpdates = new RecordUpdates.WithDelegate(updateListener);
-        }
-        KeyMapper keyMapper = Objects.requireNonNullElse(this.keyMapper, backend.recommendKeyMapper());
+        RecordUpdates recordUpdates = (updateListener == null) ?
+                new RecordUpdates() : new RecordUpdates.WithDelegate(updateListener);
+        KeyMapper keyMapper = this.keyMapper;
+        if (keyMapper == null) keyMapper = backend.recommendKeyMapper();
 
         // 1. Try to migrate if possible
         if (!migrations.isEmpty()) {
@@ -197,30 +196,39 @@ final class BuiltConfig<C> implements Configuration<C> {
                     // Update the backend with the migrated value
                     C migrated = attempt.getOrThrow();
                     DataTreeMut writeBack = new DataTreeMut();
-                    writeWithKeyMapper(migrated, writeBack, keyMapper);
+                    writeTo(migrated, writeBack, new WriteOpts(keyMapper));
                     backend.writeTree(writeBack);
                     // Now signal completion, and finish
                     migration.onCompletion();
                     recordUpdates.migratedFrom(migration);
                     return attempt;
                 }
-                recordUpdates.migrationSkip(migration, attempt.getError().orElseThrow());
+                recordUpdates.migrationSkip(migration, attempt.getErrorContexts());
                 // Keep going
             }
         }
         // 2. Load configuration
-        return backend.readTree().flatMap((loadedTree) -> {
-            LoadResult<C> loadResult = readWithKeyMapper(loadedTree, recordUpdates, keyMapper);
-            loadResult.ifSuccess((loaded) -> {
-                // 3. Update if necessary
-                if (recordUpdates.updated) {
-                    DataTreeMut loadedTreeMut = loadedTree.makeMut();
-                    writeWithKeyMapper(loaded, loadedTreeMut, keyMapper);
-                    backend.writeTree(loadedTreeMut);
-                }
-            });
-            return loadResult;
-        });
+        LoadResult<@Nullable DataTree> loadTreeResult = backend.readTree();
+        if (loadTreeResult.isFailure()) {
+            return LoadResult.failure(loadTreeResult.getErrorContexts());
+        }
+        DataTree loadedTree = loadTreeResult.getOrThrow();
+        if (loadedTree == null) {
+            // 3. Write defaults if necessary
+            C defaults = loadDefaults();
+            DataTreeMut writeBack = new DataTreeMut();
+            writeTo(defaults, writeBack, new WriteOpts(keyMapper));
+            backend.writeTree(writeBack);
+            recordUpdates.loadedDefaults();
+            return LoadResult.of(defaults);
+        }
+        DataTreeMut updatableTree = loadedTree.makeMut();
+        LoadResult<C> loadResult = readWithUpdate(updatableTree, new ReadOpts(recordUpdates, keyMapper));
+        if (loadResult.isSuccess() && recordUpdates.updated) {
+            // 4. Update if necessary
+            backend.writeTree(updatableTree);
+        }
+        return loadResult;
     }
 
 }

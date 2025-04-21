@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2020 Anand Beh
+ * Copyright © 2025 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -24,8 +24,8 @@ import space.arim.dazzleconf.error.InvalidConfigException;
 import space.arim.dazzleconf.internal.ConfEntry;
 import space.arim.dazzleconf.internal.type.ReturnType;
 import space.arim.dazzleconf.internal.type.ReturnTypeWithConfigDefinition;
-import space.arim.dazzleconf.internal.util.AccessChecking;
-import space.arim.dazzleconf.internal.util.MethodUtil;
+import space.arim.dazzleconf2.internals.AccessChecking;
+import space.arim.dazzleconf2.internals.MethodUtil;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

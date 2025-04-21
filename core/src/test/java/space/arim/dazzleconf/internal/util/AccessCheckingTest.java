@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2021 Anand Beh
+ * Copyright © 2025 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -26,7 +26,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static space.arim.dazzleconf.internal.util.AccessChecking.isAccessible;
+import static space.arim.dazzleconf2.internals.AccessChecking.isAccessible;
 
 public class AccessCheckingTest {
 

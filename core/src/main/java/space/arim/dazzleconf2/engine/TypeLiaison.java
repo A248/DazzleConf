@@ -19,7 +19,10 @@
 
 package space.arim.dazzleconf2.engine;
 
-import space.arim.dazzleconf2.ConfigurationReadWrite;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.SideEffectFree;
+import space.arim.dazzleconf2.ConfigurationDefinition;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
@@ -45,7 +48,8 @@ public interface TypeLiaison {
      * @param handshake the handshake
      * @return the agent if supported, or null otherwise
      */
-    <V> Agent<V> makeAgent(TypeToken<V> typeToken, Handshake<V> handshake);
+    @SideEffectFree
+    <V> @Nullable Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake);
 
     /**
      * An agent that is ready to handle matters relating to a type
@@ -56,35 +60,43 @@ public interface TypeLiaison {
         /**
          * Gets default values. These are often extracted in annotations
          *
+         * @param annotationContext the annotation context
          * @return the default values, or null if no defaults are available
          * @throws DeveloperMistakeException optionally, if a library usage failure happened
          */
-        DefaultValues<V> loadDefaultValues();
+        @Nullable DefaultValues<V> loadDefaultValues(@NonNull AnnotationContext annotationContext);
 
         /**
-         * Makes a serializer for the type. After this serializer is made, it will be permanently bound to the type
-         * and can be re-used in the configuration definition.
+         * Makes a serializer for the type. After the serializer is made, it will be permanently bound to the type
+         * and can be re-used in the configuration structure.
          *
          * @return the serializer
          */
-        SerializeDeserialize<V> makeSerializer();
+        @NonNull SerializeDeserialize<V> makeSerializer();
 
     }
 
     /**
-     * Callback interface allowing {@link Agent} to access certain resources
-     * @param <V> the type being dealt with
+     * A holder for annotation data
+     *
      */
-    interface Handshake<V> {
+    interface AnnotationContext {
 
         /**
-         * Checks available contexts, such as the declaring method, for the following annotation.
+         * Checks available contexts, such as the declaring method or class, for the following annotation.
          *
          * @param annotationClass the annotation class
          * @return the annotation if present
          * @param <A> the annotation type
          */
-        <A extends Annotation> A getAnnotationInContext(Class<A> annotationClass);
+        <A extends Annotation> @Nullable A getAnnotation(@NonNull Class<A> annotationClass);
+
+    }
+
+    /**
+     * Callback interface allowing {@link Agent} to access certain resources
+     */
+    interface Handshake {
 
         /**
          * Gets another serializer. This function allows serializers to "depend" on each other by storing instances
@@ -95,16 +107,16 @@ public interface TypeLiaison {
          * @param <U> the type requested
          * @throws DeveloperMistakeException if no serializer was configured for the requested type
          */
-        <U> SerializeDeserialize<U> getOtherSerializer(TypeToken<U> other);
+        <U> @NonNull SerializeDeserialize<U> getOtherSerializer(@NonNull TypeToken<U> other);
 
         /**
-         * Makes a child configuration for the type. This function will use the settings from the parent configuration
+         * Gets another configuration. This function will use the settings from the parent configuration
          * for purposes of defining, deserializing/serializing, and instantiating the child.
          *
          * @return a configuration which can be read or written
-         * @throws DeveloperMistakeException if the type being handled is improperly declared or has broken settings
+         * @throws DeveloperMistakeException if the type requested is improperly declared or has broken settings
          */
-        ConfigurationReadWrite<V> childConfiguration();
+        <U> @NonNull ConfigurationDefinition<U> getConfiguration(@NonNull TypeToken<U> other);
 
     }
 }

@@ -1,3 +1,22 @@
+<!--
+  ~ DazzleConf
+  ~ Copyright © 2025 Anand Beh
+  ~
+  ~ DazzleConf is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU Lesser General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ DazzleConf is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  ~ GNU Lesser General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU Lesser General Public License
+  ~ along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
+  ~ and navigate to version 3 of the GNU Lesser General Public License.
+  -->
+
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	
@@ -15,20 +34,31 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<executions>
+					<!--
+					We make use of different multiversion techniques. Although Java offers multi-release jars, we only
+					use them where necessary because it requires maintaining identical signatures. Additionally,
+					there is no reason to place module-info.class in a multi-release directory.
+
+					Plan:
+					Compile everything with Java 11, re-compile most things with Java 8, then add multi-release sets.
+					-->
 					<execution>
+						<!-- Compile and link everything with Java -->
 						<id>default-compile</id>
 					</execution>
 					<execution>
+						<!-- Recompilation of almost everything for Java 8 -->
 						<id>base-compile</id>
 						<configuration>
 							<excludes>
 								<exclude>module-info.java</exclude>
-								<exclude>space/arim/dazzleconf/internal/util/jdk11/**</exclude>
+								<exclude>space/arim/dazzleconf2/internals/jdk11/**</exclude>
 							</excludes>
 						</configuration>
 					</execution>
 					<execution>
-						<id>multi-release-compile</id>
+						<!-- MR: src/main/java11 -->
+						<id>multi-release-compile-jdk11</id>
 						<goals>
 							<goal>compile</goal>
 						</goals>
@@ -39,13 +69,28 @@
 							<multiReleaseOutput>true</multiReleaseOutput>
 						</configuration>
 					</execution>
+					<execution>
+						<!-- MR: src/main/java12 -->
+						<id>multi-release-compile-jdk12</id>
+						<goals>
+							<goal>compile</goal>
+						</goals>
+						<configuration>
+							<release>12</release>
+							<compileSourceRoots>
+								<compileSourceRoot>${project.basedir}/src/main/java12</compileSourceRoot>
+							</compileSourceRoots>
+							<multiReleaseOutput>true</multiReleaseOutput>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<argLine>-XX:TieredStopAtLevel=1 -XX:-TieredCompilation
+					<argLine>
+						-XX:TieredStopAtLevel=1 -XX:-TieredCompilation
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.factory=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.internal=ALL-UNNAMED
@@ -53,7 +98,15 @@
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.internal.type=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.serialiser=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.sorter=ALL-UNNAMED
-						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.validator=ALL-UNNAMED</argLine>
+						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.validator=ALL-UNNAMED
+
+						--add-opens space.arim.dazzleconf/space.arim.dazzleconf2=ALL-UNNAMED
+						--add-opens space.arim.dazzleconf/space.arim.dazzleconf2.backend=ALL-UNNAMED
+						--add-opens space.arim.dazzleconf/space.arim.dazzleconf2.engine=ALL-UNNAMED
+						--add-opens space.arim.dazzleconf/space.arim.dazzleconf2.engine.liaison=ALL-UNNAMED
+						--add-opens space.arim.dazzleconf/space.arim.dazzleconf2.migration=ALL-UNNAMED
+						--add-opens space.arim.dazzleconf/space.arim.dazzleconf2.reflect=ALL-UNNAMED
+					</argLine>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -129,6 +182,12 @@
 			<artifactId>junit-jupiter-engine</artifactId>
 			<version>${junit.version}</version>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.checkerframework</groupId>
+			<artifactId>checker-qual</artifactId>
+			<version>${checkerqual.version}</version>
+			<optional>true</optional>
 		</dependency>
 	</dependencies>
 </project>

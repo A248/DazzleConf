@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2021 Anand Beh
+ * Copyright © 2025 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -19,8 +19,8 @@
 
 package space.arim.dazzleconf.internal.type;
 
-import space.arim.dazzleconf.internal.util.AccessChecking;
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import space.arim.dazzleconf2.internals.AccessChecking;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
 
 import java.lang.annotation.Annotation;
 import java.util.List;

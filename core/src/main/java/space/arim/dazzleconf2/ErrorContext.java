@@ -19,14 +19,17 @@
 
 package space.arim.dazzleconf2;
 
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
-import space.arim.dazzleconf2.translation.LibraryLangKey;
-import space.arim.dazzleconf2.translation.LibraryLang;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.internals.LibraryLangKey;
+import space.arim.dazzleconf2.internals.LibraryLang;
 
+import java.io.IOException;
 import java.util.*;
 
 /**
- * Context holder for errors in {@link LoadResult}
+ * Context holder for errors in {@link LoadResult}. This is a decorator around a type safe map, used to provide
+ * different error-related information and parts of context.
  *
  */
 public interface ErrorContext {
@@ -36,16 +39,7 @@ public interface ErrorContext {
      */
     Key<List<String>> ENTRY_PATH = new Key<>(
             LibraryLang::entryPath,
-            (value) -> {
-                if (value == null) {
-                    return ImmutableCollections.emptyList();
-                } else {
-                    @SuppressWarnings("unchecked")
-                    List<String> casted = (List<String>) value;
-                    return casted;
-                }
-            },
-            (builder, value) -> {
+            (lang, builder, value) -> {
                 builder.append(String.join(".", value));
             }
     );
@@ -53,48 +47,143 @@ public interface ErrorContext {
     /**
      * Line number in the source data
      */
-    Key<OptionalInt> LINE_NUMBER = new Key<>(
-            LibraryLang::lineNumber,
-            value -> value == null ? OptionalInt.empty() : OptionalInt.of((Integer) value),
-            (builder, lineNumber) -> {
-                lineNumber.ifPresentOrElse(builder::append, () -> builder.append("<none>"));
-            }
-    );
+    Key<Integer> LINE_NUMBER = new Key<>(LibraryLang::line, (output, value) -> output.append(value.toString()));
 
     /**
      * Error message provided by the configuration format backend
      */
-    Key<Optional<String>> BACKEND_MESSAGE = new Key<>(
-            LibraryLang::backendMessage,
-            value -> Optional.of((String) value),
-            (builder, backendMsg) -> {
-                backendMsg.ifPresentOrElse(builder::append, () -> builder.append("<none>"));
+    Key<String> BACKEND_MESSAGE = new Key<>(LibraryLang::backendMessage, Appendable::append);
+    /**
+     * A collection of errors causing this one
+     */
+    Key<List<ErrorContext>> CAUSES = new Key<>(
+            LibraryLang::causalErrors,
+            (lang, builder, value) -> {
+                int errorCount = value.size();
+                int cap = Integer.min(4, errorCount);
+                for (int n = 0; n < cap; n++) {
+                    ErrorContext currentError = value.get(n);
+                    builder.append("\n  ");
+                    // 1. Add path
+                    boolean pathOrLineNumber = false;
+                    List<String> path = currentError.query(ENTRY_PATH);
+                    if (!path.isEmpty()) {
+                        builder.append(String.join(".", path));
+                        pathOrLineNumber = true;
+                    }
+                    // 3. Line number
+                    Integer lineNumber = currentError.query(LINE_NUMBER);
+                    if (lineNumber != null) {
+                        if (pathOrLineNumber) builder.append(" ");
+                        builder.append(lang.line());
+                        builder.append(Integer.toString(lineNumber));
+                        pathOrLineNumber = true;
+                    }
+                    // 2. Error message
+                    if (pathOrLineNumber) builder.append(':');
+                    builder.append(currentError.mainMessage());
+                }
+                if (cap != errorCount) {
+                    builder.append("+");
+                    builder.append(Integer.toString(errorCount - cap));
+                    builder.append(' ');
+                    builder.append(lang.moreErrors());
+                }
             }
     );
 
     /**
-     * Gets the main message to display as the reason for this error. This won't include additional context; for that
-     * see {@link #display}.
+     * Gets the main message to display as the reason for this error. This won't include additional details; for that
+     * see {@link #displayDetails}.
      *
      * @return the message
      */
     String mainMessage();
 
     /**
+     * Gets the main message to display as the reason for this error. This won't include additional details; for that
+     * see {@link #displayDetails}.
+     * <p>
+     * Same as {@link #mainMessage()} except that the message is sent to the output appendable
+     *
+     * @param output the string output
+     * @throws IOException if the output threw this error, it is propagated
+     */
+    void mainMessage(Appendable output) throws IOException;
+
+    /**
+     * Gets the main message to display as the reason for this error. This won't include additional details; for that
+     * see {@link #displayDetails}.
+     * <p>
+     * Same as {@link #mainMessage()} except that the message is sent to the output builder
+     *
+     * @param output the string output
+     */
+    void mainMessage(StringBuilder output);
+
+    /**
      * Formats this error context and includes all information. This message is user displayable, and it is also
      * intended to be sufficiently informative to avert the need for stacktraces.
      *
-     * @return a displayable
+     * @return a displayable message
      */
-    String display();
+    String displayDetails();
 
     /**
-     * Gets a piece of context from this error context, if it is set
-     * @param key the key
-     * @return the context detail if set, an empty optional or collection otherwise
-     * @param <V> the value returned for the key
+     * Formats this error context and includes all information. This message is user displayable, and it is also
+     * intended to be sufficiently informative to avert the need for stacktraces.
+     * <p>
+     * Same as {@link #displayDetails()} except that the message is sent to the output appendable
+     *
+     * @param output the string output
+     * @throws IOException if the output threw this error, it is propagated
      */
-    <V> V query(Key<V> key);
+    void displayDetails(Appendable output) throws IOException;
+
+    /**
+     * Formats this error context and includes all information. This message is user displayable, and it is also
+     * intended to be sufficiently informative to avert the need for stacktraces.
+     * <p>
+     * Same as {@link #displayDetails()} except that the message is set to the output builder
+     *
+     * @param output the string output
+     */
+    void displayDetails(StringBuilder output);
+
+    /**
+     * Gets a piece of detail from this error context, if it is set
+     * @param key the key
+     * @return the context detail if set, or null if not present
+     * @param <V> the value put in for the key
+     */
+    <V> @Nullable V query(@NonNull Key<V> key);
+
+    /**
+     * Adds a piece of detail to this error context, overriding previous values.
+     * <p>
+     * The passed context detail is copied and stored immutably in this error context. For example, lists are
+     * made into immutable copies.
+     *
+     * @param key the key
+     * @param context the context detail to set
+     * @param <V> the value put in for the key
+     * @throws NullPointerException if the key or context detail is null
+     */
+    <V> void addDetail(@NonNull Key<V> key, @NonNull V context);
+
+    /**
+     * Clears the specified context for this error context
+     *
+     * @param key the key
+     */
+    void clearDetail(@NonNull Key<?> key);
+
+    /**
+     * Copies all context details from this error context into another one
+     *
+     * @param target the target error context
+     */
+    void copyDetailsInto(@NonNull ErrorContext target);
 
     /**
      * Gets all the keys set on this error context. Implementations of this method are encouraged to provide
@@ -102,7 +191,7 @@ public interface ErrorContext {
      *
      * @return all the keys, may or may not be immutable
      */
-    Set<Key<?>> allKeys();
+    @NonNull Set<@NonNull Key<?>> allKeys();
 
     /**
      * A marker for context keys
@@ -111,20 +200,27 @@ public interface ErrorContext {
     final class Key<V> {
 
         final LibraryLangKey langKey;
-        final MapReturnValue<V> mapReturnValue;
         final FormatData<V> formatData;
 
-        Key(LibraryLangKey langKey, MapReturnValue<V> mapReturnValue, FormatData<V> formatData) {
+        Key(LibraryLangKey langKey, FormatData<V> formatData) {
             this.langKey = langKey;
-            this.mapReturnValue = mapReturnValue;
             this.formatData = formatData;
         }
 
-        interface MapReturnValue<V> {
-            V map(Object value);
+        Key(LibraryLangKey langKey, FormatDataLangLess<V> formatData) {
+            this.langKey = langKey;
+            this.formatData = FormatData.langLess(formatData);
         }
+
         interface FormatData<V> {
-            void format(StringBuilder builder, V value);
+            void format(LibraryLang libraryLang, Appendable output, V value) throws IOException;
+
+            static <V> FormatData<V> langLess(FormatDataLangLess<V> format) {
+                return (lang, output, value) -> format.format(output, value);
+            }
+        }
+        interface FormatDataLangLess<V> {
+            void format(Appendable output, V value) throws IOException;
         }
     }
 }

@@ -19,12 +19,14 @@
 
 package space.arim.dazzleconf2.engine;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 /**
  * Default, "no-op" mapper for keys and method names
  */
 public final class DefaultKeyMapper implements KeyMapper {
     @Override
-    public CharSequence methodNameToKey(String methodName) {
+    public @NonNull CharSequence methodNameToKey(@NonNull String methodName) {
         return methodName;
     }
 }

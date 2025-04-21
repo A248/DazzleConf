@@ -19,7 +19,7 @@
 
 package space.arim.dazzleconf2.reflect;
 
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
 
 import java.util.HashMap;
 import java.util.Map;

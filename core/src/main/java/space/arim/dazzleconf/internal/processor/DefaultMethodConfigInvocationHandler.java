@@ -1,31 +1,33 @@
-/* 
- * DazzleConf-core
- * Copyright © 2020 Anand Beh <https://www.arim.space>
- * 
- * DazzleConf-core is free software: you can redistribute it and/or modify
+/*
+ * DazzleConf
+ * Copyright © 2025 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
- * DazzleConf-core is distributed in the hope that it will be useful,
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
- * along with DazzleConf-core. If not, see <https://www.gnu.org/licenses/>
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 package space.arim.dazzleconf.internal.processor;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
-import space.arim.dazzleconf.internal.util.MethodUtil;
+import space.arim.dazzleconf.error.IllDefinedConfigException;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
+import space.arim.dazzleconf2.internals.MethodUtil;
 
 class DefaultMethodConfigInvocationHandler extends ConfigInvocationHandler {
 
@@ -42,8 +44,15 @@ class DefaultMethodConfigInvocationHandler extends ConfigInvocationHandler {
 	private static Map<Method, MethodHandle> buildDefaultMethodsMap(Object proxy, Set<Method> defaultMethods) {
 		Map<Method, MethodHandle> result = new HashMap<>(defaultMethods.size());
 		for (Method method : defaultMethods) {
-			MethodHandle methodHandle = MethodUtil.createDefaultMethodHandle(method).bindTo(proxy);
-			result.put(method, methodHandle);
+            MethodHandle methodHandle;
+            try {
+                methodHandle = MethodUtil.createDefaultMethodHandle(method).bindTo(proxy);
+            } catch (IllegalAccessException | InstantiationException | InvocationTargetException ex) {
+				throw new IllDefinedConfigException(
+						"Unable to generate default method accessor for " + MethodUtil.getQualifiedName(method), ex
+				);
+            }
+            result.put(method, methodHandle);
 		}
 		return ImmutableCollections.mapOf(result);
 	}

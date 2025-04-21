@@ -19,20 +19,26 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
- * Unique identifier for a method
+ * Identifiers for a method.
+ * <p>
+ * Compared to the standard reflection API, this class provides constructability, generic type reification, and a
+ * more lightweight form.
  *
  */
 public final class MethodId {
 
     private final Object methodOrName;
-    private final ReifiedType returnType;
+    private final ReifiedType.Annotated returnType;
     private final ReifiedType[] parameters;
+    private final boolean isDefault;
 
     /**
      * Builds from nonnull arguments
@@ -40,11 +46,14 @@ public final class MethodId {
      * @param name the method name
      * @param returnType its return type
      * @param parameters the method parameters, excluding the receiver type
+     * @param isDefault whether the method is implemented by default
      */
-    public MethodId(String name, ReifiedType returnType, ReifiedType[] parameters) {
+    public MethodId(@NonNull String name, ReifiedType.@NonNull Annotated returnType,
+                    @NonNull ReifiedType @NonNull [] parameters, boolean isDefault) {
         this.methodOrName = Objects.requireNonNull(name, "name");
         this.returnType = Objects.requireNonNull(returnType, "returnType");
         this.parameters = parameters.clone();
+        this.isDefault = isDefault;
     }
 
     /**
@@ -53,9 +62,12 @@ public final class MethodId {
      * @param method the method
      * @param returnType its return type
      * @param parameters the method parameters, excluding the receiver type
+     * @param isDefault whether the method is implemented by default
      * @throws IllegalArgumentException if the method information does not match the return type or arguments
      */
-    public MethodId(Method method, ReifiedType returnType, ReifiedType[] parameters) {
+    public MethodId(@NonNull Method method, ReifiedType.@NonNull Annotated returnType,
+                    @NonNull ReifiedType @NonNull [] parameters, boolean isDefault) {
+        this.isDefault = isDefault;
         if (!method.getReturnType().equals(returnType.rawType())) {
             throw new IllegalArgumentException(
                     "Return type mismatch; expected " + method.getReturnType() + ", not " + returnType.rawType()
@@ -84,7 +96,7 @@ public final class MethodId {
      * The method name
      * @return the method name
      */
-    public String name() {
+    public @NonNull String name() {
         if (methodOrName instanceof Method) {
             return ((Method) methodOrName).getName();
         }
@@ -92,14 +104,12 @@ public final class MethodId {
     }
 
     /**
-     * Gets the method if this was constructed with a method via {@link MethodId#MethodId(Method, ReifiedType, ReifiedType[])}
+     * Gets the method if this was constructed with a method via
+     * {@link MethodId#MethodId(Method, ReifiedType.Annotated, ReifiedType[], boolean)}
      * @return the method if constructed with one, or null empty unset
      */
-    public Optional<Method> method() {
-        if (methodOrName instanceof Method) {
-            return Optional.of((Method) methodOrName);
-        }
-        return Optional.empty();
+    public @Nullable Method method() {
+        return (methodOrName instanceof Method) ? (Method) methodOrName : null;
     }
 
     /**
@@ -110,7 +120,7 @@ public final class MethodId {
      * @return the method
      * @throws IllegalStateException possibly, if the wrong class was specified
      */
-    public Method getMethod(Class<?> enclosingClass) {
+    public @NonNull Method getMethod(@NonNull Class<?> enclosingClass) {
         if (methodOrName instanceof Method) {
             // Fast-path: Most of the time we're here
             return (Method) methodOrName;
@@ -130,7 +140,7 @@ public final class MethodId {
      * The return type
      * @return the return type
      */
-    public ReifiedType returnType() {
+    public ReifiedType.@NonNull Annotated returnType() {
         return returnType;
     }
 
@@ -141,7 +151,7 @@ public final class MethodId {
      * @return the parameter at it
      * @throws IndexOutOfBoundsException if the index is out of range
      */
-    public ReifiedType parameterAt(int index) {
+    public @NonNull ReifiedType parameterAt(int index) {
         return parameters[index];
     }
 
@@ -158,8 +168,17 @@ public final class MethodId {
      *
      * @return a copy of the parameters
      */
-    public ReifiedType[] parameters() {
+    public @NonNull ReifiedType @NonNull [] parameters() {
         return parameters.clone();
+    }
+
+    /**
+     * Gets whether the method is implemented by default
+     *
+     * @return true if a default implementation exists
+     */
+    public boolean isDefault() {
+        return isDefault;
     }
 
     @Override
@@ -167,8 +186,8 @@ public final class MethodId {
         if (!(o instanceof MethodId)) return false;
 
         MethodId methodId = (MethodId) o;
-        return name().equals(methodId.name()) && returnType.equals(methodId.returnType)
-                && Arrays.equals(parameters, methodId.parameters);
+        return isDefault == methodId.isDefault && name().equals(methodId.name())
+                && returnType.equals(methodId.returnType) && Arrays.equals(parameters, methodId.parameters);
     }
 
     @Override
@@ -176,6 +195,7 @@ public final class MethodId {
         int result = name().hashCode();
         result = 31 * result + returnType.hashCode();
         result = 31 * result + Arrays.hashCode(parameters);
+        result = 31 * result + Boolean.hashCode(isDefault);
         return result;
     }
 
@@ -185,6 +205,7 @@ public final class MethodId {
                 "name=" + name() +
                 ", returnType=" + returnType +
                 ", arguments=" + Arrays.toString(parameters) +
+                ", isDefault=" + isDefault +
                 '}';
     }
 }

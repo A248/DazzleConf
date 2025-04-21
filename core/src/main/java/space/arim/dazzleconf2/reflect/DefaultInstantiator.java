@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ReloadShell;
 
 import java.lang.reflect.Method;
@@ -40,7 +41,8 @@ public final class DefaultInstantiator implements Instantiator {
     public DefaultInstantiator() {}
 
     @Override
-    public Object generate(ClassLoader classLoader, Set<Class<?>> targets, MethodYield methodYield) {
+    public @NonNull Object generate(@NonNull ClassLoader classLoader, @NonNull Set<@NonNull Class<?>> targets,
+                                    @NonNull MethodYield methodYield) {
 
         Map<String, Object> fastValues = new HashMap<>(20, 0.80f);
         Set<Method> defaultMethods = null;
@@ -62,7 +64,7 @@ public final class DefaultInstantiator implements Instantiator {
             }
         }
         ProxyHandlerToValues proyHandler = new ProxyHandlerToValues(fastValues);
-        Object proxy = Proxy.newProxyInstance(classLoader, targets.toArray(Class[]::new), proyHandler);
+        Object proxy = Proxy.newProxyInstance(classLoader, targets.toArray(new Class[0]), proyHandler);
         if (defaultMethods != null) {
             proyHandler.initDefaultMethods(proxy, defaultMethods);
         }
@@ -70,11 +72,21 @@ public final class DefaultInstantiator implements Instantiator {
     }
 
     @Override
-    public <I> ReloadShell<I> generateShell(ClassLoader classLoader, Class<I> iface, Set<MethodId> methods) {
+    public <I> @NonNull ReloadShell<I> generateShell(@NonNull ClassLoader classLoader, @NonNull Class<I> iface,
+                                                     @NonNull Set<@NonNull MethodId> methods) {
         ProxyHandlerToDelegate<I> proxyHandler = new ProxyHandlerToDelegate<>();
         @SuppressWarnings("unchecked")
         I shell = (I) Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
         return proxyHandler.new AsReloadShell(shell);
+    }
+
+    @Override
+    public <I> @NonNull I generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<I> iface) {
+        ProxyHandlerToEmpty<I> proxyHandler = new ProxyHandlerToEmpty<>();
+        @SuppressWarnings("unchecked")
+        I empty = (I) Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
+        proxyHandler.initProxy(empty);
+        return empty;
     }
 
 }

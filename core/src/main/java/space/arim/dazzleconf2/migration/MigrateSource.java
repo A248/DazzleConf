@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.migration;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
 
@@ -40,7 +41,7 @@ public interface MigrateSource<C> {
      * @return the old configuration version, or an error if not found and detected
      * @throws UncheckedIOException upon an I/O failure
      */
-    LoadResult<C> load(Backend mainBackend);
+    @NonNull LoadResult<@NonNull C> load(@NonNull Backend mainBackend);
 
     /**
      * Signals that the migration was fully completed.

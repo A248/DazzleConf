@@ -19,14 +19,14 @@
 
 package space.arim.dazzleconf2;
 
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
+import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.engine.Comments;
 import space.arim.dazzleconf2.engine.DefaultValues;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.reflect.MethodId;
 
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Defines a single interface supertype which has not yet been instantiated
@@ -40,36 +40,54 @@ final class TypeSkeleton {
     /**
      * Functions whose return values are supplied by us
      */
-    final Set<MethodNode> methodNodes;
+    final List<MethodNode> methodNodes;
 
-    TypeSkeleton(Set<MethodId> callableDefaultMethods, Set<MethodNode> methodNodes) {
+    TypeSkeleton(Set<MethodId> callableDefaultMethods, List<MethodNode> methodNodes) {
         this.callableDefaultMethods = ImmutableCollections.setOf(callableDefaultMethods);
-        this.methodNodes = ImmutableCollections.setOf(methodNodes);
+        this.methodNodes = ImmutableCollections.listOf(methodNodes);
     }
 
     static final class MethodNode {
 
+        private final Comments.Container comments;
         final boolean optional;
         final MethodId methodId;
-        private final DefaultValues<?> defaultValues; // Can be null if optional
+        private final DefaultValues<?> defaultValues; // Can be null if optional, or if defaults unconfigured
         final SerializeDeserialize<?> serializer;
 
-        MethodNode(boolean optional, MethodId methodId, DefaultValues<?> defaultValues,
+        MethodNode(Comments.Container comments, boolean optional, MethodId methodId, DefaultValues<?> defaultValues,
                    SerializeDeserialize<?> serializer) {
-            if (!optional && defaultValues == null) {
-                throw new NullPointerException("defaultValues cannot be null if non-optional");
-            }
+            this.comments = comments;
             this.optional = optional;
             this.methodId = Objects.requireNonNull(methodId, "methodId");
             this.defaultValues = defaultValues;
             this.serializer = Objects.requireNonNull(serializer, "serializer");
         }
 
+        /**
+         * Makes the return value for this method, representing the "default value"
+         *
+         * @param inType the type enclosing this method
+         * @return the default value
+         * @throws DeveloperMistakeException if no default value was configured for this method, or
+         * {@link DefaultValues#defaultValue()} is wrongly implemented
+         */
         Object makeDefaultValue(Class<?> inType) {
-            if (optional && defaultValues == null) {
-                return Optional.empty();
+            if (defaultValues == null) {
+                if (optional) {
+                    return Optional.empty();
+                }
+                throw new DeveloperMistakeException(
+                        "No default values configured for " +  inType.getName() + '#' + methodId.name() + ". " +
+                                "To use Configuration#loadDefaults, default values must be set for every option."
+                );
             }
-            Object defaultVal = defaultValues.defaultValue();
+            Object defaultVal;
+            try {
+                defaultVal = defaultValues.defaultValue();
+            } catch (RuntimeException ex) {
+                throw new DeveloperMistakeException("DefaultValues#defaultValue threw an exception", ex);
+            }
             if (defaultVal == null) {
                 throw new DeveloperMistakeException(
                         "DefaultValues#defaultValue returned null for " + inType.getName() + '#' + methodId.name()
@@ -78,9 +96,19 @@ final class TypeSkeleton {
             return optional ? Optional.of(defaultVal) : defaultVal;
         }
 
+        /**
+         * Makes the return value for this method, representing the "missing value"
+         *
+         * @param inType the type enclosing this method
+         * @return the missing value, or null if no missing value can be made
+         * @throws DeveloperMistakeException if {@link DefaultValues#ifMissing()} is wrongly implemented
+         */
         Object makeMissingValue(Class<?> inType) {
             if (optional) {
                 return Optional.empty();
+            }
+            if (defaultValues == null) {
+                return null;
             }
             Object defaultVal = defaultValues.ifMissing();
             if (defaultVal == null) {
@@ -89,6 +117,15 @@ final class TypeSkeleton {
                 );
             }
             return defaultVal;
+        }
+
+        DataTree.Entry addComments(DataTree.Entry dataEntry) {
+            if (comments != null) {
+                for (Comments comments : comments.value()) {
+                    dataEntry = dataEntry.withComments(comments.location(), Arrays.asList(comments.value()));
+                }
+            }
+            return dataEntry;
         }
     }
 }
