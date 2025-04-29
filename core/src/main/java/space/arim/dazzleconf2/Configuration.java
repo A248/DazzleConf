@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DataTreeMut;
@@ -33,14 +35,13 @@ import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 
 /**
  * Main interface
  *
  * @param <C> the configuration type
  */
-public interface Configuration<C> extends ConfigurationReadWrite<C> {
+public interface Configuration<C> extends ConfigurationDefinition<C> {
 
     /**
      * Gets the locale used at the library level. This will be used to display error messages such as in
@@ -48,15 +49,15 @@ public interface Configuration<C> extends ConfigurationReadWrite<C> {
      *
      * @return the locale for error messages
      */
-    Locale getLocale();
+    @NonNull Locale getLocale();
 
     /**
-     * Gets all type liaisons. The order of the list is relevant, with earlier values being sought to hande types
+     * Gets all type liaisons. The order of the list is relevant, with earlier values being sought to handle types
      * before later values.
      *
      * @return the type liaisons, which are immutable
      */
-    List<TypeLiaison> getTypeLiaisons();
+    @NonNull List<@NonNull TypeLiaison> getTypeLiaisons();
 
     /**
      * Gets the key mapper if one was specified during construction. Note that a specified key mapper will override
@@ -64,30 +65,40 @@ public interface Configuration<C> extends ConfigurationReadWrite<C> {
      *
      * @return the key mapper if specified
      */
-    Optional<KeyMapper> getKeyMapper();
+    @Nullable KeyMapper getKeyMapper();
 
     /**
      * Gets the instantiator responsible for constructing instances
      *
      * @return the instantiator
      */
-    Instantiator getInstantiator();
+    @NonNull Instantiator getInstantiator();
 
     /**
      * Gets the migrations. The order of the list is relevant, with earlier migrations being tried before later ones.
      *
      * @return the migrations, which are immutable
      */
-    List<Migration<?, C>> getMigrations();
+    @NonNull List<@NonNull Migration<?, C>> getMigrations();
 
     /**
-     * Convenience method for building a configuration
+     * Convenience method for building a configuration.
+     * <p>
+     * This will automaticallly add the default type liaisons to the returned builder. The default type liaisons
+     * cover primitive types, <code>String</code>, and enums, and they will take precedence over any type liaisons
+     * added later. Please see {@link ConfigurationBuilder#addDefaultTypeLiaisons()} for more details. Callers who do
+     * not want this behavior may construct a builder directly.
+     * <p>
+     * Note that the configuration type <code>configType</code> cannot use generic parameters. <code>Class</code>
+     * objects are not parameterized, meaning the type {@code C} would not be available at runtime. If you need to
+     * use a parameterized configuration type, please use {@link #defaultBuilder(TypeToken)} and specify the generic
+     * arguments by creating a type token.
      *
      * @param <C> the config type
-     * @param configType the config class
-     * @return a config builder
+     * @param configType the config class, which cannot have generic parameters
+     * @return a config builder, with the default type liaisons set
      */
-    static <C> ConfigurationBuilder<C> builder(Class<C> configType) {
+    static <C> ConfigurationBuilder<C> defaultBuilder(@NonNull Class<C> configType) {
         if (configType.getTypeParameters().length != 0) {
             throw new IllegalArgumentException("Cannot use Configuration.builder(Class) with a generic type.");
         }
@@ -95,13 +106,25 @@ public interface Configuration<C> extends ConfigurationReadWrite<C> {
     }
 
     /**
-     * Convenience method for building a configuration
+     * Convenience method for building a configuration that adds the default type liaisons.
+     * <p>
+     * <b>Example usage</b>
+     * <pre>
+     * {@code
+     * Configuration<MyConfig<org.bukkit.Player>> config = Configuration.defaultBuilder(new TypeToken<MyConfig<org.bukkit.Player>>() {});
+     * }
+     * </pre>
+     * <p>
+     * This method will automaticallly add the default type liaisons to the returned builder. The default type liaisons
+     * cover primitive types, <code>String</code>, and enums, and they will take precedence over any type liaisons
+     * added later. Please see {@link ConfigurationBuilder#addDefaultTypeLiaisons()} for more details. Callers who do
+     * not want this behavior may construct a builder directly.
      *
      * @param <C> the config type
-     * @param configType the reified type token
-     * @return a config builder
+     * @param configType the reified type token, the runtime equivalent of {@code C}
+     * @return a config builder, with the default type liaisons set
      */
-    static <C> ConfigurationBuilder<C> builder(TypeToken<C> configType) {
+    static <C> ConfigurationBuilder<C> defaultBuilder(@NonNull TypeToken<C> configType) {
         return new ConfigurationBuilder<>(configType);
     }
 
@@ -116,7 +139,7 @@ public interface Configuration<C> extends ConfigurationReadWrite<C> {
      * @param dataTree the data tree to read from
      * @return the loaded configuration
      */
-    LoadResult<C> readFrom(DataTree dataTree);
+    @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree);
 
     /**
      * A simple, stateless read from a data tree.
@@ -130,7 +153,7 @@ public interface Configuration<C> extends ConfigurationReadWrite<C> {
      * @param loadListener a listener which informs the caller if certain events happened
      * @return the loaded configuration
      */
-    LoadResult<C> readFrom(DataTree dataTree, LoadListener loadListener);
+    @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree, @NonNull LoadListener loadListener);
 
     /**
      * Writes to the given data tree.
@@ -144,12 +167,12 @@ public interface Configuration<C> extends ConfigurationReadWrite<C> {
      * @param config the configuration
      * @param dataTree the data tree to write to
      */
-    void writeTo(C config, DataTreeMut dataTree);
+    void writeTo(@NonNull C config, @NonNull DataTreeMut dataTree);
 
     /**
      * Configures, migrates, and/or updates the backend as needed.
      * <p>
-     * This "all-in-one" function leverages multiple of this library's best features. t checks for migrations and
+     * This "all-in-one" function leverages multiple of this library's best features. It checks for migrations and
      * updates the config as necessary, up to the latest version. If the config was on the latest version, loads it
      * and substitutes missing values as necessary. Lastly, if any of these operations produced a change, writes the
      * config back to the backend. Yields the instantiated configuration.
@@ -157,12 +180,12 @@ public interface Configuration<C> extends ConfigurationReadWrite<C> {
      * @param backend the format backend
      * @return the loaded configuration
      */
-    LoadResult<C> configureWith(Backend backend);
+    @NonNull LoadResult<@NonNull C> configureWith(@NonNull Backend backend);
 
     /**
      * Configures, migrates, and/or updates the backend as needed.
      * <p>
-     * This "all-in-one" function leverages multiple of this library's best features. t checks for migrations and
+     * This "all-in-one" function leverages multiple of this library's best features. It checks for migrations and
      * updates the config as necessary, up to the latest version. If the config was on the latest version, loads it
      * and substitutes missing values as necessary. Lastly, if any of these operations produced a change, writes the
      * config back to the backend. Yields the instantiated configuration.
@@ -171,6 +194,6 @@ public interface Configuration<C> extends ConfigurationReadWrite<C> {
      * @param updateListener a listener which informs the caller if certain events happened
      * @return the loaded configuration
      */
-    LoadResult<C> configureWith(Backend backend, UpdateListener updateListener);
+    @NonNull LoadResult<@NonNull C> configureWith(@NonNull Backend backend, @NonNull UpdateListener updateListener);
 
 }

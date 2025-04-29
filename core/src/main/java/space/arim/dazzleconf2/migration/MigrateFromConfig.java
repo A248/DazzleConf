@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.migration;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.Configuration;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
@@ -39,12 +40,12 @@ public final class MigrateFromConfig<C> implements MigrateSource<C> {
      *
      * @param config the configuration to use
      */
-    public MigrateFromConfig(Configuration<C> config) {
+    public MigrateFromConfig(@NonNull Configuration<C> config) {
         this.config = Objects.requireNonNull(config);
     }
 
     @Override
-    public LoadResult<C> load(Backend mainBackend) {
+    public @NonNull LoadResult<@NonNull C> load(@NonNull Backend mainBackend) {
         return mainBackend.readTree().flatMap(config::readFrom);
     }
 

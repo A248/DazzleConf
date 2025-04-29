@@ -27,6 +27,14 @@ import java.io.IOException;
 public interface DataRoot {
 
     /**
+     * Checks whether the data is known to exist.
+     *
+     * @return true if the data is known to be present, false if not present or if its existence cannot be determined
+     * @throws IOException if checking for data existence failed
+     */
+    boolean dataExists() throws IOException;
+
+    /**
      * IO proof, functional interface for use with reader/writer methods
      * @param <R> the result type
      * @param <U> the utility type

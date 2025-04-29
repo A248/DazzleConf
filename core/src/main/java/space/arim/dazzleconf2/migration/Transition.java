@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2.migration;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 /**
  * Converter interface for moving from one configuration object to another
  * @param <C_OLD> the old config type
@@ -32,7 +34,7 @@ public interface Transition<C_OLD, C_NEW> {
      * @param previous the old config object
      * @return the new config object
      */
-    C_NEW migrateFrom(C_OLD previous);
+    @NonNull C_NEW migrateFrom(@NonNull C_OLD previous);
 
     /**
      * Chains on another transition after this one
@@ -41,11 +43,11 @@ public interface Transition<C_OLD, C_NEW> {
      * @return the combined product
      * @param <C_NEWER> the newest config type
      */
-    default <C_NEWER> Transition<C_OLD, C_NEWER> chain(Transition<C_NEW, C_NEWER> next) {
+    default <C_NEWER> @NonNull Transition<C_OLD, C_NEWER> chain(@NonNull Transition<C_NEW, C_NEWER> next) {
         class Chained implements Transition<C_OLD, C_NEWER> {
 
             @Override
-            public C_NEWER migrateFrom(C_OLD previous) {
+            public @NonNull C_NEWER migrateFrom(@NonNull C_OLD previous) {
                 C_NEW intermediate = Transition.this.migrateFrom(previous);
                 return next.migrateFrom(intermediate);
             }

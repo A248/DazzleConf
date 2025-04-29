@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2021 Anand Beh
+ * Copyright © 2025 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -37,7 +37,7 @@ import space.arim.dazzleconf.internal.error.ElementaryType;
 import space.arim.dazzleconf.internal.error.EnumType;
 import space.arim.dazzleconf.internal.error.Errors;
 import space.arim.dazzleconf.internal.error.UserError;
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf.serialiser.FlexibleType;
 import space.arim.dazzleconf.serialiser.FlexibleTypeFunction;
 import space.arim.dazzleconf.serialiser.FlexibleTypeMapEntryFunction;

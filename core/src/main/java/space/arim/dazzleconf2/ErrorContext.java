@@ -19,9 +19,10 @@
 
 package space.arim.dazzleconf2;
 
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
-import space.arim.dazzleconf2.translation.LibraryLangKey;
-import space.arim.dazzleconf2.translation.LibraryLang;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.internals.LibraryLangKey;
+import space.arim.dazzleconf2.internals.LibraryLang;
 
 import java.io.IOException;
 import java.util.*;
@@ -36,11 +37,8 @@ public interface ErrorContext {
     /**
      * Path of the configuration entry being scanned or operated upon
      */
-    Key<List<String>, List<String>> ENTRY_PATH = new Key<>(
+    Key<List<String>> ENTRY_PATH = new Key<>(
             LibraryLang::entryPath,
-            (value) -> {
-                return value == null ? ImmutableCollections.emptyList() : ImmutableCollections.listOf(value);
-            },
             (lang, builder, value) -> {
                 builder.append(String.join(".", value));
             }
@@ -49,28 +47,17 @@ public interface ErrorContext {
     /**
      * Line number in the source data
      */
-    Key<Integer, OptionalInt> LINE_NUMBER = new Key<>(
-            LibraryLang::line,
-            value -> value == null ? OptionalInt.empty() : OptionalInt.of(value),
-            (output, value) -> output.append(value.toString())
-    );
+    Key<Integer> LINE_NUMBER = new Key<>(LibraryLang::line, (output, value) -> output.append(value.toString()));
 
     /**
      * Error message provided by the configuration format backend
      */
-    Key<String, Optional<String>> BACKEND_MESSAGE = new Key<>(
-            LibraryLang::backendMessage,
-            Optional::ofNullable,
-            Appendable::append
-    );
+    Key<String> BACKEND_MESSAGE = new Key<>(LibraryLang::backendMessage, Appendable::append);
     /**
      * A collection of errors causing this one
      */
-    Key<List<ErrorContext>, List<ErrorContext>> CAUSES = new Key<>(
+    Key<List<ErrorContext>> CAUSES = new Key<>(
             LibraryLang::causalErrors,
-            (value) -> {
-                return value == null ? ImmutableCollections.emptyList() : ImmutableCollections.listOf(value);
-            },
             (lang, builder, value) -> {
                 int errorCount = value.size();
                 int cap = Integer.min(4, errorCount);
@@ -85,11 +72,11 @@ public interface ErrorContext {
                         pathOrLineNumber = true;
                     }
                     // 3. Line number
-                    OptionalInt lineNumber = currentError.query(LINE_NUMBER);
-                    if (lineNumber.isPresent()) {
+                    Integer lineNumber = currentError.query(LINE_NUMBER);
+                    if (lineNumber != null) {
                         if (pathOrLineNumber) builder.append(" ");
                         builder.append(lang.line());
-                        builder.append(Integer.toString(lineNumber.getAsInt()));
+                        builder.append(Integer.toString(lineNumber));
                         pathOrLineNumber = true;
                     }
                     // 2. Error message
@@ -166,11 +153,10 @@ public interface ErrorContext {
     /**
      * Gets a piece of detail from this error context, if it is set
      * @param key the key
-     * @return the context detail if set, an empty optional or collection otherwise
+     * @return the context detail if set, or null if not present
      * @param <V> the value put in for the key
-     * @param <R> the value returned for the key
      */
-    <V, R> R query(Key<V, R> key);
+    <V> @Nullable V query(@NonNull Key<V> key);
 
     /**
      * Adds a piece of detail to this error context, overriding previous values.
@@ -181,24 +167,23 @@ public interface ErrorContext {
      * @param key the key
      * @param context the context detail to set
      * @param <V> the value put in for the key
-     * @param <R> the value returned for the key
-     * @throws NullPointerException if the context detail is null
+     * @throws NullPointerException if the key or context detail is null
      */
-    <V, R> void addDetail(Key<V, R> key, V context);
+    <V> void addDetail(@NonNull Key<V> key, @NonNull V context);
 
     /**
      * Clears the specified context for this error context
      *
      * @param key the key
      */
-    void clearDetail(Key<?, ?> key);
+    void clearDetail(@NonNull Key<?> key);
 
     /**
      * Copies all context details from this error context into another one
      *
      * @param target the target error context
      */
-    void copyDetailsInto(ErrorContext target);
+    void copyDetailsInto(@NonNull ErrorContext target);
 
     /**
      * Gets all the keys set on this error context. Implementations of this method are encouraged to provide
@@ -206,34 +191,27 @@ public interface ErrorContext {
      *
      * @return all the keys, may or may not be immutable
      */
-    Set<Key<?, ?>> allKeys();
+    @NonNull Set<@NonNull Key<?>> allKeys();
 
     /**
      * A marker for context keys
      * @param <V> the value type
-     * @param <R> the return type
      */
-    final class Key<V, R> {
+    final class Key<V> {
 
         final LibraryLangKey langKey;
-        final MapReturnValue<V, R> mapReturnValue;
         final FormatData<V> formatData;
 
-        Key(LibraryLangKey langKey, MapReturnValue<V, R> mapReturnValue, FormatData<V> formatData) {
+        Key(LibraryLangKey langKey, FormatData<V> formatData) {
             this.langKey = langKey;
-            this.mapReturnValue = mapReturnValue;
             this.formatData = formatData;
         }
 
-        Key(LibraryLangKey langKey, MapReturnValue<V, R> mapReturnValue, FormatDataLangLess<V> formatData) {
+        Key(LibraryLangKey langKey, FormatDataLangLess<V> formatData) {
             this.langKey = langKey;
-            this.mapReturnValue = mapReturnValue;
             this.formatData = FormatData.langLess(formatData);
         }
 
-        interface MapReturnValue<V, R> {
-            R map(V value);
-        }
         interface FormatData<V> {
             void format(LibraryLang libraryLang, Appendable output, V value) throws IOException;
 

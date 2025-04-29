@@ -19,6 +19,9 @@
 
 package space.arim.dazzleconf2.backend;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.internals.FileIO;
+
 import java.io.*;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -44,18 +47,23 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
      * @param path the path
      * @param charset the charset
      */
-    public PathRoot(Path path, Charset charset) {
+    public PathRoot(@NonNull Path path, @NonNull Charset charset) {
         this.path = Objects.requireNonNull(path, "path");
         this.charset = Objects.requireNonNull(charset, "charset");
     }
 
     @Override
-    public String readToString() throws IOException {
-        return Files.readString(path, charset);
+    public boolean dataExists() throws IOException {
+        return Files.exists(path);
     }
 
     @Override
-    public <R> R useReader(Operation<R, Reader> operation) throws IOException {
+    public @NonNull String readToString() throws IOException {
+        return FileIO.readString(path, charset);
+    }
+
+    @Override
+    public <R> R useReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
         class ReadableByteChannelOperation implements Operation<R, ReadableByteChannel> {
 
             @Override
@@ -75,12 +83,12 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
     }
 
     @Override
-    public void writeString(String content) throws IOException {
-        Files.writeString(path, content, charset);
+    public void writeString(@NonNull String content) throws IOException {
+        FileIO.writeString(path, content, charset);
     }
 
     @Override
-    public <R> R openWriter(Operation<R, Writer> operation) throws IOException {
+    public <R> R openWriter(@NonNull Operation<R, @NonNull Writer> operation) throws IOException {
         class WritableChannelOperation implements Operation<R, WritableByteChannel> {
 
             @Override
@@ -100,21 +108,21 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
     }
 
     @Override
-    public <R> R openReadChannel(Operation<R, ReadableByteChannel> operation) throws IOException {
+    public <R> R openReadChannel(@NonNull Operation<R, @NonNull ReadableByteChannel> operation) throws IOException {
         try (FileChannel fileChannel = FileChannel.open(path, StandardOpenOption.READ)) {
             return operation.operateUsing(fileChannel);
         }
     }
 
     @Override
-    public <R> R openInputStream(Operation<R, InputStream> operation) throws IOException {
+    public <R> R openInputStream(@NonNull Operation<R, @NonNull InputStream> operation) throws IOException {
         try (InputStream inputStream = Files.newInputStream(path, StandardOpenOption.READ)) {
             return operation.operateUsing(inputStream);
         }
     }
 
     @Override
-    public <R> R openWriteChannel(Operation<R, WritableByteChannel> operation) throws IOException {
+    public <R> R openWriteChannel(@NonNull Operation<R, @NonNull WritableByteChannel> operation) throws IOException {
         try (FileChannel fileChannel = FileChannel.open(path,
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
             return operation.operateUsing(fileChannel);
@@ -122,7 +130,7 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
     }
 
     @Override
-    public <R> R openOutputStream(Operation<R, OutputStream> operation) throws IOException {
+    public <R> R openOutputStream(@NonNull Operation<R, @NonNull OutputStream> operation) throws IOException {
         try (OutputStream outputStream = Files.newOutputStream(path,
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
             return operation.operateUsing(outputStream);

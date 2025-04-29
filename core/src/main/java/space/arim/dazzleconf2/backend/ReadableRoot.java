@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2.backend;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -35,7 +37,7 @@ public interface ReadableRoot extends DataRoot {
      * @return the read content
      * @throws IOException upon failure to open
      */
-    String readToString() throws IOException;
+    @NonNull String readToString() throws IOException;
 
     /**
      * Opens a reader to the data
@@ -45,7 +47,7 @@ public interface ReadableRoot extends DataRoot {
      * @return the operation result
      * @throws IOException upon failure to open
      */
-    <R> R useReader(Operation<R, Reader> operation) throws IOException;
+    <R> R useReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException;
 
     /**
      * Writes to a string
@@ -53,7 +55,7 @@ public interface ReadableRoot extends DataRoot {
      * @param content the content to write
      * @throws IOException upon failure to write
      */
-    void writeString(String content) throws IOException;
+    void writeString(@NonNull String content) throws IOException;
 
     /**
      * Opens a writer for the data
@@ -63,6 +65,6 @@ public interface ReadableRoot extends DataRoot {
      * @return the operation result
      * @throws IOException upon failure to open
      */
-    <R> R openWriter(Operation<R, Writer> operation) throws IOException;
+    <R> R openWriter(@NonNull Operation<R, @NonNull Writer> operation) throws IOException;
 
 }

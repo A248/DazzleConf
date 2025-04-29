@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.engine;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.DataTree;
 
 import java.util.List;
@@ -37,14 +38,14 @@ public interface SerializeOutput {
      *
      * @return the key mapper
      */
-    KeyMapper keyMapper();
+    @NonNull KeyMapper keyMapper();
 
     /**
      * Outputs a string
      *
      * @param value the string, nonnull
      */
-    void outString(String value);
+    void outString(@NonNull String value);
 
     /**
      * Outputs a boolean
@@ -111,12 +112,12 @@ public interface SerializeOutput {
      * @param value the list, nonnull
      * @throws IllegalArgumentException if some list elements are not valid canonical types
      */
-    void outList(List<?> value);
+    void outList(@NonNull List<@NonNull ?> value);
 
     /**
      * Outputs a data tree
      *
      * @param value the data tree, nonnull
      */
-    void outDataTree(DataTree value);
+    void outDataTree(@NonNull DataTree value);
 }

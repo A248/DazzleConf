@@ -19,16 +19,13 @@
 
 package space.arim.dazzleconf2;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.KeyMapper;
 import space.arim.dazzleconf2.engine.KeyPath;
-import space.arim.dazzleconf2.engine.LoadListener;
 import space.arim.dazzleconf2.engine.DeserializeInput;
-import space.arim.dazzleconf2.translation.LibraryLang;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import space.arim.dazzleconf2.internals.LibraryLang;
 
 final class DeserInput implements DeserializeInput {
 
@@ -43,48 +40,55 @@ final class DeserInput implements DeserializeInput {
     }
 
     static final class Source {
-        private final String[] pathStart;
-        private final String pathLast;
-        private final DataTree.Entry entry;
+        private final DataTree.Entry dataEntry;
+        private final String mappedKey;
 
-        Source(String[] pathStart, String pathLast, DataTree.Entry entry) {
-            this.pathStart = pathStart;
-            this.pathLast = pathLast;
-            this.entry = entry;
+        Source(DataTree.Entry dataEntry, String mappedKey) {
+            this.dataEntry = dataEntry;
+            this.mappedKey = mappedKey;
         }
     }
 
     static final class Context {
         private final LibraryLang libraryLang;
-        private final LoadListener loadListener;
-        private final KeyMapper keyMapper;
+        private final ConfigurationDefinition.ReadOptions readOptions;
+        private final KeyPath pathPrefix;
 
-        Context(LibraryLang libraryLang, LoadListener loadListener, KeyMapper keyMapper) {
+        Context(LibraryLang libraryLang, ConfigurationDefinition.ReadOptions readOptions, KeyPath pathPrefix) {
             this.libraryLang = libraryLang;
-            this.loadListener = loadListener;
-            this.keyMapper = keyMapper;
+            this.readOptions = readOptions;
+            this.pathPrefix = pathPrefix;
         }
     }
 
     @Override
-    public Object object() {
+    public @NonNull Object object() {
         return object;
     }
 
     @Override
-    public KeyPath absoluteKeyPath() {
-        KeyPath absolutePath = new KeyPath(source.pathStart);
-        absolutePath.addBack(source.pathLast);
+    public @NonNull KeyPath absoluteKeyPath() {
+        KeyPath absolutePath = new KeyPath(context.pathPrefix);
+        absolutePath.addBack(source.mappedKey);
         return absolutePath;
     }
 
     @Override
-    public KeyMapper keyMapper() {
-        return context.keyMapper;
+    public @NonNull KeyMapper keyMapper() {
+        return context.readOptions.keyMapper();
     }
 
     @Override
-    public LoadResult<DataTree> requireDataTree() {
+    public @NonNull LoadResult<@NonNull String> requireString() {
+        Object object = object();
+        if (object instanceof String) {
+            return LoadResult.of((String) object);
+        }
+        return LoadError.wrongTypeForValue(context.libraryLang, object, String.class);
+    }
+
+    @Override
+    public @NonNull LoadResult<@NonNull DataTree> requireDataTree() {
         Object object = object();
         if (object instanceof DataTree) {
             return LoadResult.of((DataTree) object);
@@ -93,36 +97,34 @@ final class DeserInput implements DeserializeInput {
     }
 
     @Override
-    public void flagUpdate(KeyPath keyPath) {
+    public void flagUpdate(@Nullable KeyPath keyPath) {
         if (keyPath == null) {
             keyPath = new KeyPath();
         }
-        keyPath.addFront(source.pathLast);
-        context.loadListener.updatedMissingPath(keyPath);
+        keyPath.addFront(source.mappedKey);
+        context.readOptions.loadListener().updatedMissingPath(keyPath);
     }
 
     @Override
-    public DeserializeInput makeChild(Object value) {
+    public @NonNull DeserializeInput makeChild(@NonNull Object value) {
         return new DeserInput(value, source, context);
     }
 
     @Override
-    public ErrorContext buildError(String message) {
+    public @NonNull ErrorContext buildError(@NonNull String message) {
         LoadError loadError = new LoadError(message, context.libraryLang);
         // Add entry path
-        List<String> fullPath = new ArrayList<>(source.pathStart.length + 1);
-        fullPath.addAll(Arrays.asList(source.pathStart));
-        fullPath.add(source.pathLast);
-        loadError.addDetail(ErrorContext.ENTRY_PATH, fullPath);
+        loadError.addDetail(ErrorContext.ENTRY_PATH, absoluteKeyPath().intoPartsList());
         // Add line number
-        source.entry.lineNumber().ifPresent(lineNumber -> {
+        Integer lineNumber = source.dataEntry.getLineNumber();
+        if (lineNumber != null) {
             loadError.addDetail(ErrorContext.LINE_NUMBER, lineNumber);
-        });
+        }
         return loadError;
     }
 
     @Override
-    public <R> LoadResult<R> throwError(String message) {
+    public <R> @NonNull LoadResult<R> throwError(@NonNull String message) {
         return LoadResult.failure(buildError(message));
     }
 }

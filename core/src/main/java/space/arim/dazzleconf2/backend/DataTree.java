@@ -19,7 +19,10 @@
 
 package space.arim.dazzleconf2.backend;
 
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.KeyMapper;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.SerializeOutput;
@@ -60,7 +63,7 @@ public class DataTree {
 
     /**
      * Gets the entry at the specified key, or null if unset.
-     *
+     * <p>
      * If accessing keys based on method names, it is strongly recommended to use the <code>KeyMapper</code> to map
      * method names to keys. See {@link DeserializeInput#keyMapper()} for deserialization or
      * {@link SerializeOutput#keyMapper()} for serialization.
@@ -68,7 +71,7 @@ public class DataTree {
      * @param key the key
      * @return the entry
      */
-    public Entry get(Object key) {
+    public @Nullable Entry get(@NonNull Object key) {
         return data.get(key);
     }
 
@@ -77,7 +80,7 @@ public class DataTree {
      *
      * @return the key set view, which may or may not be modifiable
      */
-    public Collection<Object> keySetView() {
+    public @NonNull Collection<@NonNull Object> keySetView() {
         return Collections.unmodifiableSet(data.keySet());
     }
 
@@ -86,7 +89,7 @@ public class DataTree {
      *
      * @param action the action
      */
-    public void forEach(BiConsumer<? super Object, ? super Entry> action) {
+    public void forEach(BiConsumer<? super @NonNull Object, ? super @NonNull Entry> action) {
         data.forEach(action);
     }
 
@@ -95,7 +98,7 @@ public class DataTree {
      *
      * @return this tree if mutable, or a copy if needed
      */
-    public DataTreeMut makeMut() {
+    public @NonNull DataTreeMut makeMut() {
         if (this instanceof DataTreeMut) {
             return (DataTreeMut) this;
         }
@@ -107,7 +110,7 @@ public class DataTree {
      *
      * @return this tree if immutable, or a copy if needed
      */
-    public DataTreeImmut makeImmut() {
+    public @NonNull DataTreeImmut makeImmut() {
         if (this instanceof DataTreeImmut) {
             return (DataTreeImmut) this;
         }
@@ -119,6 +122,9 @@ public class DataTree {
      * <p>
      * Values must conform to the canonical requirements. That means String, primitives, lists of these types, or
      * another {@link DataTree} for nesting.
+     * <p>
+     * Equality is defined for an entry based on its value. Comments and line numbers are <b>not</b> counted in
+     * equality comparisons and hash code.
      */
     public static final class Entry {
 
@@ -129,18 +135,18 @@ public class DataTree {
         /**
          * Creates from a nonnull value
          * @param value the value
-         * @throws IllegalStateException if the value is not of the canonical types
+         * @throws IllegalArgumentException if the value is not of the canonical types
          */
-        public Entry(Object value) {
+        public Entry(@NonNull Object value) {
             this(value, null, ImmutableCollections.emptyMap());
         }
 
         private Entry(Object value, Integer lineNumber, Map<CommentLocation, List<String>> comments) {
-            this.lineNumber = lineNumber;
             if (!validateValue(value)) {
                 throw new IllegalArgumentException("Not a canonical value: " + value);
             }
-            this.value = Objects.requireNonNull(value, "value");
+            this.lineNumber = lineNumber;
+            this.value = value;
             this.comments = comments;
         }
 
@@ -148,7 +154,7 @@ public class DataTree {
          * Gets the value. Guaranteed to be one of the canonical types (see {@link DataTree})
          * @return the config value
          */
-        public Object getValue() {
+        public @NonNull Object getValue() {
             return value;
         }
 
@@ -156,8 +162,9 @@ public class DataTree {
          * Sets the value and returns a new object
          * @param value the value
          * @return a new data entry with the value set
+         * @throws IllegalArgumentException if the value is not of the canonical types
          */
-        public Entry withValue(Object value) {
+        public @NonNull Entry withValue(@NonNull Object value) {
             return new Entry(value, lineNumber, comments);
         }
 
@@ -167,8 +174,17 @@ public class DataTree {
          * @param lineNumber the line number
          * @return a new data entry with the line number set
          */
-        public Entry withLineNumber(int lineNumber) {
+        public @NonNull Entry withLineNumber(int lineNumber) {
             return new Entry(value, lineNumber, comments);
+        }
+
+        /**
+         * Clears the line number and returns a new object
+         *
+         * @return a new data entry with no line number set
+         */
+        public @NonNull Entry clearLineNumber() {
+            return  (lineNumber == null) ? this : new Entry(value, null, comments);
         }
 
         /**
@@ -176,24 +192,50 @@ public class DataTree {
          *
          * @return the line number
          */
-        public OptionalInt lineNumber() {
-            if (lineNumber == null) {
-                return OptionalInt.empty();
-            } else {
-                return OptionalInt.of(lineNumber);
-            }
+        public @Nullable Integer getLineNumber() {
+            return lineNumber;
         }
 
         /**
-         * Attaches comments and returns a new object
-         * @param location the comments
+         * Attaches comments and returns a new object.
+         * <p>
+         * If an empty comment list is specified, this function will clear the comments at the specified location.
+         * @param location where the comments are situated
          * @param comments the comments to specify at this location
          * @return a new data entry with the comments attached
          */
-        public Entry withComments(CommentLocation location, List<String> comments) {
+        public @NonNull Entry withComments(@NonNull CommentLocation location, @NonNull List<@NonNull String> comments) {
+            if (comments.isEmpty()) {
+                return clearComments(location);
+            }
             Map<CommentLocation, List<String>> newComments = new EnumMap<>(CommentLocation.class);
             newComments.putAll(this.comments);
             newComments.put(location, ImmutableCollections.listOf(comments));
+            return new Entry(value, lineNumber, newComments);
+        }
+
+        /**
+         * Clears comments and returns a new object
+         *
+         * @param locations which comments to clear
+         * @return a new data entry with no comments at the location
+         */
+        public @NonNull Entry clearComments(@NonNull CommentLocation @NonNull...locations) {
+            boolean foundAny = false;
+            for (CommentLocation location : locations) {
+                foundAny = foundAny || comments.containsKey(location);
+            }
+            if (!foundAny) {
+                return this;
+            }
+            Map<CommentLocation, List<String>> newComments = new EnumMap<>(CommentLocation.class);
+            newComments.putAll(this.comments);
+            for (CommentLocation location : locations) {
+                newComments.remove(location);
+            }
+            if (newComments.isEmpty()) {
+                newComments = ImmutableCollections.emptyMap();
+            }
             return new Entry(value, lineNumber, newComments);
         }
 
@@ -202,27 +244,19 @@ public class DataTree {
          * @param location the location
          * @return the comments, or an empty list if none exist
          */
-        public List<String> commentsAt(CommentLocation location) {
+        public @NonNull List<@NonNull String> getComments(@NonNull CommentLocation location) {
             return comments.getOrDefault(location, ImmutableCollections.emptyList());
         }
-    }
 
-    /**
-     * Where comments are located
-     */
-    public enum CommentLocation {
-        /**
-         * Above the entry
-         */
-        ABOVE,
-        /**
-         * Inline to the entry. For example, "key: value # comment" is a valid inline comment in YAML.
-         */
-        INLINE,
-        /**
-         * Below the entry
-         */
-        BELOW
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof DataTree.Entry && value.equals(((DataTree.Entry) obj).value);
+        }
+
+        @Override
+        public int hashCode() {
+            return value.hashCode();
+        }
     }
 
     private <M extends DataTree> M newDeepCopy(Supplier<M> treeConstructor) {
@@ -233,23 +267,12 @@ public class DataTree {
             if (value instanceof DataTree) {
                 copiedValue = ((DataTree) value).newDeepCopy(treeConstructor);
             } else {
-                // Maps and Collections are immutable by contract
+                // Lists are immutable by contract
                 copiedValue = value;
             }
             copy.data.put(key, entry.withValue(copiedValue));
         });
         return copy;
-    }
-
-    static void checkCanonical(Object value) {
-        if (value instanceof List) {
-            ((List<?>) value).forEach(DataTree::checkCanonical);
-            return;
-        }
-        if (value instanceof DataTree) {
-            return;
-        }
-        checkCanonicalSingle(value);
     }
 
     /**
@@ -259,7 +282,7 @@ public class DataTree {
      * @param value the value
      * @return true if a valid canonical value, false if not
      */
-    public static boolean validateValue(Object value) {
+    public static boolean validateValue(@Nullable Object value) {
         if (value instanceof List) {
             for (Object elem : (List<?>) value) {
                 if (!validateValue(elem)) {
@@ -278,24 +301,11 @@ public class DataTree {
      * @param value the value
      * @return true if a valid canonical key, false if not
      */
-    public static boolean validateKey(Object value) {
+    public static boolean validateKey(@Nullable Object value) {
         return value instanceof String
                 || value instanceof Boolean || value instanceof Byte || value instanceof Character
                 || value instanceof Short || value instanceof Integer || value instanceof Long
                 || value instanceof Float || value instanceof Double;
-    }
-
-    static void checkCanonicalSingle(Object value) {
-        if (value instanceof String
-                || value instanceof Boolean || value instanceof Byte || value instanceof Character
-                || value instanceof Short || value instanceof Integer || value instanceof Long
-                || value instanceof Float || value instanceof Double) {
-            return;
-        }
-        if (value == null) {
-            throw new NullPointerException("Unexpected null value");
-        }
-        throw new IllegalArgumentException("Not a canonical value: " + value);
     }
 
     @Override

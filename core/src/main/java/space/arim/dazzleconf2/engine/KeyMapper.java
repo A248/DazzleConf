@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.engine;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.Configuration;
 
 /**
@@ -34,6 +35,6 @@ public interface KeyMapper {
      * @param methodName the method name
      * @return the key compponent
      */
-    CharSequence methodNameToKey(String methodName);
+    @NonNull CharSequence methodNameToKey(@NonNull String methodName);
 
 }

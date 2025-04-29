@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2.backend;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import java.io.*;
 import java.util.Objects;
 
@@ -33,41 +35,45 @@ public final class StringRoot implements ReadableRoot {
      * Creates from the given nonnull content
      * @param content the content
      */
-    public StringRoot(String content) {
+    public StringRoot(@NonNull String content) {
         this.content = Objects.requireNonNull(content);
+    }
+
+    @Override
+    public boolean dataExists() throws IOException {
+        return true;
     }
 
     /**
      * Gets the current content, which may change
      * @return the content
      */
-    public String getContent() {
+    public @NonNull String getContent() {
         return content;
     }
 
     @Override
-    public String readToString() throws IOException {
+    public @NonNull String readToString() throws IOException {
         return content;
     }
 
     @Override
-    public <R> R useReader(Operation<R, Reader> operation) throws IOException {
+    public <R> R useReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
         try (Reader reader = new StringReader(content)) {
             return operation.operateUsing(reader);
         }
     }
 
     @Override
-    public void writeString(String content) throws IOException {
+    public void writeString(@NonNull String content) throws IOException {
         this.content = Objects.requireNonNull(content);
     }
 
     @Override
-    public <R> R openWriter(Operation<R, Writer> operation) throws IOException {
+    public <R> R openWriter(@NonNull Operation<R, @NonNull Writer> operation) throws IOException {
         StringWriter writer = new StringWriter();
         R outcome = operation.operateUsing(writer);
-        this.content = writer.toString();
+        content = writer.toString();
         return outcome;
     }
-
 }

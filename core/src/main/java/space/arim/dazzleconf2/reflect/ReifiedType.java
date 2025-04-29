@@ -19,6 +19,9 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Arrays;
@@ -27,8 +30,12 @@ import java.util.Objects;
 /**
  * A possibly generic type, with its arguments fully specified.
  * <p>
- * An equality contract exists for all ReifiedTypes, including subtypes like {@link ReifiedType.Annotated}, based on
- * the raw type and reified arguments.
+ * This type is a runtime stand-in for fully reified generic information. Given that Java discards generic type data
+ * at runtime, this type exists to retain that data. Lastly, while this class itself contains the raw generic data, it
+ * is designed for low-level usage. See {@link TypeToken} for an ergonomic high-level version.
+ * <p>
+ * This class should be considered sealed and not subclassed. Equality is defined for any two reified types based
+ * on whether the raw type and arguments match. Annotations (like in {@link ReifiedType.Annotated}) are not considered.
  *
  */
 public class ReifiedType {
@@ -36,7 +43,7 @@ public class ReifiedType {
     private final Class<?> rawType;
     private final ReifiedType[] arguments;
 
-    static final ReifiedType[] EMPTY_ARR = new ReifiedType[] {};
+    static final ReifiedType.Annotated[] EMPTY_ARR = new ReifiedType.Annotated[] {};
 
     /**
      * Builds from nonnull input arguments.
@@ -44,7 +51,7 @@ public class ReifiedType {
      * @param rawType the raw type
      * @param arguments the arguments, which are copied to ensure immutability
      */
-    public ReifiedType(Class<?> rawType, ReifiedType[] arguments) {
+    public ReifiedType(@NonNull Class<?> rawType, @NonNull ReifiedType @NonNull [] arguments) {
         this.rawType = Objects.requireNonNull(rawType, "rawType");
         this.arguments = arguments.clone();
     }
@@ -54,7 +61,7 @@ public class ReifiedType {
      *
      * @param rawType the raw type
      */
-    public ReifiedType(Class<?> rawType) {
+    public ReifiedType(@NonNull Class<?> rawType) {
         this.rawType = Objects.requireNonNull(rawType, "rawType");
         this.arguments = EMPTY_ARR;
     }
@@ -64,7 +71,7 @@ public class ReifiedType {
      *
      * @return the raw type
      */
-    public Class<?> rawType() {
+    public @NonNull Class<?> rawType() {
         return rawType;
     }
 
@@ -75,7 +82,7 @@ public class ReifiedType {
      * @return the argument at it
      * @throws IndexOutOfBoundsException if the index is out of range
      */
-    public ReifiedType argumentAt(int index) {
+    public @NonNull ReifiedType argumentAt(int index) {
         return arguments[index];
     }
 
@@ -92,7 +99,7 @@ public class ReifiedType {
      *
      * @return a copy of the arguments
      */
-    public ReifiedType[] arguments() {
+    public @NonNull ReifiedType @NonNull [] arguments() {
         return arguments.clone();
     }
 
@@ -112,11 +119,34 @@ public class ReifiedType {
     }
 
     @Override
-    public String toString() {
-        return "ReifiedType{" +
-                "rawType=" + rawType +
-                ", arguments=" + Arrays.toString(arguments) +
-                '}';
+    public final String toString() {
+        StringBuilder builder = new StringBuilder();
+        toString(builder);
+        return builder.toString();
+    }
+
+    void toString(StringBuilder builder) {
+        toString(builder, null);
+    }
+
+    void toString(StringBuilder builder, Annotation[] annotations) {
+        builder.append(rawType().getName());
+        if (arguments.length != 0) {
+            builder.append('<');
+            for (int n = 0; n < arguments.length; n++) {
+                if (n != 0) {
+                    builder.append(',');
+                }
+                arguments[n].toString(builder);
+            }
+            builder.append('>');
+        }
+        if (annotations != null) {
+            for (Annotation annotation : annotations) {
+                builder.append('@');
+                builder.append(annotation.annotationType().getName());
+            }
+        }
     }
 
     /**
@@ -133,7 +163,8 @@ public class ReifiedType {
          * @param arguments, which are copied to ensure immutability
          * @param annotations the annotations source
          */
-        public Annotated(Class<?> rawType, ReifiedType.Annotated[] arguments, AnnotatedElement annotations) {
+        public Annotated(@NonNull Class<?> rawType, ReifiedType.@NonNull Annotated @NonNull [] arguments,
+                         @NonNull AnnotatedElement annotations) {
             super(rawType, arguments);
             this.annotations = annotations.getAnnotations();
         }
@@ -144,7 +175,7 @@ public class ReifiedType {
          * @param rawType the raw type
          * @param annotations the annotations source
          */
-        public Annotated(Class<?> rawType, AnnotatedElement annotations) {
+        public Annotated(@NonNull Class<?> rawType, @NonNull AnnotatedElement annotations) {
             super(rawType);
             this.annotations = annotations.getAnnotations();
         }
@@ -155,7 +186,7 @@ public class ReifiedType {
          * @return the annotation if present, or null if not found
          * @param <A> the annotation type
          */
-        public <A extends Annotation> A getAnnotation(Class<A> annotationClass) {
+        public <A extends Annotation> @Nullable A getAnnotation(@NonNull Class<A> annotationClass) {
             for (Annotation check : annotations) {
                 if (annotationClass.equals(check.annotationType())) {
                     return annotationClass.cast(check);
@@ -172,7 +203,7 @@ public class ReifiedType {
          * @throws IndexOutOfBoundsException if the index is out of range
          */
         @Override
-        public ReifiedType.Annotated argumentAt(int index) {
+        public ReifiedType.@NonNull Annotated argumentAt(int index) {
             return (ReifiedType.Annotated) super.argumentAt(index);
         }
 
@@ -182,17 +213,13 @@ public class ReifiedType {
          * @return a copy of the arguments
          */
         @Override
-        public ReifiedType.Annotated[] arguments() {
+        public ReifiedType.@NonNull Annotated @NonNull [] arguments() {
             return (ReifiedType.Annotated[]) super.arguments();
         }
 
         @Override
-        public String toString() {
-            return "ReifiedType.Annotated{" +
-                    "rawType=" + rawType() +
-                    ", arguments=" + Arrays.toString(arguments()) +
-                    ", annotations=" + Arrays.toString(annotations) +
-                    '}';
+        void toString(StringBuilder builder) {
+            toString(builder, annotations);
         }
     }
 }

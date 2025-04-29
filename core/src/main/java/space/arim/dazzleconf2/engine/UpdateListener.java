@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.engine;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.migration.Migration;
 
@@ -38,13 +39,13 @@ public interface UpdateListener extends LoadListener {
      * Notifies that a migration from a previous version was successful
      * @param migration the migration
      */
-    void migratedFrom(Migration<?, ?> migration);
+    void migratedFrom(@NonNull Migration<?, ?> migration);
 
     /**
      * Notifies that a migration was attempted from a previous version, unsuccessfully
      * @param migration the migration
      * @param errorContexts the failure contexts
      */
-    void migrationSkip(Migration<?, ?> migration, List<ErrorContext> errorContexts);
+    void migrationSkip(@NonNull Migration<?, ?> migration, @NonNull List<@NonNull ErrorContext> errorContexts);
 
 }

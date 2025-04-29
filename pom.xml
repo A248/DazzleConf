@@ -1,3 +1,22 @@
+<!--
+  ~ DazzleConf
+  ~ Copyright © 2025 Anand Beh
+  ~
+  ~ DazzleConf is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU Lesser General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ DazzleConf is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  ~ GNU Lesser General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU Lesser General Public License
+  ~ along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
+  ~ and navigate to version 3 of the GNU Lesser General Public License.
+  -->
+
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	
@@ -16,7 +35,8 @@
 
 		<junit.version>5.9.2</junit.version>
 		<mockito.version>5.1.1</mockito.version>
-		<equalsverifier.version>3.13.2</equalsverifier.version>
+		<equalsverifier.version>3.19.2</equalsverifier.version>
+		<checkerqual.version>3.49.2</checkerqual.version>
 	</properties>
 	
 	<scm>

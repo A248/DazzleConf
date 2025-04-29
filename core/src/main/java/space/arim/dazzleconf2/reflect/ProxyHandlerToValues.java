@@ -19,10 +19,12 @@
 
 package space.arim.dazzleconf2.reflect;
 
-import space.arim.dazzleconf.internal.util.ImmutableCollections;
-import space.arim.dazzleconf.internal.util.MethodUtil;
+import space.arim.dazzleconf2.DeveloperMistakeException;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
+import space.arim.dazzleconf2.internals.MethodUtil;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,12 +41,19 @@ final class ProxyHandlerToValues extends ProxyHandler {
 
     @Override
     Object implInvoke(Method method, Object[] args) throws Throwable {
+        Object fastValue = fastValues.get(method.getName());
+        if (fastValue != null) {
+            return fastValue;
+        }
         MethodHandle defaultMethodHandle;
         if (defaultMethodsMap != null && MethodUtil.isDefault(method)
                 && (defaultMethodHandle = defaultMethodsMap.get(method)) != null) {
             return defaultMethodHandle.invokeWithArguments(args);
         }
-        return fastValues.get(method.getName());
+        // We shouldn't reach here, but if we do, it means the method maps we were provided are lacking
+        // We could throw an exception. But that might slow down the compiled method. So just use an assert.
+        assert false : "Bad proxy; incomplete data";
+        return null;
     }
 
     void initDefaultMethods(Object proxy, Set<Method> defaultMethods) {
@@ -54,7 +63,16 @@ final class ProxyHandlerToValues extends ProxyHandler {
     private static Map<Method, MethodHandle> buildDefaultMethodsMap(Object proxy, Set<Method> defaultMethods) {
         Map<Method, MethodHandle> result = new HashMap<>((int) (defaultMethods.size() / 0.98f), 0.999f);
         for (Method method : defaultMethods) {
-            MethodHandle methodHandle = MethodUtil.createDefaultMethodHandle(method).bindTo(proxy);
+            MethodHandle methodHandle;
+            try {
+                methodHandle = MethodUtil.createDefaultMethodHandle(method).bindTo(proxy);
+            } catch (IllegalAccessException | InstantiationException | InvocationTargetException ex) {
+                String className = method.getDeclaringClass().getName();
+                throw new DeveloperMistakeException(
+                        "Unable to generate default method accessor for " + className + '#' + method.getName(),
+                        ex
+                );
+            }
             result.put(method, methodHandle);
         }
         return ImmutableCollections.mapOf(result);

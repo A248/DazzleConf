@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2.engine;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 /**
  * Listener for configuration events that lets the implementor know when paths were updated
  */
@@ -29,5 +31,6 @@ public interface LoadListener {
      *
      * @param entryPath the path of the formerly missing value
      */
-    void updatedMissingPath(KeyPath entryPath);
+    void updatedMissingPath(@NonNull KeyPath entryPath);
+
 }

@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2.engine;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
@@ -37,7 +39,7 @@ public interface DeserializeInput {
      *
      * @return the object
      */
-    Object object();
+    @NonNull Object object();
 
     /**
      * Gets the absolute key path where the object was loaded from. This will automatically include all key parts from
@@ -45,7 +47,7 @@ public interface DeserializeInput {
      *
      * @return an absolute key path
      */
-    KeyPath absoluteKeyPath();
+    @NonNull KeyPath absoluteKeyPath();
 
     /**
      * Gets the key mapper.
@@ -56,18 +58,21 @@ public interface DeserializeInput {
      *
      * @return the key mapper, never
      */
-    KeyMapper keyMapper();
+    @NonNull KeyMapper keyMapper();
 
-    //LoadResult<String> requireString();
+    /**
+     * Requires the object to be a string
+     *
+     * @return the object as a string, or an error result if the type is mismatched
+     */
+    @NonNull LoadResult<@NonNull String> requireString();
 
     /**
      * Requires the object to be a data tree, i.e. a map of key/value pairs.
      *
      * @return the object as a data tree, or an error result if the type is mismatched
      */
-    LoadResult<DataTree> requireDataTree();
-
-    // TODO: Keep adding more here
+    @NonNull LoadResult<@NonNull DataTree> requireDataTree();
 
     /**
      * Signals that the data tree could use an update with respect to this object. For example, this might happen if
@@ -78,7 +83,7 @@ public interface DeserializeInput {
      * @param subPath the sub path to be updated. May be null or empty if none exists. This path is relative to the
      *                location of the current object, meaning it should not overlap with {@link #absoluteKeyPath()}
      */
-    void flagUpdate(KeyPath subPath);
+    void flagUpdate(@Nullable KeyPath subPath);
 
     /**
      * Makes a child and prepares it for deserialization. The child value is supposed to be taken "from" this object.
@@ -87,7 +92,7 @@ public interface DeserializeInput {
      * @param value the child value to wrap
      * @return deserializable input
      */
-    DeserializeInput makeChild(Object value);
+    @NonNull DeserializeInput makeChild(@NonNull Object value);
 
     /**
      * Builds an error context based on the implementation
@@ -95,7 +100,7 @@ public interface DeserializeInput {
      * @param message the main error messge
      * @return an error context
      */
-    ErrorContext buildError(String message);
+    @NonNull ErrorContext buildError(@NonNull String message);
 
     /**
      * Builds an error context, wraps it in a <code>LoadResult</code> and returns it. This function is named as such
@@ -105,5 +110,5 @@ public interface DeserializeInput {
      * @return an error result
      * @param <R> the type of the result value (can be anything since the result will be an error)
      */
-    <R> LoadResult<R> throwError(String message);
+    <R> @NonNull LoadResult<R> throwError(@NonNull String message);
 }

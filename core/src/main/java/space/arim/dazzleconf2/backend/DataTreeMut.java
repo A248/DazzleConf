@@ -19,6 +19,9 @@
 
 package space.arim.dazzleconf2.backend;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 /**
  * A data tree which can unmistakably be modified
  *
@@ -37,7 +40,7 @@ public final class DataTreeMut extends DataTree {
      * @param entry the entry; if null, clears any existing entry
      * @throws IllegalArgumentException if the provided key is not a valid canonical type
      */
-    public void set(Object key, Entry entry) {
+    public void set(@NonNull Object key, @Nullable Entry entry) {
         if (!validateKey(key)) {
             throw new IllegalArgumentException("Not a canonical key: " + key);
         }
@@ -54,7 +57,7 @@ public final class DataTreeMut extends DataTree {
      * @param key the key
      * @throws IllegalArgumentException if the provided key is not a valid canonical type
      */
-    public void remove(Object key) {
+    public void remove(@NonNull Object key) {
         if (!validateKey(key)) {
             throw new IllegalArgumentException("Not a canonical key: " + key);
         }

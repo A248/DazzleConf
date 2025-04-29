@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ReloadShell;
 
 import java.util.Set;
@@ -37,7 +38,8 @@ public interface Instantiator {
      * @param methodYield a map of methods to the values they are to yield
      * @return the generated implementation
      */
-    Object generate(ClassLoader classLoader, Set<Class<?>> targets, MethodYield methodYield);
+    @NonNull Object generate(@NonNull ClassLoader classLoader, @NonNull Set<@NonNull Class<?>> targets,
+                             @NonNull MethodYield methodYield);
 
     /**
      * Makes a reloadable shell for the given interface type. The interface's methods are conveniently included as
@@ -45,10 +47,24 @@ public interface Instantiator {
      *
      * @param classLoader where to generate the class file if necessary
      * @param iface the interface type
-     * @param methods collection of method IDs, including methods from parent interfaces
      * @return a reload shell
      * @param <I> the interface type
      */
-    <I> ReloadShell<I> generateShell(ClassLoader classLoader, Class<I> iface, Set<MethodId> methods);
+    <I> @NonNull ReloadShell<I> generateShell(@NonNull ClassLoader classLoader, @NonNull Class<I> iface,
+                                              @NonNull Set<@NonNull MethodId> methods);
+
+    /**
+     * Generates an "empty" implementation for the given interface type, which lets the caller use its default
+     * method implementations.
+     * <p>
+     * The purpose of this function is for the caller to use the default methods of the provided interface, and the
+     * caller promises not to use non-default methods. If that promise is broken, behavior is not defined.
+     *
+     * @param classLoader where to generate the class file if necessary
+     * @param iface the interface type
+     * @return the instance
+     * @param <I> the interface type
+     */
+    <I> @NonNull I generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<I> iface);
 
 }

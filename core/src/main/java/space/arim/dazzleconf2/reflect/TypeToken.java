@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 
 import java.lang.reflect.AnnotatedParameterizedType;
@@ -44,12 +45,22 @@ public class TypeToken<V> {
      *
      * @param reifiedType a reified type
      */
-    public TypeToken(ReifiedType.Annotated reifiedType) {
+    public TypeToken(ReifiedType.@NonNull Annotated reifiedType) {
         this.reifiedType = Objects.requireNonNull(reifiedType);
     }
 
     /**
-     * Creates from a subclass. The subclass must fully specify concrete generic arguments.
+     * Creates from a subclass.
+     * <p>
+     * The subclass must fully specify concrete generic arguments. The most common approach is to create a simple
+     * anonymous subclass using double brackets.
+     * <p>
+     * <b>Example usage</b>
+     * <pre>
+     * {@code
+     * TypeToken<GenericConfig<String>> token = new TypeToken<GenericConfig<String>>() {};
+     * }
+     * </pre>
      */
     protected TypeToken() {
         this.reifiedType = buildReified(extractTypeFromSubclass());
@@ -60,7 +71,7 @@ public class TypeToken<V> {
      *
      * @return the raw type
      */
-    public Class<V> getRawType() {
+    public final @NonNull Class<V> getRawType() {
         @SuppressWarnings("unchecked")
         Class<V> rawType = (Class<V>) reifiedType.rawType();
         return rawType;
@@ -70,7 +81,7 @@ public class TypeToken<V> {
      * Gets the annotated reified type represented by this type token
      * @return the annotated reified type
      */
-    public ReifiedType.Annotated getReifiedType() {
+    public final ReifiedType.@NonNull Annotated getReifiedType() {
         return reifiedType;
     }
 
@@ -82,7 +93,7 @@ public class TypeToken<V> {
         return ((AnnotatedParameterizedType) superClassType).getAnnotatedActualTypeArguments()[0];
     }
 
-    private static ReifiedType.Annotated buildReified(AnnotatedType source) {
+    private static ReifiedType.@NonNull Annotated buildReified(AnnotatedType source) {
 
         if (source instanceof AnnotatedParameterizedType) {
             AnnotatedParameterizedType parameterizedSource = (AnnotatedParameterizedType) source;
@@ -100,5 +111,23 @@ public class TypeToken<V> {
             return new ReifiedType.Annotated((Class<?>) unannotated, source);
         }
         throw new DeveloperMistakeException("Invalid TypeToken. Generics must be fully reified.");
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (!(o instanceof TypeToken)) return false;
+
+        TypeToken<?> typeToken = (TypeToken<?>) o;
+        return reifiedType.equals(typeToken.reifiedType);
+    }
+
+    @Override
+    public final int hashCode() {
+        return reifiedType.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "TypeToken{" + reifiedType + '}';
     }
 }

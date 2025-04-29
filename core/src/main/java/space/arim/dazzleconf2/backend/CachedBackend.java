@@ -19,55 +19,63 @@
 
 package space.arim.dazzleconf2.backend;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.KeyMapper;
 
 import java.util.Objects;
 
 /**
- * A wrapper for another backend. <b>Not thread safe.</b> This wrapper stores the last known tree which was read,
- * and caches it so that it can be reused.
+ * A wrapper for another backend. <b>Not thread safe.</b> This wrapper stores the last known tree which was
+ * successfully read and caches it so that it can be reused.
  * <p>
  * This wrapper assumes that it, and only it, is the one writing to the delegate backend with
- * {@link Backend#writeTree(DataTree)}. If the monopoly on writing is violated, this should not be used.
+ * {@link Backend#writeTree(DataTree)}. If the monopoly on writing is violated, this class should not be used.
  */
 public final class CachedBackend implements Backend {
 
     private final Backend delegate;
-    private LoadResult<DataTree> currentTree;
+    private DataTree currentTree;
 
     /**
      * Creates from the given delegate
      *
-     * @param delegate the delegate
+     * @param delegate the inner delegate
      */
-    public CachedBackend(Backend delegate) {
-        this.delegate = Objects.requireNonNull(delegate, "delegate");
+    public CachedBackend(@NonNull Backend delegate) {
+        this.delegate = Objects.requireNonNull(delegate, "inner");
     }
 
     @Override
-    public LoadResult<DataTree> readTree() {
-        if (currentTree == null) {
-            currentTree = delegate.readTree();
+    public @NonNull LoadResult<@Nullable DataTree> readTree() {
+        if (currentTree != null) {
+            return LoadResult.of(currentTree);
         }
-        return currentTree;
+        LoadResult<DataTree> read = delegate.readTree();
+        if (read.isSuccess()) {
+            currentTree = read.getOrThrow();
+        }
+        return read;
     }
 
     @Override
-    public void writeTree(DataTree tree) {
+    public void writeTree(@NonNull DataTree tree) {
+        Objects.requireNonNull(tree, "tree");
         // If delegate#writeTree throws an exception, we can't rely on whether that operation completed
         currentTree = null;
         delegate.writeTree(tree);
-        currentTree = LoadResult.of(tree);
+        currentTree = tree;
     }
 
     @Override
-    public boolean supportsComments(DataTree.CommentLocation location) {
+    public boolean supportsComments(@NonNull CommentLocation location) {
         return delegate.supportsComments(location);
     }
 
     @Override
-    public KeyMapper recommendKeyMapper() {
+    public @NonNull KeyMapper recommendKeyMapper() {
         return delegate.recommendKeyMapper();
     }
 }

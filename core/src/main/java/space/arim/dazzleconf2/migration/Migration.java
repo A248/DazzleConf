@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.migration;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
 
@@ -41,7 +42,7 @@ public final class Migration<C_OLD, C_NEW> {
      * @param migrateSource the migration source
      * @param transition the transition
      */
-    public Migration(MigrateSource<C_OLD> migrateSource, Transition<C_OLD, C_NEW> transition) {
+    public Migration(@NonNull MigrateSource<C_OLD> migrateSource, @NonNull Transition<C_OLD, C_NEW> transition) {
         this.migrateSource = Objects.requireNonNull(migrateSource, "migrateSource");
         this.transition = Objects.requireNonNull(transition, "transition");
     }
@@ -53,7 +54,7 @@ public final class Migration<C_OLD, C_NEW> {
      * @param mainBackend the backend for the main, up-to-date configuration
      * @return a load result that yields the newly transitioned configuration
      */
-    public LoadResult<C_NEW> tryMigrate(Backend mainBackend) {
+    public @NonNull LoadResult<@NonNull C_NEW> tryMigrate(@NonNull Backend mainBackend) {
         return migrateSource.load(mainBackend).map(transition::migrateFrom);
     }
 
