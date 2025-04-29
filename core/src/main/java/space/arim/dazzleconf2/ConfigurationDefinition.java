@@ -21,8 +21,9 @@ package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.DataTreeMut;
+import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
 /**
  * Provides the minimal methods for reading and writing configurations from data trees
@@ -30,6 +31,13 @@ import space.arim.dazzleconf2.engine.*;
  * @param <C> the configuration type
  */
 public interface ConfigurationDefinition<C> {
+
+    /**
+     * Gets the reified type of the configuration interface
+     *
+     * @return a type token for the config interface
+     */
+    @NonNull TypeToken<C> getType();
 
     /**
      * Loads the default configuration.
@@ -57,7 +65,7 @@ public interface ConfigurationDefinition<C> {
     /**
      * Reads from the data tree given, and updates it as necessary.
      * <p>
-     * This function loads from the data tree and it does not use migrations. However, if any entries need updating
+     * This function loads from the data tree, and it does not use migrations. However, if any entries need updating
      * (as determined by {@link SerializeDeserialize#deserializeUpdate(DeserializeInput, SerializeOutput)} then the
      * objects will be updated in the data tree. Callers can check whether any updates ocurred by using a load listener
      * in the read options.
@@ -66,7 +74,7 @@ public interface ConfigurationDefinition<C> {
      * @param readOptions full parameters to customize the operation
      * @return the loaded configuration, or an error if failed
      */
-    @NonNull LoadResult<@NonNull C> readWithUpdate(@NonNull DataTreeMut dataTree, @NonNull ReadOptions readOptions);
+    @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadOptions readOptions);
 
     /**
      * Writes to the given data tree.
@@ -79,7 +87,7 @@ public interface ConfigurationDefinition<C> {
      * @param dataTree the data tree to write to
      * @param writeOptions full parameters to customize the operation
      */
-    void writeTo(@NonNull C config, @NonNull DataTreeMut dataTree, @NonNull WriteOptions writeOptions);
+    void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree, @NonNull WriteOptions writeOptions);
 
     /**
      * Parameters for reading a configuration from a tree
@@ -99,15 +107,16 @@ public interface ConfigurationDefinition<C> {
          *
          * @return the key mapper, nonnull
          */
-        @NonNull KeyMapper keyMapper();
+        @NonNull
+        KeyMapper keyMapper();
 
         /**
-         * The maximum number of errors to collect before exiting.
+         * The maximum number of errors to collect before exiting. Must be greater than 0.
          * <p>
          * If reading the configuration failed, the size of {@link LoadResult#getErrorContexts()} will be at most this
          * number.
          *
-         * @return the maximum number of errors to collect, default 10
+         * @return the maximum number of errors to collect, default 12. Must be greater than 0
          */
         default int maximumErrorCollect() {
             return ReadOpts.DEFAULT_MAX_ERROR_TO_COLLECT;

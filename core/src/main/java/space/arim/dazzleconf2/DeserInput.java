@@ -21,13 +21,16 @@ package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.engine.KeyMapper;
-import space.arim.dazzleconf2.engine.KeyPath;
+import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.DeserializeInput;
-import space.arim.dazzleconf2.internals.LibraryLang;
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
-final class DeserInput implements DeserializeInput {
+import java.util.Locale;
+
+final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
 
     private final Object object;
     private final Source source;
@@ -40,10 +43,10 @@ final class DeserInput implements DeserializeInput {
     }
 
     static final class Source {
-        private final DataTree.Entry dataEntry;
+        private final DataEntry dataEntry;
         private final String mappedKey;
 
-        Source(DataTree.Entry dataEntry, String mappedKey) {
+        Source(DataEntry dataEntry, String mappedKey) {
             this.dataEntry = dataEntry;
             this.mappedKey = mappedKey;
         }
@@ -52,13 +55,23 @@ final class DeserInput implements DeserializeInput {
     static final class Context {
         private final LibraryLang libraryLang;
         private final ConfigurationDefinition.ReadOptions readOptions;
-        private final KeyPath pathPrefix;
+        private final KeyPath.Immut mappedPathPrefix;
 
-        Context(LibraryLang libraryLang, ConfigurationDefinition.ReadOptions readOptions, KeyPath pathPrefix) {
+        Context(LibraryLang libraryLang, ConfigurationDefinition.ReadOptions readOptions, KeyPath.Immut mappedPathPrefix) {
             this.libraryLang = libraryLang;
             this.readOptions = readOptions;
-            this.pathPrefix = pathPrefix;
+            this.mappedPathPrefix = mappedPathPrefix;
         }
+    }
+
+    @Override
+    public @NonNull LibraryLang getLibraryLang() {
+        return context.libraryLang;
+    }
+
+    @Override
+    public @NonNull Locale getLocale() {
+        return context.libraryLang.getLocale();
     }
 
     @Override
@@ -68,9 +81,9 @@ final class DeserInput implements DeserializeInput {
 
     @Override
     public @NonNull KeyPath absoluteKeyPath() {
-        KeyPath absolutePath = new KeyPath(context.pathPrefix);
-        absolutePath.addBack(source.mappedKey);
-        return absolutePath;
+        KeyPath.Mut path = context.mappedPathPrefix.intoMut();
+        path.addBack(source.mappedKey);
+        return path.intoImmut();
     }
 
     @Override
@@ -84,7 +97,7 @@ final class DeserInput implements DeserializeInput {
         if (object instanceof String) {
             return LoadResult.of((String) object);
         }
-        return LoadError.wrongTypeForValue(context.libraryLang, object, String.class);
+        return throwError(context.libraryLang.wrongTypeForValue(object, String.class));
     }
 
     @Override
@@ -93,16 +106,17 @@ final class DeserInput implements DeserializeInput {
         if (object instanceof DataTree) {
             return LoadResult.of((DataTree) object);
         }
-        return LoadError.wrongTypeForValue(context.libraryLang, object, DataTree.class);
+        return throwError(context.libraryLang.wrongTypeForValue(object, DataTree.class));
     }
 
     @Override
     public void flagUpdate(@Nullable KeyPath keyPath) {
         if (keyPath == null) {
-            keyPath = new KeyPath();
+            keyPath = new KeyPath.Mut();
         }
-        keyPath.addFront(source.mappedKey);
-        context.readOptions.loadListener().updatedMissingPath(keyPath);
+        KeyPath.Mut keyPathMut = keyPath.intoMut();
+        keyPathMut.addFront(source.mappedKey);
+        context.readOptions.loadListener().updatedMissingPath(keyPathMut.intoImmut());
     }
 
     @Override
@@ -111,10 +125,10 @@ final class DeserInput implements DeserializeInput {
     }
 
     @Override
-    public @NonNull ErrorContext buildError(@NonNull String message) {
+    public @NonNull ErrorContext buildError(@NonNull CharSequence message) {
         LoadError loadError = new LoadError(message, context.libraryLang);
         // Add entry path
-        loadError.addDetail(ErrorContext.ENTRY_PATH, absoluteKeyPath().intoPartsList());
+        loadError.addDetail(ErrorContext.ENTRY_PATH, absoluteKeyPath());
         // Add line number
         Integer lineNumber = source.dataEntry.getLineNumber();
         if (lineNumber != null) {
@@ -124,7 +138,7 @@ final class DeserInput implements DeserializeInput {
     }
 
     @Override
-    public <R> @NonNull LoadResult<R> throwError(@NonNull String message) {
+    public <R> @NonNull LoadResult<R> throwError(@NonNull CharSequence message) {
         return LoadResult.failure(buildError(message));
     }
 }

@@ -20,29 +20,52 @@
 package space.arim.dazzleconf;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.DataTreeMut;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@ExtendWith(MockitoExtension.class)
 public class ConfigurationTest {
 
     @Test
-    public void genericConfig() {
-        Configuration<GenericConfig<String>> config = Configuration
-                .defaultBuilder(new TypeToken<GenericConfig<String>>() {})
+    public void simple() {
+        Configuration<HelloWorld> config = Configuration
+                .defaultBuilder(HelloWorld.class)
+                .build();
+        assertEquals("hi", config.loadDefaults().helloThere());
+
+        DataTree.Mut sourceTree = new DataTree.Mut();
+        sourceTree.set("helloThere", new DataEntry("goodbye"));
+
+        assertEquals("goodbye", config.readFrom(sourceTree).getOrThrow().helloThere());
+    }
+
+    public interface HelloWorld {
+
+        default String helloThere() {
+            return "hi";
+        }
+    }
+
+    @Test
+    public void generic() {
+        Configuration<GenericWorld<String>> config = Configuration
+                .defaultBuilder(new TypeToken<GenericWorld<String>>() {})
                 .build();
         List<String> testList = List.of("hi", "nope", "yes");
-        DataTreeMut sourceTree = new DataTreeMut();
-        sourceTree.set("someType", new DataTree.Entry(testList));
+        DataTree.Mut sourceTree = new DataTree.Mut();
+        sourceTree.set("testList", new DataEntry(testList));
         assertEquals(testList, config.readFrom(sourceTree).getOrThrow().testList());
     }
 
-    public interface GenericConfig<T> {
+    public interface GenericWorld<T> {
 
         default List<T> testList() {
             return List.of();

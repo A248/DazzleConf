@@ -61,7 +61,7 @@ public final class SimpleTypeLiaison<U> implements TypeLiaison {
             @SuppressWarnings("unchecked")
             Agent<V> casted = (Agent<V>) new Agent<U>() {
                 @Override
-                public @Nullable DefaultValues<U> loadDefaultValues(@NonNull AnnotationContext annotationContext) {
+                public @Nullable DefaultValues<U> loadDefaultValues(@NonNull DefaultInit defaultInit) {
                     return null;
                 }
 

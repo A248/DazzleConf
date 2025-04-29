@@ -19,27 +19,30 @@
 
 package space.arim.dazzleconf2;
 
-import space.arim.dazzleconf2.engine.SerializeDeserialize;
-import space.arim.dazzleconf2.engine.TypeLiaison;
+import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.reflect.MethodId;
+import space.arim.dazzleconf2.reflect.MethodMirror;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 final class LiaisonCache {
 
-    private final Map<TypeToken<?>, Cache<?>> cachedAgents = new HashMap<>();
+    private final Map<TypeToken<?>, HandleType<?>> cachedAgents = new HashMap<>();
     private final List<TypeLiaison> typeLiaisons;
 
     LiaisonCache(List<TypeLiaison> typeLiaisons) {
         this.typeLiaisons = typeLiaisons;
     }
 
-    <V> Cache<V> requestInfo(TypeToken<V> typeToken, TypeLiaison.Handshake handshake) {
+    <V> HandleType<V> requestToHandle(TypeToken<V> typeToken, TypeLiaison.Handshake handshake) {
         // Don't use computeIfAbsent - reduce stack depth
         @SuppressWarnings("unchecked")
-        Cache<V> cached = (Cache<V>) cachedAgents.get(typeToken);
+        HandleType<V> cached = (HandleType<V>) cachedAgents.get(typeToken);
         if (cached != null) {
             return cached;
         }
@@ -47,7 +50,7 @@ final class LiaisonCache {
         for (TypeLiaison liaison : typeLiaisons) {
             TypeLiaison.Agent<V> agent = liaison.makeAgent(typeToken, handshake);
             if (agent != null) {
-                cached = new Cache<>(agent, agent.makeSerializer());
+                cached = new HandleType<>(typeToken, agent, agent.makeSerializer());
                 cachedAgents.put(typeToken, cached);
                 return cached;
             }
@@ -57,14 +60,60 @@ final class LiaisonCache {
         );
     }
 
-    static final class Cache<V> {
+    static final class HandleType<V> {
 
-        final TypeLiaison.Agent<V> agent;
+        private final TypeToken<V> typeToken;
+        private final TypeLiaison.Agent<V> agent;
         final SerializeDeserialize<V> serializer;
 
-        private Cache(TypeLiaison.Agent<V> agent, SerializeDeserialize<V> serializer) {
+        private HandleType(TypeToken<V> typeToken, TypeLiaison.Agent<V> agent, SerializeDeserialize<V> serializer) {
+            this.typeToken = typeToken;
             this.agent = agent;
             this.serializer = serializer;
+        }
+
+        private DefaultValues<V> makeDefaultValues(MethodId methodId, boolean optional,
+                                                   AnnotationContext methodAnnotations,
+                                                   MethodMirror.Invoker defaultsInvoker) {
+            DefaultValues<V> defaultValues = agent.loadDefaultValues(() -> methodAnnotations);
+            if (defaultValues != null) {
+                return defaultValues;
+            }
+            if (!methodId.isDefault()) {
+                // No default values here for this entry.
+                // Meaning either the developer is a complete novice or an advanced library user
+                return null;
+            }
+            // Let's try calling the default method
+            Object defaultVal;
+            try {
+                defaultVal = defaultsInvoker.invokeMethod(methodId);
+            } catch (InvocationTargetException e) {
+                throw new DeveloperMistakeException("Default method threw an exception", e);
+            }
+            if (defaultVal == null) {
+                throw new DeveloperMistakeException("Default method " + methodId + " returned null");
+            }
+            // Unpack Optional as needed
+            if (optional) {
+                Optional<?> optDefaultVal = (Optional<?>) defaultVal;
+                if (optDefaultVal.isEmpty()) {
+                    // That's okay, since optional entries don't need defaults
+                    return null;
+                }
+                defaultVal = optDefaultVal.get();
+            }
+            return DefaultValues.simple(typeToken.cast(defaultVal));
+        }
+
+        TypeSkeleton.MethodNode<V> makeMethodNode(MethodId methodId, boolean optional,
+                                               AnnotationContext methodAnnotations,
+                                               MethodMirror.Invoker defaultsInvoker) {
+            DefaultValues<V> defaultValues = makeDefaultValues(
+                    methodId, optional, methodAnnotations, defaultsInvoker
+            );
+            Comments.Container comments = methodAnnotations.getAnnotation(Comments.Container.class);
+            return new TypeSkeleton.MethodNode<>(comments, optional, methodId, defaultValues, serializer);
         }
     }
 }

@@ -20,6 +20,7 @@
 package space.arim.dazzleconf2.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.backend.KeyPath;
 
 /**
  * Listener for configuration events that lets the implementor know when paths were updated

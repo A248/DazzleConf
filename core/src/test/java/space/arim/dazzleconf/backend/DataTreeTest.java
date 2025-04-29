@@ -20,9 +20,10 @@
 package space.arim.dazzleconf.backend;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.DataTreeMut;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
 import java.util.ArrayList;
@@ -35,9 +36,9 @@ public class DataTreeTest {
     @Test
     public void populateEntries() {
         // Sample values
-        DataTreeMut dataTreeValue = new DataTreeMut();
-        dataTreeValue.set("hello", new DataTree.Entry("goodbye"));
-        dataTreeValue.set(1, new DataTree.Entry("key is not a string"));
+        DataTree.Mut dataTreeValue = new DataTree.Mut();
+        dataTreeValue.set("hello", new DataEntry("goodbye"));
+        dataTreeValue.set(1, new DataEntry("key is not a string"));
 
         Object[] validValues = new Object[] {
                 3, (byte) 4, Long.MAX_VALUE, Double.MIN_VALUE, (float) 42.7,
@@ -47,23 +48,23 @@ public class DataTreeTest {
         };
         // Verify usage
         for (Object validValue : validValues) {
-            assertEquals(validValue, new DataTree.Entry(validValue).getValue());
-            assertEquals(validValue, new DataTree.Entry(validValue)
+            assertEquals(validValue, new DataEntry(validValue).getValue());
+            assertEquals(validValue, new DataEntry(validValue)
                     .withComments(CommentLocation.ABOVE, List.of()).getValue());
-            assertEquals(validValue, new DataTree.Entry(validValue).withLineNumber(14).getValue());
+            assertEquals(validValue, new DataEntry(validValue).withLineNumber(14).getValue());
         }
         // Failed types
-        assertThrows(RuntimeException.class, () -> new DataTree.Entry(null));
-        assertThrows(IllegalArgumentException.class, () -> new DataTree.Entry(new Object()));
-        assertThrows(IllegalArgumentException.class, () -> new DataTree.Entry(List.of("hi there", new Object())));
+        assertThrows(RuntimeException.class, () -> new DataEntry(null));
+        assertThrows(IllegalArgumentException.class, () -> new DataEntry(new Object()));
+        assertThrows(IllegalArgumentException.class, () -> new DataEntry(List.of("hi there", new Object())));
     }
 
     @Test
     public void iterateInOrder() {
-        DataTreeMut dataTreeMut = new DataTreeMut();
-        dataTreeMut.set("hello", new DataTree.Entry("goodbye"));
-        dataTreeMut.set("also", new DataTree.Entry("yes"));
-        dataTreeMut.set("zed", new DataTree.Entry(true));
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.set("also", new DataEntry("yes"));
+        dataTreeMut.set("zed", new DataEntry(true));
 
         List<Object> orderedKeys = new ArrayList<>();
         List<Object> orderedValues = new ArrayList<>();
@@ -81,32 +82,33 @@ public class DataTreeTest {
     public void commentsAndLineNumbers() {
         List<String> comments = List.of("no comment", "second line");
         List<String> comments2 = List.of("other location", "second line", "third line");
-        DataTree.Entry entry = new DataTree.Entry("hi")
+        DataEntry entry = new DataEntry("hi")
                 .withComments(CommentLocation.ABOVE, comments)
                 .withComments(CommentLocation.INLINE, comments2);
         assertEquals(comments, entry.getComments(CommentLocation.ABOVE));
         assertEquals(comments2, entry.getComments(CommentLocation.INLINE));
         assertEquals(List.of(), entry.getComments(CommentLocation.BELOW));
-        assertEquals(new DataTree.Entry("hi"), entry);
+        assertEquals(new DataEntry("hi"), entry);
     }
 
     @Test
     public void lineNumber()  {
-        DataTree.Entry entry = new DataTree.Entry("hi").withLineNumber(32);
+        DataEntry entry = new DataEntry("hi").withLineNumber(32);
         assertEquals(32, entry.getLineNumber());
-        assertEquals(new DataTree.Entry("hi"), entry);
+        assertEquals(new DataEntry("hi"), entry);
     }
 
     @Test
-    public void equality() {
-        DataTreeMut dataTreeMut = new DataTreeMut();
-        dataTreeMut.set("hello", new DataTree.Entry("goodbye"));
-        dataTreeMut.set("also", new DataTree.Entry("yes"));
-        dataTreeMut.set("zed", new DataTree.Entry(true));
+    public void equality() throws ClassNotFoundException {
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.set("also", new DataEntry("yes"));
+        dataTreeMut.set("zed", new DataEntry(true));
 
-        assertEquals((DataTree) dataTreeMut, dataTreeMut.makeImmut());
-        assertEquals(dataTreeMut, dataTreeMut.makeImmut().makeMut());
+        assertEquals((DataTree) dataTreeMut, dataTreeMut.intoImmut());
+        assertEquals(dataTreeMut, dataTreeMut.intoImmut().intoMut());
 
+        Class.forName(NonNull.class.getName());
         EqualsVerifier.forClass(DataTree.class).verify();
     }
 }

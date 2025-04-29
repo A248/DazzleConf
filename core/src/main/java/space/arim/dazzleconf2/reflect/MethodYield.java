@@ -48,8 +48,8 @@ public final class MethodYield {
      * @param implementable the interface being implemented
      * @return the values for method calls on that interface's methods, immutable
      */
-    public Set<Map.Entry<MethodId, Object>> valuesFor(Class<?> implementable) {
-        return backing.getOrDefault(implementable, ImmutableCollections.emptyMap()).entrySet();
+    public Map<MethodId, Object> valuesFor(Class<?> implementable) {
+        return backing.getOrDefault(implementable, ImmutableCollections.emptyMap());
     }
 
     /**
@@ -63,23 +63,18 @@ public final class MethodYield {
          * Modifies this builder, adding a yielded value as given
          *
          * @param implementable the interface being implemented
-         * @param method a method within that interface
-         * @param value the value to supply
-         * @return this builder
+         * @param method        a method within that interface
+         * @param value         the value to supply
          */
-        public Builder addValue(Class<?> implementable, MethodId method, Object value) {
-            backing.computeIfAbsent(implementable, (k) -> new HashMap<>());
-            return this;
+        public void addValue(Class<?> implementable, MethodId method, Object value) {
+            backing.computeIfAbsent(implementable, (k) -> new HashMap<>()).put(method, value);
         }
 
         /**
          * Clears all added values and starts over again
-         *
-         * @return this builder
          */
-        public Builder clearValues() {
+        public void clearValues() {
             backing.clear();
-            return this;
         }
 
         /**

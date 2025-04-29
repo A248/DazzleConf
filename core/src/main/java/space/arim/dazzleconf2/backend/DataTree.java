@@ -21,26 +21,22 @@ package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.internals.ImmutableCollections;
-import space.arim.dazzleconf2.engine.CommentLocation;
-import space.arim.dazzleconf2.engine.KeyMapper;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.function.Supplier;
 
 /**
  * A tree of in-memory configuration data. This tree is essentially a map of keys to values representing in-memory
  * configuration data, with added metadata of line numbers and comments.
  * <p>
- * Please keep in mind that a data tree interfaces with the configuration backend. As such, it uses the keys found in
- * the backend data, and it does <b>NOT</b> take into account method names or {@link KeyMapper}. It is highly
- * recommend to use <code>KeyMapper</code> where appropriate to interface with this class.
+ * Please keep in mind that a data tree is read from and written to configuration backend. As such, it uses the keys
+ * found in the backend data, and it does <b>NOT</b> take into account method names or {@link KeyMapper}. It is highly
+ * recommend to use <code>KeyMapper</code> where appropriate to interface with key strings.
  * <p>
  * Keys are represented as <code>Object</code> and must be one of the canonical types (excl. lists or nested trees).
- * Values are wrapped by {@link Entry}, but are also <code>Object</code> and must be one of the canonical types.
+ * Values are wrapped by {@link DataEntry}, but are also <code>Object</code> and must be one of the canonical types.
  * <p>
  * Canonical types:<ul>
  * <li>String
@@ -49,17 +45,19 @@ import java.util.function.Supplier;
  * <li>Lists of the above types. The List implementation must be immutable.
  * </ul>
  * Recall that keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime, and they can be
- * checked using {@link #validateKey(Object)} and {@link #validateValue(Object)}
+ * checked using {@link #validateKey(Object)} and {@link #validateValue(Object)}.
  * <p>
- * Mutability of this class is <b>not defined</b>. Please use {@link DataTreeImmut} or {@link DataTreeMut} if you need
- * guaranteed mutable or immutable versions.
+ * Mutability of this class is <b>not defined</b>. Please use {@link DataTree.Immut} or {@link DataTree.Mut} if you need
+ * guaranteed mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
  *
  */
-public class DataTree {
+public abstract class DataTree {
 
-    final Map<Object, Entry> data = new LinkedHashMap<>();
+    @NonNull LinkedHashMap<Object, DataEntry> data;
 
-    DataTree() {}
+    DataTree(LinkedHashMap<Object, DataEntry> data) {
+        this.data = data;
+    }
 
     /**
      * Gets the entry at the specified key, or null if unset.
@@ -71,7 +69,7 @@ public class DataTree {
      * @param key the key
      * @return the entry
      */
-    public @Nullable Entry get(@NonNull Object key) {
+    public @Nullable DataEntry get(@NonNull Object key) {
         return data.get(key);
     }
 
@@ -89,194 +87,34 @@ public class DataTree {
      *
      * @param action the action
      */
-    public void forEach(BiConsumer<? super @NonNull Object, ? super @NonNull Entry> action) {
+    public void forEach(BiConsumer<? super @NonNull Object, ? super @NonNull DataEntry> action) {
         data.forEach(action);
     }
 
     /**
-     * Gets this data tree as a mutable one. If not mutable, the data is copied to a new tree which is returned.
-     *
-     * @return this tree if mutable, or a copy if needed
-     */
-    public @NonNull DataTreeMut makeMut() {
-        if (this instanceof DataTreeMut) {
-            return (DataTreeMut) this;
-        }
-        return newDeepCopy(DataTreeMut::new);
-    }
-
-    /**
-     * Gets this data tree as an immutable one. If not immutable, the data is copied to a new tree which is returned.
-     *
-     * @return this tree if immutable, or a copy if needed
-     */
-    public @NonNull DataTreeImmut makeImmut() {
-        if (this instanceof DataTreeImmut) {
-            return (DataTreeImmut) this;
-        }
-        return newDeepCopy(DataTreeImmut::new);
-    }
-
-    /**
-     * Immutable representation of a configuration entry as interoperable with backend formats.
+     * Gets this data tree as a mutable one.
      * <p>
-     * Values must conform to the canonical requirements. That means String, primitives, lists of these types, or
-     * another {@link DataTree} for nesting.
-     * <p>
-     * Equality is defined for an entry based on its value. Comments and line numbers are <b>not</b> counted in
-     * equality comparisons and hash code.
+     * If not mutable, the data is copied to a new tree which is returned. This copying may be performed lazily, such
+     * as by deferring to the first mutative operation on the returned object.
+     *
+     * @return this tree if mutable, or a mutable copy if needed
      */
-    public static final class Entry {
-
-        private final Object value;
-        private final Integer lineNumber;
-        private final Map<CommentLocation, List<String>> comments;
-
-        /**
-         * Creates from a nonnull value
-         * @param value the value
-         * @throws IllegalArgumentException if the value is not of the canonical types
-         */
-        public Entry(@NonNull Object value) {
-            this(value, null, ImmutableCollections.emptyMap());
-        }
-
-        private Entry(Object value, Integer lineNumber, Map<CommentLocation, List<String>> comments) {
-            if (!validateValue(value)) {
-                throw new IllegalArgumentException("Not a canonical value: " + value);
-            }
-            this.lineNumber = lineNumber;
-            this.value = value;
-            this.comments = comments;
-        }
-
-        /**
-         * Gets the value. Guaranteed to be one of the canonical types (see {@link DataTree})
-         * @return the config value
-         */
-        public @NonNull Object getValue() {
-            return value;
-        }
-
-        /**
-         * Sets the value and returns a new object
-         * @param value the value
-         * @return a new data entry with the value set
-         * @throws IllegalArgumentException if the value is not of the canonical types
-         */
-        public @NonNull Entry withValue(@NonNull Object value) {
-            return new Entry(value, lineNumber, comments);
-        }
-
-        /**
-         * Attaches a line number and returns a new object
-         *
-         * @param lineNumber the line number
-         * @return a new data entry with the line number set
-         */
-        public @NonNull Entry withLineNumber(int lineNumber) {
-            return new Entry(value, lineNumber, comments);
-        }
-
-        /**
-         * Clears the line number and returns a new object
-         *
-         * @return a new data entry with no line number set
-         */
-        public @NonNull Entry clearLineNumber() {
-            return  (lineNumber == null) ? this : new Entry(value, null, comments);
-        }
-
-        /**
-         * Gets the line number if present
-         *
-         * @return the line number
-         */
-        public @Nullable Integer getLineNumber() {
-            return lineNumber;
-        }
-
-        /**
-         * Attaches comments and returns a new object.
-         * <p>
-         * If an empty comment list is specified, this function will clear the comments at the specified location.
-         * @param location where the comments are situated
-         * @param comments the comments to specify at this location
-         * @return a new data entry with the comments attached
-         */
-        public @NonNull Entry withComments(@NonNull CommentLocation location, @NonNull List<@NonNull String> comments) {
-            if (comments.isEmpty()) {
-                return clearComments(location);
-            }
-            Map<CommentLocation, List<String>> newComments = new EnumMap<>(CommentLocation.class);
-            newComments.putAll(this.comments);
-            newComments.put(location, ImmutableCollections.listOf(comments));
-            return new Entry(value, lineNumber, newComments);
-        }
-
-        /**
-         * Clears comments and returns a new object
-         *
-         * @param locations which comments to clear
-         * @return a new data entry with no comments at the location
-         */
-        public @NonNull Entry clearComments(@NonNull CommentLocation @NonNull...locations) {
-            boolean foundAny = false;
-            for (CommentLocation location : locations) {
-                foundAny = foundAny || comments.containsKey(location);
-            }
-            if (!foundAny) {
-                return this;
-            }
-            Map<CommentLocation, List<String>> newComments = new EnumMap<>(CommentLocation.class);
-            newComments.putAll(this.comments);
-            for (CommentLocation location : locations) {
-                newComments.remove(location);
-            }
-            if (newComments.isEmpty()) {
-                newComments = ImmutableCollections.emptyMap();
-            }
-            return new Entry(value, lineNumber, newComments);
-        }
-
-        /**
-         * Gets the comments on this entry at the specified location
-         * @param location the location
-         * @return the comments, or an empty list if none exist
-         */
-        public @NonNull List<@NonNull String> getComments(@NonNull CommentLocation location) {
-            return comments.getOrDefault(location, ImmutableCollections.emptyList());
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj instanceof DataTree.Entry && value.equals(((DataTree.Entry) obj).value);
-        }
-
-        @Override
-        public int hashCode() {
-            return value.hashCode();
-        }
-    }
-
-    private <M extends DataTree> M newDeepCopy(Supplier<M> treeConstructor) {
-        M copy = treeConstructor.get();
-        data.forEach((key, entry) -> {
-            Object value = entry.getValue();
-            Object copiedValue;
-            if (value instanceof DataTree) {
-                copiedValue = ((DataTree) value).newDeepCopy(treeConstructor);
-            } else {
-                // Lists are immutable by contract
-                copiedValue = value;
-            }
-            copy.data.put(key, entry.withValue(copiedValue));
-        });
-        return copy;
-    }
+    public abstract DataTree.@NonNull Mut intoMut();
 
     /**
-     * Checks whether the given object is valid as a value in the data tree. Keys must be one of primitive,
+     * Gets this data tree as an immutable one.
+     * <p>
+     * The data contained within this {@code DataTree} is evacuated and moved into a new instance. After the call, the
+     * old instance (this object) is poisoned and must not be used.
+     * <p>
+     * If this instance is already {@code DataTree.Immut}, then it may be returned without changes.
+     *
+     * @return an immutable data tree
+     */
+    public abstract DataTree.@NonNull Immut intoImmut();
+
+    /**
+     * Checks whether the given object is valid as a value in the data tree. Values must be one of primitive,
      * <code>String</code>, <code>List</code> with valid elements, or <code>DataTree</code>. Null values are not valid.
      *
      * @param value the value
@@ -309,7 +147,7 @@ public class DataTree {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public final boolean equals(Object o) {
         if (!(o instanceof DataTree)) return false;
 
         DataTree dataTree = (DataTree) o;
@@ -317,12 +155,131 @@ public class DataTree {
     }
 
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         return data.hashCode();
     }
 
     @Override
     public String toString() {
-        return "DataTree{" + data + '}';
+        return getClass().getSimpleName() + '{' + data + '}';
+    }
+
+    /**
+     * A data tree which is unmistakably immutable.
+     * <p>
+     * Note that although the tree itself is immutable, any {@code DataTree}s contained within it may or may not be.
+     */
+    public static final class Immut extends DataTree {
+
+        /**
+         * Creates an empty data tree
+         */
+        public Immut() {
+            super(new LinkedHashMap<>(1, 0.99f));
+        }
+
+        Immut(LinkedHashMap<Object, DataEntry> data) {
+            super(data);
+        }
+
+        @Override
+        public @NonNull Mut intoMut() {
+            Mut mutCopy = new Mut(data);
+            mutCopy.state = Mut.COPY_BEFORE_MUTATE;
+            return mutCopy;
+        }
+
+        @Override
+        public @NonNull Immut intoImmut() {
+            return this;
+        }
+    }
+
+    /**
+     * A data tree which can unmistakably be modified
+     *
+     */
+    public static final class Mut extends DataTree {
+
+        private int state;
+
+        private static final int REGULAR = 0;
+        private static final int COPY_BEFORE_MUTATE = 1;
+        private static final int POISONED = 2;
+
+        /**
+         * Creates
+         */
+        public Mut() {
+            super(new LinkedHashMap<>());
+        }
+
+        Mut(LinkedHashMap<Object, DataEntry> data) {
+            super(data);
+        }
+
+        @Override
+        public @NonNull Mut intoMut() {
+            return this;
+        }
+
+        @Override
+        public @NonNull Immut intoImmut() {
+            // SAFETY
+            // Setting state = POISONED prevents future modifications
+            state = POISONED;
+            return new Immut(data);
+        }
+
+        private void ensureMutable() {
+            if (state == POISONED) {
+                throw new IllegalStateException("poisoned from #intoImmut");
+            }
+            if (state == COPY_BEFORE_MUTATE) {
+                data = new LinkedHashMap<>(data);
+                state = REGULAR;
+            }
+        }
+
+        /**
+         * Sets the entry at the specified key
+         *
+         * @param key the key
+         * @param entry the entry; if null, clears any existing entry
+         * @throws IllegalArgumentException if the provided key is not a valid canonical type
+         */
+        public void set(@NonNull Object key, @Nullable DataEntry entry) {
+            if (!validateKey(key)) {
+                throw new IllegalArgumentException("Not a canonical key: " + key);
+            }
+            ensureMutable();
+            if (entry == null) {
+                data.remove(key);
+            } else {
+                data.put(key, entry);
+            }
+        }
+
+        /**
+         * Clears any entry at the specified key
+         *
+         * @param key the key
+         * @throws IllegalArgumentException if the provided key is not a valid canonical type
+         */
+        public void remove(@NonNull Object key) {
+            if (!validateKey(key)) {
+                throw new IllegalArgumentException("Not a canonical key: " + key);
+            }
+            ensureMutable();
+            data.remove(key);
+        }
+
+        /**
+         * Clears all data
+         */
+        public void clear() {
+            ensureMutable();
+            data.clear();
+        }
     }
 }

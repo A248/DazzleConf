@@ -20,21 +20,17 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.common.returnsreceiver.qual.This;
 import org.checkerframework.dataflow.qual.SideEffectFree;
-import space.arim.dazzleconf2.engine.liaison.SubSectionLiaison;
+import space.arim.dazzleconf2.engine.liaison.*;
 import space.arim.dazzleconf2.internals.ImmutableCollections;
-import space.arim.dazzleconf2.engine.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.TypeLiaison;
-import space.arim.dazzleconf2.engine.liaison.SimpleTypeLiaison;
-import space.arim.dazzleconf2.engine.liaison.StringLiaison;
 import space.arim.dazzleconf2.migration.Migration;
-import space.arim.dazzleconf2.reflect.DefaultInstantiator;
-import space.arim.dazzleconf2.reflect.DefaultMethodMirror;
-import space.arim.dazzleconf2.reflect.Instantiator;
-import space.arim.dazzleconf2.reflect.TypeToken;
-import space.arim.dazzleconf2.internals.LibraryLang;
+import space.arim.dazzleconf2.reflect.*;
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.util.*;
 
@@ -66,9 +62,10 @@ public final class ConfigurationBuilder<C> {
     private final TypeToken<C> configType;
 
     // Settings
-    private Locale locale = Locale.ENGLISH;
+    private @Nullable Locale locale;
     private final List<TypeLiaison> typeLiaisons = new ArrayList<>();
     private KeyMapper keyMapper;
+    private MethodMirror methodMirror = new DefaultMethodMirror();
     private Instantiator instantiator = new DefaultInstantiator();
     private final List<Migration<?, C>> migrations = new ArrayList<>();
 
@@ -85,7 +82,9 @@ public final class ConfigurationBuilder<C> {
     }
 
     /**
-     * Sets the locale for displaying error messages
+     * Sets the locale for displaying error messages.
+     * <p>
+     * If not set, defaults to the system locale.
      *
      * @param locale the locale, nonnull
      * @return this builder
@@ -133,14 +132,16 @@ public final class ConfigurationBuilder<C> {
      */
     public @This @NonNull ConfigurationBuilder<C> addPrimitiveTypeLiaisons() {
         // TODO - Impl
-        return addTypeLiaisons(new StringLiaison());
+        return addTypeLiaisons(new StringLiaison(), new IntegerLiaison(), new ShortLiaison());
     }
 
     /**
      * Adds the default type liaisons to this builder.
      * <p>
-     * The default type liaisons are capable of serializing primitive types, <code>String</code>s, and enum types.
-     * They support the following annotations to modify their behavior:<ul>
+     * The default type liaisons are capable of serializing primitive types, <code>String</code>s, and enum types,
+     * plus lists of other serializable types, and configuration subsections.
+     * <p>
+     * The default liaisons support the following annotations to modify their behavior:<ul>
      *     <li><code>IntegerLiaison</code>: <code>@IntegerRange</code></li>
      * </ul>
      *
@@ -150,7 +151,7 @@ public final class ConfigurationBuilder<C> {
     public @This @NonNull ConfigurationBuilder<C> addDefaultTypeLiaisons() {
         addPrimitiveTypeLiaisons();
         // TODO - Impl & Javadoc
-        return addTypeLiaisons(new SubSectionLiaison());
+        return addTypeLiaisons(new ListLiaison(), new SubSectionLiaison());
     }
 
     /**
@@ -193,6 +194,17 @@ public final class ConfigurationBuilder<C> {
      */
     public @This @NonNull ConfigurationBuilder<C> keyMapper(KeyMapper keyMapper) {
         this.keyMapper = keyMapper;
+        return this;
+    }
+
+    /**
+     * Sets the method mirror
+     *
+     * @param methodMirror the method mirror, nonnull
+     * @return this builder
+     */
+    public @This @NonNull ConfigurationBuilder<C> methodMirror(MethodMirror methodMirror) {
+        this.methodMirror = Objects.requireNonNull(methodMirror);
         return this;
     }
 
@@ -245,11 +257,18 @@ public final class ConfigurationBuilder<C> {
      */
     @SideEffectFree
     public @NonNull Configuration<C> build() {
+
+        // Harden values
+        Locale locale = (this.locale == null) ? Locale.getDefault() : this.locale;
         List<TypeLiaison> typeLiaisons = ImmutableCollections.listOf(this.typeLiaisons);
-        LibraryLang libraryLang = LibraryLang.loadLang(locale);
+        List<Migration<?, C>> migrations = ImmutableCollections.listOf(this.migrations);
+
+        // Scan and build definition
         ConfigurationDefinition<C> definition = new DefinitionScan(
-                libraryLang, new LiaisonCache(typeLiaisons
-        ), new DefaultMethodMirror(), instantiator).read(configType);
+                LibraryLang.loadLang(locale), new LiaisonCache(typeLiaisons), methodMirror, instantiator
+        ).read(configType);
+
+        // Yield final
         return new BuiltConfig<>(definition, locale, typeLiaisons, keyMapper, instantiator, migrations);
     }
 }

@@ -20,7 +20,7 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.engine.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyMapper;
 
 import java.util.Objects;
 

@@ -19,35 +19,30 @@
 
 package space.arim.dazzleconf2;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.engine.KeyMapper;
-import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 
-import java.util.List;
 import java.util.Objects;
 
 final class SerOutput implements SerializeOutput {
 
-    Object output;
+    private Object output;
     private final KeyMapper keyMapper;
 
     SerOutput(KeyMapper keyMapper) {
-        this.keyMapper = keyMapper;
-    }
-
-    @SuppressWarnings("unchecked")
-    <V> void forceFeed(SerializeDeserialize<V> serializer, Object value) {
-        serializer.serialize((V) value, this);
+        this.keyMapper = Objects.requireNonNull(keyMapper, "key mapper");
     }
 
     @Override
-    public KeyMapper keyMapper() {
+    public @NonNull KeyMapper keyMapper() {
         return keyMapper;
     }
 
     @Override
-    public void outString(String value) {
+    public void outString(@NonNull String value) {
         output = Objects.requireNonNull(value);
     }
 
@@ -92,13 +87,19 @@ final class SerOutput implements SerializeOutput {
     }
 
     @Override
-    public void outList(List<?> value) {
-        // Canonical check is performed in Entry constructor
+    public void outDataTree(@NonNull DataTree value) {
         output = Objects.requireNonNull(value);
     }
 
     @Override
-    public void outDataTree(DataTree value) {
+    public void outObjectUnchecked(@NonNull Object value) {
         output = Objects.requireNonNull(value);
+    }
+
+    @Override
+    public @Nullable Object getAndClearLastOutput() {
+        Object output = this.output;
+        this.output = null;
+        return output;
     }
 }

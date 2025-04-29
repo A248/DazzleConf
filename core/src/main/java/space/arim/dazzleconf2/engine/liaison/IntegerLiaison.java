@@ -19,5 +19,86 @@
 
 package space.arim.dazzleconf2.engine.liaison;
 
-public class IntegerLiaison {
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+/**
+ * Liaison for integers
+ *
+ */
+public final class IntegerLiaison extends BaseNumberLiaison<Integer, IntegerDefault, IntegerRange> {
+
+    /**
+     * Creates
+     */
+    public IntegerLiaison() {}
+
+    @Override
+    @NonNull Class<Integer> boxedType() {
+        return Integer.class;
+    }
+
+    @Override
+    @NonNull Class<Integer> primitiveType() {
+        return int.class;
+    }
+
+    @Override
+    @NonNull Class<IntegerDefault> defaultAnnotation() {
+        return IntegerDefault.class;
+    }
+
+    @Override
+    @NonNull Integer defaultValue(@NonNull IntegerDefault defaultAnnotation) {
+        return defaultAnnotation.value();
+    }
+
+    @Override
+    @Nullable Integer castNumbers(@NonNull Object input) {
+        if (input instanceof Integer) {
+            return (Integer) input;
+        }
+        if (input instanceof Short) {
+            return (int) ((short) input);
+        }
+        if (input instanceof Byte) {
+            return (int) ((byte) input);
+        }
+        return null;
+    }
+
+    @Override
+    @Nullable Integer parseFrom(@NonNull String input) {
+        try {
+            return Integer.parseInt(input);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    @Override
+    @NonNull Class<IntegerRange> rangeAnnotation() {
+        return IntegerRange.class;
+    }
+
+    @Override
+    @NonNull Integer minFrom(@NonNull IntegerRange integerRange) {
+        return integerRange.min();
+    }
+
+    @Override
+    @NonNull
+    Integer maxFrom(@NonNull IntegerRange integerRange) {
+        return integerRange.max();
+    }
+
+    @Override
+    boolean greaterOrEq(@NonNull Integer value, @NonNull Integer min) {
+        return value >= min;
+    }
+
+    @Override
+    boolean lessOrEq(@NonNull Integer value, @NonNull Integer max) {
+        return value <= max;
+    }
 }

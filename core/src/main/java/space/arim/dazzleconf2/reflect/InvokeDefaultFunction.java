@@ -17,16 +17,16 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.engine;
-
-import org.checkerframework.checker.nullness.qual.NonNull;
+package space.arim.dazzleconf2.reflect;
 
 /**
- * Default, "no-op" mapper for keys and method names
+ * A marker value used for {@link MethodYield} that instructs the {@link Instantiator} to call the default method
+ *
  */
-public final class DefaultKeyMapper implements KeyMapper {
-    @Override
-    public @NonNull CharSequence methodNameToKey(@NonNull String methodName) {
-        return methodName;
-    }
+public final class InvokeDefaultFunction {
+
+    /**
+     * Creates
+     */
+    public InvokeDefaultFunction() {}
 }

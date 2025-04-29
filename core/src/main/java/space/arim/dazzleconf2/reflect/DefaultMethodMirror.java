@@ -43,37 +43,72 @@ public final class DefaultMethodMirror implements MethodMirror {
     private static final ReifiedType[] EMPTY_PARAMS = new ReifiedType[0];
 
     @Override
-    public @NonNull Stream<@NonNull MethodId> getViableMethods(ReifiedType.@NonNull Annotated reifiedType) {
-
-        GenericContext classGenerics = new GenericContext(reifiedType);
-        Method[] classMethods = reifiedType.rawType().getDeclaredMethods();
-
-        return Arrays.stream(classMethods)
-                .filter(method -> !method.isSynthetic() && !method.isBridge())
-                .map((method -> {
-                    Type[] methodParameters = method.getGenericParameterTypes();
-
-                    if (method.getTypeParameters().length != 0) {
-                        throw new DeveloperMistakeException(
-                                "Configuration method " + method.getName() + " in " + reifiedType.rawType() +
-                                        " cannot declared with generic type parameters."
-                        );
-                    }
-                    ReifiedType.Annotated reifiedReturn = classGenerics.reifyAnnotated(method.getAnnotatedReturnType());
-                    ReifiedType[] reifiedParameters = (methodParameters.length == 0) ?
-                            EMPTY_PARAMS : new ReifiedType[methodParameters.length];
-                    for (int n = 0; n < reifiedParameters.length; n++) {
-                        reifiedParameters[n] = classGenerics.reify(methodParameters[n]);
-                    }
-                    return new MethodId(method, reifiedReturn, reifiedParameters, MethodUtil.isDefault(method));
-                }));
+    public @NonNull TypeWalker typeWalker(ReifiedType.@NonNull Annotated reifiedType) {
+        return new Walker(reifiedType);
     }
 
-    @Override
-    public <A extends Annotation> @Nullable A getAnnotation(@NonNull MethodId methodId,
-                                                            @NonNull ReifiedType enclosingType,
-                                                            @NonNull Class<A> annotation) {
-        return methodId.getMethod(enclosingType.rawType()).getAnnotation(annotation);
+    private static final class Walker implements TypeWalker {
+
+        private final ReifiedType.Annotated enclosingType;
+        private GenericContext genericContext;
+
+        private Walker(ReifiedType.Annotated enclosingType) {
+            this.enclosingType = enclosingType;
+        }
+
+        private GenericContext classGenerics() {
+            GenericContext genericContext = this.genericContext;
+            if (genericContext == null) {
+                genericContext = new GenericContext(enclosingType);
+                this.genericContext = genericContext;
+            }
+            return genericContext;
+        }
+
+        @Override
+        public ReifiedType.@NonNull Annotated getEnclosingType() {
+            return enclosingType;
+        }
+
+        @Override
+        public @NonNull Stream<@NonNull MethodId> getViableMethods() {
+            Method[] classMethods = enclosingType.rawType().getDeclaredMethods();
+
+            return Arrays.stream(classMethods)
+                    .filter(method -> !method.isSynthetic() && !method.isBridge())
+                    .map((method -> {
+                        Type[] methodParameters = method.getGenericParameterTypes();
+
+                        if (method.getTypeParameters().length != 0) {
+                            throw new DeveloperMistakeException(
+                                    "Configuration method " + method.getName() + " in " + enclosingType.rawType() +
+                                            " cannot be declared with generic type parameters."
+                            );
+                        }
+                        ReifiedType.Annotated reifiedReturn = classGenerics().reifyAnnotated(method.getAnnotatedReturnType());
+                        ReifiedType[] reifiedParameters = (methodParameters.length == 0) ?
+                                EMPTY_PARAMS : new ReifiedType[methodParameters.length];
+                        for (int n = 0; n < reifiedParameters.length; n++) {
+                            reifiedParameters[n] = classGenerics().reify(methodParameters[n]);
+                        }
+                        return new MethodId(method, reifiedReturn, reifiedParameters, MethodUtil.isDefault(method));
+                    }));
+        }
+
+        @Override
+        public <A extends Annotation> @Nullable A getAnnotation(@NonNull MethodId methodId, @NonNull Class<A> annotation) {
+            return methodId.getMethod(enclosingType.rawType()).getAnnotation(annotation);
+        }
+
+        @Override
+        public @NonNull TypeWalker @NonNull [] getSuperTypes() {
+            AnnotatedType[] annotatedInterfaces = enclosingType.rawType().getAnnotatedInterfaces();
+            TypeWalker[] superTypes = new TypeWalker[annotatedInterfaces.length];
+            for (int n = 0; n < annotatedInterfaces.length; n++) {
+                superTypes[n] = new Walker(classGenerics().reifyAnnotated(annotatedInterfaces[n]));
+            }
+            return superTypes;
+        }
     }
 
     @Override
@@ -99,11 +134,6 @@ public final class DefaultMethodMirror implements MethodMirror {
             this.receiver = receiver;
             this.enclosingType = enclosingType;
             this.proxyHandler = proxyHandler;
-        }
-
-        @Override
-        public Class<?> enclosingType() {
-            return enclosingType;
         }
 
         @Override

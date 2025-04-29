@@ -35,9 +35,10 @@ import java.util.Objects;
  * is designed for low-level usage. See {@link TypeToken} for an ergonomic high-level version.
  * <p>
  * This class should be considered sealed and not subclassed. Equality is defined for any two reified types based
- * on whether the raw type and arguments match. Annotations (like in {@link ReifiedType.Annotated}) are not considered.
+ * on whether the raw type and arguments match, or annotations if {@link ReifiedType.Annotated} is used.
  *
  */
+// TODO Make this class sealed in a versions/17 multi-release directory
 public class ReifiedType {
 
     private final Class<?> rawType;
@@ -108,7 +109,14 @@ public class ReifiedType {
         if (!(o instanceof ReifiedType)) return false;
 
         ReifiedType that = (ReifiedType) o;
-        return rawType.equals(that.rawType) && Arrays.equals(arguments, that.arguments);
+        return rawType.equals(that.rawType) && Arrays.equals(arguments, that.arguments) && annotationsEq(that);
+    }
+
+    boolean annotationsEq(ReifiedType that) {
+        if (that instanceof ReifiedType.Annotated) {
+            return ((Annotated) that).annotations.length == 0;
+        }
+        return true;
     }
 
     @Override
@@ -214,7 +222,24 @@ public class ReifiedType {
          */
         @Override
         public ReifiedType.@NonNull Annotated @NonNull [] arguments() {
-            return (ReifiedType.Annotated[]) super.arguments();
+            return (Annotated[]) super.arguments();
+        }
+
+        @Override
+        boolean annotationsEq(ReifiedType that) {
+            if (that instanceof Annotated) {
+                Annotated thatAnnotated = (Annotated) that;
+                if (annotations.length != thatAnnotated.annotations.length) {
+                    return false;
+                }
+                for (int n = 0; n < annotations.length; n++) {
+                    if (!annotations[n].equals(thatAnnotated.annotations[n])) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return annotations.length == 0;
         }
 
         @Override

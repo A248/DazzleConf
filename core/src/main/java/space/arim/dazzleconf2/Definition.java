@@ -20,63 +20,80 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.internals.ImmutableCollections;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.DataTreeMut;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.*;
-import space.arim.dazzleconf2.internals.LibraryLang;
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 final class Definition<C> implements ConfigurationDefinition<C> {
 
     private final TypeToken<C> configType;
-    private final KeyPath pathPrefix;
-    /**
-     * Includes both this type and all its super types
-     */
-    private final Map<Class<?>, TypeSkeleton> superTypes;
+    private final KeyPath.Immut pathPrefix;
+
     private final LibraryLang libraryLang;
     private final MethodMirror methodMirror;
     private final Instantiator instantiator;
 
-    private static final InvokeDefaultValue INVOKE_DEFAULT_VALUE = new InvokeDefaultValue();
+    /**
+     * Includes both this type and all its super types. These arrays have equal length
+     */
+    private final Class<?>[] superTypesArray;
+    private final TypeSkeleton[] skeletonArray;
 
-    Definition(TypeToken<C> configType, KeyPath pathPrefix, Map<Class<?>, TypeSkeleton> superTypes,
+    private static final InvokeDefaultFunction INVOKE_DEFAULT_VALUE = new InvokeDefaultFunction();
+
+    Definition(TypeToken<C> configType, KeyPath.Immut pathPrefix, Map<Class<?>, TypeSkeleton> typeSkeletons,
                LibraryLang libraryLang, MethodMirror methodMirror, Instantiator instantiator) {
         this.configType = Objects.requireNonNull(configType);
         this.pathPrefix = Objects.requireNonNull(pathPrefix);
-        this.superTypes = ImmutableCollections.mapOf(superTypes);
         this.libraryLang = Objects.requireNonNull(libraryLang);
         this.methodMirror = Objects.requireNonNull(methodMirror);
         this.instantiator = Objects.requireNonNull(instantiator);
+
+        int numberOfSkeletons = typeSkeletons.size();
+        Class<?>[] superTypesArray = new Class[numberOfSkeletons];
+        TypeSkeleton[] skeletonArray = new TypeSkeleton[numberOfSkeletons];
+        int index = 0;
+        for (Map.Entry<Class<?>, TypeSkeleton> typeEntry : typeSkeletons.entrySet()) {
+            superTypesArray[index] = typeEntry.getKey();
+            skeletonArray[index++] = typeEntry.getValue();
+        }
+        this.superTypesArray = superTypesArray;
+        this.skeletonArray = skeletonArray;
     }
 
+    @SuppressWarnings("unchecked")
     private C instantiate(MethodYield.Builder methodYield) {
-        // Add callable default methods
-        superTypes.forEach((type, typeSkeleton) -> {
-            typeSkeleton.callableDefaultMethods.forEach(callableMethod -> {
-               methodYield.addValue(type, callableMethod, INVOKE_DEFAULT_VALUE);
-            });
-        });
-        // Instantiate
-        Class<C> rawConfigType = configType.getRawType();
-        return rawConfigType.cast(instantiator.generate(
-                rawConfigType.getClassLoader(), superTypes.keySet(), methodYield.build()
-        ));
+        return (C) instantiator.generate(
+                configType.getRawType().getClassLoader(), superTypesArray, methodYield.build()
+        );
+    }
+
+    @Override
+    public @NonNull TypeToken<C> getType() {
+        return configType;
     }
 
     @Override
     public @NonNull C loadDefaults() {
         MethodYield.Builder methodYield = new MethodYield.Builder();
-        superTypes.forEach((superType, typeSkeleton) -> {
-            typeSkeleton.methodNodes.forEach(methodNode -> {
-                Object defaultValue = methodNode.makeDefaultValue(superType);
-                methodYield.addValue(superType, methodNode.methodId, defaultValue);
-            });
-        });
+        for (int n = 0; n < superTypesArray.length; n++) {
+            Class<?> currentType = superTypesArray[n];
+            TypeSkeleton typeSkeleton = skeletonArray[n];
+            // Add callable default methods
+            for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
+                methodYield.addValue(currentType, callableMethod, INVOKE_DEFAULT_VALUE);
+            }
+            // Add default values
+            for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
+                Object defaultValue = methodNode.makeDefaultValue(currentType);
+                methodYield.addValue(currentType, methodNode.methodId, defaultValue);
+            }
+        }
         return instantiate(methodYield);
     }
 
@@ -84,28 +101,36 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             @NonNull D dataTree, @NonNull ReadOptions readOptions, Definition.@NonNull HowToUpdate<D, S> howToUpdate
     ) {
         // Where we're located - mapped
-        // TODO Add key mapper support to KeyPath
-        //KeyPath pathPrefix = new KeyPath(this.pathPrefix, readOptions.keyMapper());
-
+        KeyPath.Immut mappedPathPrefix;
+        {
+            KeyPath.Mut mutPathPrefix = this.pathPrefix.intoMut();
+            mutPathPrefix.applyKeyMapper(readOptions.keyMapper());
+            mappedPathPrefix = mutPathPrefix.intoImmut();
+        }
         // What we're building (an instance) and how we're doing that
         MethodYield.Builder methodYield = new MethodYield.Builder();
-        DeserInput.Context deserContext = new DeserInput.Context(libraryLang, readOptions, pathPrefix);
+        DeserInput.Context deserContext = new DeserInput.Context(libraryLang, readOptions, mappedPathPrefix);
 
         // Collected errors - get a certain maximum before quitting
         ErrorContext[] collectedErrors = new ErrorContext[readOptions.maximumErrorCollect()];
         int errorCount = 0;
 
         // For each type in the hierarchy
-        for (Map.Entry<Class<?>, TypeSkeleton> superTypeEntry : superTypes.entrySet()) {
-            Class<?> currentType = superTypeEntry.getKey();
-            TypeSkeleton typeSkeleton = superTypeEntry.getValue();
+        for (int n = 0; n < superTypesArray.length; n++) {
 
-            // For each method in that type
-            for (TypeSkeleton.MethodNode methodNode : typeSkeleton.methodNodes) {
+            Class<?> currentType = superTypesArray[n];
+            TypeSkeleton typeSkeleton = skeletonArray[n];
+            // Add callable default methods
+            for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
+                methodYield.addValue(currentType, callableMethod, INVOKE_DEFAULT_VALUE);
+            }
+
+            // Add values for each method
+            for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
 
                 Object value;
-                String mappedKey = readOptions.keyMapper().methodNameToKey(methodNode.methodId.name()).toString();
-                DataTree.Entry dataEntry = dataTree.get(mappedKey);
+                String mappedKey = readOptions.keyMapper().labelToKey(methodNode.methodId.name()).toString();
+                DataEntry dataEntry = dataTree.get(mappedKey);
                 if (dataEntry == null) {
 
                     // Missing value. Three possibilities for the method:
@@ -118,16 +143,16 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                         value = Optional.empty();
                     } else if ((value = methodNode.makeMissingValue(currentType)) != null) {
                         // 2.
-                        KeyPath keyPath = new KeyPath();
+                        KeyPath.Mut keyPath = new KeyPath.Mut();
                         keyPath.addFront(mappedKey);
                         readOptions.loadListener().updatedMissingPath(keyPath);
                         howToUpdate.insertMissingValue(dataTree, mappedKey, methodNode, value);
                     } else {
                         // 3.
                         LoadError loadError = new LoadError(libraryLang.missingValue(), libraryLang);
-                        KeyPath entryPath = new KeyPath(pathPrefix);
+                        KeyPath.Mut entryPath = new KeyPath.Mut(mappedPathPrefix);
                         entryPath.addBack(mappedKey);
-                        loadError.addDetail(ErrorContext.ENTRY_PATH, entryPath.intoPartsList());
+                        loadError.addDetail(ErrorContext.ENTRY_PATH, entryPath);
 
                         collectedErrors[errorCount++] = loadError;
                         // Check if errors maxed out
@@ -142,13 +167,10 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                     // Main deserialization route - most cases go here
                     //
 
-                    // Updatable output if needed
-                    S outputForUpdate = howToUpdate.makeOutputForUpdate(readOptions);
-
                     // Deserialization
                     LoadResult<?> valueResult = howToUpdate.deserialize(methodNode.serializer,  new DeserInput(
                             dataEntry.getValue(), new DeserInput.Source(dataEntry, mappedKey), deserContext
-                    ), outputForUpdate);
+                    ));
 
                     // Error handling
                     if (valueResult.isFailure()) {
@@ -164,7 +186,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                         }
                     }
                     // Update if desired
-                    howToUpdate.updateIfDesired(dataTree, mappedKey, dataEntry, methodNode, outputForUpdate);
+                    howToUpdate.updateIfDesired(dataTree, mappedKey, dataEntry, methodNode);
 
                     // Bail out if there are errors
                     if (errorCount > 0) continue;
@@ -186,15 +208,12 @@ final class Definition<C> implements ConfigurationDefinition<C> {
 
     private interface HowToUpdate<D extends DataTree, S> {
 
-        void insertMissingValue(D dataTree, String mappedKey, TypeSkeleton.MethodNode methodNode, Object value);
+        void insertMissingValue(D dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode, Object value);
 
-        S makeOutputForUpdate(ReadOptions readOpts);
+        <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser);
 
-        <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize,
-                                      DeserializeInput deser, S outputForUpdate);
-
-        void updateIfDesired(D dataTree, String mappedKey, DataTree.Entry sourceEntry,
-                             TypeSkeleton.MethodNode methodNode, S outputForUpdate);
+        void updateIfDesired(D dataTree, String mappedKey, DataEntry sourceEntry,
+                             TypeSkeleton.MethodNode<?> methodNode);
 
     }
 
@@ -202,92 +221,59 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree, @NonNull ReadOptions readOptions) {
         return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree, Void>() {
             @Override
-            public void insertMissingValue(DataTree dataTree, String mappedKey, TypeSkeleton.MethodNode methodNode,
+            public void insertMissingValue(DataTree dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode,
                                            Object value) {}
 
             @Override
-            public Void makeOutputForUpdate(ReadOptions readOpts) {
-                return null;
-            }
-
-            @Override
-            public <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize,
-                                                 DeserializeInput deser, Void outputForUpdate) {
+            public <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser) {
                 return serializeDeserialize.deserialize(deser);
             }
 
             @Override
-            public void updateIfDesired(DataTree dataTree, String mappedKey, DataTree.Entry sourceEntry,
-                                        TypeSkeleton.MethodNode methodNode, Void outputForUpdate) {}
+            public void updateIfDesired(DataTree dataTree, String mappedKey, DataEntry sourceEntry,
+                                        TypeSkeleton.MethodNode<?> methodNode) {}
         });
     }
 
     @Override
-    public @NonNull LoadResult<@NonNull C> readWithUpdate(@NonNull DataTreeMut dataTree, @NonNull ReadOptions readOptions) {
-        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTreeMut, SerOutput>() {
+    public @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadOptions readOptions) {
+
+        SerializeOutput outputForUpdate = new SerOutput(readOptions.keyMapper());
+        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree.Mut, SerializeOutput>() {
             @Override
-            public void insertMissingValue(DataTreeMut dataTree, String mappedKey, TypeSkeleton.MethodNode methodNode,
+            public void insertMissingValue(DataTree.Mut dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode,
                                            Object value) {
-                dataTree.set(mappedKey, methodNode.addComments(new DataTree.Entry(value)));
+                dataTree.set(mappedKey, methodNode.addComments(new DataEntry(value)));
             }
 
             @Override
-            public SerOutput makeOutputForUpdate(ReadOptions readOpts) {
-                return new SerOutput(readOpts.keyMapper());
-            }
-
-            @Override
-            public <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser,
-                                                 SerOutput outputForUpdate) {
+            public <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser) {
                 return serializeDeserialize.deserializeUpdate(deser, outputForUpdate);
             }
 
             @Override
-            public void updateIfDesired(DataTreeMut dataTree, String mappedKey, DataTree.Entry sourceEntry,
-                                        TypeSkeleton.MethodNode methodNode, SerOutput outputForUpdate) {
-                if (outputForUpdate.output != null) {
-                    dataTree.set(mappedKey, methodNode.addComments(sourceEntry.withValue(outputForUpdate.output)));
+            public void updateIfDesired(DataTree.Mut dataTree, String mappedKey, DataEntry sourceEntry,
+                                        TypeSkeleton.MethodNode<?> methodNode) {
+                Object lastOutput = outputForUpdate.getAndClearLastOutput();
+                if (lastOutput != null) {
+                    dataTree.set(mappedKey, methodNode.addComments(sourceEntry.withValue(lastOutput)));
                 }
             }
         });
     }
 
     @Override
-    public void writeTo(@NonNull C config, @NonNull DataTreeMut dataTree, @NonNull WriteOptions writeOptions) {
+    public void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree, @NonNull WriteOptions writeOptions) {
 
-        for (Map.Entry<Class<?>, TypeSkeleton> superTypeEntry : superTypes.entrySet()) {
-            Class<?> currentType = superTypeEntry.getKey();
-            TypeSkeleton typeSkeleton = superTypeEntry.getValue();
-            MethodMirror.Invoker invoker = methodMirror.makeInvoker(config, currentType);
+        SerializeOutput serOutput = new SerOutput(writeOptions.keyMapper());
 
-            for (TypeSkeleton.MethodNode methodNode : typeSkeleton.methodNodes) {
+        for (int n = 0; n < superTypesArray.length; n++) {
+            MethodMirror.Invoker invoker = methodMirror.makeInvoker(config, superTypesArray[n]);
 
-                Object value;
-                try {
-                    value = invoker.invokeMethod(methodNode.methodId);
-                } catch (InvocationTargetException e) {
-                    throw new DeveloperMistakeException("Configuration methods must not throw exceptions", e);
-                }
-                if (value == null) {
-                    throw new DeveloperMistakeException(
-                            "Configuration method " + methodNode.methodId + " must not return null"
-                    );
-                }
-                if (methodNode.optional && (value = ((Optional<?>) value).orElse(null)) == null) {
-                    continue;
-                }
-                SerOutput serOutput = new SerOutput(writeOptions.keyMapper());
-                serOutput.forceFeed(methodNode.serializer, value);
-
-                if (serOutput.output == null) {
-                    throw new DeveloperMistakeException(
-                            "Serializer " + methodNode.serializer + " did not produce any output for " + value
-                    );
-                }
-                dataTree.set(
-                        writeOptions.keyMapper().methodNameToKey(methodNode.methodId.name()).toString(),
-                        methodNode.addComments(new DataTree.Entry(serOutput.output))
-                );
+            for (TypeSkeleton.MethodNode<?> methodNode : skeletonArray[n].methodNodes) {
+                String mappedKey = writeOptions.keyMapper().labelToKey(methodNode.methodId.name()).toString();
+                DataEntry entry = methodNode.serialize(invoker, serOutput);
+                dataTree.set(mappedKey, entry);
             }
         }
     }

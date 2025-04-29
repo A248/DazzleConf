@@ -17,16 +17,25 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.reflect;
+package space.arim.dazzleconf2.engine;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+import java.lang.annotation.Annotation;
 
 /**
- * A marker value used for {@link MethodYield} that instructs the {@link Instantiator} to call the default method
- *
+ * A holder for annotation data
  */
-public final class InvokeDefaultValue {
+public interface AnnotationContext {
 
     /**
-     * Creates
+     * Checks available contexts, such as the declaring method or class, for the following annotation.
+     *
+     * @param annotationClass the annotation class
+     * @param <A>             the annotation type
+     * @return the annotation if present
      */
-    public InvokeDefaultValue() {}
+    <A extends Annotation> @Nullable A getAnnotation(@NonNull Class<A> annotationClass);
+
 }

@@ -201,11 +201,19 @@ public final class MethodId {
 
     @Override
     public String toString() {
-        return "MethodId{" +
-                "name=" + name() +
-                ", returnType=" + returnType +
-                ", arguments=" + Arrays.toString(parameters) +
-                ", isDefault=" + isDefault +
-                '}';
+        StringBuilder builder = new StringBuilder();
+        if (isDefault) {
+            builder.append("default ");
+        }
+        builder.append(name());
+        builder.append('(');
+        for (int n = 0; n < parameters.length; n++) {
+            if (n != 0) {
+                builder.append(',');
+            }
+            parameters[n].toString(builder);
+        }
+        builder.append(')');
+        return builder.toString();
     }
 }

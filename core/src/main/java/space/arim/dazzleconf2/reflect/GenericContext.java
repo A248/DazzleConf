@@ -23,8 +23,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.internals.ArrayType;
 
 import java.lang.reflect.*;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * A low level helper for reifying generic members within context of a generic class declaration.
@@ -33,7 +31,7 @@ import java.util.Map;
 public final class GenericContext {
 
     private final ReifiedType.Annotated parent;
-    private final Map<String, ReifiedType.Annotated> typeArguments = new HashMap<>();
+    private final TypeVariable<?>[] typeVars;
 
     /**
      * Creates from a parent type.
@@ -44,15 +42,14 @@ public final class GenericContext {
      */
     public GenericContext(ReifiedType.@NonNull Annotated parent) {
         this.parent = parent;
-
         TypeVariable<?>[] typeVars = parent.rawType().getTypeParameters();
         if (typeVars.length != parent.argumentCount()) {
             throw new IllegalStateException("Malformed input type. Wrong number of arguments on " + parent);
         }
+        this.typeVars = typeVars;
     }
 
     private ReifiedType.Annotated getTypeArgument(String varName) {
-        TypeVariable<?>[] typeVars = parent.rawType().getTypeParameters();
         for (int n = 0; n < typeVars.length; n++) {
             if (typeVars[n].getName().equals(varName)) {
                 return parent.argumentAt(n);

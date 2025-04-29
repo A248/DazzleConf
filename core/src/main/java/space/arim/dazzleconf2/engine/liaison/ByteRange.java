@@ -17,24 +17,29 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.engine;
-
-import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.Configuration;
+package space.arim.dazzleconf2.engine.liaison;
 
 /**
- * Simple interface for mapping method names into backend configuration keys.
+ * Controls the range of a byte.
  * <p>
- * For example, some formats (JSON) use lowerCamelCase for option names, whereas others use snake-case (YAML).
- * Fortunately, the key mapper is configured automatically when using {@link Configuration#configureWith}.
+ * This annotation is made to be used with {@code byte} or {@code Byte} and not other numeric types. It is only
+ * supported by the byte liaison.
+ *
  */
-public interface KeyMapper {
+public @interface ByteRange {
 
     /**
-     * Turns a method name into a key
-     * @param methodName the method name
-     * @return the key compponent
+     * The minimum value
+     *
+     * @return the min value, inclusive
      */
-    @NonNull CharSequence methodNameToKey(@NonNull String methodName);
+    byte min() default Byte.MIN_VALUE;
+
+    /**
+     * The maximum value
+     *
+     * @return the max value, inclusive
+     */
+    byte max() default Byte.MAX_VALUE;
 
 }

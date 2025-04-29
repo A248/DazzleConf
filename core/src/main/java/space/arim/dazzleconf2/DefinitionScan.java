@@ -20,14 +20,13 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.AccessChecking;
 import space.arim.dazzleconf2.reflect.*;
-import space.arim.dazzleconf2.internals.LibraryLang;
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedType;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -38,6 +37,8 @@ final class DefinitionScan {
     private final MethodMirror methodMirror;
     private final Instantiator instantiator;
 
+    private final BlockInfiniteLoop<TypeToken<?>> blockTypeLoop = new BlockInfiniteLoop<>();
+
     DefinitionScan(LibraryLang libraryLang, LiaisonCache liaisonCache, MethodMirror methodMirror, Instantiator instantiator) {
         this.libraryLang = libraryLang;
         this.liaisonCache = liaisonCache;
@@ -47,26 +48,37 @@ final class DefinitionScan {
 
     final class Run<V> {
 
-        private final KeyPath pathPrefix;
+        private final KeyPath.Immut pathPrefix;
         private final TypeToken<V> typeToken;
+        private final LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons = new LinkedHashMap<>();
+
+        // Seen before
+        private final Set<Class<?>> superTypeSeenBefore = new HashSet<>();
         private final Set<CovariantGuard> covariantSeenBefore = new HashSet<>();
-        private final Map<Class<?>, TypeSkeleton> superTypes = new HashMap<>();
 
         private Run(KeyPath pathPrefix, TypeToken<V> typeToken) {
-            this.pathPrefix = pathPrefix;
+            this.pathPrefix = pathPrefix.intoImmut();
             this.typeToken = typeToken;
-            pathPrefix.lockChanges();
         }
 
-        private void scanType(ReifiedType.Annotated currentType, Object defaultsProvider) {
+        private void scanType(MethodMirror.TypeWalker currentWalker, V defaultsProvider) {
+            Class<?> currentType = currentWalker.getEnclosingType().rawType();
+            // Check if seen before (diamond inheritance)
+            if (!superTypeSeenBefore.add(currentType)) {
+                return;
+            }
+            // Check if accessible
+            if (!AccessChecking.isAccessible(currentType)) {
+                throw new DeveloperMistakeException("Configuration interface not accessible: " + currentType);
+            }
             Set<MethodId> callableDefaultMethods = new HashSet<>();
-            List<TypeSkeleton.MethodNode> methodNodes = new ArrayList<>();
-            MethodMirror.Invoker defaultsInvoker = methodMirror.makeInvoker(defaultsProvider, currentType.rawType());
+            List<TypeSkeleton.MethodNode<?>> methodNodes = new ArrayList<>();
+            MethodMirror.Invoker defaultsInvoker = methodMirror.makeInvoker(defaultsProvider, currentType);
 
             // To avoid massively increasing the stack depth, skip using the stream itself
             // This is potentially important considering the madness of nested configuration sections
             // Thus, we collect and iterate to reduce stack depth
-            for (MethodId methodId : methodMirror.getViableMethods(currentType).collect(Collectors.toList())) {
+            for (MethodId methodId : currentWalker.getViableMethods().collect(Collectors.toList())) {
 
                 if (!covariantSeenBefore.add(new CovariantGuard(methodId))) {
                     //
@@ -76,24 +88,24 @@ final class DefinitionScan {
                     // If that method is in the same class, someone is using this library with hacked class binaries
                     //
                     // Regardless, doing nothing should be fine. Nobody should be using hacked class binaries. If
-                    // they are, they should check compatibilities with the libraries they're using, especially with
-                    // libraries which are highly-reflective like ours (seems like a no-brainer to at least read docs)
+                    // they are, they should really check compatibilities with the libraries they're using, especially
+                    // libraries which are highly-reflective (seems like a no-brainer to at least read docs)
                     continue;
                 }
-                TypeLiaison.AnnotationContext annotationContext = new TypeLiaison.AnnotationContext() {
+                AnnotationContext methodAnnotations = new AnnotationContext() {
                     @Override
                     public <A extends Annotation> A getAnnotation(@NonNull Class<A> annotationClass) {
-                        return methodMirror.getAnnotation(methodId, currentType, annotationClass);
+                        return currentWalker.getAnnotation(methodId, annotationClass);
                     }
                 };
                 // Check for @CallableFn
-                if (annotationContext.getAnnotation(CallableFn.class) != null) {
+                if (methodAnnotations.getAnnotation(CallableFn.class) != null) {
                     callableDefaultMethods.add(methodId);
                     continue;
                 }
-                // Check for @Comments
-                Comments.Container comments = annotationContext.getAnnotation(Comments.Container.class);
-
+                if (methodId.parameterCount() != 0) {
+                    throw new DeveloperMistakeException("Configuration method " + methodId + " cannot have parameters");
+                }
                 // Check for Optional return
                 boolean optional = methodId.returnType().rawType().equals(Optional.class);
 
@@ -104,48 +116,22 @@ final class DefinitionScan {
                 } else {
                     typeRequested = methodId.returnType();
                 }
-                // Get DefaultValues + SerializeDeserialize
-                LiaisonCache.Cache<?> agentAndSerializer = liaisonCache.requestInfo(
-                        new TypeToken<>(typeRequested), new AsHandshake(methodId.name())
-                );
-                DefaultValues<?> defaultValues = agentAndSerializer.agent.loadDefaultValues(annotationContext);
-                if (defaultValues == null) {
-                    // Agent gave no defaults -- let's try calling the default method
-                    if (methodId.isDefault()) {
-                        Object defaultVal;
-                        try {
-                            defaultVal = defaultsInvoker.invokeMethod(methodId);
-                        } catch (InvocationTargetException e) {
-                            throw new DeveloperMistakeException("Default method threw an exception", e);
-                        }
-                        if (defaultVal == null) {
-                            throw new DeveloperMistakeException("Default method " + methodId + " returned null");
-                        }
-                        // Unpack Optional as needed
-                        if (optional) {
-                            Optional<?> optDefaultVal = (Optional<?>) defaultVal;
-                            if (optDefaultVal.isPresent()) {
-                                defaultValues = DefaultValues.simple(optDefaultVal.get());
-                            }
-                            // If empty, that's okay -- optional entries don't need defaults
-                        } else {
-                            defaultValues = DefaultValues.simple(defaultVal);
-                        }
-                    } else {
-                        // No default values here for this entry.
-                        // Meaning either the developer is a complete novice or an advanced library user
-                    }
+                LiaisonCache.HandleType<?> handleType;
+                try {
+                    handleType = liaisonCache.requestToHandle(
+                            new TypeToken<>(typeRequested), new AsHandshake(methodId.name())
+                    );
+                } catch (DeveloperMistakeException rethrow) {
+                    throw new DeveloperMistakeException("Failed to make type agent for " + methodId, rethrow);
                 }
-                methodNodes.add(new TypeSkeleton.MethodNode(
-                        comments, optional, methodId, defaultValues, agentAndSerializer.serializer
+                methodNodes.add(handleType.makeMethodNode(
+                        methodId, optional, methodAnnotations, defaultsInvoker
                 ));
             }
-            superTypes.put(currentType.rawType(), new TypeSkeleton(callableDefaultMethods, methodNodes));
+            typeSkeletons.put(currentType, new TypeSkeleton(callableDefaultMethods, methodNodes));
 
-            GenericContext currentGenerics = new GenericContext(currentType);
-            for (AnnotatedType superType : currentType.rawType().getAnnotatedInterfaces()) {
-                ReifiedType.Annotated reifiedSuperType = currentGenerics.reifyAnnotated(superType);
-                scanType(reifiedSuperType, defaultsProvider);
+            for (MethodMirror.TypeWalker superType : currentWalker.getSuperTypes()) {
+                scanType(superType, defaultsProvider);
             }
         }
 
@@ -154,17 +140,22 @@ final class DefinitionScan {
             if (!rawType.isInterface()) {
                 throw new DeveloperMistakeException("This library works exclusively with interfaces");
             }
-            if (!AccessChecking.isAccessible(rawType)) {
-                throw new DeveloperMistakeException("Configuration interface not accessible: " + rawType);
+            blockTypeLoop.enter(typeToken);
+            try {
+                scanType(
+                        methodMirror.typeWalker(typeToken.getReifiedType()),
+                        rawType.cast(instantiator.generateEmpty(rawType.getClassLoader(), rawType))
+                );
+            } finally {
+                blockTypeLoop.exit(typeToken);
             }
-            V defaultsProvider = instantiator.generateEmpty(rawType.getClassLoader(), rawType);
-            scanType(typeToken.getReifiedType(), defaultsProvider);
-            return new Definition<>(typeToken, pathPrefix, superTypes, libraryLang, methodMirror, instantiator);
+            return new Definition<>(typeToken, pathPrefix, typeSkeletons, libraryLang, methodMirror, instantiator);
         }
 
         final class AsHandshake implements TypeLiaison.Handshake {
 
             private final String pathAddition;
+            private final BlockInfiniteLoop<TypeToken<?>> blockRequestLoop = new BlockInfiniteLoop<>();
 
             AsHandshake(String pathAddition) {
                 this.pathAddition = pathAddition;
@@ -172,12 +163,17 @@ final class DefinitionScan {
 
             @Override
             public @NonNull <U> SerializeDeserialize<U> getOtherSerializer(@NonNull TypeToken<U> other) {
-                return liaisonCache.requestInfo(other, this).serializer;
+                blockRequestLoop.enter(other);
+                try {
+                    return liaisonCache.requestToHandle(other, this).serializer;
+                } finally {
+                    blockRequestLoop.exit(other);
+                }
             }
 
             @Override
             public @NonNull <U> ConfigurationDefinition<U> getConfiguration(@NonNull TypeToken<U> other) {
-                KeyPath subPath = new KeyPath(pathPrefix);
+                KeyPath.Mut subPath = new KeyPath.Mut(pathPrefix);
                 subPath.addBack(pathAddition);
                 return new Run<>(subPath, other).read();
             }
@@ -185,7 +181,25 @@ final class DefinitionScan {
     }
 
     <V> ConfigurationDefinition<V> read(TypeToken<V> typeToken) {
-        return new Run<>(new KeyPath(), typeToken).read();
+        return new Run<>(new KeyPath.Immut(), typeToken).read();
+    }
+
+    private static final class BlockInfiniteLoop<V> {
+
+        private final Set<V> seenBefore = new HashSet<>();
+
+        void enter(V value) {
+            if (!seenBefore.add(value)) {
+                throw new IllegalStateException("Cycle detected: " + value);
+            }
+        }
+
+        void exit(V exitToken) {
+            if (!seenBefore.remove(exitToken)) {
+                throw new IllegalStateException("Gateway value was never added");
+            }
+        }
+
     }
 
     private static final class CovariantGuard {
@@ -219,7 +233,7 @@ final class DefinitionScan {
         @Override
         public int hashCode() {
             int result = methodId.name().hashCode();
-            result = 31 * result + Arrays.hashCode(methodId.parameters());;
+            result = 31 * result + Arrays.hashCode(methodId.parameters());
             return result;
         }
     }

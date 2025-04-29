@@ -25,7 +25,8 @@ import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.ConfigurationDefinition;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.DataTreeMut;
+import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
@@ -61,7 +62,7 @@ public final class SubSectionLiaison implements TypeLiaison {
         }
 
         @Override
-        public @Nullable DefaultValues<V> loadDefaultValues(@NonNull AnnotationContext annotationContext) {
+        public @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             return new DefaultValues<V>() {
                 @Override
                 public @NonNull V defaultValue() {
@@ -116,7 +117,7 @@ public final class SubSectionLiaison implements TypeLiaison {
                 if (requireDataTree.isFailure()) {
                     return LoadResult.failure(requireDataTree.getErrorContexts());
                 }
-                DataTreeMut updatableTree = requireDataTree.getOrThrow().makeMut();
+                DataTree.Mut updatableTree = requireDataTree.getOrThrow().intoMut();
                 RecordUpdates recordUpdates = new RecordUpdates();
 
                 LoadResult<V> result = configuration.readWithUpdate(updatableTree, new ConfigurationDefinition.ReadOptions() {
@@ -138,7 +139,7 @@ public final class SubSectionLiaison implements TypeLiaison {
 
             @Override
             public void serialize(@NonNull V value, @NonNull SerializeOutput ser) {
-                DataTreeMut dataTreeMut = new DataTreeMut();
+                DataTree.Mut dataTreeMut = new DataTree.Mut();
                 configuration.writeTo(value, dataTreeMut, ser::keyMapper);
                 ser.outDataTree(dataTreeMut);
             }

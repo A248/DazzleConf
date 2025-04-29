@@ -27,11 +27,12 @@ import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 /**
- * Gets the default string
+ * Liaison for strings
  *
  */
 public final class StringLiaison implements TypeLiaison {
 
+    // Come on, seriously. Is anyone going to troll us by saying they want to us this string for real?
     static final String IF_MISSING_STAND_IN = "ausutfyguhibgvftrdfyguhijnbhvgfxserrftgyuhinbgvfcrxszeretfygubna";
 
     /**
@@ -52,9 +53,9 @@ public final class StringLiaison implements TypeLiaison {
 
     private static final class StringAgent implements Agent<String> {
         @Override
-        public @Nullable DefaultValues<String> loadDefaultValues(@NonNull AnnotationContext annotationContext) {
+        public @Nullable DefaultValues<String> loadDefaultValues(@NonNull DefaultInit defaultInit) {
 
-            DefaultString defaultString = annotationContext.getAnnotation(DefaultString.class);
+            DefaultString defaultString = defaultInit.methodAnnotations().getAnnotation(DefaultString.class);
             if (defaultString != null) {
                 String defaultVal = defaultString.value();
                 String ifMissingSrc = defaultString.ifMissing();

@@ -32,7 +32,7 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
     Object implInvoke(Method method, Object[] args) throws Throwable {
         try {
             return method.invoke(delegate, args);
-        } catch (IllegalAccessException | IllegalArgumentException ex) {
+        } catch (IllegalAccessException ex) {
             throw new AssertionError(ex);
 
         } catch (InvocationTargetException ex) {

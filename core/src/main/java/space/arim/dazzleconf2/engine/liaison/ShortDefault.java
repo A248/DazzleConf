@@ -17,40 +17,29 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.internals;
+package space.arim.dazzleconf2.engine.liaison;
 
-import java.util.Locale;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Language translation for the library itself. If you want to implement this and provide a translation for your
- * locale, <b>please</b> PR it back to the main repository.
+ * Specifies the default value as a short.
+ * <p>
+ * This annotation is made to be used with {@code short} or {@code Short} and not other numeric types. It is only
+ * supported by the short liaison.
  */
-public interface LibraryLang {
+@Retention(RUNTIME)
+@Target(METHOD)
+public @interface ShortDefault {
 
-    String entryPath();
-
-    String line();
-
-    String backendMessage();
-
-    @Deprecated
-    String causalErrors();
-
-    @Deprecated
-    String moreErrors();
-
-    String missingValue();
-
-    String wrongTypeForValue(Object value, String expectedType, String actualType);
-
-    String malformattedValue(String reason);
-
-    String errorIntro();
-
-    String errorContext();
-
-    static LibraryLang loadLang(Locale locale) {
-        return new LibraryLangEn();
-    }
+    /**
+     * The short value to provide as a default.
+     *
+     * @return the short value
+     */
+    short value();
 
 }

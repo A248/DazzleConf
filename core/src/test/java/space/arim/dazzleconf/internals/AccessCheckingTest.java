@@ -17,7 +17,7 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.internal.util;
+package space.arim.dazzleconf.internals;
 
 import org.junit.jupiter.api.Test;
 

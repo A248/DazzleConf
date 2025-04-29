@@ -41,19 +41,19 @@ public final class DefaultInstantiator implements Instantiator {
     public DefaultInstantiator() {}
 
     @Override
-    public @NonNull Object generate(@NonNull ClassLoader classLoader, @NonNull Set<@NonNull Class<?>> targets,
+    public @NonNull Object generate(@NonNull ClassLoader classLoader, @NonNull Class<?> @NonNull [] targets,
                                     @NonNull MethodYield methodYield) {
 
         Map<String, Object> fastValues = new HashMap<>(20, 0.80f);
         Set<Method> defaultMethods = null;
 
         for (Class<?> target : targets) {
-            for (Map.Entry<MethodId, Object> entry : methodYield.valuesFor(target)) {
+            for (Map.Entry<MethodId, Object> entry : methodYield.valuesFor(target).entrySet()) {
 
                 MethodId methodId = entry.getKey();
                 Object value = entry.getValue();
 
-                if (value instanceof InvokeDefaultValue) {
+                if (value instanceof InvokeDefaultFunction) {
                     if (defaultMethods == null) {
                         defaultMethods = new HashSet<>();
                     }
@@ -64,7 +64,7 @@ public final class DefaultInstantiator implements Instantiator {
             }
         }
         ProxyHandlerToValues proyHandler = new ProxyHandlerToValues(fastValues);
-        Object proxy = Proxy.newProxyInstance(classLoader, targets.toArray(new Class[0]), proyHandler);
+        Object proxy = Proxy.newProxyInstance(classLoader, targets, proyHandler);
         if (defaultMethods != null) {
             proyHandler.initDefaultMethods(proxy, defaultMethods);
         }
@@ -81,12 +81,11 @@ public final class DefaultInstantiator implements Instantiator {
     }
 
     @Override
-    public <I> @NonNull I generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<I> iface) {
-        ProxyHandlerToEmpty<I> proxyHandler = new ProxyHandlerToEmpty<>();
-        @SuppressWarnings("unchecked")
-        I empty = (I) Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
-        proxyHandler.initProxy(empty);
-        return empty;
+    public @NonNull Object generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<?> iface) {
+        ProxyHandlerToEmpty proxyHandler = new ProxyHandlerToEmpty();
+        Object proxy = Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
+        proxyHandler.initProxy(proxy);
+        return proxy;
     }
 
 }

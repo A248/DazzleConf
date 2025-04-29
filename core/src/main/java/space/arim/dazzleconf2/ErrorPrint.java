@@ -17,16 +17,37 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.backend;
+package space.arim.dazzleconf2;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.backend.Printable;
+
+import java.util.List;
 
 /**
- * A data tree which is unmistakably immutable
+ * Output device for when an error occured
+ *
  */
-public final class DataTreeImmut extends DataTree {
+public interface ErrorPrint {
 
     /**
-     * Creates an empty data tree
+     * Displays the following error contexts in some way, shape, or form
+     *
+     * @param errorContexts the error contexts
      */
-    public DataTreeImmut() {}
+    void onError(@NonNull List<@NonNull ErrorContext> errorContexts);
 
+    /**
+     * The message sink (used by some {@code ErrorPrint} implementations) where printable messages are sent
+     *
+     */
+    interface Output {
+
+        /**
+         * Outputs the given printable content
+         *
+         * @param printable the printable content
+         */
+        void output(@NonNull Printable printable);
+    }
 }
