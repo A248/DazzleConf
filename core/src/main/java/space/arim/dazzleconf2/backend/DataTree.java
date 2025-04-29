@@ -57,7 +57,7 @@ import java.util.function.Supplier;
  */
 public class DataTree {
 
-    final Map<Object, Entry> data = new LinkedHashMap<>();
+    final @NonNull Map<Object, Entry> data = new LinkedHashMap<>();
 
     DataTree() {}
 
@@ -309,7 +309,7 @@ public class DataTree {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public final boolean equals(Object o) {
         if (!(o instanceof DataTree)) return false;
 
         DataTree dataTree = (DataTree) o;
@@ -317,12 +317,12 @@ public class DataTree {
     }
 
     @Override
-    public int hashCode() {
+    public final int hashCode() {
         return data.hashCode();
     }
 
     @Override
     public String toString() {
-        return "DataTree{" + data + '}';
+        return getClass().getSimpleName() + '{' + data + '}';
     }
 }

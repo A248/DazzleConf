@@ -92,7 +92,7 @@ public interface MethodMirror {
          *
          * @return the enclosing type
          */
-        Class<?> enclosingType();
+        @NonNull Class<?> enclosingType();
 
         /**
          * Invokes a method and gets the return value.

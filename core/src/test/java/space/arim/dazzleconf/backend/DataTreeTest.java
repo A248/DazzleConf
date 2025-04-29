@@ -20,6 +20,7 @@
 package space.arim.dazzleconf.backend;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DataTreeMut;
@@ -98,7 +99,7 @@ public class DataTreeTest {
     }
 
     @Test
-    public void equality() {
+    public void equality() throws ClassNotFoundException {
         DataTreeMut dataTreeMut = new DataTreeMut();
         dataTreeMut.set("hello", new DataTree.Entry("goodbye"));
         dataTreeMut.set("also", new DataTree.Entry("yes"));
@@ -107,6 +108,7 @@ public class DataTreeTest {
         assertEquals((DataTree) dataTreeMut, dataTreeMut.makeImmut());
         assertEquals(dataTreeMut, dataTreeMut.makeImmut().makeMut());
 
+        Class.forName(NonNull.class.getName());
         EqualsVerifier.forClass(DataTree.class).verify();
     }
 }

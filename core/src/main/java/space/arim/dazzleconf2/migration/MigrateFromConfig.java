@@ -46,7 +46,9 @@ public final class MigrateFromConfig<C> implements MigrateSource<C> {
 
     @Override
     public @NonNull LoadResult<@NonNull C> load(@NonNull Backend mainBackend) {
-        return mainBackend.readTree().flatMap(config::readFrom);
+        return mainBackend.readTree().flatMap(tree -> {
+            return tree == null ? LoadResult.failure() : config.readFrom(tree);
+        });
     }
 
     @Override

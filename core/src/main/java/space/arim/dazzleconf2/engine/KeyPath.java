@@ -33,9 +33,11 @@ public final class KeyPath {
 
     // This list is actually in backwards order
     // TODO Switch to using ArrayDeque to improve performance and readability
+    // TODO Store locked KeyPaths as Object within the same collection
     private final ArrayList<String> parts;
 
-    private boolean locked;
+    // TODO add a KeyMapper here
+    private transient boolean locked;
 
     /**
      * Creates from the given parts. The constructed key path will not be locked.
@@ -177,18 +179,5 @@ public final class KeyPath {
         StringBuilder builder = new StringBuilder();
         toString(builder);
         return builder.toString();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof KeyPath)) return false;
-
-        KeyPath keyPath = (KeyPath) o;
-        return parts.equals(keyPath.parts);
-    }
-
-    @Override
-    public int hashCode() {
-        return parts.hashCode();
     }
 }

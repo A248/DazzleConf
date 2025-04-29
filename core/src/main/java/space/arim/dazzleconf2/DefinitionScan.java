@@ -58,7 +58,7 @@ final class DefinitionScan {
             pathPrefix.lockChanges();
         }
 
-        private void scanType(ReifiedType.Annotated currentType, Object defaultsProvider) {
+        private void scanType(ReifiedType.Annotated currentType, V defaultsProvider) {
             Set<MethodId> callableDefaultMethods = new HashSet<>();
             List<TypeSkeleton.MethodNode> methodNodes = new ArrayList<>();
             MethodMirror.Invoker defaultsInvoker = methodMirror.makeInvoker(defaultsProvider, currentType.rawType());
@@ -76,8 +76,8 @@ final class DefinitionScan {
                     // If that method is in the same class, someone is using this library with hacked class binaries
                     //
                     // Regardless, doing nothing should be fine. Nobody should be using hacked class binaries. If
-                    // they are, they should check compatibilities with the libraries they're using, especially with
-                    // libraries which are highly-reflective like ours (seems like a no-brainer to at least read docs)
+                    // they are, they should really check compatibilities with the libraries they're using, especially
+                    // libraries which are highly-reflective (seems like a no-brainer to at least read docs)
                     continue;
                 }
                 TypeLiaison.AnnotationContext annotationContext = new TypeLiaison.AnnotationContext() {
@@ -90,6 +90,9 @@ final class DefinitionScan {
                 if (annotationContext.getAnnotation(CallableFn.class) != null) {
                     callableDefaultMethods.add(methodId);
                     continue;
+                }
+                if (methodId.parameterCount() != 0) {
+                    throw new DeveloperMistakeException("Configuration method " + methodId + " cannot have parameters");
                 }
                 // Check for @Comments
                 Comments.Container comments = annotationContext.getAnnotation(Comments.Container.class);
@@ -144,8 +147,7 @@ final class DefinitionScan {
 
             GenericContext currentGenerics = new GenericContext(currentType);
             for (AnnotatedType superType : currentType.rawType().getAnnotatedInterfaces()) {
-                ReifiedType.Annotated reifiedSuperType = currentGenerics.reifyAnnotated(superType);
-                scanType(reifiedSuperType, defaultsProvider);
+                scanType(currentGenerics.reifyAnnotated(superType), defaultsProvider);
             }
         }
 
@@ -157,8 +159,8 @@ final class DefinitionScan {
             if (!AccessChecking.isAccessible(rawType)) {
                 throw new DeveloperMistakeException("Configuration interface not accessible: " + rawType);
             }
-            V defaultsProvider = instantiator.generateEmpty(rawType.getClassLoader(), rawType);
-            scanType(typeToken.getReifiedType(), defaultsProvider);
+            Object defaultsProvider = instantiator.generateEmpty(rawType.getClassLoader(), rawType);
+            scanType(typeToken.getReifiedType(), rawType.cast(defaultsProvider));
             return new Definition<>(typeToken, pathPrefix, superTypes, libraryLang, methodMirror, instantiator);
         }
 

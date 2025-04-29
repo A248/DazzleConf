@@ -81,12 +81,11 @@ public final class DefaultInstantiator implements Instantiator {
     }
 
     @Override
-    public <I> @NonNull I generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<I> iface) {
-        ProxyHandlerToEmpty<I> proxyHandler = new ProxyHandlerToEmpty<>();
-        @SuppressWarnings("unchecked")
-        I empty = (I) Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
-        proxyHandler.initProxy(empty);
-        return empty;
+    public @NonNull Object generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<?> iface) {
+        ProxyHandlerToEmpty proxyHandler = new ProxyHandlerToEmpty();
+        Object proxy = Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
+        proxyHandler.initProxy(proxy);
+        return proxy;
     }
 
 }

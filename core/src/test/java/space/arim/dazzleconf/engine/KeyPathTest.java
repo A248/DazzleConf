@@ -106,4 +106,55 @@ public class KeyPathTest {
         assertArrayEquals(new String[] {"section", "my-brave-world", "this-feature", "enabled"}, keyPath.intoParts());
     }
 
+    @Test
+    public void buildVariously5() {
+        KeyPath keyPath = new KeyPath();
+        keyPath.addFront("my-brave-world");
+        keyPath.addBack("this-feature");
+        keyPath.lockChanges();
+        keyPath = new KeyPath(keyPath);
+        keyPath.addBack("enabled");
+        keyPath.addFront("section");
+        assertEquals("section.my-brave-world.this-feature.enabled", keyPath.toString());
+        assertArrayEquals(new String[] {"section", "my-brave-world", "this-feature", "enabled"}, keyPath.intoParts());
+    }
+
+    @Test
+    public void buildVariously6() {
+        KeyPath keyPath = new KeyPath();
+        keyPath.addBack("my-brave-world");
+        keyPath.addBack("this-feature");
+        keyPath.lockChanges();
+        keyPath = new KeyPath(keyPath);
+        keyPath.addBack("enabled");
+        keyPath.addFront("section");
+        assertEquals("section.my-brave-world.this-feature.enabled", keyPath.toString());
+        assertArrayEquals(new String[] {"section", "my-brave-world", "this-feature", "enabled"}, keyPath.intoParts());
+    }
+
+    @Test
+    public void buildVariously7() {
+        KeyPath keyPath = new KeyPath();
+        keyPath.addFront("my-brave-world");
+        keyPath.addBack("this-feature");
+        keyPath.lockChanges();
+        keyPath = new KeyPath(keyPath);
+        keyPath.addFront("section");
+        keyPath.addBack("enabled");
+        assertEquals("section.my-brave-world.this-feature.enabled", keyPath.toString());
+        assertArrayEquals(new String[] {"section", "my-brave-world", "this-feature", "enabled"}, keyPath.intoParts());
+    }
+
+    @Test
+    public void buildVariously8() {
+        KeyPath keyPath = new KeyPath();
+        keyPath.addBack("my-brave-world");
+        keyPath.addBack("this-feature");
+        keyPath.lockChanges();
+        keyPath = new KeyPath(keyPath);
+        keyPath.addFront("section");
+        keyPath.addBack("enabled");
+        assertEquals("section.my-brave-world.this-feature.enabled", keyPath.toString());
+        assertArrayEquals(new String[] {"section", "my-brave-world", "this-feature", "enabled"}, keyPath.intoParts());
+    }
 }

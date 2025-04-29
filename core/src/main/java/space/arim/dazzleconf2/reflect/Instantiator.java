@@ -63,8 +63,7 @@ public interface Instantiator {
      * @param classLoader where to generate the class file if necessary
      * @param iface the interface type
      * @return the instance
-     * @param <I> the interface type
      */
-    <I> @NonNull I generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<I> iface);
+    @NonNull Object generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<?> iface);
 
 }

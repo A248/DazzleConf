@@ -23,6 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DataTreeMut;
 import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
 /**
  * Provides the minimal methods for reading and writing configurations from data trees
@@ -30,6 +31,13 @@ import space.arim.dazzleconf2.engine.*;
  * @param <C> the configuration type
  */
 public interface ConfigurationDefinition<C> {
+
+    /**
+     * Gets the reified type of the configuration interface
+     *
+     * @return a type token for the config interface
+     */
+    @NonNull TypeToken<C> getType();
 
     /**
      * Loads the default configuration.

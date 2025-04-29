@@ -69,6 +69,11 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     @Override
+    public @NonNull TypeToken<C> getType() {
+        return configType;
+    }
+
+    @Override
     public @NonNull C loadDefaults() {
         MethodYield.Builder methodYield = new MethodYield.Builder();
         superTypes.forEach((superType, typeSkeleton) -> {

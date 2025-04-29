@@ -21,12 +21,13 @@ package space.arim.dazzleconf2.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.backend.Backend;
 
 /**
  * Simple interface for mapping method names into backend configuration keys.
  * <p>
  * For example, some formats (JSON) use lowerCamelCase for option names, whereas others use snake-case (YAML).
- * Fortunately, the key mapper is configured automatically when using {@link Configuration#configureWith}.
+ * Fortunately, the key mapper is configured automatically when using {@link Configuration#configureWith(Backend)}.
  */
 public interface KeyMapper {
 

@@ -248,8 +248,8 @@ public final class ConfigurationBuilder<C> {
         List<TypeLiaison> typeLiaisons = ImmutableCollections.listOf(this.typeLiaisons);
         LibraryLang libraryLang = LibraryLang.loadLang(locale);
         ConfigurationDefinition<C> definition = new DefinitionScan(
-                libraryLang, new LiaisonCache(typeLiaisons
-        ), new DefaultMethodMirror(), instantiator).read(configType);
+                libraryLang, new LiaisonCache(typeLiaisons), new DefaultMethodMirror(), instantiator
+        ).read(configType);
         return new BuiltConfig<>(definition, locale, typeLiaisons, keyMapper, instantiator, migrations);
     }
 }

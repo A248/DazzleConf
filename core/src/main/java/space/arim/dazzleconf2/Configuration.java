@@ -102,7 +102,7 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
         if (configType.getTypeParameters().length != 0) {
             throw new IllegalArgumentException("Cannot use Configuration.builder(Class) with a generic type.");
         }
-        return new ConfigurationBuilder<>(new TypeToken<>(new ReifiedType.Annotated(configType, configType)));
+        return defaultBuilder(new TypeToken<>(new ReifiedType.Annotated(configType, configType)));
     }
 
     /**
@@ -125,7 +125,7 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * @return a config builder, with the default type liaisons set
      */
     static <C> ConfigurationBuilder<C> defaultBuilder(@NonNull TypeToken<C> configType) {
-        return new ConfigurationBuilder<>(configType);
+        return new ConfigurationBuilder<>(configType).addDefaultTypeLiaisons();
     }
 
     /**

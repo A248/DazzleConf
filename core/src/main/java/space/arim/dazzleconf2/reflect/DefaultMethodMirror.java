@@ -56,7 +56,7 @@ public final class DefaultMethodMirror implements MethodMirror {
                     if (method.getTypeParameters().length != 0) {
                         throw new DeveloperMistakeException(
                                 "Configuration method " + method.getName() + " in " + reifiedType.rawType() +
-                                        " cannot declared with generic type parameters."
+                                        " cannot be declared with generic type parameters."
                         );
                     }
                     ReifiedType.Annotated reifiedReturn = classGenerics.reifyAnnotated(method.getAnnotatedReturnType());
@@ -102,7 +102,7 @@ public final class DefaultMethodMirror implements MethodMirror {
         }
 
         @Override
-        public Class<?> enclosingType() {
+        public @NonNull Class<?> enclosingType() {
             return enclosingType;
         }
 

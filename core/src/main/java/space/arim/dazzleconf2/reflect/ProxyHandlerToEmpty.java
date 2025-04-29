@@ -24,11 +24,11 @@ import space.arim.dazzleconf2.DeveloperMistakeException;
 
 import java.lang.reflect.Method;
 
-final class ProxyHandlerToEmpty<I> extends ProxyHandler {
+final class ProxyHandlerToEmpty extends ProxyHandler {
 
-    private I proxy;
+    private Object proxy;
 
-    void initProxy(I proxy) {
+    void initProxy(Object proxy) {
         this.proxy = proxy;
     }
 

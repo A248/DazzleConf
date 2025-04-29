@@ -26,6 +26,7 @@ import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.migration.Migration;
 import space.arim.dazzleconf2.reflect.Instantiator;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.*;
 
@@ -71,6 +72,11 @@ final class BuiltConfig<C> implements Configuration<C> {
     @Override
     public @NonNull List<@NonNull Migration<?, C>> getMigrations() {
         return migrations;
+    }
+
+    @Override
+    public @NonNull TypeToken<C> getType() {
+        return definition.getType();
     }
 
     @Override
@@ -192,9 +198,9 @@ final class BuiltConfig<C> implements Configuration<C> {
             // Try all migrations
             for (Migration<?, C> migration : migrations) {
                 LoadResult<C> attempt = migration.tryMigrate(backend);
-                if (attempt.isSuccess()) {
+                C migrated;
+                if (attempt.isSuccess() && (migrated = attempt.getOrThrow()) != null) {
                     // Update the backend with the migrated value
-                    C migrated = attempt.getOrThrow();
                     DataTreeMut writeBack = new DataTreeMut();
                     writeTo(migrated, writeBack, new WriteOpts(keyMapper));
                     backend.writeTree(writeBack);
