@@ -21,8 +21,10 @@ package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.Printable;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.internals.LibraryLangKey;
-import space.arim.dazzleconf2.internals.LibraryLang;
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.io.IOException;
 import java.util.*;
@@ -37,12 +39,7 @@ public interface ErrorContext {
     /**
      * Path of the configuration entry being scanned or operated upon
      */
-    Key<List<String>> ENTRY_PATH = new Key<>(
-            LibraryLang::entryPath,
-            (lang, builder, value) -> {
-                builder.append(String.join(".", value));
-            }
-    );
+    Key<KeyPath> ENTRY_PATH = new Key<>(LibraryLang::location, (output, value) -> value.printTo(output));
 
     /**
      * Line number in the source data
@@ -53,44 +50,13 @@ public interface ErrorContext {
      * Error message provided by the configuration format backend
      */
     Key<String> BACKEND_MESSAGE = new Key<>(LibraryLang::backendMessage, Appendable::append);
+
     /**
-     * A collection of errors causing this one
+     * The locale to format messages in.
+     *
+     * @return the locale
      */
-    Key<List<ErrorContext>> CAUSES = new Key<>(
-            LibraryLang::causalErrors,
-            (lang, builder, value) -> {
-                int errorCount = value.size();
-                int cap = Integer.min(4, errorCount);
-                for (int n = 0; n < cap; n++) {
-                    ErrorContext currentError = value.get(n);
-                    builder.append("\n  ");
-                    // 1. Add path
-                    boolean pathOrLineNumber = false;
-                    List<String> path = currentError.query(ENTRY_PATH);
-                    if (!path.isEmpty()) {
-                        builder.append(String.join(".", path));
-                        pathOrLineNumber = true;
-                    }
-                    // 3. Line number
-                    Integer lineNumber = currentError.query(LINE_NUMBER);
-                    if (lineNumber != null) {
-                        if (pathOrLineNumber) builder.append(" ");
-                        builder.append(lang.line());
-                        builder.append(Integer.toString(lineNumber));
-                        pathOrLineNumber = true;
-                    }
-                    // 2. Error message
-                    if (pathOrLineNumber) builder.append(':');
-                    builder.append(currentError.mainMessage());
-                }
-                if (cap != errorCount) {
-                    builder.append("+");
-                    builder.append(Integer.toString(errorCount - cap));
-                    builder.append(' ');
-                    builder.append(lang.moreErrors());
-                }
-            }
-    );
+    @NonNull Locale getLocale();
 
     /**
      * Gets the main message to display as the reason for this error. This won't include additional details; for that
@@ -98,28 +64,7 @@ public interface ErrorContext {
      *
      * @return the message
      */
-    String mainMessage();
-
-    /**
-     * Gets the main message to display as the reason for this error. This won't include additional details; for that
-     * see {@link #displayDetails}.
-     * <p>
-     * Same as {@link #mainMessage()} except that the message is sent to the output appendable
-     *
-     * @param output the string output
-     * @throws IOException if the output threw this error, it is propagated
-     */
-    void mainMessage(Appendable output) throws IOException;
-
-    /**
-     * Gets the main message to display as the reason for this error. This won't include additional details; for that
-     * see {@link #displayDetails}.
-     * <p>
-     * Same as {@link #mainMessage()} except that the message is sent to the output builder
-     *
-     * @param output the string output
-     */
-    void mainMessage(StringBuilder output);
+    @NonNull Printable mainMessage();
 
     /**
      * Formats this error context and includes all information. This message is user displayable, and it is also
@@ -127,28 +72,7 @@ public interface ErrorContext {
      *
      * @return a displayable message
      */
-    String displayDetails();
-
-    /**
-     * Formats this error context and includes all information. This message is user displayable, and it is also
-     * intended to be sufficiently informative to avert the need for stacktraces.
-     * <p>
-     * Same as {@link #displayDetails()} except that the message is sent to the output appendable
-     *
-     * @param output the string output
-     * @throws IOException if the output threw this error, it is propagated
-     */
-    void displayDetails(Appendable output) throws IOException;
-
-    /**
-     * Formats this error context and includes all information. This message is user displayable, and it is also
-     * intended to be sufficiently informative to avert the need for stacktraces.
-     * <p>
-     * Same as {@link #displayDetails()} except that the message is set to the output builder
-     *
-     * @param output the string output
-     */
-    void displayDetails(StringBuilder output);
+    @NonNull Printable displayDetails();
 
     /**
      * Gets a piece of detail from this error context, if it is set
@@ -207,19 +131,7 @@ public interface ErrorContext {
             this.formatData = formatData;
         }
 
-        Key(LibraryLangKey langKey, FormatDataLangLess<V> formatData) {
-            this.langKey = langKey;
-            this.formatData = FormatData.langLess(formatData);
-        }
-
         interface FormatData<V> {
-            void format(LibraryLang libraryLang, Appendable output, V value) throws IOException;
-
-            static <V> FormatData<V> langLess(FormatDataLangLess<V> format) {
-                return (lang, output, value) -> format.format(output, value);
-            }
-        }
-        interface FormatDataLangLess<V> {
             void format(Appendable output, V value) throws IOException;
         }
     }

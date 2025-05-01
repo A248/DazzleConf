@@ -31,14 +31,16 @@ import java.util.Set;
 public interface Instantiator {
 
     /**
-     * Generates the target class
+     * Generates the target class.
+     * <p>
+     * The implementation must <b>NOT</b> modify the {@code targets} argument.
      *
      * @param classLoader where to generate the class file if necessary
      * @param targets the target interfaces to implement
      * @param methodYield a map of methods to the values they are to yield
      * @return the generated implementation
      */
-    @NonNull Object generate(@NonNull ClassLoader classLoader, @NonNull Set<@NonNull Class<?>> targets,
+    @NonNull Object generate(@NonNull ClassLoader classLoader, @NonNull Class<?> @NonNull [] targets,
                              @NonNull MethodYield methodYield);
 
     /**

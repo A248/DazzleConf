@@ -20,13 +20,13 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.internals.LibraryLang;
+import space.arim.dazzleconf2.backend.Printable;
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.io.IOException;
 import java.util.*;
 
-final class LoadError implements ErrorContext {
+final class LoadError implements ErrorContext, LibraryLang.Accessor {
 
     private final CharSequence message;
     private final LibraryLang libraryLang;
@@ -37,80 +37,59 @@ final class LoadError implements ErrorContext {
         this.libraryLang = Objects.requireNonNull(libraryLang, "libraryLang");
     }
 
-    static <R> LoadResult<R> wrongTypeForValue(LibraryLang libraryLang, Object value, Class<?> expectedType) {
-        return LoadResult.failure(new LoadError(libraryLang.wrongTypeForValue(
-                value, displayCanonicalType(expectedType, null), displayCanonicalType(value.getClass(), value)
-        ), libraryLang));
-    }
-
-    private static String displayCanonicalType(Class<?> type, Object typeAssist) {
-        if (type.equals(String.class)) {
-            return "text/string";
-        }
-        if (type.equals(Byte.class)) {
-            return "small integer";
-        }
-        if (type.equals(Short.class) || type.equals(Integer.class) || type.equals(Long.class)) {
-            return "integer";
-        }
-        if (type.equals(Character.class)) {
-            return "character";
-        }
-        if (type.equals(Float.class) || type.equals(Double.class)) {
-            return "decimal";
-        }
-        if (typeAssist instanceof List || type.equals(List.class)) {
-            return "list";
-        }
-        if (typeAssist instanceof DataTree || type.equals(DataTree.class)) {
-            return "configuration section";
-        }
-        throw new IllegalArgumentException("Not a canonical type " + type);
+    @Override
+    public @NonNull LibraryLang getLibraryLang() {
+        return libraryLang;
     }
 
     @Override
-    public String mainMessage() {
-        return message.toString();
+    public @NonNull Locale getLocale() {
+        return libraryLang.getLocale();
     }
 
     @Override
-    public void mainMessage(Appendable output) throws IOException {
-        output.append(message);
+    public @NonNull Printable mainMessage() {
+        return Printable.preBuilt(message);
     }
 
     @Override
-    public void mainMessage(StringBuilder output) {
-        output.append(message);
-    }
+    public @NonNull Printable displayDetails() {
+        return new Printable() {
+            @Override
+            public @NonNull String printString() {
+                StringBuilder output = new StringBuilder();
+                printTo(output);
+                return output.toString();
+            }
 
-    @Override
-    public String displayDetails() {
-        StringBuilder builder = new StringBuilder();
-        displayDetails(builder);
-        return builder.toString();
-    }
+            @Override
+            public void printTo(@NonNull Appendable output) throws IOException {
+                for (Key<?> key : allKeys()) {
+                    formatKeyData(output, key);
+                    output.append('\n');
+                }
+            }
 
-    @Override
-    public void displayDetails(Appendable output) throws IOException {
-        for (Key<?> key : allKeys()) {
-            formatKeyData(output, key);
-            output.append('\n');
-        }
-    }
+            @Override
+            public void printTo(@NonNull StringBuilder output) {
+                try {
+                    printTo((Appendable) output);
+                } catch (IOException e) {
+                    throw new AssertionError("StringBuilder does not throw IOException", e);
+                }
+            }
 
-    @Override
-    public void displayDetails(StringBuilder output) {
-        try {
-            displayDetails((Appendable) output);
-        } catch (IOException e) {
-            throw new AssertionError("StringBuilder does not throw IOException", e);
-        }
+            @Override
+            public String toString() {
+                return printString();
+            }
+        };
     }
 
     private <V> void formatKeyData(Appendable output, Key<V> key) throws IOException {
         output.append(key.langKey.getMessage(libraryLang));
         output.append(": ");
-        key.formatData.format(libraryLang, output, query(key));
+        key.formatData.format(output, query(key));
     }
 
     @Override
@@ -150,4 +129,5 @@ final class LoadError implements ErrorContext {
     public @NonNull Set<@NonNull Key<?>> allKeys() {
         return contexts.keySet();
     }
+
 }

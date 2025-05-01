@@ -17,11 +17,10 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.engine;
+package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.backend.Backend;
 
 /**
  * Simple interface for mapping method names into backend configuration keys.
@@ -32,10 +31,11 @@ import space.arim.dazzleconf2.backend.Backend;
 public interface KeyMapper {
 
     /**
-     * Turns a method name into a key
-     * @param methodName the method name
+     * Turns the argument into a key. The argument is usually a method name.
+     *
+     * @param label the method name
      * @return the key compponent
      */
-    @NonNull CharSequence methodNameToKey(@NonNull String methodName);
+    @NonNull CharSequence labelToKey(@NonNull String label);
 
 }

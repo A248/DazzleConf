@@ -20,10 +20,11 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.AccessChecking;
 import space.arim.dazzleconf2.reflect.*;
-import space.arim.dazzleconf2.internals.LibraryLang;
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedType;
@@ -49,8 +50,8 @@ final class DefinitionScan {
 
         private final KeyPath pathPrefix;
         private final TypeToken<V> typeToken;
-        private final Set<CovariantGuard> covariantSeenBefore = new HashSet<>();
-        private final Map<Class<?>, TypeSkeleton> superTypes = new HashMap<>();
+        private final HashSet<CovariantGuard> covariantSeenBefore = new HashSet<>();
+        private final LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons = new LinkedHashMap<>();
 
         private Run(KeyPath pathPrefix, TypeToken<V> typeToken) {
             this.pathPrefix = pathPrefix;
@@ -143,7 +144,7 @@ final class DefinitionScan {
                         comments, optional, methodId, defaultValues, agentAndSerializer.serializer
                 ));
             }
-            superTypes.put(currentType.rawType(), new TypeSkeleton(callableDefaultMethods, methodNodes));
+            typeSkeletons.put(currentType.rawType(), new TypeSkeleton(callableDefaultMethods, methodNodes));
 
             GenericContext currentGenerics = new GenericContext(currentType);
             for (AnnotatedType superType : currentType.rawType().getAnnotatedInterfaces()) {
@@ -161,7 +162,7 @@ final class DefinitionScan {
             }
             Object defaultsProvider = instantiator.generateEmpty(rawType.getClassLoader(), rawType);
             scanType(typeToken.getReifiedType(), rawType.cast(defaultsProvider));
-            return new Definition<>(typeToken, pathPrefix, superTypes, libraryLang, methodMirror, instantiator);
+            return new Definition<>(typeToken, pathPrefix, typeSkeletons, libraryLang, methodMirror, instantiator);
         }
 
         final class AsHandshake implements TypeLiaison.Handshake {

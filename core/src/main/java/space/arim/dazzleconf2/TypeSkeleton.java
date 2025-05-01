@@ -19,7 +19,6 @@
 
 package space.arim.dazzleconf2;
 
-import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.Comments;
 import space.arim.dazzleconf2.engine.DefaultValues;
@@ -36,15 +35,15 @@ final class TypeSkeleton {
     /**
      * Functions annotated with @Callable
      */
-    final Set<MethodId> callableDefaultMethods;
+    final MethodId[] callableDefaultMethods;
     /**
      * Functions whose return values are supplied by us
      */
-    final List<MethodNode> methodNodes;
+    final MethodNode[] methodNodes;
 
-    TypeSkeleton(Set<MethodId> callableDefaultMethods, List<MethodNode> methodNodes) {
-        this.callableDefaultMethods = ImmutableCollections.setOf(callableDefaultMethods);
-        this.methodNodes = ImmutableCollections.listOf(methodNodes);
+    TypeSkeleton(Collection<MethodId> callableDefaultMethods, List<MethodNode> methodNodes) {
+        this.callableDefaultMethods = callableDefaultMethods.toArray(new MethodId[0]);
+        this.methodNodes = methodNodes.toArray(new MethodNode[0]);
     }
 
     static final class MethodNode {

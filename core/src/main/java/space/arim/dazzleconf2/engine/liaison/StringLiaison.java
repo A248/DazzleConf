@@ -27,11 +27,12 @@ import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 /**
- * Gets the default string
+ * Liaison for strings
  *
  */
 public final class StringLiaison implements TypeLiaison {
 
+    // Come on, seriously. Is anyone going to troll us by saying they want to us this string for real?
     static final String IF_MISSING_STAND_IN = "ausutfyguhibgvftrdfyguhijnbhvgfxserrftgyuhinbgvfcrxszeretfygubna";
 
     /**

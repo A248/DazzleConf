@@ -17,21 +17,16 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.engine;
+package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.KeyPath;
 
 /**
- * Listener for configuration events that lets the implementor know when paths were updated
+ * Default, "no-op" mapper for keys and method names
  */
-public interface LoadListener {
-
-    /**
-     * Called when an option was missing, so the value was supplied with {@link DefaultValues#ifMissing()}
-     *
-     * @param entryPath the path of the formerly missing value
-     */
-    void updatedMissingPath(@NonNull KeyPath entryPath);
-
+public final class DefaultKeyMapper implements KeyMapper {
+    @Override
+    public @NonNull CharSequence labelToKey(@NonNull String label) {
+        return label;
+    }
 }

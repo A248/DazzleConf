@@ -25,7 +25,6 @@ import space.arim.dazzleconf2.Configuration;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.engine.CommentLocation;
-import space.arim.dazzleconf2.engine.KeyMapper;
 
 import java.io.UncheckedIOException;
 
@@ -64,9 +63,10 @@ public interface Backend {
     boolean supportsComments(@NonNull CommentLocation location);
 
     /**
-     * Recommends a {@link KeyMapper} appropriate to the backend format. When loading a config with
-     * {@link Configuration#configureWith(Backend)}, the recommended key mapper will be selected from this method,
-     * unless the <code>Configuration</code> already declares its own key mapper.
+     * Recommends a {@link KeyMapper} appropriate to the backend format.
+     *
+     * When loading a config with {@link Configuration#configureWith(Backend)}, the recommended key mapper will be
+     * selected from this method, unless the <code>Configuration</code> already declares its own key mapper.
      *
      * @return the recommended key mapper
      */

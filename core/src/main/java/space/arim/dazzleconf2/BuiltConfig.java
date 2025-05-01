@@ -21,7 +21,6 @@ package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.migration.Migration;
@@ -46,7 +45,7 @@ final class BuiltConfig<C> implements Configuration<C> {
         this.typeLiaisons = typeLiaisons;
         this.keyMapper = keyMapper;
         this.instantiator = Objects.requireNonNull(instantiator, "instantiator");
-        this.migrations = ImmutableCollections.listOf(migrations);
+        this.migrations = Objects.requireNonNull(migrations, "migrations");
     }
 
     @Override
@@ -112,7 +111,7 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     @Override
-    public @NonNull LoadResult<C> readFrom(@NonNull DataTree dataTree, @NonNull LoadListener loadListener) {
+    public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree, @NonNull LoadListener loadListener) {
         KeyMapper keyMapper = this.keyMapper;
         if (keyMapper == null) keyMapper = new DefaultKeyMapper();
         return readFrom(dataTree, new ReadOpts(loadListener, keyMapper));
@@ -126,12 +125,12 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     @Override
-    public @NonNull LoadResult<C> configureWith(@NonNull Backend backend) {
+    public @NonNull LoadResult<@NonNull C> configureWith(@NonNull Backend backend) {
         return configureWith0(new CachedBackend(backend), null);
     }
 
     @Override
-    public @NonNull LoadResult<C> configureWith(@NonNull Backend backend, @NonNull UpdateListener updateListener) {
+    public @NonNull LoadResult<@NonNull C> configureWith(@NonNull Backend backend, @NonNull UpdateListener updateListener) {
         Objects.requireNonNull(updateListener, "updateListener");
         return configureWith0(new CachedBackend(backend), updateListener);
     }
@@ -191,8 +190,10 @@ final class BuiltConfig<C> implements Configuration<C> {
         RecordUpdates recordUpdates = (updateListener == null) ?
                 new RecordUpdates() : new RecordUpdates.WithDelegate(updateListener);
         KeyMapper keyMapper = this.keyMapper;
-        if (keyMapper == null) keyMapper = backend.recommendKeyMapper();
-
+        if (keyMapper == null) {
+            keyMapper = backend.recommendKeyMapper();
+            Objects.requireNonNull(keyMapper, "Backend returned null key mapper");
+        }
         // 1. Try to migrate if possible
         if (!migrations.isEmpty()) {
             // Try all migrations
@@ -237,4 +238,22 @@ final class BuiltConfig<C> implements Configuration<C> {
         return loadResult;
     }
 
+    @Override
+    public @NonNull C configureOrFallback(@NonNull Backend backend, @NonNull ErrorPrint errorPrint) {
+        return handleErrors(configureWith(backend), errorPrint);
+    }
+
+    @Override
+    public @NonNull C configureOrFallback(@NonNull Backend backend, @NonNull UpdateListener updateListener,
+                                          @NonNull ErrorPrint errorPrint) {
+        return handleErrors(configureWith(backend, updateListener), errorPrint);
+    }
+
+    private @NonNull C handleErrors(LoadResult<@NonNull C> result, ErrorPrint errorPrint) {
+        if (result.isSuccess()) {
+            return result.getOrThrow();
+        }
+        errorPrint.onError(result.getErrorContexts());
+        return loadDefaults();
+    }
 }

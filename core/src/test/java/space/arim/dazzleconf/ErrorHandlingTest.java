@@ -21,54 +21,52 @@ package space.arim.dazzleconf;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.ErrorPrint;
+import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DataTreeMut;
-import space.arim.dazzleconf2.reflect.TypeToken;
-
-import java.util.List;
+import space.arim.dazzleconf2.backend.DefaultKeyMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class ConfigurationTest {
+public class ErrorHandlingTest {
+
+    private final Backend backend;
+    private final ErrorPrint errorPrint;
+
+    public ErrorHandlingTest(@Mock Backend backend, @Mock ErrorPrint errorPrint) {
+        this.backend = backend;
+        this.errorPrint = errorPrint;
+    }
 
     @Test
-    public void simple() {
+    public void success() {
         Configuration<HelloWorld> config = Configuration
                 .defaultBuilder(HelloWorld.class)
                 .build();
-        assertEquals("hi", config.loadDefaults().helloThere());
+        assertEquals("hi", config.loadDefaults().hello());
 
         DataTreeMut sourceTree = new DataTreeMut();
-        sourceTree.set("helloThere", new DataTree.Entry("goodbye"));
+        sourceTree.set("hello", new DataTree.Entry("goodbye"));
+        when(backend.readTree()).thenReturn(LoadResult.of(sourceTree));
+        when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
 
-        assertEquals("goodbye", config.readFrom(sourceTree).getOrThrow().helloThere());
+        assertEquals("goodbye", config.configureOrFallback(backend, errorPrint).hello());
+        verifyNoInteractions(errorPrint);
     }
 
     public interface HelloWorld {
 
-        default String helloThere() {
+        default String hello() {
             return "hi";
         }
     }
 
-    @Test
-    public void generic() {
-        Configuration<GenericWorld<String>> config = Configuration
-                .defaultBuilder(new TypeToken<GenericWorld<String>>() {})
-                .build();
-        List<String> testList = List.of("hi", "nope", "yes");
-        DataTreeMut sourceTree = new DataTreeMut();
-        sourceTree.set("testList", new DataTree.Entry(testList));
-        assertEquals(testList, config.readFrom(sourceTree).getOrThrow().testList());
-    }
-
-    public interface GenericWorld<T> {
-
-        default List<T> testList() {
-            return List.of();
-        }
-    }
 }

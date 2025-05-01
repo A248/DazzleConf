@@ -22,12 +22,14 @@ package space.arim.dazzleconf2;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.engine.KeyMapper;
-import space.arim.dazzleconf2.engine.KeyPath;
+import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.DeserializeInput;
-import space.arim.dazzleconf2.internals.LibraryLang;
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
-final class DeserInput implements DeserializeInput {
+import java.util.Locale;
+
+final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
 
     private final Object object;
     private final Source source;
@@ -62,15 +64,25 @@ final class DeserInput implements DeserializeInput {
     }
 
     @Override
+    public @NonNull LibraryLang getLibraryLang() {
+        return context.libraryLang;
+    }
+
+    @Override
+    public @NonNull Locale getLocale() {
+        return context.libraryLang.getLocale();
+    }
+
+    @Override
     public @NonNull Object object() {
         return object;
     }
 
     @Override
     public @NonNull KeyPath absoluteKeyPath() {
-        KeyPath absolutePath = new KeyPath(context.pathPrefix);
-        absolutePath.addBack(source.mappedKey);
-        return absolutePath;
+        KeyPath path = new KeyPath(context.pathPrefix);
+        path.addBack(source.mappedKey);
+        return path;
     }
 
     @Override
@@ -84,7 +96,7 @@ final class DeserInput implements DeserializeInput {
         if (object instanceof String) {
             return LoadResult.of((String) object);
         }
-        return LoadError.wrongTypeForValue(context.libraryLang, object, String.class);
+        return throwError(context.libraryLang.wrongTypeForValue(object, String.class));
     }
 
     @Override
@@ -93,7 +105,7 @@ final class DeserInput implements DeserializeInput {
         if (object instanceof DataTree) {
             return LoadResult.of((DataTree) object);
         }
-        return LoadError.wrongTypeForValue(context.libraryLang, object, DataTree.class);
+        return throwError(context.libraryLang.wrongTypeForValue(object, DataTree.class));
     }
 
     @Override
@@ -114,7 +126,7 @@ final class DeserInput implements DeserializeInput {
     public @NonNull ErrorContext buildError(@NonNull String message) {
         LoadError loadError = new LoadError(message, context.libraryLang);
         // Add entry path
-        loadError.addDetail(ErrorContext.ENTRY_PATH, absoluteKeyPath().intoPartsList());
+        loadError.addDetail(ErrorContext.ENTRY_PATH, absoluteKeyPath());
         // Add line number
         Integer lineNumber = source.dataEntry.getLineNumber();
         if (lineNumber != null) {

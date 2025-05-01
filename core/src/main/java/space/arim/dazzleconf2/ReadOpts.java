@@ -20,10 +20,9 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.engine.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.LoadListener;
 
-import java.util.List;
 import java.util.Objects;
 
 final class ReadOpts implements ConfigurationDefinition.ReadOptions {
@@ -32,7 +31,7 @@ final class ReadOpts implements ConfigurationDefinition.ReadOptions {
     private final KeyMapper keyMapper;
     private final int maximumErrorCollect;
 
-    static final int DEFAULT_MAX_ERROR_TO_COLLECT = 10;
+    static final int DEFAULT_MAX_ERROR_TO_COLLECT = 12;
 
     private ReadOpts(LoadListener loadListener, KeyMapper keyMapper, int maximumErrorCollect) {
         this.loadListener = Objects.requireNonNull(loadListener, "loadListener");

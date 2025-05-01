@@ -35,17 +35,15 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<executions>
 					<!--
-					We make use of different multiversion techniques. Although Java offers multi-release jars, we only
-					use them where necessary because it requires maintaining identical signatures. Additionally,
-					there is no reason to place module-info.class in a multi-release directory.
+                    We make use of different multiversion techniques. Although Java offers multi-release jars,
+                    we only use them where necessary because it requires maintaining identical signatures.
+                    Additionally, there is no reason to place module-info.class in a multi-release directory.
 
-					Plan:
-					Compile everything with Java 11, re-compile most things with Java 8, then add multi-release sets.
-					-->
-					<execution>
-						<!-- Compile and link everything with Java -->
-						<id>default-compile</id>
-					</execution>
+                    Plan:
+                    Compile everything with Java 11
+                    Re-compile most things with Java 8.
+                    Then add multi-release source sets.
+                    -->
 					<execution>
 						<!-- Recompilation of almost everything for Java 8 -->
 						<id>base-compile</id>
@@ -90,7 +88,8 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<argLine>
-						-XX:TieredStopAtLevel=1 -XX:-TieredCompilation
+						-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+						-XX:+EnableDynamicAgentLoading -XX:TieredStopAtLevel=1 -XX:-TieredCompilation
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.factory=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.internal=ALL-UNNAMED

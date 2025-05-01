@@ -17,7 +17,7 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.engine;
+package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -30,35 +30,24 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  */
 public final class SnakeCaseKeyMapper implements KeyMapper {
     @Override
-    public @NonNull CharSequence methodNameToKey(@NonNull String methodName) {
+    public @NonNull CharSequence labelToKey(@NonNull String label) {
+
         StringBuilder builder = new StringBuilder();
+        int startAppend = 0;
 
-        int startIndex = 0;
-        boolean upperLeadingChar = false;
-
-        for (int n = 0; n < methodName.length(); n++) {
-            if (Character.isUpperCase(methodName.charAt(n))) {
+        for (int n = 0; n < label.length(); n++) {
+            char currentChar = label.charAt(n);
+            if (Character.isUpperCase(currentChar)) {
                 // Found a segment: append everything before us
-                if (upperLeadingChar) {
-                    builder.append(Character.toLowerCase(methodName.charAt(startIndex)));
-                    builder.append(methodName, startIndex + 1, n);
-                } else {
-                    builder.append(methodName, startIndex, n);
-                }
+                builder.append(label, startAppend, n);
                 if (n != 0) {
                     builder.append('-');
                 }
-                // Prepare for next run
-                upperLeadingChar = true;
-                startIndex = n;
+                builder.append(Character.toLowerCase(currentChar));
+                startAppend = n + 1;
             }
         }
-        if (upperLeadingChar) {
-            builder.append(Character.toLowerCase(methodName.charAt(startIndex)));
-            builder.append(methodName, startIndex + 1, methodName.length());
-        } else {
-            builder.append(methodName, startIndex, methodName.length());
-        }
+        builder.append(label, startAppend, label.length());
         return builder.toString();
     }
 }

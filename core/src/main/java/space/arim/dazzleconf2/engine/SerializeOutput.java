@@ -20,15 +20,23 @@
 package space.arim.dazzleconf2.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.DataTree;
-
-import java.util.List;
+import space.arim.dazzleconf2.backend.KeyMapper;
 
 /**
  * The output for serialization, which is handed to {@link SerializeDeserialize#serialize}.
  * <p>
- * Serializers <b>MUST</b> call one of the methods in this class. Behavior is undefined, however, if more than one
- * method is called.
+ * Serializers <b>MUST</b> call one of the output methods in this class. The output methods start with "out" and are
+ * distinguished by the argument type, which helps callers ensure that they are passing a valid output type.
+ * If no object is output when {@code serialize} returns, that is considered a library usage error, and an exception
+ * may be thrown at a later time.
+ * <p>
+ * <b>Advanced usage</b>
+ * <p>
+ * This {@code SerializeOutput} stores the last object output to it. Calling more than one "out" method will overwrite
+ * the value stored in this instance, which will in turn change the return value of this method. This output can be
+ * extracted (and simultaneously cleared) by calling {@link #getAndClearLastOutput()}.
  *
  */
 public interface SerializeOutput {
@@ -38,7 +46,8 @@ public interface SerializeOutput {
      *
      * @return the key mapper
      */
-    @NonNull KeyMapper keyMapper();
+    @NonNull
+    KeyMapper keyMapper();
 
     /**
      * Outputs a string
@@ -104,20 +113,34 @@ public interface SerializeOutput {
     void outDouble(double value);
 
     /**
-     * Outputs a list.
-     * <p>
-     * The list elements will be checked to conform with the canonical types. Note that mixing different types in the
-     * same list, however, is allowed.
-     *
-     * @param value the list, nonnull
-     * @throws IllegalArgumentException if some list elements are not valid canonical types
-     */
-    void outList(@NonNull List<@NonNull ?> value);
-
-    /**
      * Outputs a data tree
      *
      * @param value the data tree, nonnull
      */
     void outDataTree(@NonNull DataTree value);
+
+    /**
+     * Outputs the given object.
+     * <p>
+     * This function should not be used in normal circumstances. It is a low-level means of setting the output
+     * object, intended for when the caller has a ready object, or when the caller needs to pass a {@code List}.
+     * <p>
+     * The caller guarantees that the passed object is valid according to {@link DataTree#validateValue(Object)}.
+     * If this condition is not met, behavior is <b>not defined</b> and an exception may be thrown at a later point.
+     *
+     * @param value the object, nonnull
+     */
+    void outObjectUnchecked(@NonNull Object value);
+
+    /**
+     * Moves the last output out of this object and returns it to the caller.
+     * <p>
+     * Any one of the "out" methods on this type will affect the return value of this method. Whichever was called
+     * last will be yielded here, or {@code null} if none were called. Because this method also clears the stored
+     * value, calling it twice will always yield {@code null}.
+     *
+     * @return the last object output, or null if there is none
+     */
+    @Nullable Object getAndClearLastOutput();
+
 }

@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2.internals;
 
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
+
 /**
  * Simple functional interface for dealing with {@link LibraryLang}
  */

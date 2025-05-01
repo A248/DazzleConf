@@ -24,7 +24,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DataTreeMut;
-import space.arim.dazzleconf2.engine.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.LoadListener;
 import space.arim.dazzleconf2.engine.TypeLiaison;
 import space.arim.dazzleconf2.engine.UpdateListener;
@@ -195,5 +195,43 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * @return the loaded configuration
      */
     @NonNull LoadResult<@NonNull C> configureWith(@NonNull Backend backend, @NonNull UpdateListener updateListener);
+
+    /**
+     * Configures, migrates, and/or updates the backend as needed. Falls back to the default values if an error
+     * occured and prints that error.
+     * <p>
+     * This "all-in-one" function leverages multiple of this library's best features. It checks for migrations and
+     * updates the config as necessary, up to the latest version. If the config was on the latest version, loads it
+     * and substitutes missing values as necessary. Lastly, if any of these operations produced a change, writes the
+     * config back to the backend. Yields the instantiated configuration.
+     * <p>
+     * This function is similar to {@link #configureWith(Backend)} but with error handling layered on top. That error
+     * handling is simple: upon failure, print the error, return default configuration.
+     *
+     * @param backend the format backend
+     * @param errorPrint if an error occured, it will be printed through this argument
+     * @return the loaded configuration
+     */
+    @NonNull C configureOrFallback(@NonNull Backend backend, @NonNull ErrorPrint errorPrint);
+
+    /**
+     * Configures, migrates, and/or updates the backend as needed. Falls back to the default values if an error
+     * occured and prints that error.
+     * <p>
+     * This "all-in-one" function leverages multiple of this library's best features. It checks for migrations and
+     * updates the config as necessary, up to the latest version. If the config was on the latest version, loads it
+     * and substitutes missing values as necessary. Lastly, if any of these operations produced a change, writes the
+     * config back to the backend. Yields the instantiated configuration.
+     * <p>
+     * This function is similar to {@link #configureWith(Backend)} but with error handling layered on top. That error
+     * handling is simple: upon failure, print the error, return default configuration.
+     *
+     * @param backend the format backend
+     * @param updateListener a listener which informs the caller if certain events happened
+     * @param errorPrint if an error occured, it will be printed through this argument
+     * @return the loaded configuration
+     */
+    @NonNull C configureOrFallback(@NonNull Backend backend, @NonNull UpdateListener updateListener,
+                                   @NonNull ErrorPrint errorPrint);
 
 }

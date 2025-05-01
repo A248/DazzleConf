@@ -17,11 +17,11 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.engine;
+package space.arim.dazzleconf.backend;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.engine.KeyMapper;
-import space.arim.dazzleconf2.engine.SnakeCaseKeyMapper;
+import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -31,26 +31,26 @@ public class SnakeCaseKeyMapperTest {
 
     @Test
     public void simple() {
-        assertEquals("brave", keyMapper.methodNameToKey("brave"));
+        assertEquals("brave", keyMapper.labelToKey("brave"));
     }
 
     @Test
     public void standard1() {
-        assertEquals("my-brave-world", keyMapper.methodNameToKey("myBraveWorld"));
+        assertEquals("my-brave-world", keyMapper.labelToKey("myBraveWorld"));
     }
 
     @Test
     public void standard2() {
-        assertEquals("my-brave-world-two", keyMapper.methodNameToKey("myBraveWorldTwo"));
+        assertEquals("my-brave-world-two", keyMapper.labelToKey("myBraveWorldTwo"));
     }
 
     @Test
     public void malformed1() {
-        assertEquals("my-brave", keyMapper.methodNameToKey("MyBrave"));
+        assertEquals("my-brave", keyMapper.labelToKey("MyBrave"));
     }
 
     @Test
     public void malformed2() {
-        assertEquals("m-b-w", keyMapper.methodNameToKey("MBW"));
+        assertEquals("m-b-w", keyMapper.labelToKey("MBW"));
     }
 }

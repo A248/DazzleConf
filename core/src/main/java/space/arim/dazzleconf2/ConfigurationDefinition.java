@@ -22,6 +22,7 @@ package space.arim.dazzleconf2;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DataTreeMut;
+import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
@@ -65,7 +66,7 @@ public interface ConfigurationDefinition<C> {
     /**
      * Reads from the data tree given, and updates it as necessary.
      * <p>
-     * This function loads from the data tree and it does not use migrations. However, if any entries need updating
+     * This function loads from the data tree, and it does not use migrations. However, if any entries need updating
      * (as determined by {@link SerializeDeserialize#deserializeUpdate(DeserializeInput, SerializeOutput)} then the
      * objects will be updated in the data tree. Callers can check whether any updates ocurred by using a load listener
      * in the read options.
@@ -107,15 +108,16 @@ public interface ConfigurationDefinition<C> {
          *
          * @return the key mapper, nonnull
          */
-        @NonNull KeyMapper keyMapper();
+        @NonNull
+        KeyMapper keyMapper();
 
         /**
-         * The maximum number of errors to collect before exiting.
+         * The maximum number of errors to collect before exiting. Must be greater than 0.
          * <p>
          * If reading the configuration failed, the size of {@link LoadResult#getErrorContexts()} will be at most this
          * number.
          *
-         * @return the maximum number of errors to collect, default 10
+         * @return the maximum number of errors to collect, default 12. Must be greater than 0
          */
         default int maximumErrorCollect() {
             return ReadOpts.DEFAULT_MAX_ERROR_TO_COLLECT;

@@ -252,7 +252,7 @@
 			</plugins>
 		</pluginManagement>
 	</build>
-	
+
 	<modules>
 		<module>core</module>
 		<module>gson</module>

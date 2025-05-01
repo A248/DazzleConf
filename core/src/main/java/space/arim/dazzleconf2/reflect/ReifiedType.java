@@ -38,6 +38,7 @@ import java.util.Objects;
  * on whether the raw type and arguments match. Annotations (like in {@link ReifiedType.Annotated}) are not considered.
  *
  */
+// TODO Make this class sealed in a versions/17 multi-release directory
 public class ReifiedType {
 
     private final Class<?> rawType;

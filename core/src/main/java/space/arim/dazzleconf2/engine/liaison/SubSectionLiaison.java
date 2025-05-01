@@ -26,6 +26,8 @@ import space.arim.dazzleconf2.ConfigurationDefinition;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DataTreeMut;
+import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.TypeToken;
 

@@ -19,5 +19,60 @@
 
 package space.arim.dazzleconf2.engine.liaison;
 
-public class IntegerLiaison {
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+/**
+ * Liaison for integers
+ *
+ */
+public final class IntegerLiaison extends BaseIntegerLiaison<Integer, DefaultInteger> {
+
+    /**
+     * Creates
+     */
+    public IntegerLiaison() {}
+
+    @Override
+    @NonNull Class<Integer> boxedType() {
+        return Integer.class;
+    }
+
+    @Override
+    @NonNull Class<?> primitiveType() {
+        return int.class;
+    }
+
+    @Override
+    @NonNull Class<DefaultInteger> defaultAnnotation() {
+        return DefaultInteger.class;
+    }
+
+    @Override
+    @NonNull Integer valueOn(@NonNull DefaultInteger defaultAnnotation) {
+        return defaultAnnotation.value();
+    }
+
+    @Override
+    @Nullable Integer castNumbers(@NonNull Object input) {
+        if (input instanceof Integer) {
+            return (Integer) input;
+        }
+        if (input instanceof Byte) {
+            return (int) ((byte) input);
+        }
+        if (input instanceof Short) {
+            return (int) ((short) input);
+        }
+        return null;
+    }
+
+    @Override
+    @Nullable Integer parseFrom(@NonNull String input) {
+        try {
+            return Integer.parseInt(input);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
 }
