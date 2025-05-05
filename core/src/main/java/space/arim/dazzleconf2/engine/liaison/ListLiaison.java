@@ -61,7 +61,7 @@ public final class ListLiaison implements TypeLiaison {
         }
 
         @Override
-        public @Nullable DefaultValues<List<E>> loadDefaultValues(@NonNull AnnotationContext annotationContext) {
+        public @Nullable DefaultValues<List<E>> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             return null;
         }
 

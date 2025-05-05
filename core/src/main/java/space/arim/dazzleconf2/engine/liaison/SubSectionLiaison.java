@@ -63,7 +63,7 @@ public final class SubSectionLiaison implements TypeLiaison {
         }
 
         @Override
-        public @Nullable DefaultValues<V> loadDefaultValues(@NonNull AnnotationContext annotationContext) {
+        public @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             return new DefaultValues<V>() {
                 @Override
                 public @NonNull V defaultValue() {

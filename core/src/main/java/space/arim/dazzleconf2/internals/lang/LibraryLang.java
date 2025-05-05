@@ -70,6 +70,8 @@ public interface LibraryLang {
 
     @NonNull String wrongTypeForValue(Object value, String expectedType, String actualType);
 
+    @NonNull String mustBeBetween(String value, String min, String max);
+
     @NonNull String malformattedValue(String reason);
 
     @NonNull String errorIntro();
@@ -83,6 +85,12 @@ public interface LibraryLang {
                 value,
                 ReadMe.displayCanonicalType(this, expectedType, null),
                 ReadMe.displayCanonicalType(this, value.getClass(), value)
+        );
+    }
+
+    default @NonNull String outOfRange(@NonNull Object value, @NonNull Number min, @NonNull Number max) {
+        return mustBeBetween(
+                ReadMe.displayCanonicalType(this, value.getClass(), value), min + "", max + ""
         );
     }
 

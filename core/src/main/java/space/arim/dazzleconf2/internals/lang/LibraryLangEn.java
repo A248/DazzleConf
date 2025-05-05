@@ -60,6 +60,11 @@ public final class LibraryLangEn implements LibraryLang {
     }
 
     @Override
+    public @NonNull String mustBeBetween(String value, String min, String max) {
+        return "The value < " + value + " > must be between " + min + " and " + max;
+    }
+
+    @Override
     public @NonNull String malformattedValue(String reason) {
         return "This value is not formatted correctly because " + reason + '.';
     }

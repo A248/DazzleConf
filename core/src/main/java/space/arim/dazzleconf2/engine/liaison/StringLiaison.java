@@ -53,9 +53,9 @@ public final class StringLiaison implements TypeLiaison {
 
     private static final class StringAgent implements Agent<String> {
         @Override
-        public @Nullable DefaultValues<String> loadDefaultValues(@NonNull AnnotationContext annotationContext) {
+        public @Nullable DefaultValues<String> loadDefaultValues(@NonNull DefaultInit defaultInit) {
 
-            DefaultString defaultString = annotationContext.getAnnotation(DefaultString.class);
+            DefaultString defaultString = defaultInit.methodAnnotations().getAnnotation(DefaultString.class);
             if (defaultString != null) {
                 String defaultVal = defaultString.value();
                 String ifMissingSrc = defaultString.ifMissing();

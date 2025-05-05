@@ -26,8 +26,6 @@ import space.arim.dazzleconf2.ConfigurationDefinition;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
-import java.lang.annotation.Annotation;
-
 /**
  * Powerful handle for working with types, serializing them, and representing them throughout the library structure
  * and configuration construction process.
@@ -60,11 +58,11 @@ public interface TypeLiaison {
         /**
          * Gets default values. These are often extracted in annotations
          *
-         * @param annotationContext the annotation context
+         * @param defaultInit the init context
          * @return the default values, or null if no defaults are available
          * @throws DeveloperMistakeException optionally, if a library usage failure happened
          */
-        @Nullable DefaultValues<V> loadDefaultValues(@NonNull AnnotationContext annotationContext);
+        @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit defaultInit);
 
         /**
          * Makes a serializer for the type. After the serializer is made, it will be permanently bound to the type
@@ -77,19 +75,17 @@ public interface TypeLiaison {
     }
 
     /**
-     * A holder for annotation data
+     * Provides relevant resources related to default value creation
      *
      */
-    interface AnnotationContext {
+    interface DefaultInit {
 
         /**
-         * Checks available contexts, such as the declaring method or class, for the following annotation.
+         * Gets method level annotations for the entry being initialized
          *
-         * @param annotationClass the annotation class
-         * @return the annotation if present
-         * @param <A> the annotation type
+         * @return the method level annotations
          */
-        <A extends Annotation> @Nullable A getAnnotation(@NonNull Class<A> annotationClass);
+        @NonNull AnnotationContext methodAnnotations();
 
     }
 

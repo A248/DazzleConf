@@ -20,6 +20,7 @@
 package space.arim.dazzleconf2;
 
 import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.Comments;
 import space.arim.dazzleconf2.engine.DefaultValues;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
@@ -120,8 +121,22 @@ final class TypeSkeleton {
 
         DataTree.Entry addComments(DataTree.Entry dataEntry) {
             if (comments != null) {
-                for (Comments comments : comments.value()) {
-                    dataEntry = dataEntry.withComments(comments.location(), Arrays.asList(comments.value()));
+                for (Comments addFrom : comments.value()) {
+                    // Append at this location
+                    CommentLocation location = addFrom.location();
+                    String[] addition = addFrom.value();
+
+                    // Check for existing comments
+                    List<String> existingAtLoc = dataEntry.getComments(location);
+                    List<String> newAtLoc;
+                    if (existingAtLoc.isEmpty()) {
+                        newAtLoc = Arrays.asList(addition);
+                    } else {
+                        newAtLoc = new ArrayList<>(existingAtLoc.size() + addition.length);
+                        newAtLoc.addAll(existingAtLoc);
+                        newAtLoc.addAll(Arrays.asList(addition));
+                    }
+                    dataEntry = dataEntry.withComments(location, newAtLoc);
                 }
             }
             return dataEntry;

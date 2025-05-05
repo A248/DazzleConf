@@ -27,7 +27,6 @@ import space.arim.dazzleconf2.reflect.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -50,8 +49,11 @@ final class DefinitionScan {
 
         private final KeyPath pathPrefix;
         private final TypeToken<V> typeToken;
-        private final HashSet<CovariantGuard> covariantSeenBefore = new HashSet<>();
         private final LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons = new LinkedHashMap<>();
+
+        // Seen before
+        private final Set<Class<?>> superTypeSeenBefore = new HashSet<>();
+        private final Set<CovariantGuard> covariantSeenBefore = new HashSet<>();
 
         private Run(KeyPath pathPrefix, TypeToken<V> typeToken) {
             this.pathPrefix = pathPrefix;
@@ -59,15 +61,24 @@ final class DefinitionScan {
             pathPrefix.lockChanges();
         }
 
-        private void scanType(ReifiedType.Annotated currentType, V defaultsProvider) {
+        private void scanType(MethodMirror.TypeWalker currentWalker, V defaultsProvider) {
+            Class<?> currentType = currentWalker.getEnclosingType().rawType();
+            // Check if seen before (diamond inheritance)
+            if (!superTypeSeenBefore.add(currentType)) {
+                return;
+            }
+            // Check if accessible
+            if (!AccessChecking.isAccessible(currentType)) {
+                throw new DeveloperMistakeException("Configuration interface not accessible: " + currentType);
+            }
             Set<MethodId> callableDefaultMethods = new HashSet<>();
             List<TypeSkeleton.MethodNode> methodNodes = new ArrayList<>();
-            MethodMirror.Invoker defaultsInvoker = methodMirror.makeInvoker(defaultsProvider, currentType.rawType());
+            MethodMirror.Invoker defaultsInvoker = methodMirror.makeInvoker(defaultsProvider, currentType);
 
             // To avoid massively increasing the stack depth, skip using the stream itself
             // This is potentially important considering the madness of nested configuration sections
             // Thus, we collect and iterate to reduce stack depth
-            for (MethodId methodId : methodMirror.getViableMethods(currentType).collect(Collectors.toList())) {
+            for (MethodId methodId : currentWalker.getViableMethods().collect(Collectors.toList())) {
 
                 if (!covariantSeenBefore.add(new CovariantGuard(methodId))) {
                     //
@@ -81,14 +92,14 @@ final class DefinitionScan {
                     // libraries which are highly-reflective (seems like a no-brainer to at least read docs)
                     continue;
                 }
-                TypeLiaison.AnnotationContext annotationContext = new TypeLiaison.AnnotationContext() {
+                AnnotationContext methodAnnotations = new AnnotationContext() {
                     @Override
                     public <A extends Annotation> A getAnnotation(@NonNull Class<A> annotationClass) {
-                        return methodMirror.getAnnotation(methodId, currentType, annotationClass);
+                        return currentWalker.getAnnotation(methodId, annotationClass);
                     }
                 };
                 // Check for @CallableFn
-                if (annotationContext.getAnnotation(CallableFn.class) != null) {
+                if (methodAnnotations.getAnnotation(CallableFn.class) != null) {
                     callableDefaultMethods.add(methodId);
                     continue;
                 }
@@ -96,7 +107,7 @@ final class DefinitionScan {
                     throw new DeveloperMistakeException("Configuration method " + methodId + " cannot have parameters");
                 }
                 // Check for @Comments
-                Comments.Container comments = annotationContext.getAnnotation(Comments.Container.class);
+                Comments.Container comments = methodAnnotations.getAnnotation(Comments.Container.class);
 
                 // Check for Optional return
                 boolean optional = methodId.returnType().rawType().equals(Optional.class);
@@ -112,7 +123,7 @@ final class DefinitionScan {
                 LiaisonCache.Cache<?> agentAndSerializer = liaisonCache.requestInfo(
                         new TypeToken<>(typeRequested), new AsHandshake(methodId.name())
                 );
-                DefaultValues<?> defaultValues = agentAndSerializer.agent.loadDefaultValues(annotationContext);
+                DefaultValues<?> defaultValues = agentAndSerializer.agent.loadDefaultValues(() -> methodAnnotations);
                 if (defaultValues == null) {
                     // Agent gave no defaults -- let's try calling the default method
                     if (methodId.isDefault()) {
@@ -144,11 +155,10 @@ final class DefinitionScan {
                         comments, optional, methodId, defaultValues, agentAndSerializer.serializer
                 ));
             }
-            typeSkeletons.put(currentType.rawType(), new TypeSkeleton(callableDefaultMethods, methodNodes));
+            typeSkeletons.put(currentType, new TypeSkeleton(callableDefaultMethods, methodNodes));
 
-            GenericContext currentGenerics = new GenericContext(currentType);
-            for (AnnotatedType superType : currentType.rawType().getAnnotatedInterfaces()) {
-                scanType(currentGenerics.reifyAnnotated(superType), defaultsProvider);
+            for (MethodMirror.TypeWalker superType : currentWalker.getSuperTypes()) {
+                scanType(superType, defaultsProvider);
             }
         }
 
@@ -157,11 +167,10 @@ final class DefinitionScan {
             if (!rawType.isInterface()) {
                 throw new DeveloperMistakeException("This library works exclusively with interfaces");
             }
-            if (!AccessChecking.isAccessible(rawType)) {
-                throw new DeveloperMistakeException("Configuration interface not accessible: " + rawType);
-            }
-            Object defaultsProvider = instantiator.generateEmpty(rawType.getClassLoader(), rawType);
-            scanType(typeToken.getReifiedType(), rawType.cast(defaultsProvider));
+            scanType(
+                    methodMirror.typeWalker(typeToken.getReifiedType()),
+                    rawType.cast(instantiator.generateEmpty(rawType.getClassLoader(), rawType))
+            );
             return new Definition<>(typeToken, pathPrefix, typeSkeletons, libraryLang, methodMirror, instantiator);
         }
 

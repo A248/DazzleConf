@@ -132,7 +132,7 @@ public final class ConfigurationBuilder<C> {
      */
     public @This @NonNull ConfigurationBuilder<C> addPrimitiveTypeLiaisons() {
         // TODO - Impl
-        return addTypeLiaisons(new StringLiaison(), new IntegerLiaison());
+        return addTypeLiaisons(new StringLiaison(), new IntegerLiaison(), new ShortLiaison());
     }
 
     /**

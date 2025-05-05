@@ -17,30 +17,25 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.engine.liaison;
+package space.arim.dazzleconf2.engine;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import java.lang.annotation.Annotation;
 
 /**
- * Specifies the default value as an integer.
- * <p>
- * Primarily used by integer, byte, and short liaisons.
+ * A holder for annotation data
  */
-@Retention(RUNTIME)
-@Target(METHOD)
-public @interface DefaultInteger {
+public interface AnnotationContext {
 
     /**
-     * The integer value to provide as a default.
-     * <p>
-     * Regardless of the numeric type they choose, library users must specify an integer value within its bounds.
+     * Checks available contexts, such as the declaring method or class, for the following annotation.
      *
-     * @return the integer value
+     * @param annotationClass the annotation class
+     * @param <A>             the annotation type
+     * @return the annotation if present
      */
-    int value();
+    <A extends Annotation> @Nullable A getAnnotation(@NonNull Class<A> annotationClass);
 
 }

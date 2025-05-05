@@ -58,6 +58,11 @@ public final class LibraryLangAr implements LibraryLang {
     }
 
     @Override
+    public @NonNull String mustBeBetween(String value, String min, String max) {
+        return "يجب ان < " + value + " > يكون بين " + min + " و" + max;
+    }
+
+    @Override
     public @NonNull String malformattedValue(String reason) {
         return "هذا الإعداد ليس مرتباً جيداً لانه " + reason;
     }

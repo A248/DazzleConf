@@ -26,17 +26,18 @@ import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
-import java.lang.annotation.Annotation;
-import java.util.Objects;
-
-abstract class BaseIntegerLiaison<N, A extends Annotation> implements TypeLiaison {
+abstract class BaseIntegerLiaison<N> implements TypeLiaison {
 
     @Override
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
         Class<?> rawType = typeToken.getRawType();
         if (rawType.equals(primitiveType()) || rawType.equals(boxedType())) {
+            Object rangeAnnote = typeToken.getReifiedType().getAnnotation(LongRange.class);
+            if (rangeAnnote == null) {
+                rangeAnnote = typeToken.getReifiedType().getAnnotation(IntegerRange.class);
+            }
             @SuppressWarnings("unchecked")
-            Agent<V> casted = (Agent<V>) new AgentImpl();
+            Agent<V> casted = (Agent<V>) new AgentImpl(rangeAnnote);
             return casted;
         }
         return null;
@@ -46,21 +47,32 @@ abstract class BaseIntegerLiaison<N, A extends Annotation> implements TypeLiaiso
 
     abstract @NonNull Class<?> primitiveType();
 
-    abstract @NonNull Class<A> defaultAnnotation();
-
-    abstract @NonNull N valueOn(@NonNull A defaultAnnotation);
+    abstract @Nullable N defaultValue(@NonNull AnnotationContext annotationContext);
 
     abstract @Nullable N castNumbers(@NonNull Object input);
 
     abstract @Nullable N parseFrom(@NonNull String input);
 
+    abstract boolean lessOrEq(@NonNull N value, long max);
+
+    abstract boolean greaterOrEq(@NonNull N value, long min);
+
+    abstract boolean lessOrEq(@NonNull N value, int max);
+
+    abstract boolean greaterOrEq(@NonNull N value, int min);
+
     private final class AgentImpl implements Agent<N> {
 
+        private final Object rangeAnnote;
+
+        private AgentImpl(Object rangeAnnote) {
+            this.rangeAnnote = rangeAnnote;
+        }
+
         @Override
-        public @Nullable DefaultValues<N> loadDefaultValues(@NonNull AnnotationContext annotationContext) {
-            A defaultAnnotation = annotationContext.getAnnotation(defaultAnnotation());
-            if (defaultAnnotation != null) {
-                N value = Objects.requireNonNull(valueOn(defaultAnnotation));
+        public @Nullable DefaultValues<N> loadDefaultValues(@NonNull DefaultInit defaultInit) {
+            N value = defaultValue(defaultInit.methodAnnotations());
+            if (value != null) {
                 return new DefaultValues<N>() {
                     @Override
                     public @NonNull N defaultValue() {
@@ -80,22 +92,41 @@ abstract class BaseIntegerLiaison<N, A extends Annotation> implements TypeLiaiso
         public @NonNull SerializeDeserialize<N> makeSerializer() {
             return new SerializeDeserialize<N>() {
 
-                @Override
-                public @NonNull LoadResult<@NonNull N> deserialize(@NonNull DeserializeInput deser) {
+                public @Nullable N deserUnbounded(@NonNull DeserializeInput deser) {
                     Object object = deser.object();
                     N fromOtherNumber = castNumbers(object);
                     if (fromOtherNumber != null) {
-                        return LoadResult.of(fromOtherNumber);
+                        return fromOtherNumber;
                     }
                     if (object instanceof String) {
                         String string = (String) object;
-                        N parsed = parseFrom(string);
-                        if (parsed != null) {
-                            return LoadResult.of(parsed);
+                        return parseFrom(string);
+                    }
+                    return null;
+                }
+
+                @Override
+                public @NonNull LoadResult<@NonNull N> deserialize(@NonNull DeserializeInput deser) {
+                    N value = deserUnbounded(deser);
+                    if (value != null) {
+                        if (rangeAnnote instanceof LongRange) {
+                            LongRange longRange = (LongRange) rangeAnnote;
+                            if (!greaterOrEq(value, longRange.min()) || !lessOrEq(value, longRange.max())) {
+                                LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
+                                return deser.throwError(libraryLang.outOfRange(value, longRange.min(), longRange.max()));
+                            }
                         }
+                        if (rangeAnnote instanceof IntegerRange) {
+                            IntegerRange integerRange = (IntegerRange) rangeAnnote;
+                            if (!greaterOrEq(value, integerRange.min()) || !lessOrEq(value, integerRange.max())) {
+                                LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
+                                return deser.throwError(libraryLang.outOfRange(value, integerRange.min(), integerRange.max()));
+                            }
+                        }
+                        return LoadResult.of(value);
                     }
                     LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
-                    return deser.throwError(libraryLang.wrongTypeForValue(object, boxedType()));
+                    return deser.throwError(libraryLang.wrongTypeForValue(deser.object(), boxedType()));
                 }
 
                 @Override

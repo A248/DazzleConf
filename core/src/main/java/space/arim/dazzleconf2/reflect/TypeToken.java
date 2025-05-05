@@ -113,6 +113,12 @@ public class TypeToken<V> {
         throw new DeveloperMistakeException("Invalid TypeToken. Generics must be fully reified.");
     }
 
+    /**
+     * A type token is equal to another when it points to the same reified type (at runtime)
+     *
+     * @param o the other object
+     * @return true if equal
+     */
     @Override
     public final boolean equals(Object o) {
         if (!(o instanceof TypeToken)) return false;

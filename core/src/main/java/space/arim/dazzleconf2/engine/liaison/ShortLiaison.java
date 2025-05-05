@@ -24,83 +24,76 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.engine.AnnotationContext;
 
 /**
- * Liaison for integers
+ * Liaison for shorts
  *
  */
-public final class IntegerLiaison extends BaseIntegerLiaison<Integer> {
+public final class ShortLiaison extends BaseIntegerLiaison<Short> {
 
     /**
      * Creates
      */
-    public IntegerLiaison() {}
+    public ShortLiaison() {}
 
     @Override
-    @NonNull Class<Integer> boxedType() {
-        return Integer.class;
+    @NonNull Class<Short> boxedType() {
+        return Short.class;
     }
 
     @Override
     @NonNull Class<?> primitiveType() {
-        return int.class;
+        return short.class;
     }
 
     @Override
-    @Nullable Integer defaultValue(@NonNull AnnotationContext annotationContext) {
-        IntegerDefault integerDefault = annotationContext.getAnnotation(IntegerDefault.class);
-        if (integerDefault != null) {
-            return integerDefault.value();
-        }
+    @Nullable Short defaultValue(@NonNull AnnotationContext annotationContext) {
         ShortDefault shortDefault = annotationContext.getAnnotation(ShortDefault.class);
         if (shortDefault != null) {
-            return (int) shortDefault.value();
+            return shortDefault.value();
         }
         ByteDefault byteDefault = annotationContext.getAnnotation(ByteDefault.class);
         if (byteDefault != null) {
-            return (int) byteDefault.value();
+            return (short) byteDefault.value();
         }
         return null;
     }
 
     @Override
-    @Nullable Integer castNumbers(@NonNull Object input) {
-        if (input instanceof Integer) {
-            return (Integer) input;
-        }
+    @Nullable Short castNumbers(@NonNull Object input) {
         if (input instanceof Short) {
-            return (int) ((short) input);
+            return (short) input;
         }
         if (input instanceof Byte) {
-            return (int) ((byte) input);
+            return (short) ((byte) input);
         }
         return null;
     }
 
     @Override
-    @Nullable Integer parseFrom(@NonNull String input) {
+    @Nullable Short parseFrom(@NonNull String input) {
         try {
-            return Integer.parseInt(input);
+            return Short.parseShort(input);
         } catch (NumberFormatException ignored) {
             return null;
         }
     }
 
     @Override
-    boolean lessOrEq(@NonNull Integer value, long max) {
+    boolean lessOrEq(@NonNull Short value, long max) {
         return (long) value <= max;
     }
 
     @Override
-    boolean greaterOrEq(@NonNull Integer value, long min) {
+    boolean greaterOrEq(@NonNull Short value, long min) {
         return (long) value >= min;
     }
 
     @Override
-    boolean lessOrEq(@NonNull Integer value, int max) {
-        return value <= max;
+    boolean lessOrEq(@NonNull Short value, int max) {
+        return (int) value <= max;
     }
 
     @Override
-    boolean greaterOrEq(@NonNull Integer value, int min) {
-        return value >= min;
+    boolean greaterOrEq(@NonNull Short value, int min) {
+        return (int) value >= min;
     }
 }
