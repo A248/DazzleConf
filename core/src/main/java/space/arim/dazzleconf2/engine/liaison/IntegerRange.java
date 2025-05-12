@@ -20,22 +20,23 @@
 package space.arim.dazzleconf2.engine.liaison;
 
 /**
- * Controls the range of an integer type.
+ * Controls the range of an int.
  * <p>
- * Supported by the integer, byte, and short liaisons.
+ * This annotation is made to be used with {@code int} or {@code Integer} and not other numeric types. It is only
+ * supported by the integer liaison.
  *
  */
 public @interface IntegerRange {
 
     /**
-     * The minimum value. If the type being used is not an int, it is cast for comparison.
+     * The minimum value.
      *
      * @return the min value, inclusive
      */
     int min() default Integer.MIN_VALUE;
 
     /**
-     * The maximum value. If the type being used is not an int, it is cast for comparison.
+     * The maximum value.
      *
      * @return the max value, inclusive
      */

@@ -28,7 +28,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 /**
  * Specifies the default value as a byte.
  * <p>
- * Primarily used by the byte liaison.
+ * This annotation is made to be used with {@code byte} or {@code Byte} and not other numeric types. It is only
+ * supported by the byte liaison.
  */
 @Retention(RUNTIME)
 @Target(METHOD)

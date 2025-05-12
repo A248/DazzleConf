@@ -60,7 +60,7 @@ public final class LibraryLangEn implements LibraryLang {
     }
 
     @Override
-    public @NonNull String mustBeBetween(String value, String min, String max) {
+    public @NonNull String mustBeBetween(String value, Number min, Number max) {
         return "The value < " + value + " > must be between " + min + " and " + max;
     }
 

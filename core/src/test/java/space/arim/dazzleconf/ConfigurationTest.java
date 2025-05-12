@@ -23,8 +23,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.DataTreeMut;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.List;
@@ -41,8 +41,8 @@ public class ConfigurationTest {
                 .build();
         assertEquals("hi", config.loadDefaults().helloThere());
 
-        DataTreeMut sourceTree = new DataTreeMut();
-        sourceTree.set("helloThere", new DataTree.Entry("goodbye"));
+        DataTree.Mut sourceTree = new DataTree.Mut();
+        sourceTree.set("helloThere", new DataEntry("goodbye"));
 
         assertEquals("goodbye", config.readFrom(sourceTree).getOrThrow().helloThere());
     }
@@ -60,8 +60,8 @@ public class ConfigurationTest {
                 .defaultBuilder(new TypeToken<GenericWorld<String>>() {})
                 .build();
         List<String> testList = List.of("hi", "nope", "yes");
-        DataTreeMut sourceTree = new DataTreeMut();
-        sourceTree.set("testList", new DataTree.Entry(testList));
+        DataTree.Mut sourceTree = new DataTree.Mut();
+        sourceTree.set("testList", new DataEntry(testList));
         assertEquals(testList, config.readFrom(sourceTree).getOrThrow().testList());
     }
 

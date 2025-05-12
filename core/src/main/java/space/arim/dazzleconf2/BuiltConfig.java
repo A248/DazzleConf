@@ -91,14 +91,14 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     @Override
-    public @NonNull LoadResult<@NonNull C> readWithUpdate(@NonNull DataTreeMut dataTree, @NonNull ReadOptions readOptions) {
+    public @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadOptions readOptions) {
         Objects.requireNonNull(dataTree, "dataTree");
         Objects.requireNonNull(readOptions, "readOptions");
         return definition.readWithUpdate(dataTree, readOptions);
     }
 
     @Override
-    public void writeTo(@NonNull C config, @NonNull DataTreeMut dataTree, @NonNull WriteOptions writeOptions) {
+    public void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree, @NonNull WriteOptions writeOptions) {
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(dataTree, "dataTree");
         Objects.requireNonNull(writeOptions, "writeOptions");
@@ -118,7 +118,7 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     @Override
-    public void writeTo(@NonNull C config, @NonNull DataTreeMut dataTree) {
+    public void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree) {
         KeyMapper keyMapper = this.keyMapper;
         if (keyMapper == null) keyMapper = new DefaultKeyMapper();
         writeTo(config, dataTree, new WriteOpts(keyMapper));
@@ -202,7 +202,7 @@ final class BuiltConfig<C> implements Configuration<C> {
                 C migrated;
                 if (attempt.isSuccess() && (migrated = attempt.getOrThrow()) != null) {
                     // Update the backend with the migrated value
-                    DataTreeMut writeBack = new DataTreeMut();
+                    DataTree.Mut writeBack = new DataTree.Mut();
                     writeTo(migrated, writeBack, new WriteOpts(keyMapper));
                     backend.writeTree(writeBack);
                     // Now signal completion, and finish
@@ -223,13 +223,13 @@ final class BuiltConfig<C> implements Configuration<C> {
         if (loadedTree == null) {
             // 3. Write defaults if necessary
             C defaults = loadDefaults();
-            DataTreeMut writeBack = new DataTreeMut();
+            DataTree.Mut writeBack = new DataTree.Mut();
             writeTo(defaults, writeBack, new WriteOpts(keyMapper));
             backend.writeTree(writeBack);
             recordUpdates.loadedDefaults();
             return LoadResult.of(defaults);
         }
-        DataTreeMut updatableTree = loadedTree.makeMut();
+        DataTree.Mut updatableTree = loadedTree.intoMut();
         LoadResult<C> loadResult = readWithUpdate(updatableTree, new ReadOpts(recordUpdates, keyMapper));
         if (loadResult.isSuccess() && recordUpdates.updated) {
             // 4. Update if necessary

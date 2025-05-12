@@ -58,7 +58,7 @@ public final class LibraryLangAr implements LibraryLang {
     }
 
     @Override
-    public @NonNull String mustBeBetween(String value, String min, String max) {
+    public @NonNull String mustBeBetween(String value, Number min, Number max) {
         return "يجب ان < " + value + " > يكون بين " + min + " و" + max;
     }
 

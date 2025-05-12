@@ -19,27 +19,27 @@
 
 package space.arim.dazzleconf2.engine.liaison;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
-
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
-
 /**
- * Specifies the default value as a short.
+ * Controls the range of a short.
  * <p>
  * This annotation is made to be used with {@code short} or {@code Short} and not other numeric types. It is only
  * supported by the short liaison.
+ *
  */
-@Retention(RUNTIME)
-@Target(METHOD)
-public @interface ShortDefault {
+public @interface ShortRange {
 
     /**
-     * The short value to provide as a default.
+     * The minimum value
      *
-     * @return the short value
+     * @return the min value, inclusive
      */
-    short value();
+    short min() default Short.MIN_VALUE;
+
+    /**
+     * The maximum value
+     *
+     * @return the max value, inclusive
+     */
+    short max() default Short.MAX_VALUE;
 
 }

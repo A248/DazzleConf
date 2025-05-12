@@ -21,13 +21,12 @@ package space.arim.dazzleconf2.engine.liaison;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.engine.AnnotationContext;
 
 /**
  * Liaison for shorts
  *
  */
-public final class ShortLiaison extends BaseIntegerLiaison<Short> {
+public final class ShortLiaison extends BaseNumberLiaison<Short, ShortDefault, ShortRange> {
 
     /**
      * Creates
@@ -40,21 +39,18 @@ public final class ShortLiaison extends BaseIntegerLiaison<Short> {
     }
 
     @Override
-    @NonNull Class<?> primitiveType() {
+    @NonNull Class<Short> primitiveType() {
         return short.class;
     }
 
     @Override
-    @Nullable Short defaultValue(@NonNull AnnotationContext annotationContext) {
-        ShortDefault shortDefault = annotationContext.getAnnotation(ShortDefault.class);
-        if (shortDefault != null) {
-            return shortDefault.value();
-        }
-        ByteDefault byteDefault = annotationContext.getAnnotation(ByteDefault.class);
-        if (byteDefault != null) {
-            return (short) byteDefault.value();
-        }
-        return null;
+    @NonNull Class<ShortDefault> defaultAnnotation() {
+        return ShortDefault.class;
+    }
+
+    @Override
+    @NonNull Short defaultValue(@NonNull ShortDefault defaultAnnotation) {
+        return defaultAnnotation.value();
     }
 
     @Override
@@ -78,22 +74,27 @@ public final class ShortLiaison extends BaseIntegerLiaison<Short> {
     }
 
     @Override
-    boolean lessOrEq(@NonNull Short value, long max) {
-        return (long) value <= max;
+    @NonNull Class<ShortRange> rangeAnnotation() {
+        return ShortRange.class;
     }
 
     @Override
-    boolean greaterOrEq(@NonNull Short value, long min) {
-        return (long) value >= min;
+    @NonNull Short minFrom(@NonNull ShortRange shortRange) {
+        return shortRange.min();
     }
 
     @Override
-    boolean lessOrEq(@NonNull Short value, int max) {
-        return (int) value <= max;
+    @NonNull Short maxFrom(@NonNull ShortRange shortRange) {
+        return shortRange.max();
     }
 
     @Override
-    boolean greaterOrEq(@NonNull Short value, int min) {
-        return (int) value >= min;
+    boolean greaterOrEq(@NonNull Short value, @NonNull Short min) {
+        return value >= min;
+    }
+
+    @Override
+    boolean lessOrEq(@NonNull Short value, @NonNull Short max) {
+        return value <= max;
     }
 }

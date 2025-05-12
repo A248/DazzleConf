@@ -26,10 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.Configuration;
 import space.arim.dazzleconf2.ErrorPrint;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.DataTreeMut;
-import space.arim.dazzleconf2.backend.DefaultKeyMapper;
+import space.arim.dazzleconf2.backend.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -53,8 +50,8 @@ public class ErrorHandlingTest {
                 .build();
         assertEquals("hi", config.loadDefaults().hello());
 
-        DataTreeMut sourceTree = new DataTreeMut();
-        sourceTree.set("hello", new DataTree.Entry("goodbye"));
+        DataTree.Mut sourceTree = new DataTree.Mut();
+        sourceTree.set("hello", new DataEntry("goodbye"));
         when(backend.readTree()).thenReturn(LoadResult.of(sourceTree));
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
 

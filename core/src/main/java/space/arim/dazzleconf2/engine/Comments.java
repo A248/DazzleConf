@@ -20,7 +20,7 @@
 package space.arim.dazzleconf2.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.DataEntry;
 
 import java.lang.annotation.*;
 import java.util.List;
@@ -48,7 +48,7 @@ public @interface Comments {
      * Where the comments should be located.
      * <p>
      * This function will set the comments on the corresponding data entry via
-     * {@link DataTree.Entry#withComments(CommentLocation, List)} using the given location. If no location
+     * {@link DataEntry#withComments(CommentLocation, List)} using the given location. If no location
      * is specified, the default is {@link CommentLocation#ABOVE}
      *
      * @return where to place the comments

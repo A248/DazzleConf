@@ -78,7 +78,7 @@ public final class StandardErrorPrint implements ErrorPrint {
                 for (int n = 0; n < cap; n++) {
                     ErrorContext currentError = errorContexts.get(n);
                     output.append("\n  ");
-                    // 1. Add path
+                    // 1. Entry path
                     boolean pathOrLineNumber = false;
                     KeyPath path = currentError.query(ErrorContext.ENTRY_PATH);
                     if (path != null) {
@@ -88,18 +88,28 @@ public final class StandardErrorPrint implements ErrorPrint {
                     // 2. Line number
                     Integer lineNumber = currentError.query(ErrorContext.LINE_NUMBER);
                     if (lineNumber != null) {
-                        if (pathOrLineNumber) output.append(" ");
+                        if (pathOrLineNumber) output.append(' ');
                         output.append(lang.line());
                         output.append(' ');
                         output.append(Integer.toString(lineNumber));
                         pathOrLineNumber = true;
                     }
-                    // 3. Error message
-                    if (pathOrLineNumber) output.append(':');
+                    // 3. Main message
+                    if (pathOrLineNumber) {
+                        output.append(':');
+                        output.append(' ');
+                    }
                     currentError.mainMessage().printTo(output);
+                    // 4. Backend message
+                    Printable backendMessage = currentError.query(ErrorContext.BACKEND_MESSAGE);
+                    if (backendMessage != null) {
+                        output.append(':');
+                        output.append(' ');
+                        backendMessage.printTo(output);
+                    }
                 }
                 if (cap != errorCount) {
-                    output.append("+");
+                    output.append('+');
                     output.append(' ');
                     output.append(lang.moreErrors(errorCount - cap));
                 }

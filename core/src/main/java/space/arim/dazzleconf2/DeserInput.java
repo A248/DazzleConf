@@ -21,6 +21,7 @@ package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
@@ -42,10 +43,10 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     static final class Source {
-        private final DataTree.Entry dataEntry;
+        private final DataEntry dataEntry;
         private final String mappedKey;
 
-        Source(DataTree.Entry dataEntry, String mappedKey) {
+        Source(DataEntry dataEntry, String mappedKey) {
             this.dataEntry = dataEntry;
             this.mappedKey = mappedKey;
         }
@@ -54,12 +55,12 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     static final class Context {
         private final LibraryLang libraryLang;
         private final ConfigurationDefinition.ReadOptions readOptions;
-        private final KeyPath pathPrefix;
+        private final KeyPath.Immut mappedPathPrefix;
 
-        Context(LibraryLang libraryLang, ConfigurationDefinition.ReadOptions readOptions, KeyPath pathPrefix) {
+        Context(LibraryLang libraryLang, ConfigurationDefinition.ReadOptions readOptions, KeyPath.Immut mappedPathPrefix) {
             this.libraryLang = libraryLang;
             this.readOptions = readOptions;
-            this.pathPrefix = pathPrefix;
+            this.mappedPathPrefix = mappedPathPrefix;
         }
     }
 
@@ -80,9 +81,9 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
 
     @Override
     public @NonNull KeyPath absoluteKeyPath() {
-        KeyPath path = new KeyPath(context.pathPrefix);
+        KeyPath.Mut path = context.mappedPathPrefix.intoMut();
         path.addBack(source.mappedKey);
-        return path;
+        return path.intoImmut();
     }
 
     @Override
@@ -111,10 +112,11 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     @Override
     public void flagUpdate(@Nullable KeyPath keyPath) {
         if (keyPath == null) {
-            keyPath = new KeyPath();
+            keyPath = new KeyPath.Mut();
         }
-        keyPath.addFront(source.mappedKey);
-        context.readOptions.loadListener().updatedMissingPath(keyPath);
+        KeyPath.Mut keyPathMut = keyPath.intoMut();
+        keyPathMut.addFront(source.mappedKey);
+        context.readOptions.loadListener().updatedMissingPath(keyPathMut.intoImmut());
     }
 
     @Override
@@ -123,7 +125,7 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     @Override
-    public @NonNull ErrorContext buildError(@NonNull String message) {
+    public @NonNull ErrorContext buildError(@NonNull CharSequence message) {
         LoadError loadError = new LoadError(message, context.libraryLang);
         // Add entry path
         loadError.addDetail(ErrorContext.ENTRY_PATH, absoluteKeyPath());
@@ -136,7 +138,7 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     @Override
-    public <R> @NonNull LoadResult<R> throwError(@NonNull String message) {
+    public <R> @NonNull LoadResult<R> throwError(@NonNull CharSequence message) {
         return LoadResult.failure(buildError(message));
     }
 }

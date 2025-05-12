@@ -45,6 +45,8 @@ public interface TypeLiaison {
      * @param typeToken the type token
      * @param handshake the handshake
      * @return the agent if supported, or null otherwise
+     * @throws DeveloperMistakeException if the type has been annotated in a disallowed way for example by specifying
+     * contradictory annotations, or if a method on {@code handshake} threw such an exception
      */
     @SideEffectFree
     <V> @Nullable Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake);
@@ -102,6 +104,7 @@ public interface TypeLiaison {
          * @return a serializer for it
          * @param <U> the type requested
          * @throws DeveloperMistakeException if no serializer was configured for the requested type
+         * @throws IllegalStateException if a cyclic loop is detected with the other serializer
          */
         <U> @NonNull SerializeDeserialize<U> getOtherSerializer(@NonNull TypeToken<U> other);
 
@@ -111,6 +114,7 @@ public interface TypeLiaison {
          *
          * @return a configuration which can be read or written
          * @throws DeveloperMistakeException if the type requested is improperly declared or has broken settings
+         * @throws IllegalStateException if a cyclic loop is detected with the requested type
          */
         <U> @NonNull ConfigurationDefinition<U> getConfiguration(@NonNull TypeToken<U> other);
 

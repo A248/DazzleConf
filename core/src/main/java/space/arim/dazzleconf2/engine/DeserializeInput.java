@@ -113,7 +113,7 @@ public interface DeserializeInput {
      * @param message the main error messge
      * @return an error context
      */
-    @NonNull ErrorContext buildError(@NonNull String message);
+    @NonNull ErrorContext buildError(@NonNull CharSequence message);
 
     /**
      * Builds an error context, wraps it in a <code>LoadResult</code> and returns it. This function is named as such
@@ -123,5 +123,5 @@ public interface DeserializeInput {
      * @return an error result
      * @param <R> the type of the result value (can be anything since the result will be an error)
      */
-    <R> @NonNull LoadResult<R> throwError(@NonNull String message);
+    <R> @NonNull LoadResult<R> throwError(@NonNull CharSequence message);
 }

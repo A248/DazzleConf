@@ -23,7 +23,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.DataTreeMut;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.LoadListener;
 import space.arim.dazzleconf2.engine.TypeLiaison;
@@ -167,7 +166,7 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * @param config the configuration
      * @param dataTree the data tree to write to
      */
-    void writeTo(@NonNull C config, @NonNull DataTreeMut dataTree);
+    void writeTo(@NonNull C config, @NonNull DataTree.Mut dataTree);
 
     /**
      * Configures, migrates, and/or updates the backend as needed.

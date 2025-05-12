@@ -21,7 +21,6 @@ package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.DataTreeMut;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.TypeToken;
@@ -75,7 +74,7 @@ public interface ConfigurationDefinition<C> {
      * @param readOptions full parameters to customize the operation
      * @return the loaded configuration, or an error if failed
      */
-    @NonNull LoadResult<@NonNull C> readWithUpdate(@NonNull DataTreeMut dataTree, @NonNull ReadOptions readOptions);
+    @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadOptions readOptions);
 
     /**
      * Writes to the given data tree.
@@ -88,7 +87,7 @@ public interface ConfigurationDefinition<C> {
      * @param dataTree the data tree to write to
      * @param writeOptions full parameters to customize the operation
      */
-    void writeTo(@NonNull C config, @NonNull DataTreeMut dataTree, @NonNull WriteOptions writeOptions);
+    void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree, @NonNull WriteOptions writeOptions);
 
     /**
      * Parameters for reading a configuration from a tree

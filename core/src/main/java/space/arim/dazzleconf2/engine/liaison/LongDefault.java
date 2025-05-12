@@ -26,20 +26,20 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Specifies the default value as a short.
+ * Specifies the default value as a long
  * <p>
- * This annotation is made to be used with {@code short} or {@code Short} and not other numeric types. It is only
- * supported by the short liaison.
+ * This annotation is made to be used with {@code long} or {@code Long} and not other numeric types. It is only
+ * supported by the long liaison.
  */
 @Retention(RUNTIME)
 @Target(METHOD)
-public @interface ShortDefault {
+public @interface LongDefault {
 
     /**
-     * The short value to provide as a default.
+     * The long value to provide as a default.
      *
-     * @return the short value
+     * @return the long value
      */
-    short value();
+    long value();
 
 }

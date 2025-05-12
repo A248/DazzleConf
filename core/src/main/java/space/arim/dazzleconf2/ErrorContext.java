@@ -49,7 +49,7 @@ public interface ErrorContext {
     /**
      * Error message provided by the configuration format backend
      */
-    Key<String> BACKEND_MESSAGE = new Key<>(LibraryLang::backendMessage, Appendable::append);
+    Key<Printable> BACKEND_MESSAGE = new Key<>(LibraryLang::backendMessage, (output, value) -> value.printTo(output));
 
     /**
      * The locale to format messages in.

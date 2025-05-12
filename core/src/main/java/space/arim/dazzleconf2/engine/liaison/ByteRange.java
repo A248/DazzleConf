@@ -17,16 +17,29 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.backend;
+package space.arim.dazzleconf2.engine.liaison;
 
 /**
- * A data tree which is unmistakably immutable
+ * Controls the range of a byte.
+ * <p>
+ * This annotation is made to be used with {@code byte} or {@code Byte} and not other numeric types. It is only
+ * supported by the byte liaison.
+ *
  */
-public final class DataTreeImmut extends DataTree {
+public @interface ByteRange {
 
     /**
-     * Creates an empty data tree
+     * The minimum value
+     *
+     * @return the min value, inclusive
      */
-    public DataTreeImmut() {}
+    byte min() default Byte.MIN_VALUE;
+
+    /**
+     * The maximum value
+     *
+     * @return the max value, inclusive
+     */
+    byte max() default Byte.MAX_VALUE;
 
 }

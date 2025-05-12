@@ -28,16 +28,15 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 /**
  * Specifies the default value as an integer.
  * <p>
- * Primarily used by the integer, character, short, and byte liaisons.
+ * This annotation is made to be used with {@code int} or {@code Integer} and not other numeric types. It is only
+ * supported by the integer liaison.
  */
 @Retention(RUNTIME)
 @Target(METHOD)
 public @interface IntegerDefault {
 
     /**
-     * The integer value to provide as a default.
-     * <p>
-     * Regardless of the numeric type they choose, library users must specify an integer value within its bounds.
+     * The integer value to provide as a default
      *
      * @return the integer value
      */

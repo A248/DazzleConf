@@ -23,6 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * A key path consists of an ordered sequence of strings.
@@ -41,15 +42,15 @@ import java.util.*;
  *     }
  * </pre>
  * <p>
- * <b>Mutability and locking changes</b>
+ * <b>Mutability</b>
  * <p>
- * {@code KeyPath} is mutable by default. However, an instance can be immutably locked it with
- * {@link #lockChanges()}, and a locked instance can be relied upon to never change (unlocking is not possible).
- * As a consequence, {@code KeyPath} is only thread safe if changes are locked.
+ * Mutability of this class is <b>not defined</b>. Please use {@link KeyPath.Immut} or {@link KeyPath.Mut} if you need
+ * guaranteed mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
  * <p>
  * <b>Key mapping</b>
+ * <p>
  * A {@code KeyPath} stores strings without distinction. However, users can add key mapping with
- * {@link #applyKeyMapper(KeyMapper)}. If a key mapper is applied, it will map all existing key parts in this
+ * {@link Mut#applyKeyMapper(KeyMapper)}. If a key mapper is applied, it will map all existing key parts in this
  * {@code KeyPath}, as well as automatically map new key parts added (whether to the front or part). When those
  * same key parts are output at a later time (e.g. through <code>printString</code> or <code>intoParts</code>),
  * they are guaranteed to have been run through the mapper.
@@ -58,32 +59,29 @@ import java.util.*;
  * instances. The key mapper itself will never be copied to another instance, even if its (mapped) key parts are.
  *
  */
-public final class KeyPath implements Printable {
+public abstract class KeyPath implements Printable {
 
     /// The {@code KeyMapper} is lazily applied, meaning the contents of this collection are not mapped
-    private final ArrayDeque<CharSequence> parts;
-
-    private transient KeyMapper keyMapper;
-    private transient boolean locked;
+    ArrayDeque<CharSequence> parts;
+    transient KeyMapper keyMapper;
 
     /**
-     * Creates from the given parts. The constructed key path will not be locked.
+     * Creates from the given parts
      *
      * @param parts the parts
      */
-    public KeyPath(@NonNull String @NonNull...parts) {
+    protected KeyPath(@NonNull String @NonNull...parts) {
         this.parts = new ArrayDeque<>(Arrays.asList(parts));
     }
 
     /**
      * Creates from another key path.
      * <p>
-     * This will copy the contents of that key path into this one. The new key path will be unlocked, regardless of
-     * the original key path's lock state.
+     * This will copy the contents of that key path into this one.
      *
      * @param other the other key path
      */
-    public KeyPath(@NonNull KeyPath other) {
+    protected KeyPath(@NonNull KeyPath other) {
         if (other.keyMapper == null) {
             this.parts = new ArrayDeque<>(other.parts);
         } else {
@@ -93,99 +91,43 @@ public final class KeyPath implements Printable {
         }
     }
 
-    /**
-     * Creates an empty key path
-     *
-     */
-    public KeyPath() {
-        this.parts = new ArrayDeque<>();
+    protected KeyPath(ArrayDeque<CharSequence> parts, KeyMapper keyMapper) {
+        this.parts = parts;
+        this.keyMapper = keyMapper;
     }
 
     /**
-     * Applies a key mapper to all the key parts.
-     * <p>
-     * All existing key parts will be mapped through the provided argument, as will parts added later.
-     * <p>
-     * This method can only be called once per instance. Once called, the given key mapper will be attached to this
-     * key path, but the key mapper itself will not be visible or usable by other {@code KeyPath} instances. Only the
-     * mapped key parts (the result of applying the key mapper) will be observable.
+     * Runs an action for each key part in the sequence
      *
-     * @param keyMapper the key mapper
-     * @throws IllegalStateException if a key mapper has already been set, or this {@code KeyPath} is locked
+     * @param action the action
      */
-    public void applyKeyMapper(@NonNull KeyMapper keyMapper) {
-        if (locked) {
-            throw new IllegalStateException("locked");
+    public void forEach(Consumer<? super @NonNull CharSequence> action) {
+        for (CharSequence part : intoParts()) {
+            action.accept(part);
         }
-        if (this.keyMapper != null) {
-            throw new IllegalStateException("key mapper already set");
-        }
-        this.keyMapper = Objects.requireNonNull(keyMapper);
     }
 
     /**
-     * Locks this key path, causing it to become immutable.
+     * Gets this key path as a mutable one.
      * <p>
-     * After this method has been called, no content-modifying methods can be used and will throw
-     * {@code IllegalStateException} if attempted. No key mapper can be applied either.
-     * <p>
-     * Calling this method more than once has no effect.
+     * If not mutable, the data is copied to a new key path which is returned. This copying may be performed lazily, such
+     * as by deferring to the first mutative operation on the returned object.
      *
+     * @return this key path if mutable, or a mutable copy if needed
      */
-    public void lockChanges() {
-        locked = true;
-    }
+    public abstract KeyPath.@NonNull Mut intoMut();
 
     /**
-     * Gets whether this key path is locked. If locked, it is immutable
-     *
-     * @return true if locked
-     */
-    public boolean isLocked() {
-        return locked;
-    }
-
-    /**
-     * Creates a new key path which is a copy of this one, and locks it immutably.
+     * Gets this key path as an immutable one.
      * <p>
-     * This key path will remain unlocked and can continue to be modified, but the returned key path will be
-     * unmodifiable.
-     *
-     * @return a locked copy of this key path
-     */
-    public @NonNull KeyPath newLockedCopy() {
-        KeyPath lockedCopy = new KeyPath(this);
-        lockedCopy.lockChanges();
-        return lockedCopy;
-    }
-
-    /**
-     * Adds a key part at the front.
+     * The data contained within this {@code KeyPath} is evacuated and moved into a new instance. After the call, the
+     * old instance (this object) is poisoned and must not be used.
      * <p>
-     * This part will be prepended before the other parts.
+     * If this instance is already {@code DataTree.Immut}, then it may be returned without changes.
      *
-     * @param part the part
-     * @throws IllegalStateException if this key path was locked to be immutable
+     * @return an immutable key path
      */
-    public void addFront(@NonNull CharSequence part) {
-        if (locked)
-            throw new IllegalStateException("locked");
-        parts.addFirst(part);
-    }
-
-    /**
-     * Adds a key part at the back.
-     * <p>
-     * This part will be appended behind the other parts.
-     *
-     * @param part the part
-     * @throws IllegalStateException if this key path was locked to be immutable
-     */
-    public void addBack(@NonNull CharSequence part) {
-        if (locked)
-            throw new IllegalStateException("locked");
-        parts.addLast(part);
-    }
+    public abstract KeyPath.@NonNull Immut intoImmut();
 
     /**
      * Turns into key path parts.
@@ -250,5 +192,148 @@ public final class KeyPath implements Printable {
         } catch (IOException e) {
             throw new AssertionError("StringBuilder does not throw IOException", e);
         }
+    }
+
+    /**
+     * A key path which is unmistakably immutable.
+     *
+     */
+    public static final class Immut extends KeyPath {
+
+        /**
+         * Creates from the given parts
+         *
+         * @param parts the parts
+         */
+        public Immut(@NonNull String @NonNull...parts) {
+            super(parts);
+        }
+
+        /**
+         * Creates from another key path.
+         * <p>
+         * This will copy the contents of that key path into this one.
+         *
+         * @param other the other key path
+         */
+        public Immut(@NonNull KeyPath other) {
+            super(other);
+        }
+
+        Immut(ArrayDeque<CharSequence> parts, KeyMapper keyMapper) {
+            super(parts, keyMapper);
+        }
+
+        @Override
+        public @NonNull Mut intoMut() {
+            Mut mutCopy = new Mut(parts, keyMapper);
+            mutCopy.state = Mut.COPY_BEFORE_MUTATE;
+            return mutCopy;
+        }
+
+        @Override
+        public @NonNull Immut intoImmut() {
+            return this;
+        }
+    }
+
+    public static final class Mut extends KeyPath {
+
+        private int state;
+
+        private static final int REGULAR = 0;
+        private static final int COPY_BEFORE_MUTATE = 1;
+        private static final int POISONED = 2;
+
+        /**
+         * Creates from the given parts
+         *
+         * @param parts the parts
+         */
+        public Mut(@NonNull String @NonNull...parts) {
+            super(parts);
+        }
+
+        /**
+         * Creates from another key path.
+         * <p>
+         * This will copy the contents of that key path into this one.
+         *
+         * @param other the other key path
+         */
+        public Mut(@NonNull KeyPath other) {
+            super(other);
+        }
+
+        Mut(ArrayDeque<CharSequence> parts, KeyMapper keyMapper) {
+            super(parts, keyMapper);
+        }
+
+        @Override
+        public @NonNull Mut intoMut() {
+            return this;
+        }
+
+        @Override
+        public @NonNull Immut intoImmut() {
+            // SAFETY
+            // Setting state = POISONED prevents future modifications
+            state = POISONED;
+            return new Immut(parts, keyMapper);
+        }
+
+        private void ensureMutable() {
+            if (state == POISONED) {
+                throw new IllegalStateException("poisoned from #intoImmut");
+            }
+            if (state == COPY_BEFORE_MUTATE) {
+                parts = new ArrayDeque<>(parts);
+                state = REGULAR;
+            }
+        }
+
+        /**
+         * Applies a key mapper to all the key parts.
+         * <p>
+         * All existing key parts will be mapped through the provided argument, as will parts added later.
+         * <p>
+         * This method can only be called once per instance. Once called, the given key mapper will be attached to this
+         * key path, but the key mapper itself will not be visible or usable by other {@code KeyPath} instances. Only the
+         * mapped key parts (the result of applying the key mapper) will be observable.
+         *
+         * @param keyMapper the key mapper
+         * @throws IllegalStateException if a key mapper has already been set
+         */
+        public void applyKeyMapper(@NonNull KeyMapper keyMapper) {
+            if (this.keyMapper != null) {
+                throw new IllegalStateException("key mapper already set");
+            }
+            this.keyMapper = Objects.requireNonNull(keyMapper);
+        }
+
+        /**
+         * Adds a key part at the front.
+         * <p>
+         * This part will be prepended before the other parts.
+         *
+         * @param part the part
+         */
+        public void addFront(@NonNull CharSequence part) {
+            ensureMutable();
+            parts.addFirst(part);
+        }
+
+        /**
+         * Adds a key part at the back.
+         * <p>
+         * This part will be appended behind the other parts.
+         *
+         * @param part the part
+         */
+        public void addBack(@NonNull CharSequence part) {
+            ensureMutable();
+            parts.addLast(part);
+        }
+
     }
 }

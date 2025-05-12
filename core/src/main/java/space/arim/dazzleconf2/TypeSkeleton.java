@@ -19,13 +19,13 @@
 
 package space.arim.dazzleconf2;
 
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.engine.CommentLocation;
-import space.arim.dazzleconf2.engine.Comments;
-import space.arim.dazzleconf2.engine.DefaultValues;
-import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.MethodId;
+import space.arim.dazzleconf2.reflect.MethodMirror;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 /**
@@ -40,23 +40,23 @@ final class TypeSkeleton {
     /**
      * Functions whose return values are supplied by us
      */
-    final MethodNode[] methodNodes;
+    final MethodNode<?>[] methodNodes;
 
-    TypeSkeleton(Collection<MethodId> callableDefaultMethods, List<MethodNode> methodNodes) {
+    TypeSkeleton(Collection<MethodId> callableDefaultMethods, List<MethodNode<?>> methodNodes) {
         this.callableDefaultMethods = callableDefaultMethods.toArray(new MethodId[0]);
         this.methodNodes = methodNodes.toArray(new MethodNode[0]);
     }
 
-    static final class MethodNode {
+    static final class MethodNode<V> {
 
         private final Comments.Container comments;
         final boolean optional;
         final MethodId methodId;
-        private final DefaultValues<?> defaultValues; // Can be null if optional, or if defaults unconfigured
-        final SerializeDeserialize<?> serializer;
+        private final DefaultValues<V> defaultValues; // Can be null if optional, or if defaults unconfigured
+        final SerializeDeserialize<V> serializer;
 
-        MethodNode(Comments.Container comments, boolean optional, MethodId methodId, DefaultValues<?> defaultValues,
-                   SerializeDeserialize<?> serializer) {
+        MethodNode(Comments.Container comments, boolean optional, MethodId methodId, DefaultValues<V> defaultValues,
+                   SerializeDeserialize<V> serializer) {
             this.comments = comments;
             this.optional = optional;
             this.methodId = Objects.requireNonNull(methodId, "methodId");
@@ -82,7 +82,7 @@ final class TypeSkeleton {
                                 "To use Configuration#loadDefaults, default values must be set for every option."
                 );
             }
-            Object defaultVal;
+            V defaultVal;
             try {
                 defaultVal = defaultValues.defaultValue();
             } catch (RuntimeException ex) {
@@ -110,7 +110,7 @@ final class TypeSkeleton {
             if (defaultValues == null) {
                 return null;
             }
-            Object defaultVal = defaultValues.ifMissing();
+            V defaultVal = defaultValues.ifMissing();
             if (defaultVal == null) {
                 throw new DeveloperMistakeException(
                         "DefaultValues#missingValue returned null for " + inType.getName() + '#' + methodId.name()
@@ -119,7 +119,7 @@ final class TypeSkeleton {
             return defaultVal;
         }
 
-        DataTree.Entry addComments(DataTree.Entry dataEntry) {
+        DataEntry addComments(DataEntry dataEntry) {
             if (comments != null) {
                 for (Comments addFrom : comments.value()) {
                     // Append at this location
@@ -140,6 +140,32 @@ final class TypeSkeleton {
                 }
             }
             return dataEntry;
+        }
+
+        @Nullable DataEntry serialize(MethodMirror.Invoker invoker, SerializeOutput ser) {
+            Object value;
+            try {
+                value = invoker.invokeMethod(methodId);
+            } catch (InvocationTargetException e) {
+                throw new DeveloperMistakeException("Configuration methods must not throw exceptions", e);
+            }
+            if (value == null) {
+                throw new DeveloperMistakeException(
+                        "Configuration method " + methodId + " must not return null"
+                );
+            }
+            if (optional && (value = ((Optional<?>) value).orElse(null)) == null) {
+                return null;
+            }
+            serializer.serialize((V) value, ser);
+
+            Object output = ser.getAndClearLastOutput();
+            if (output == null) {
+                throw new DeveloperMistakeException(
+                        "Serializer " + serializer + " did not produce any output for " + value
+                );
+            }
+            return new DataEntry(output);
         }
     }
 }

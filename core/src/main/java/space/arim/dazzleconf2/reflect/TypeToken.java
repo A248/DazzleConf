@@ -67,6 +67,19 @@ public class TypeToken<V> {
     }
 
     /**
+     * Casts the argument to this type.
+     * <p>
+     * Note that only the raw type ({@link #getRawType()}) can be checked at runtime, and not generic arguments.
+     *
+     * @param obj the object
+     * @return the cast value
+     * @throws ClassCastException if the obj is not null and not assignable to this type
+     */
+    public V cast(Object obj) {
+        return getRawType().cast(obj);
+    }
+
+    /**
      * Gets the raw type as a class object
      *
      * @return the raw type

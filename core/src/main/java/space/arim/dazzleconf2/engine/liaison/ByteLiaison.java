@@ -23,82 +23,75 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Liaison for integers
+ * Liaison for bytes
  *
  */
-public final class IntegerLiaison extends BaseNumberLiaison<Integer, IntegerDefault, IntegerRange> {
+public final class ByteLiaison extends BaseNumberLiaison<Byte, ByteDefault, ByteRange> {
 
     /**
      * Creates
      */
-    public IntegerLiaison() {}
+    public ByteLiaison() {}
 
     @Override
-    @NonNull Class<Integer> boxedType() {
-        return Integer.class;
+    @NonNull Class<Byte> boxedType() {
+        return Byte.class;
     }
 
     @Override
-    @NonNull Class<Integer> primitiveType() {
-        return int.class;
+    @NonNull Class<Byte> primitiveType() {
+        return byte.class;
     }
 
     @Override
-    @NonNull Class<IntegerDefault> defaultAnnotation() {
-        return IntegerDefault.class;
+    @NonNull Class<ByteDefault> defaultAnnotation() {
+        return ByteDefault.class;
     }
 
     @Override
-    @NonNull Integer defaultValue(@NonNull IntegerDefault defaultAnnotation) {
+    @NonNull Byte defaultValue(@NonNull ByteDefault defaultAnnotation) {
         return defaultAnnotation.value();
     }
 
     @Override
-    @Nullable Integer castNumbers(@NonNull Object input) {
-        if (input instanceof Integer) {
-            return (Integer) input;
-        }
-        if (input instanceof Short) {
-            return (int) ((short) input);
-        }
+    @Nullable Byte castNumbers(@NonNull Object input) {
         if (input instanceof Byte) {
-            return (int) ((byte) input);
+            return (Byte) input;
         }
         return null;
     }
 
     @Override
-    @Nullable Integer parseFrom(@NonNull String input) {
+    @Nullable Byte parseFrom(@NonNull String input) {
         try {
-            return Integer.parseInt(input);
+            return Byte.parseByte(input);
         } catch (NumberFormatException ignored) {
             return null;
         }
     }
 
     @Override
-    @NonNull Class<IntegerRange> rangeAnnotation() {
-        return IntegerRange.class;
+    @NonNull Class<ByteRange> rangeAnnotation() {
+        return ByteRange.class;
     }
 
     @Override
-    @NonNull Integer minFrom(@NonNull IntegerRange integerRange) {
-        return integerRange.min();
+    @NonNull Byte minFrom(@NonNull ByteRange byteRange) {
+        return byteRange.min();
     }
 
     @Override
-    @NonNull
-    Integer maxFrom(@NonNull IntegerRange integerRange) {
-        return integerRange.max();
+    @NonNull Byte maxFrom(@NonNull ByteRange byteRange) {
+        return byteRange.max();
     }
 
     @Override
-    boolean greaterOrEq(@NonNull Integer value, @NonNull Integer min) {
+    boolean greaterOrEq(@NonNull Byte value, @NonNull Byte min) {
         return value >= min;
     }
 
     @Override
-    boolean lessOrEq(@NonNull Integer value, @NonNull Integer max) {
+    boolean lessOrEq(@NonNull Byte value, @NonNull Byte max) {
         return value <= max;
     }
 }

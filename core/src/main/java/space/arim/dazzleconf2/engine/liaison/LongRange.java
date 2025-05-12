@@ -20,22 +20,23 @@
 package space.arim.dazzleconf2.engine.liaison;
 
 /**
- * Controls the range of an integer type.
+ * Controls the range of a long.
  * <p>
- * Supported by the integer, byte, short, and long liaisons.
+ * This annotation is made to be used with {@code long} or {@code Long} and not other numeric types. It is only
+ * supported by the long liaison.
  *
  */
 public @interface LongRange {
 
     /**
-     * The minimum value. If the type being used is not a long, it is cast for comparison.
+     * The minimum value
      *
      * @return the min value, inclusive
      */
     long min() default Long.MIN_VALUE;
 
     /**
-     * The maximum value. If the type being used is not a long, it is cast for comparison.
+     * The maximum value
      *
      * @return the max value, inclusive
      */
