@@ -26,7 +26,12 @@ import java.lang.reflect.Method;
 
 final class ProxyHandlerToEmpty extends ProxyHandler {
 
+    private final Class<?> iface;
     private Object proxy;
+
+    ProxyHandlerToEmpty(Class<?> iface) {
+        this.iface = iface;
+    }
 
     void initProxy(Object proxy) {
         this.proxy = proxy;
@@ -41,5 +46,21 @@ final class ProxyHandlerToEmpty extends ProxyHandler {
             throw new DeveloperMistakeException("Cannot call non-default configuration methods pre-initialization");
         }
         return MethodUtil.createDefaultMethodHandle(method).bindTo(proxy).invokeWithArguments(args);
+    }
+
+    @Override
+    boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler otherHandler) {
+        if (otherHandler instanceof ProxyHandlerToEmpty) {
+            return iface.equals(((ProxyHandlerToEmpty) otherHandler).iface);
+        }
+        // It's us - ProxyHandlerToValues or ProxyHandlerToDelegate
+        // By inverting the direction of equals, we get our peers to handle the implementation
+        return otherProxy.equals(ourProxy);
+    }
+
+    @Override
+    int implHashCode() {
+        // IMPORTANT: This matches up with ProxyHandlerToValues's fastValues.isEmpty() (hash of map is guaranteed zero)
+        return 0;
     }
 }

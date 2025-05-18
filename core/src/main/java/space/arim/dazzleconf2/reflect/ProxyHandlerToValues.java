@@ -26,16 +26,19 @@ import space.arim.dazzleconf2.internals.MethodUtil;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 final class ProxyHandlerToValues extends ProxyHandler {
 
+    private final Class<?>[] targets;
     private final Map<String, Object> fastValues;
     private Map<Method, MethodHandle> defaultMethodsMap;
 
-    ProxyHandlerToValues(Map<String, Object> fastValues) {
+    ProxyHandlerToValues(Class<?>[] targets, Map<String, Object> fastValues) {
+        this.targets = targets;
         this.fastValues = ImmutableCollections.mapOf(fastValues);
     }
 
@@ -54,6 +57,30 @@ final class ProxyHandlerToValues extends ProxyHandler {
         // We could throw an exception. But that might slow down the compiled method. So just use an assert.
         assert false : "Bad proxy; incomplete data";
         return null;
+    }
+
+    @Override
+    boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler otherHandler) {
+        if (otherHandler instanceof ProxyHandlerToValues) {
+            ProxyHandlerToValues that = (ProxyHandlerToValues) otherHandler;
+            // No need to add defaultMethodsMap: it's the mirror of whatever is left out of fastValues
+            return Arrays.equals(targets, that.targets) && fastValues.equals(that.fastValues);
+        }
+        if (otherHandler instanceof ProxyHandlerToDelegate) {
+            // Unwrap the delegate by forcing it to implement equality
+            return otherHandler.implEquals(otherProxy, ourProxy, this);
+        }
+        if (otherHandler instanceof ProxyHandlerToEmpty) {
+            // The only possible condition where this might hold
+            return fastValues.isEmpty();
+        }
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    int implHashCode() {
+        // WARNING: Keep in sync with ProxyHandlerToEmpty#hashCode
+        return fastValues.hashCode();
     }
 
     void initDefaultMethods(Object proxy, Set<Method> defaultMethods) {

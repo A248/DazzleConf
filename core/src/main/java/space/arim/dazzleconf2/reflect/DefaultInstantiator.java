@@ -41,6 +41,11 @@ public final class DefaultInstantiator implements Instantiator {
     public DefaultInstantiator() {}
 
     @Override
+    public boolean hasProduced(@NonNull Object instance) {
+        return Proxy.isProxyClass(instance.getClass()) && Proxy.getInvocationHandler(instance) instanceof ProxyHandler;
+    }
+
+    @Override
     public @NonNull Object generate(@NonNull ClassLoader classLoader, @NonNull Class<?> @NonNull [] targets,
                                     @NonNull MethodYield methodYield) {
 
@@ -63,7 +68,7 @@ public final class DefaultInstantiator implements Instantiator {
                 }
             }
         }
-        ProxyHandlerToValues proyHandler = new ProxyHandlerToValues(fastValues);
+        ProxyHandlerToValues proyHandler = new ProxyHandlerToValues(targets, fastValues);
         Object proxy = Proxy.newProxyInstance(classLoader, targets, proyHandler);
         if (defaultMethods != null) {
             proyHandler.initDefaultMethods(proxy, defaultMethods);
@@ -82,7 +87,7 @@ public final class DefaultInstantiator implements Instantiator {
 
     @Override
     public @NonNull Object generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<?> iface) {
-        ProxyHandlerToEmpty proxyHandler = new ProxyHandlerToEmpty();
+        ProxyHandlerToEmpty proxyHandler = new ProxyHandlerToEmpty(iface);
         Object proxy = Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
         proxyHandler.initProxy(proxy);
         return proxy;

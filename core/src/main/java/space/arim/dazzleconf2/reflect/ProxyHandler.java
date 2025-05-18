@@ -22,19 +22,29 @@ package space.arim.dazzleconf2.reflect;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 
+/**
+ * Base interface for proxying.
+ * <p>
+ * Subclasses <b>MUST</b> be aware of each other and implement equality accordingly!
+ *
+ */
 abstract class ProxyHandler implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         if (method.getDeclaringClass().equals(Object.class)) {
-            if (method.getName().equals("equals")) {
-                /*
-                Equals implementation - identity equality.
-                There is no better way to implement .equals in accordance with the reflexivity contract.
-                */
-                Object that = args[0];
-                return proxy == that;
+            String methodName = method.getName();
+            if (methodName.equals("equals")) {
+                Object other = args[0];
+                InvocationHandler otherHandler;
+                return Proxy.isProxyClass(other.getClass())
+                        && (otherHandler = Proxy.getInvocationHandler(other)) instanceof ProxyHandler
+                        && implEquals(proxy, other, (ProxyHandler) otherHandler);
+            }
+            if (methodName.equals("hashCode")) {
+                return implHashCode();
             }
             return invokeMethodOnSelf(method, args);
         }
@@ -42,6 +52,10 @@ abstract class ProxyHandler implements InvocationHandler {
     }
 
     abstract Object implInvoke(Method method, Object[] args) throws Throwable;
+
+    abstract boolean implEquals(Object proxy, Object other, ProxyHandler otherHandler);
+
+    abstract int implHashCode();
 
     private Object invokeMethodOnSelf(Method method, Object[] args) throws Throwable {
         try {

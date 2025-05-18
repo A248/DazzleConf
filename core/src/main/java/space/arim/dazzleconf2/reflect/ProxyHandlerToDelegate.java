@@ -45,6 +45,20 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
         }
     }
 
+    @Override
+    boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler otherHandler) {
+        if (otherHandler instanceof ProxyHandlerToDelegate) {
+            ProxyHandlerToDelegate<?> that = (ProxyHandlerToDelegate<?>) otherHandler;
+            return delegate.equals(that.delegate);
+        }
+        return delegate.equals(otherProxy);
+    }
+
+    @Override
+    int implHashCode() {
+        return delegate.hashCode();
+    }
+
     class AsReloadShell implements ReloadShell<I> {
 
         private final I shell;
