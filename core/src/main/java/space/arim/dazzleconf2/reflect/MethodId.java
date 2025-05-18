@@ -53,6 +53,9 @@ public final class MethodId {
         this.methodOrName = Objects.requireNonNull(name, "name");
         this.returnType = Objects.requireNonNull(returnType, "returnType");
         this.parameters = parameters.clone();
+        for (ReifiedType parameter : this.parameters) {
+            Objects.requireNonNull(parameter, "parameters");
+        }
         this.isDefault = isDefault;
     }
 
@@ -67,7 +70,6 @@ public final class MethodId {
      */
     public MethodId(@NonNull Method method, ReifiedType.@NonNull Annotated returnType,
                     @NonNull ReifiedType @NonNull [] parameters, boolean isDefault) {
-        this.isDefault = isDefault;
         if (!method.getReturnType().equals(returnType.rawType())) {
             throw new IllegalArgumentException(
                     "Return type mismatch; expected " + method.getReturnType() + ", not " + returnType.rawType()
@@ -87,9 +89,15 @@ public final class MethodId {
                 );
             }
         }
+        if (!(method.isDefault() == isDefault)) {
+            throw new IllegalArgumentException(
+                    "Default status mismatch; expected " + method.isDefault() + ", not " + isDefault
+            );
+        }
         this.methodOrName = method;
         this.returnType = Objects.requireNonNull(returnType, "returnType");
         this.parameters = parameters.clone();
+        this.isDefault = isDefault;
     }
 
     /**
@@ -113,14 +121,16 @@ public final class MethodId {
     }
 
     /**
-     * Gets the {@code java.lang.reflect.Method} for this object. The input parameter MUST be the actual class from
-     * which this method was taken, otherwise behavior is <b>not defined</b>.
+     * Gets the {@code java.lang.reflect.Method} for this object.
+     * <p>
+     * The declaring class must be either the original class which declared this method, or one of its sub-types.
+     * Behavior is undefined if this property is not upheld.
      *
-     * @param enclosingClass the containing class
+     * @param declaringClass the containing class
      * @return the method
      * @throws IllegalStateException possibly, if the wrong class was specified
      */
-    public @NonNull Method getMethod(@NonNull Class<?> enclosingClass) {
+    public @NonNull Method getMethod(@NonNull Class<?> declaringClass) {
         if (methodOrName instanceof Method) {
             // Fast-path: Most of the time we're here
             return (Method) methodOrName;
@@ -130,7 +140,7 @@ public final class MethodId {
             rawParams[n] = parameters[n].rawType();
         }
         try {
-            return enclosingClass.getDeclaredMethod(name(), rawParams);
+            return declaringClass.getMethod(name(), rawParams);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("Specified method does not exist on target class", e);
         }

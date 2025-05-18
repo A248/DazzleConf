@@ -24,9 +24,11 @@ import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.internals.lang.LibraryLangAr;
 import space.arim.dazzleconf2.internals.lang.LibraryLangEn;
 
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.Locale;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class LibraryLangTest {
 
@@ -44,6 +46,27 @@ public class LibraryLangTest {
         assert LibraryLang.loadLang(new Locale("ar", "JO")) instanceof LibraryLangAr;
         assert LibraryLang.loadLang(new Locale("ar", "EG")) instanceof LibraryLangAr;
         assert LibraryLang.loadLang(new Locale("ar", "DZ")) instanceof LibraryLangAr;
+    }
+
+    @Test
+    public void loadAny() {
+        PrintStream originalSysOut = System.out;
+        System.setOut(new PrintStream(OutputStream.nullOutputStream()));
+        try {
+            for (Locale locale : Locale.getAvailableLocales()) {
+                LibraryLang loaded = assertDoesNotThrow(() -> LibraryLang.loadLang(locale), () -> "threw for " + locale);
+                assertNotNull(loaded, () -> "loaded null for " + locale);
+            }
+        } finally {
+            System.setOut(originalSysOut);
+        }
+    }
+
+    @Test
+    public void preserveDialect() {
+        assertEquals(Locale.CANADA, LibraryLang.loadLang(Locale.CANADA).getLocale());
+        Locale arJo = new Locale("ar", "JO");
+        assertEquals(arJo, LibraryLang.loadLang(arJo).getLocale());
     }
 
     @Test

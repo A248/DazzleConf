@@ -22,31 +22,29 @@ package space.arim.dazzleconf2.backend;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.engine.CommentLocation;
-import space.arim.dazzleconf2.internals.ImmutableCollections;
 
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
- * Immutable representation of a configuration entry as interoperable with backend formats.
+ * A data value, with associated metadata as interoperable with backend formats.
  * <p>
  * Values must conform to the canonical requirements. That means String, primitives, lists of these types, or
- * another {@link DataTree} for nesting.
+ * another {@link DataTree} for nesting. Although a {@code DataEntry} itself is immutable, its contents may not be,
+ * and mutable lists and mutable data trees are permitted to be the value.
  * <p>
  * Equality is defined for an entry based on its value. Comments and line numbers are <b>not</b> counted in
  * equality comparisons and hash code.
  */
 public final class DataEntry {
 
-    private final Object value;
+    private final @NonNull Object value;
     private final Integer lineNumber;
-    private final Map<CommentLocation, List<String>> comments;
+    private final CommentData comments;
 
     /**
      * Creates from a nonnull value.
      * <p>
-     * The value must conform to {@link DataTree#validateValue(Object)}
+     * The value must conform to {@link #validateValue(Object)}
      * I.e., it must be one of primitive, <code>String</code>, <code>List</code> with valid elements, or
      * <code>DataTree</code>. Null values are not valid.
      *
@@ -54,11 +52,11 @@ public final class DataEntry {
      * @throws IllegalArgumentException if the value is not of the canonical types
      */
     public DataEntry(@NonNull Object value) {
-        this(value, null, ImmutableCollections.emptyMap());
+        this(value, null, CommentData.empty());
     }
 
-    private DataEntry(Object value, Integer lineNumber, Map<CommentLocation, List<String>> comments) {
-        if (!DataTree.validateValue(value)) {
+    private DataEntry(@NonNull Object value, Integer lineNumber, CommentData comments) {
+        if (!validateValue(value)) {
             throw new IllegalArgumentException("Not a canonical value: " + value);
         }
         this.lineNumber = lineNumber;
@@ -87,7 +85,7 @@ public final class DataEntry {
     }
 
     /**
-     * Attaches a line number and returns a new object
+     * Sets the line number and returns a new object
      *
      * @param lineNumber the line number
      * @return a new data entry with the line number set
@@ -115,57 +113,47 @@ public final class DataEntry {
     }
 
     /**
-     * Attaches comments and returns a new object.
+     * Sets the comments and returns a new object
+     *
+     * @param comments the comments
+     * @return a new data entry with the comments set
+     */
+    public @NonNull DataEntry withComments(@NonNull CommentData comments) {
+        return new DataEntry(value, lineNumber, comments);
+    }
+
+    /**
+     * Sets comments at the given location and returns a new object.
      * <p>
-     * If an empty comment list is specified, this function will clear the comments at the specified location.
+     * If an empty list is specified, this function will clear the comments at the specified location.
      *
      * @param location where the comments are situated
-     * @param comments the comments to specify at this location
-     * @return a new data entry with the comments attached
+     * @param lines the comment lines to specify at this location
+     * @return a new data entry with the comments set
      */
-    public @NonNull DataEntry withComments(@NonNull CommentLocation location, @NonNull List<@NonNull String> comments) {
-        if (comments.isEmpty()) {
-            return clearComments(location);
-        }
-        Map<CommentLocation, List<String>> newComments = new EnumMap<>(CommentLocation.class);
-        newComments.putAll(this.comments);
-        newComments.put(location, ImmutableCollections.listOf(comments));
-        return new DataEntry(value, lineNumber, newComments);
+    public @NonNull DataEntry withComments(@NonNull CommentLocation location, @NonNull List<@NonNull String> lines) {
+        return withComments(comments.setAt(location, lines));
     }
 
     /**
-     * Clears comments and returns a new object
+     * Gets the comments present
      *
-     * @param locations which comments to clear
-     * @return a new data entry with no comments at the location
+     * @return the comments
      */
-    public @NonNull DataEntry clearComments(@NonNull CommentLocation @NonNull ... locations) {
-        boolean foundAny = false;
-        for (CommentLocation location : locations) {
-            foundAny = foundAny || comments.containsKey(location);
-        }
-        if (!foundAny) {
-            return this;
-        }
-        Map<CommentLocation, List<String>> newComments = new EnumMap<>(CommentLocation.class);
-        newComments.putAll(this.comments);
-        for (CommentLocation location : locations) {
-            newComments.remove(location);
-        }
-        if (newComments.isEmpty()) {
-            newComments = ImmutableCollections.emptyMap();
-        }
-        return new DataEntry(value, lineNumber, newComments);
+    public @NonNull CommentData getComments() {
+        return comments;
     }
 
     /**
-     * Gets the comments on this entry at the specified location
+     * Gets the comments present on this entry at the specified location.
+     * <p>
+     * The returned value may be immutable, or it may be a mutable copy.
      *
      * @param location the location
-     * @return the comments, or an empty list if none exist
+     * @return the comment lines, or an empty list if none exist
      */
     public @NonNull List<@NonNull String> getComments(@NonNull CommentLocation location) {
-        return comments.getOrDefault(location, ImmutableCollections.emptyList());
+        return comments.getAt(location);
     }
 
     @Override
@@ -176,5 +164,26 @@ public final class DataEntry {
     @Override
     public int hashCode() {
         return value.hashCode();
+    }
+
+    /**
+     * Checks whether the given object is valid as a value.
+     * <p>
+     * Values must be one of primitive, <code>String</code>, <code>List</code> with valid elements,
+     * or <code>DataTree</code>. Null values are not valid.
+     *
+     * @param value the value
+     * @return true if a valid canonical value, false if not
+     */
+    public static boolean validateValue(@Nullable Object value) {
+        if (value instanceof List) {
+            for (Object elem : (List<?>) value) {
+                if (!validateValue(elem)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return value instanceof DataTree || DataTree.validateKey(value);
     }
 }

@@ -58,12 +58,12 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
     }
 
     @Override
-    public @NonNull String readToString() throws IOException {
+    public @NonNull String readString() throws IOException {
         return FileIO.readString(path, charset);
     }
 
     @Override
-    public <R> R useReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
+    public <R> R openReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
         class ReadableByteChannelOperation implements Operation<R, ReadableByteChannel> {
 
             @Override

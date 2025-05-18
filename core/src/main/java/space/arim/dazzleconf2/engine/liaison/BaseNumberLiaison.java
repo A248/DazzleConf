@@ -21,6 +21,7 @@ package space.arim.dazzleconf2.engine.liaison;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
@@ -32,6 +33,7 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
         implements TypeLiaison {
 
     @Override
+    @SideEffectFree
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
         Class<?> rawType = typeToken.getRawType();
         if (rawType.equals(primitiveType()) || rawType.equals(boxedType())) {
@@ -51,6 +53,8 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
 
     abstract @NonNull TYPE defaultValue(@NonNull DEF_ANNOTE defaultAnnotation);
 
+    abstract @NonNull TYPE ifMissing(@NonNull DEF_ANNOTE defaultAnnotation);
+
     abstract @Nullable TYPE castNumbers(@NonNull Object input);
 
     abstract @Nullable TYPE parseFrom(@NonNull String input);
@@ -60,6 +64,10 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
     abstract @NonNull TYPE minFrom(@NonNull RANGE_ANNOTE rangeAnnote);
 
     abstract @NonNull TYPE maxFrom(@NonNull RANGE_ANNOTE rangeAnnote);
+
+    boolean isNaN(@NonNull TYPE value) {
+        return false;
+    }
 
     abstract boolean greaterOrEq(@NonNull TYPE value, @NonNull TYPE min);
 
@@ -77,16 +85,17 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
         public @Nullable DefaultValues<TYPE> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             DEF_ANNOTE defaultAnnotation = defaultInit.methodAnnotations().getAnnotation(defaultAnnotation());
             if (defaultAnnotation != null) {
-                TYPE value = defaultValue(defaultAnnotation);
+                TYPE defaultValue = defaultValue(defaultAnnotation);
+                TYPE ifMissing = ifMissing(defaultAnnotation);
                 return new DefaultValues<TYPE>() {
                     @Override
                     public @NonNull TYPE defaultValue() {
-                        return value;
+                        return defaultValue;
                     }
 
                     @Override
                     public @NonNull TYPE ifMissing() {
-                        return value;
+                        return ifMissing;
                     }
                 };
             }
@@ -99,9 +108,9 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
 
                 public @Nullable TYPE deserIfPossible(@NonNull DeserializeInput deser) {
                     Object object = deser.object();
-                    TYPE fromOtherNumber = castNumbers(object);
-                    if (fromOtherNumber != null) {
-                        return fromOtherNumber;
+                    TYPE castNumbers = castNumbers(object);
+                    if (castNumbers != null) {
+                        return castNumbers;
                     }
                     if (object instanceof String) {
                         String string = (String) object;
@@ -113,9 +122,13 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
                 @Override
                 public @NonNull LoadResult<@NonNull TYPE> deserialize(@NonNull DeserializeInput deser) {
                     TYPE value = deserIfPossible(deser);
-                    if (value == null) {
+                    if (value == null ) {
                         LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
                         return deser.throwError(libraryLang.wrongTypeForValue(deser.object(), boxedType()));
+                    }
+                    if (isNaN(value)) {
+                        LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
+                        return deser.throwError(libraryLang.notANumber(value));
                     }
                     if (rangeAnnote != null) {
                         TYPE min = minFrom(rangeAnnote);
@@ -133,6 +146,7 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
                                                                             @NonNull SerializeOutput updateTo) {
                     LoadResult<TYPE> result = deserialize(deser);
                     TYPE loaded;
+                    // Use identity equality to determine if the value changed
                     if (result.isSuccess() && (loaded = result.getOrThrow()) != deser.object()) {
                         serialize(loaded, updateTo);
                     }

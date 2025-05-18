@@ -20,6 +20,7 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyPath;
@@ -28,15 +29,18 @@ import space.arim.dazzleconf2.reflect.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 final class Definition<C> implements ConfigurationDefinition<C> {
 
     private final TypeToken<C> configType;
     private final KeyPath.Immut pathPrefix;
+    private final CommentData topLevelComments;
+    private final String[] labels;
 
     private final LibraryLang libraryLang;
-    private final MethodMirror methodMirror;
     private final Instantiator instantiator;
+    private final MethodMirror methodMirror;
 
     /**
      * Includes both this type and all its super types. These arrays have equal length
@@ -46,13 +50,16 @@ final class Definition<C> implements ConfigurationDefinition<C> {
 
     private static final InvokeDefaultFunction INVOKE_DEFAULT_VALUE = new InvokeDefaultFunction();
 
-    Definition(TypeToken<C> configType, KeyPath.Immut pathPrefix, Map<Class<?>, TypeSkeleton> typeSkeletons,
-               LibraryLang libraryLang, MethodMirror methodMirror, Instantiator instantiator) {
+    Definition(TypeToken<C> configType, KeyPath pathPrefix, CommentData topLevelComments,
+               List<String> labels, LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons,
+               LibraryLang libraryLang, Instantiator instantiator, MethodMirror methodMirror) {
         this.configType = Objects.requireNonNull(configType);
-        this.pathPrefix = Objects.requireNonNull(pathPrefix);
+        this.pathPrefix = pathPrefix.intoImmut();
+        this.topLevelComments = Objects.requireNonNull(topLevelComments);
+        this.labels = labels.toArray(new String[0]);
         this.libraryLang = Objects.requireNonNull(libraryLang);
-        this.methodMirror = Objects.requireNonNull(methodMirror);
         this.instantiator = Objects.requireNonNull(instantiator);
+        this.methodMirror = Objects.requireNonNull(methodMirror);
 
         int numberOfSkeletons = typeSkeletons.size();
         Class<?>[] superTypesArray = new Class[numberOfSkeletons];
@@ -66,11 +73,8 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         this.skeletonArray = skeletonArray;
     }
 
-    @SuppressWarnings("unchecked")
-    private C instantiate(MethodYield.Builder methodYield) {
-        return (C) instantiator.generate(
-                configType.getRawType().getClassLoader(), superTypesArray, methodYield.build()
-        );
+    private C instantiate(MethodYield methodYield) {
+        return configType.cast(instantiator.generate(superTypesArray, methodYield));
     }
 
     @Override
@@ -79,8 +83,34 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     @Override
+    public @NonNull Layout getLayout() {
+        return new Layout() {
+
+            @Override
+            public @NonNull CommentData getTopLevelComments() {
+                return topLevelComments;
+            }
+
+            @Override
+            public @NonNull Collection<@NonNull String> getLabels() {
+                return Collections.unmodifiableList(Arrays.asList(labels));
+            }
+
+            @Override
+            public @NonNull Stream<@NonNull String> getLabelsAsStream() {
+                return Arrays.stream(labels);
+            }
+        };
+    }
+
+    @Override
+    public @NonNull Instantiator getInstantiator() {
+        return instantiator;
+    }
+
+    @Override
     public @NonNull C loadDefaults() {
-        MethodYield.Builder methodYield = new MethodYield.Builder();
+        MethodYield methodYield = new MethodYield();
         for (int n = 0; n < superTypesArray.length; n++) {
             Class<?> currentType = superTypesArray[n];
             TypeSkeleton typeSkeleton = skeletonArray[n];
@@ -97,8 +127,8 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         return instantiate(methodYield);
     }
 
-    private <D extends DataTree, S> @NonNull LoadResult<@NonNull C> readingNexus(
-            @NonNull D dataTree, @NonNull ReadOptions readOptions, Definition.@NonNull HowToUpdate<D, S> howToUpdate
+    private <DT extends DataTree> @NonNull LoadResult<@NonNull C> readingNexus(
+            @NonNull DT dataTree, @NonNull ReadOptions readOptions, Definition.@NonNull HowToUpdate<DT> howToUpdate
     ) {
         // Where we're located - mapped
         KeyPath.Immut mappedPathPrefix;
@@ -108,7 +138,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             mappedPathPrefix = mutPathPrefix.intoImmut();
         }
         // What we're building (an instance) and how we're doing that
-        MethodYield.Builder methodYield = new MethodYield.Builder();
+        MethodYield methodYield = new MethodYield();
         DeserInput.Context deserContext = new DeserInput.Context(libraryLang, readOptions, mappedPathPrefix);
 
         // Collected errors - get a certain maximum before quitting
@@ -143,9 +173,9 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                         value = Optional.empty();
                     } else if ((value = methodNode.makeMissingValue(currentType)) != null) {
                         // 2.
-                        KeyPath.Mut keyPath = new KeyPath.Mut();
-                        keyPath.addFront(mappedKey);
-                        readOptions.loadListener().updatedMissingPath(keyPath);
+                        readOptions.loadListener().updatedPath(
+                                new KeyPath.Mut(mappedKey), UpdateReason.MISSING
+                        );
                         howToUpdate.insertMissingValue(dataTree, mappedKey, methodNode, value);
                     } else {
                         // 3.
@@ -206,20 +236,20 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         return LoadResult.of(instantiate(methodYield));
     }
 
-    private interface HowToUpdate<D extends DataTree, S> {
+    private interface HowToUpdate<DT extends DataTree> {
 
-        void insertMissingValue(D dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode, Object value);
+        void insertMissingValue(DT dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode, Object value);
 
         <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser);
 
-        void updateIfDesired(D dataTree, String mappedKey, DataEntry sourceEntry,
+        void updateIfDesired(DT dataTree, String mappedKey, DataEntry sourceEntry,
                              TypeSkeleton.MethodNode<?> methodNode);
 
     }
 
     @Override
     public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree, @NonNull ReadOptions readOptions) {
-        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree, Void>() {
+        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree>() {
             @Override
             public void insertMissingValue(DataTree dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode,
                                            Object value) {}
@@ -239,11 +269,11 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     public @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadOptions readOptions) {
 
         SerializeOutput outputForUpdate = new SerOutput(readOptions.keyMapper());
-        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree.Mut, SerializeOutput>() {
+        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree.Mut>() {
             @Override
             public void insertMissingValue(DataTree.Mut dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode,
                                            Object value) {
-                dataTree.set(mappedKey, methodNode.addComments(new DataEntry(value)));
+                dataTree.set(mappedKey, new DataEntry(value).withComments(methodNode.comments));
             }
 
             @Override
@@ -254,9 +284,10 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             @Override
             public void updateIfDesired(DataTree.Mut dataTree, String mappedKey, DataEntry sourceEntry,
                                         TypeSkeleton.MethodNode<?> methodNode) {
-                Object lastOutput = outputForUpdate.getAndClearLastOutput();
-                if (lastOutput != null) {
-                    dataTree.set(mappedKey, methodNode.addComments(sourceEntry.withValue(lastOutput)));
+                Object update = outputForUpdate.getAndClearLastOutput();
+                if (update != null && !sourceEntry.getValue().equals(update)) {
+                    readOptions.loadListener().updatedPath(new KeyPath.Mut(mappedKey), UpdateReason.UPDATED);
+                    dataTree.set(mappedKey, sourceEntry.withValue(update));
                 }
             }
         });

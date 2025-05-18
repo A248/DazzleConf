@@ -19,10 +19,13 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.ReloadShell;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Objects;
 
 final class ProxyHandlerToDelegate<I> extends ProxyHandler {
 
@@ -30,6 +33,10 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
 
     @Override
     Object implInvoke(Method method, Object[] args) throws Throwable {
+        I delegate = this.delegate;
+        if (delegate == null) {
+            throw new NullPointerException("delegate");
+        }
         try {
             return method.invoke(delegate, args);
         } catch (IllegalAccessException ex) {
@@ -45,6 +52,30 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
         }
     }
 
+    @Override
+    boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler otherHandler) {
+        I delegate = this.delegate;
+        if (otherHandler instanceof ProxyHandlerToDelegate) {
+            ProxyHandlerToDelegate<?> that = (ProxyHandlerToDelegate<?>) otherHandler;
+            return Objects.equals(delegate, that.delegate);
+        }
+        if (delegate == null) {
+            // We lack the information to do anything else
+            return false;
+        }
+        return delegate.equals(otherProxy);
+    }
+
+    @Override
+    int implHashCode() {
+        return Objects.hashCode(delegate);
+    }
+
+    @Override
+    void implToString(StringBuilder output) {
+        output.append(delegate);
+    }
+
     class AsReloadShell implements ReloadShell<I> {
 
         private final I shell;
@@ -54,17 +85,17 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
         }
 
         @Override
-        public void setCurrentDelegate(I delegate) {
+        public void setCurrentDelegate(@Nullable I delegate) {
             ProxyHandlerToDelegate.this.delegate = delegate;
         }
 
         @Override
-        public I getCurrentDelegate() {
+        public @Nullable I getCurrentDelegate() {
             return delegate;
         }
 
         @Override
-        public I getShell() {
+        public @NonNull I getShell() {
             return shell;
         }
     }

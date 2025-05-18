@@ -33,10 +33,10 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+		<checkerqual.version>3.49.2</checkerqual.version>
 		<junit.version>5.12.2</junit.version>
 		<mockito.version>5.1.1</mockito.version>
 		<equalsverifier.version>3.19.2</equalsverifier.version>
-		<checkerqual.version>3.49.2</checkerqual.version>
 	</properties>
 	
 	<scm>
@@ -259,7 +259,16 @@
 		<module>snakeyaml</module>
         <module>hocon</module>
     </modules>
-	
+
+	<dependencies>
+		<dependency>
+			<groupId>org.checkerframework</groupId>
+			<artifactId>checker-qual</artifactId>
+			<version>${checkerqual.version}</version>
+			<optional>true</optional>
+		</dependency>
+	</dependencies>
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>

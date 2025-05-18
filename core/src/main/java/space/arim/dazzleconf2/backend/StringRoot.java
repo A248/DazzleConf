@@ -44,28 +44,20 @@ public final class StringRoot implements ReadableRoot {
         return true;
     }
 
-    /**
-     * Gets the current content, which may change
-     * @return the content
-     */
-    public @NonNull String getContent() {
+    @Override
+    public @NonNull String readString() {
         return content;
     }
 
     @Override
-    public @NonNull String readToString() throws IOException {
-        return content;
-    }
-
-    @Override
-    public <R> R useReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
+    public <R> R openReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
         try (Reader reader = new StringReader(content)) {
             return operation.operateUsing(reader);
         }
     }
 
     @Override
-    public void writeString(@NonNull String content) throws IOException {
+    public void writeString(@NonNull String content) {
         this.content = Objects.requireNonNull(content);
     }
 

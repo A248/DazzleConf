@@ -19,10 +19,15 @@
 
 package space.arim.dazzleconf2;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 /**
- * A handler for managing reloading of an inner configuration object. This handler provides a proxy, called the shell
- * ({@link #getShell()}) which delegates all calls made on it to an inner value. That inner value can be updated at
- * any time.
+ * A handler for managing reloading of an inner configuration object.
+ * <p>
+ * This handler provides a proxy, called the shell ({@link #getShell()}) which delegates all calls made on it to an
+ * inner delegate. The delegate can also be set or get via this interface. If the current delegate is {@code null},
+ * calls to methods on the shell will throw {@code NullPointerException}.
  *
  * @param <C> the type of the config
  */
@@ -35,14 +40,14 @@ public interface ReloadShell<C> {
      *
      * @param delegate the delegate value
      */
-    void setCurrentDelegate(C delegate);
+    void setCurrentDelegate(@Nullable C delegate);
 
     /**
      * Gets the current inner delegate
      *
      * @return the delegate value
      */
-    C getCurrentDelegate();
+    @Nullable C getCurrentDelegate();
 
     /**
      * Gets the configuration shell, a proxy to the current delegate.
@@ -56,6 +61,6 @@ public interface ReloadShell<C> {
      *
      * @return the configuration shell, a proxy to the current delegate
      */
-    C getShell();
+    @NonNull C getShell();
 
 }

@@ -22,6 +22,7 @@ package space.arim.dazzleconf2.internals.lang;
 import space.arim.dazzleconf2.backend.DataTree;
 
 import java.util.List;
+import java.util.Locale;
 
 final class ReadMe {
 
@@ -44,8 +45,8 @@ final class ReadMe {
     static LibraryLang[] availableLanguages() {
         return new LibraryLang[] {
 
-                new LibraryLangAr(),
-                new LibraryLangEn()
+                new LibraryLangAr(null),
+                new LibraryLangEn(null)
 
         };
     }

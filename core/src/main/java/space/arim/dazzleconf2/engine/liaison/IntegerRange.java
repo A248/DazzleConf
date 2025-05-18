@@ -19,6 +19,14 @@
 
 package space.arim.dazzleconf2.engine.liaison;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.TYPE_USE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 /**
  * Controls the range of an int.
  * <p>
@@ -26,6 +34,8 @@ package space.arim.dazzleconf2.engine.liaison;
  * supported by the integer liaison.
  *
  */
+@Retention(RUNTIME)
+@Target(TYPE_USE)
 public @interface IntegerRange {
 
     /**

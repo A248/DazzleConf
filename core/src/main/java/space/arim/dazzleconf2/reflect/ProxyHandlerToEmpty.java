@@ -24,11 +24,16 @@ import space.arim.dazzleconf2.DeveloperMistakeException;
 
 import java.lang.reflect.Method;
 
-final class ProxyHandlerToEmpty extends ProxyHandler {
+final class ProxyHandlerToEmpty<I> extends ProxyHandler {
 
-    private Object proxy;
+    private final Class<I> iface;
+    private I proxy;
 
-    void initProxy(Object proxy) {
+    ProxyHandlerToEmpty(Class<I> iface) {
+        this.iface = iface;
+    }
+
+    void initProxy(I proxy) {
         this.proxy = proxy;
     }
 
@@ -41,5 +46,31 @@ final class ProxyHandlerToEmpty extends ProxyHandler {
             throw new DeveloperMistakeException("Cannot call non-default configuration methods pre-initialization");
         }
         return MethodUtil.createDefaultMethodHandle(method).bindTo(proxy).invokeWithArguments(args);
+    }
+
+    @Override
+    boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler otherHandler) {
+        if (otherHandler instanceof ProxyHandlerToValues) {
+            // We're never equal - we can never know if we implement the same interfaces
+            return false;
+        }
+        if (otherHandler instanceof ProxyHandlerToDelegate) {
+            // Invert direction => unwrap the delegate
+            return otherHandler.implEquals(otherProxy, ourProxy, this);
+        }
+        if (otherHandler instanceof ProxyHandlerToEmpty) {
+            return iface.equals(((ProxyHandlerToEmpty<?>) otherHandler).iface);
+        }
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    int implHashCode() {
+        return iface.hashCode();
+    }
+
+    @Override
+    void implToString(StringBuilder output) {
+        output.append(iface.getName());
     }
 }

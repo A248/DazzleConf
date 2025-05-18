@@ -26,14 +26,22 @@ import space.arim.dazzleconf2.engine.SerializeOutput;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 
 /**
  * A tree of in-memory configuration data. This tree is essentially a map of keys to values representing in-memory
  * configuration data, with added metadata of line numbers and comments.
  * <p>
- * Please keep in mind that a data tree is read from and written to configuration backend. As such, it uses the keys
- * found in the backend data, and it does <b>NOT</b> take into account method names or {@link KeyMapper}. It is highly
- * recommend to use <code>KeyMapper</code> where appropriate to interface with key strings.
+ * <b>Interfacing and order</b>
+ * <p>
+ * A data tree is read from and written to configuration backend. As such, it uses the keys found in the backend data,
+ * and it does <b>NOT</b> take into account method names or {@link KeyMapper}. It is highly recommend to use
+ * <code>KeyMapper</code> where appropriate to interface with key strings.
+ * <p>
+ * Additionally, a data tree maintains an order which is reflected in iteration operations. If created immutably, this
+ * order is fixed at creation. If built mutably, the order will be the insertion order of the elements.
+ * <p>
+ * <b>Keys and values</b>
  * <p>
  * Keys are represented as <code>Object</code> and must be one of the canonical types (excl. lists or nested trees).
  * Values are wrapped by {@link DataEntry}, but are also <code>Object</code> and must be one of the canonical types.
@@ -45,13 +53,13 @@ import java.util.function.BiConsumer;
  * <li>Lists of the above types. The List implementation must be immutable.
  * </ul>
  * Recall that keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime, and they can be
- * checked using {@link #validateKey(Object)} and {@link #validateValue(Object)}.
+ * checked using {@link #validateKey(Object)} and {@link DataEntry#validateValue(Object)}.
  * <p>
- * Mutability of this class is <b>not defined</b>. Please use {@link DataTree.Immut} or {@link DataTree.Mut} if you need
- * guaranteed mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
+ * Mutability of this class is <b>not defined</b>. Please use {@link DataTree.Mut} or {@link DataTree.Immut} if you need
+ * mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
  *
  */
-public abstract class DataTree {
+public abstract class DataTree implements DataStreamable {
 
     @NonNull LinkedHashMap<Object, DataEntry> data;
 
@@ -74,16 +82,21 @@ public abstract class DataTree {
     }
 
     /**
-     * Gets all the keys used in this tree
+     * Gets all the keys used in this tree.
+     * <p>
+     * The returned collection is a mutable copy; it is unaffected by the mutability of this {@code DataTree}, and
+     * concurrent updates to this tree will not affect it either.
      *
-     * @return the key set view, which may or may not be modifiable
+     * @return the key set, a mutable copy
      */
-    public @NonNull Collection<@NonNull Object> keySetView() {
-        return Collections.unmodifiableSet(data.keySet());
+    public @NonNull Collection<@NonNull Object> getKeys() {
+        return new LinkedHashSet<>(data.keySet());
     }
 
     /**
-     * Runs an action for each key/value pair
+     * Runs an action for each key/value pair.
+     * <p>
+     * Iteration maintains the order with which this data tree was created.
      *
      * @param action the action
      */
@@ -112,25 +125,6 @@ public abstract class DataTree {
      * @return an immutable data tree
      */
     public abstract DataTree.@NonNull Immut intoImmut();
-
-    /**
-     * Checks whether the given object is valid as a value in the data tree. Values must be one of primitive,
-     * <code>String</code>, <code>List</code> with valid elements, or <code>DataTree</code>. Null values are not valid.
-     *
-     * @param value the value
-     * @return true if a valid canonical value, false if not
-     */
-    public static boolean validateValue(@Nullable Object value) {
-        if (value instanceof List) {
-            for (Object elem : (List<?>) value) {
-                if (!validateValue(elem)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return value instanceof DataTree || validateKey(value);
-    }
 
     /**
      * Checks whether the given object is valid as a key in the data tree. Keys must be either primitive or
@@ -185,7 +179,7 @@ public abstract class DataTree {
         @Override
         public @NonNull Mut intoMut() {
             Mut mutCopy = new Mut(data);
-            mutCopy.state = Mut.COPY_BEFORE_MUTATE;
+            mutCopy.dataFrozen = true;
             return mutCopy;
         }
 
@@ -201,11 +195,8 @@ public abstract class DataTree {
      */
     public static final class Mut extends DataTree {
 
-        private int state;
-
-        private static final int REGULAR = 0;
-        private static final int COPY_BEFORE_MUTATE = 1;
-        private static final int POISONED = 2;
+        // If the data in this Mut is shared with an Immut, it should not be modified
+        private boolean dataFrozen;
 
         /**
          * Creates
@@ -225,19 +216,15 @@ public abstract class DataTree {
 
         @Override
         public @NonNull Immut intoImmut() {
-            // SAFETY
-            // Setting state = POISONED prevents future modifications
-            state = POISONED;
+            // Setting dataFrozen prevents future modifications
+            dataFrozen = true;
             return new Immut(data);
         }
 
         private void ensureMutable() {
-            if (state == POISONED) {
-                throw new IllegalStateException("poisoned from #intoImmut");
-            }
-            if (state == COPY_BEFORE_MUTATE) {
+            if (dataFrozen) {
                 data = new LinkedHashMap<>(data);
-                state = REGULAR;
+                dataFrozen = false;
             }
         }
 
@@ -282,4 +269,29 @@ public abstract class DataTree {
             data.clear();
         }
     }
+
+    // Implementation of self as DataStreamable
+
+    /**
+     * Returns this data tree, itself
+     *
+     * @return this object
+     */
+    @Override
+    public @NonNull DataTree getAsTree() {
+        return this;
+    }
+
+    /**
+     * Gets the data in this tree as a {@link Stream}.
+     * <p>
+     * The stream is ordered according to the insertion order of this tree.
+     *
+     * @return a stream of keys and data entries
+     */
+    @Override
+    public @NonNull Stream<Map.@NonNull Entry<@NonNull Object, @NonNull DataEntry>> getAsStream() {
+        return data.entrySet().stream();
+    }
+
 }

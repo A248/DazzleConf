@@ -19,11 +19,13 @@
 
 package space.arim.dazzleconf2;
 
+import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.MethodId;
 import space.arim.dazzleconf2.reflect.MethodMirror;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.List;
@@ -63,7 +65,7 @@ final class LiaisonCache {
     static final class HandleType<V> {
 
         private final TypeToken<V> typeToken;
-        private final TypeLiaison.Agent<V> agent;
+        final TypeLiaison.Agent<V> agent;
         final SerializeDeserialize<V> serializer;
 
         private HandleType(TypeToken<V> typeToken, TypeLiaison.Agent<V> agent, SerializeDeserialize<V> serializer) {
@@ -73,9 +75,9 @@ final class LiaisonCache {
         }
 
         private DefaultValues<V> makeDefaultValues(MethodId methodId, boolean optional,
-                                                   AnnotationContext methodAnnotations,
+                                                   TypeLiaison.DefaultInit defaultInit,
                                                    MethodMirror.Invoker defaultsInvoker) {
-            DefaultValues<V> defaultValues = agent.loadDefaultValues(() -> methodAnnotations);
+            DefaultValues<V> defaultValues = agent.loadDefaultValues(defaultInit);
             if (defaultValues != null) {
                 return defaultValues;
             }
@@ -97,22 +99,28 @@ final class LiaisonCache {
             // Unpack Optional as needed
             if (optional) {
                 Optional<?> optDefaultVal = (Optional<?>) defaultVal;
-                if (optDefaultVal.isEmpty()) {
+                if (optDefaultVal.isPresent()) {
+                    defaultVal = optDefaultVal.get();
+                } else {
                     // That's okay, since optional entries don't need defaults
                     return null;
                 }
-                defaultVal = optDefaultVal.get();
             }
             return DefaultValues.simple(typeToken.cast(defaultVal));
         }
 
         TypeSkeleton.MethodNode<V> makeMethodNode(MethodId methodId, boolean optional,
-                                               AnnotationContext methodAnnotations,
-                                               MethodMirror.Invoker defaultsInvoker) {
+                                                  AnnotatedElement methodAnnotations,
+                                                  MethodMirror.Invoker defaultsInvoker) {
             DefaultValues<V> defaultValues = makeDefaultValues(
-                    methodId, optional, methodAnnotations, defaultsInvoker
+                    methodId, optional, () -> methodAnnotations, defaultsInvoker
             );
-            Comments.Container comments = methodAnnotations.getAnnotation(Comments.Container.class);
+            CommentData comments;
+            // Try the method itself first, then look at the return type's class declaration
+            comments = CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
+            if (comments.isEmpty()) {
+                comments = CommentData.buildFrom(methodId.returnType().rawType().getAnnotationsByType(Comments.class));
+            }
             return new TypeSkeleton.MethodNode<>(comments, optional, methodId, defaultValues, serializer);
         }
     }

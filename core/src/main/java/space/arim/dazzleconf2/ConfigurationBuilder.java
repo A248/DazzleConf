@@ -64,9 +64,8 @@ public final class ConfigurationBuilder<C> {
     // Settings
     private @Nullable Locale locale;
     private final List<TypeLiaison> typeLiaisons = new ArrayList<>();
-    private KeyMapper keyMapper;
-    private MethodMirror methodMirror = new DefaultMethodMirror();
-    private Instantiator instantiator = new DefaultInstantiator();
+    private @Nullable KeyMapper keyMapper;
+    private @Nullable Instantiator instantiator;
     private final List<Migration<?, C>> migrations = new ArrayList<>();
 
     /**
@@ -89,7 +88,7 @@ public final class ConfigurationBuilder<C> {
      * @param locale the locale, nonnull
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> locale(Locale locale) {
+    public @This @NonNull ConfigurationBuilder<C> locale(@NonNull Locale locale) {
         this.locale = Objects.requireNonNull(locale, "locale");
         return this;
     }
@@ -103,7 +102,7 @@ public final class ConfigurationBuilder<C> {
      * @param typeLiaisons the type liaisons
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> addTypeLiaisons(TypeLiaison...typeLiaisons) {
+    public @This @NonNull ConfigurationBuilder<C> addTypeLiaisons(@NonNull TypeLiaison @NonNull ...typeLiaisons) {
         this.typeLiaisons.addAll(Arrays.asList(typeLiaisons));
         return this;
     }
@@ -117,7 +116,7 @@ public final class ConfigurationBuilder<C> {
      * @param typeLiaisons the type liaisons
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> addTypeLiaisons(List<TypeLiaison> typeLiaisons) {
+    public @This @NonNull ConfigurationBuilder<C> addTypeLiaisons(@NonNull List<@NonNull TypeLiaison> typeLiaisons) {
         this.typeLiaisons.addAll(typeLiaisons);
         return this;
     }
@@ -132,7 +131,10 @@ public final class ConfigurationBuilder<C> {
      */
     public @This @NonNull ConfigurationBuilder<C> addPrimitiveTypeLiaisons() {
         // TODO - Impl
-        return addTypeLiaisons(new StringLiaison(), new IntegerLiaison(), new ShortLiaison());
+        return addTypeLiaisons(
+                new StringLiaison(), new CharacterLiaison(), new DoubleLiaison(), new FloatLiaison(),
+                new LongLiaison(), new IntegerLiaison(), new ShortLiaison(), new ByteLiaison()
+        );
     }
 
     /**
@@ -141,17 +143,30 @@ public final class ConfigurationBuilder<C> {
      * The default type liaisons are capable of serializing primitive types, <code>String</code>s, and enum types,
      * plus lists of other serializable types, and configuration subsections.
      * <p>
+     * <b>Notable annotations</b>
+     * <p>
      * The default liaisons support the following annotations to modify their behavior:<ul>
-     *     <li><code>IntegerLiaison</code>: <code>@IntegerRange</code></li>
+     *     <li><code>StringLiaison</code>: <code>@StringDefault</code></li>
+     *     <li><code>LongLiaison</code>: <code>@LongRange</code> and <code>@LongDefault</code></li>
+     *     <li><code>IntegerLiaison</code>: <code>@IntegerRange</code> and <code>@IntegerDefault</code></li>
+     *     <li><code>ShortLiaison</code>: <code>@ShortRange</code> and <code>@ShortDefault</code></li>
+     *     <li><code>ByteLiaison</code>: <code>@ByteRange</code> and <code>@ByteDefault</code></li>
+     *     <li><code>DoubleLiaison</code>: <code>@DoubleRange</code> and <code>@DoubleDefault</code></li>
+     *     <li><code>FloatLiaison</code>: <code>@FloatRange</code> and <code>@FloatDefault</code></li>
      * </ul>
-     *
+     * <p>The "XRange" annotations for numeric types provide bounds checking for a specified range.
+     * <p>The "XDefault" annotations provide default values. There is mostly no difference between using default methods
+     * and the default value-providing annotations, but the annotations provide additional capabilities: like specifying
+     * an "if missing" value or being passed to dependent liaisons.
+     * <p>
+     * The annotations can also be depended upon by other liaisons, not just the default liaisons.
      *
      * @return this builder
      */
     public @This @NonNull ConfigurationBuilder<C> addDefaultTypeLiaisons() {
         addPrimitiveTypeLiaisons();
         // TODO - Impl & Javadoc
-        return addTypeLiaisons(new ListLiaison(), new SubSectionLiaison());
+        return addTypeLiaisons(new CollectionLiaison(), new SubSectionLiaison());
     }
 
     /**
@@ -166,13 +181,14 @@ public final class ConfigurationBuilder<C> {
      * This method is closest to version 1's method of handling custom types. It is slightly more limited, as it cannot
      * allow you to depend on other serializers in the same way.
      *
-     * @param typeToken the type to handle
+     * @param typeToken the type to handle. Annotations will be matched <i>exactly</i>, meaning that the provided
+     *                  serializer will <i>NOT</i> apply to usage of the type with different annotations
      * @param serializeDeserialize the serialization for that type
      * @return this builder
      * @param <V> the type being handled by the serializer
      */
-    public <V> @This @NonNull ConfigurationBuilder<C> addSimpleSerializer(TypeToken<V> typeToken,
-                                                                          SerializeDeserialize<V> serializeDeserialize) {
+    public <V> @This @NonNull ConfigurationBuilder<C> addSimpleSerializer(@NonNull TypeToken<V> typeToken,
+                                                                          @NonNull SerializeDeserialize<V> serializeDeserialize) {
         return addTypeLiaisons(new SimpleTypeLiaison<>(typeToken, serializeDeserialize));
     }
 
@@ -192,29 +208,18 @@ public final class ConfigurationBuilder<C> {
      * @param keyMapper the key mapper, or null to clear
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> keyMapper(KeyMapper keyMapper) {
+    public @This @NonNull ConfigurationBuilder<C> keyMapper(@Nullable KeyMapper keyMapper) {
         this.keyMapper = keyMapper;
-        return this;
-    }
-
-    /**
-     * Sets the method mirror
-     *
-     * @param methodMirror the method mirror, nonnull
-     * @return this builder
-     */
-    public @This @NonNull ConfigurationBuilder<C> methodMirror(MethodMirror methodMirror) {
-        this.methodMirror = Objects.requireNonNull(methodMirror);
         return this;
     }
 
     /**
      * Sets the instantiator
      *
-     * @param instantiator the instantiator, nonnull
+     * @param instantiator the instantiator
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> instantiator(Instantiator instantiator) {
+    public @This @NonNull ConfigurationBuilder<C> instantiator(@NonNull Instantiator instantiator) {
         this.instantiator = Objects.requireNonNull(instantiator);
         return this;
     }
@@ -228,7 +233,7 @@ public final class ConfigurationBuilder<C> {
      * @param migration the migration
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> addMigration(Migration<?, C> migration) {
+    public @This @NonNull ConfigurationBuilder<C> addMigration(@NonNull Migration<?, C> migration) {
         this.migrations.add(Objects.requireNonNull(migration));
         return this;
     }
@@ -242,7 +247,7 @@ public final class ConfigurationBuilder<C> {
      * @param migrations the migrations
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> addMigrations(List<Migration<?, C>> migrations) {
+    public @This @NonNull ConfigurationBuilder<C> addMigrations(@NonNull List<@NonNull Migration<?, C>> migrations) {
         this.migrations.addAll(migrations);
         return this;
     }
@@ -261,14 +266,16 @@ public final class ConfigurationBuilder<C> {
         // Harden values
         Locale locale = (this.locale == null) ? Locale.getDefault() : this.locale;
         List<TypeLiaison> typeLiaisons = ImmutableCollections.listOf(this.typeLiaisons);
+        Instantiator instantiator = (this.instantiator == null) ?
+                new DefaultInstantiator(configType.getRawType().getClassLoader()) : this.instantiator;
         List<Migration<?, C>> migrations = ImmutableCollections.listOf(this.migrations);
 
         // Scan and build definition
         ConfigurationDefinition<C> definition = new DefinitionScan(
-                LibraryLang.loadLang(locale), new LiaisonCache(typeLiaisons), methodMirror, instantiator
+                LibraryLang.loadLang(locale), new LiaisonCache(typeLiaisons), instantiator
         ).read(configType);
 
         // Yield final
-        return new BuiltConfig<>(definition, locale, typeLiaisons, keyMapper, instantiator, migrations);
+        return new BuiltConfig<>(definition, locale, typeLiaisons, keyMapper, migrations);
     }
 }

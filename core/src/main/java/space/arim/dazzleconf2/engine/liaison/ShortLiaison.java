@@ -54,12 +54,29 @@ public final class ShortLiaison extends BaseNumberLiaison<Short, ShortDefault, S
     }
 
     @Override
+    @NonNull Short ifMissing(@NonNull ShortDefault defaultAnnotation) {
+        return defaultAnnotation.ifMissing();
+    }
+
+    @Override
     @Nullable Short castNumbers(@NonNull Object input) {
         if (input instanceof Short) {
-            return (short) input;
+            return (Short) input;
         }
         if (input instanceof Byte) {
             return (short) ((byte) input);
+        }
+        if (input instanceof Integer) {
+            int intValue = (Integer) input;
+            if ((short) intValue == intValue) {
+                return (short) intValue;
+            }
+        }
+        if (input instanceof Long) {
+            long longValue = (Long) input;
+            if ((short) longValue == longValue) {
+                return (short) longValue;
+            }
         }
         return null;
     }

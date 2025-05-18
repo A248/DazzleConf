@@ -48,14 +48,13 @@ public final class Migration<C_OLD, C_NEW> {
     }
 
     /**
-     * Tries to migrate. The given backend is the one used for the main configuration, and it may or may not be
-     * necessary to use in the implementation.
+     * Tries to migrate.
      *
-     * @param mainBackend the backend for the main, up-to-date configuration
+     * @param migrateContext the migration context
      * @return a load result that yields the newly transitioned configuration
      */
-    public @NonNull LoadResult<@NonNull C_NEW> tryMigrate(@NonNull Backend mainBackend) {
-        return migrateSource.load(mainBackend).map(transition::migrateFrom);
+    public @NonNull LoadResult<@NonNull C_NEW> tryMigrate(@NonNull MigrateContext migrateContext) {
+        return migrateSource.load(migrateContext).map(transition::migrateFrom);
     }
 
     /**

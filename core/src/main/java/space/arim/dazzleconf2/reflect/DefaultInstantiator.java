@@ -24,10 +24,7 @@ import space.arim.dazzleconf2.ReloadShell;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Default implementation of {@link Instantiator} using standard proxy reflection
@@ -35,13 +32,29 @@ import java.util.Set;
  */
 public final class DefaultInstantiator implements Instantiator {
 
+    private final ClassLoader classLoader;
+
     /**
-     * Creates
+     * Creates from a classloader.
+     * <p>
+     * The classloader provided is where generated proxies will be located.
      */
-    public DefaultInstantiator() {}
+    public DefaultInstantiator(@NonNull ClassLoader classLoader) {
+        this.classLoader = Objects.requireNonNull(classLoader);
+    }
 
     @Override
-    public @NonNull Object generate(@NonNull ClassLoader classLoader, @NonNull Class<?> @NonNull [] targets,
+    public MethodMirror getMethodMirror() {
+        return new DefaultMethodMirror();
+    }
+
+    @Override
+    public boolean hasProduced(@NonNull Object instance) {
+        return Proxy.isProxyClass(instance.getClass()) && Proxy.getInvocationHandler(instance) instanceof ProxyHandler;
+    }
+
+    @Override
+    public @NonNull Object generate(@NonNull Class<?> @NonNull [] targets,
                                     @NonNull MethodYield methodYield) {
 
         Map<String, Object> fastValues = new HashMap<>(20, 0.80f);
@@ -63,7 +76,7 @@ public final class DefaultInstantiator implements Instantiator {
                 }
             }
         }
-        ProxyHandlerToValues proyHandler = new ProxyHandlerToValues(fastValues);
+        ProxyHandlerToValues proyHandler = new ProxyHandlerToValues(targets, fastValues);
         Object proxy = Proxy.newProxyInstance(classLoader, targets, proyHandler);
         if (defaultMethods != null) {
             proyHandler.initDefaultMethods(proxy, defaultMethods);
@@ -72,20 +85,17 @@ public final class DefaultInstantiator implements Instantiator {
     }
 
     @Override
-    public <I> @NonNull ReloadShell<I> generateShell(@NonNull ClassLoader classLoader, @NonNull Class<I> iface,
-                                                     @NonNull Set<@NonNull MethodId> methods) {
+    public <I> @NonNull ReloadShell<I> generateShell(@NonNull Class<I> iface) {
         ProxyHandlerToDelegate<I> proxyHandler = new ProxyHandlerToDelegate<>();
-        @SuppressWarnings("unchecked")
-        I shell = (I) Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
+        I shell = iface.cast(Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler));
         return proxyHandler.new AsReloadShell(shell);
     }
 
     @Override
-    public @NonNull Object generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<?> iface) {
-        ProxyHandlerToEmpty proxyHandler = new ProxyHandlerToEmpty();
-        Object proxy = Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
+    public <I> @NonNull I generateEmpty(@NonNull Class<I> iface) {
+        ProxyHandlerToEmpty<I> proxyHandler = new ProxyHandlerToEmpty<>(iface);
+        I proxy = iface.cast(Proxy.newProxyInstance(classLoader, new Class[]{iface}, proxyHandler));
         proxyHandler.initProxy(proxy);
         return proxy;
     }
-
 }

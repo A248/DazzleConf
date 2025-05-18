@@ -19,27 +19,57 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.internals.ImmutableCollections;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * Bank of values yielded when calling an instantiated proxy
+ * Bank of values yielded when calling an instantiated proxy.
+ * <p>
+ * This class is mutable. It is designed to be passed from its producer to its consumer.
  */
 public final class MethodYield {
 
-    private final Map<Class<?>, Map<MethodId, Object>> backing;
+    private final @NonNull Map<Class<?>, Map<MethodId, Object>> backing;
 
-    MethodYield(Map<Class<?>, Map<MethodId, Object>> backing) {
-        Map<Class<?>, Map<MethodId, Object>> copied = new HashMap<>(
-                (int) (backing.size() / 0.98f), 0.999f
-        );
-        for (Map.Entry<Class<?>, Map<MethodId, Object>> entry : backing.entrySet()) {
-            copied.put(entry.getKey(), ImmutableCollections.mapOf(entry.getValue()));
-        }
-        this.backing = ImmutableCollections.mapOf(copied);
+    /**
+     * Creates an empty yield.
+     * <p>
+     * Values can be added by calling {@link #addValue(Class, MethodId, Object)}.
+     */
+    public MethodYield() {
+        this.backing = new HashMap<>();
+    }
+
+    /**
+     * Creates a method yield that is identical to the provided instance.
+     * <p>
+     * Mutating this {@code MethodYield}, such as by adding or clearing values, will not affect the argument.
+     *
+     * @param copyFrom the method yield from which to copy
+     */
+    public MethodYield(@NonNull MethodYield copyFrom) {
+        this.backing = new HashMap<>(copyFrom.backing);
+    }
+
+    /**
+     * Modifies this builder, adding a yielded value as given
+     *
+     * @param implementable the interface being implemented
+     * @param method        a method within that interface
+     * @param value         the value to supply
+     */
+    public void addValue(@NonNull Class<?> implementable, @NonNull MethodId method, @NonNull Object value) {
+        backing.computeIfAbsent(implementable, (k) -> new HashMap<>()).put(method, value);
+    }
+
+    /**
+     * Clears all added values and starts over again
+     */
+    public void clearValues() {
+        backing.clear();
     }
 
     /**
@@ -48,41 +78,25 @@ public final class MethodYield {
      * @param implementable the interface being implemented
      * @return the values for method calls on that interface's methods, immutable
      */
-    public Map<MethodId, Object> valuesFor(Class<?> implementable) {
+    public Map<@NonNull MethodId, @NonNull Object> valuesFor(@NonNull Class<?> implementable) {
         return backing.getOrDefault(implementable, ImmutableCollections.emptyMap());
     }
 
-    /**
-     * Builder for method yield
-     */
-    public static final class Builder {
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof MethodYield)) return false;
 
-        private final Map<Class<?>, Map<MethodId, Object>> backing = new HashMap<>();
+        MethodYield that = (MethodYield) o;
+        return backing.equals(that.backing);
+    }
 
-        /**
-         * Modifies this builder, adding a yielded value as given
-         *
-         * @param implementable the interface being implemented
-         * @param method        a method within that interface
-         * @param value         the value to supply
-         */
-        public void addValue(Class<?> implementable, MethodId method, Object value) {
-            backing.computeIfAbsent(implementable, (k) -> new HashMap<>()).put(method, value);
-        }
+    @Override
+    public int hashCode() {
+        return backing.hashCode();
+    }
 
-        /**
-         * Clears all added values and starts over again
-         */
-        public void clearValues() {
-            backing.clear();
-        }
-
-        /**
-         * Finishes construction
-         * @return the built method yield
-         */
-        public MethodYield build() {
-            return new MethodYield(backing);
-        }
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + '{' + backing + '}';
     }
 }

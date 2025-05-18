@@ -20,7 +20,9 @@
 package space.arim.dazzleconf2.reflect;
 
 /**
- * A marker value used for {@link MethodYield} that instructs the {@link Instantiator} to call the default method
+ * A marker value used for {@link MethodYield} that instructs the {@link Instantiator} to call the default method.
+ * <p>
+ * Equality on this object is not specified. Usage should test for it using <code>instanceof</code> checks.
  *
  */
 public final class InvokeDefaultFunction {
@@ -29,4 +31,14 @@ public final class InvokeDefaultFunction {
      * Creates
      */
     public InvokeDefaultFunction() {}
+
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof InvokeDefaultFunction;
+    }
+
+    @Override
+    public int hashCode() {
+        return InvokeDefaultFunction.class.hashCode();
+    }
 }

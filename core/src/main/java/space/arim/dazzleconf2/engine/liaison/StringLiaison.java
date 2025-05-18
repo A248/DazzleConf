@@ -27,12 +27,12 @@ import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 /**
- * Liaison for strings
+ * Liaison for strings. Handles the unannotated {@code String}
  *
  */
 public final class StringLiaison implements TypeLiaison {
 
-    // Come on, seriously. Is anyone going to troll us by saying they want to us this string for real?
+    // Come on, seriously. Is anyone going to troll us by saying they want to use this string for real?
     static final String IF_MISSING_STAND_IN = "ausutfyguhibgvftrdfyguhijnbhvgfxserrftgyuhinbgvfcrxszeretfygubna";
 
     /**
@@ -43,35 +43,33 @@ public final class StringLiaison implements TypeLiaison {
     @Override
     @SideEffectFree
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
-        if (typeToken.getRawType().equals(String.class)) {
-            @SuppressWarnings("unchecked")
-            Agent<V> casted = (Agent<V>) new StringAgent();
-            return casted;
-        }
-        return null;
+        return Agent.matchOnToken(typeToken, String.class, StringAgent::new);
     }
 
     private static final class StringAgent implements Agent<String> {
         @Override
         public @Nullable DefaultValues<String> loadDefaultValues(@NonNull DefaultInit defaultInit) {
 
-            DefaultString defaultString = defaultInit.methodAnnotations().getAnnotation(DefaultString.class);
-            if (defaultString != null) {
-                String defaultVal = defaultString.value();
-                String ifMissingSrc = defaultString.ifMissing();
-                String ifMissing = (ifMissingSrc.equals(IF_MISSING_STAND_IN)) ? defaultVal : ifMissingSrc;
+            StringDefault stringDefault = defaultInit.methodAnnotations().getAnnotation(StringDefault.class);
+            if (stringDefault != null) {
+                String defaultValue = stringDefault.value();
+                String ifMissing = stringDefault.ifMissing();
+                // Micro-optimize: make the DefaultValues hold 1 field only if ifMissing is not set
+                if (ifMissing.equals(IF_MISSING_STAND_IN)) {
+                    return DefaultValues.simple(defaultValue);
+                } else {
+                    return new DefaultValues<String>() {
+                        @Override
+                        public @NonNull String defaultValue() {
+                            return defaultValue;
+                        }
 
-                return new DefaultValues<String>() {
-                    @Override
-                    public @NonNull String defaultValue() {
-                        return defaultVal;
-                    }
-
-                    @Override
-                    public @NonNull String ifMissing() {
-                        return ifMissing;
-                    }
-                };
+                        @Override
+                        public @NonNull String ifMissing() {
+                            return ifMissing;
+                        }
+                    };
+                }
             }
             return null;
         }
@@ -81,12 +79,6 @@ public final class StringLiaison implements TypeLiaison {
             return new SerializeDeserialize<String>() {
                 @Override
                 public @NonNull LoadResult<@NonNull String> deserialize(@NonNull DeserializeInput deser) {
-                    return deser.requireString();
-                }
-
-                @Override
-                public @NonNull LoadResult<@NonNull String> deserializeUpdate(@NonNull DeserializeInput deser,
-                                                                              @NonNull SerializeOutput updateTo) {
                     return deser.requireString();
                 }
 

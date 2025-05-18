@@ -22,30 +22,36 @@ package space.arim.dazzleconf2.engine.liaison;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE_USE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Specifies the default value as string.
+ * Controls the range of a double.
  * <p>
- * While primarily used by {@link StringLiaison}, this annotation can theoretically be used by any type liaison.
+ * This annotation is made to be used with {@code double} or {@code Double} and not other numeric types. It is only
+ * supported by the double liaison.
+ *
  */
 @Retention(RUNTIME)
-@Target(METHOD)
-public @interface DefaultString {
+@Target(TYPE_USE)
+public @interface DoubleRange {
 
     /**
-     * The string value to provide as a default
+     * The minimum value.
+     * <p>
+     * If set to {@code Double.NEGATIVE_INFINITY} (the default), the bounds check is disabled.
      *
-     * @return the string value
+     * @return the min value, inclusive
      */
-    String value();
+    double min() default Double.NEGATIVE_INFINITY;
 
     /**
-     * The string value to provide as a missing value. If unset, this falls back to {@link #value()}
+     * The maximum value.
+     * <p>
+     * If set to {@code Double.POSITIVE_INFINITY} (the default), the bounds check is disabled.
      *
-     * @return the value to provide when missing
+     * @return the max value, inclusive
      */
-    String ifMissing() default StringLiaison.IF_MISSING_STAND_IN;
+    double max() default Double.POSITIVE_INFINITY;
 
 }

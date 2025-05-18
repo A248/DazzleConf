@@ -22,17 +22,35 @@ package space.arim.dazzleconf.backend;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
+import space.arim.dazzleconf.ImmutabilityGuard;
+import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DataTreeTest {
 
+    static class ImmutGuard extends ImmutabilityGuard<DataTree.Immut, Map<String, Object>> {
+
+        protected ImmutGuard(DataTree.Immut value, DataTree.Immut...extra) {
+            super(value, extra);
+        }
+
+        @Override
+        protected Map<String, Object> takeSnapshot(DataTree.Immut value) {
+            return value.getAsStream()
+                    .map(entry -> Map.entry(entry.getKey().toString(), entry.getValue()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
+    };
     @Test
     public void populateEntries() {
         // Sample values
@@ -75,7 +93,7 @@ public class DataTreeTest {
         assertEquals(orderedKeys, List.of("hello", "also", "zed"));
         assertEquals(orderedValues, List.of("goodbye", "yes", true));
 
-        assertEquals(orderedKeys, new ArrayList<>(dataTreeMut.keySetView()));
+        assertEquals(orderedKeys, new ArrayList<>(dataTreeMut.getKeys()));
     }
 
     @Test
@@ -99,16 +117,158 @@ public class DataTreeTest {
     }
 
     @Test
-    public void equality() throws ClassNotFoundException {
+    public void intoMutOnMut() {
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        assertSame(dataTreeMut, dataTreeMut.intoMut());
+    }
+
+    @Test
+    public void intoImmut() {
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.set("also", new DataEntry("yes"));
+        dataTreeMut.set("zed", new DataEntry(true));
+        DataTree.Immut dataTreeImmut = dataTreeMut.intoImmut();
+
+        assertEquals((DataTree) dataTreeImmut, dataTreeMut);
+        assertSame(dataTreeImmut, dataTreeImmut.intoImmut());
+    }
+
+    @Test
+    public void intoImmutMutRoundTrip() {
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.set("also", new DataEntry("yes"));
+        dataTreeMut.set("zed", new DataEntry(true));
+        assertEquals(dataTreeMut, dataTreeMut.intoImmut().intoMut());
+
+    }
+
+    @Test
+    public void intoMutOnImmutCannotMutateImmut() {
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+
+        DataTree.Immut snapshot = dataTreeMut.intoImmut();
+        try (ImmutGuard guard = new ImmutGuard(snapshot)) {
+
+            DataTree.Mut backToMut = snapshot.intoMut();
+            backToMut.set("new key", new DataEntry("new value"));
+            guard.check();
+            assertNotEquals(backToMut, snapshot);
+
+            DataTree.Mut backToMut2 = snapshot.intoMut();
+            backToMut2.set("hello", null);
+            guard.check();
+            assertNotEquals(backToMut2, snapshot);
+
+            DataTree.Mut backToMut3 = snapshot.intoMut();
+            backToMut3.remove("hello");
+            guard.check();
+            assertNotEquals(backToMut3, snapshot);
+
+            DataTree.Mut backToMut4 = snapshot.intoMut();
+            backToMut4.clear();
+            assertNotEquals(backToMut4, snapshot);
+
+            assertEquals(backToMut2, backToMut3);
+            assertEquals(backToMut3, backToMut4);
+        }
+    }
+
+    @Test
+    public void intoImmutOnMutCannotBeMutatedBySet() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
         dataTreeMut.set("hello", new DataEntry("goodbye"));
         dataTreeMut.set("also", new DataEntry("yes"));
         dataTreeMut.set("zed", new DataEntry(true));
 
-        assertEquals((DataTree) dataTreeMut, dataTreeMut.intoImmut());
-        assertEquals(dataTreeMut, dataTreeMut.intoImmut().intoMut());
+        DataTree.Immut snapshot = dataTreeMut.intoImmut();
+        try (ImmutGuard ignored = new ImmutGuard(snapshot)) {
+            dataTreeMut.set("new key", new DataEntry("new value"));
+        }
+    }
 
+
+    @Test
+    public void intoImmutOnMutCannotBeMutatedBySetNull() {
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.set("also", new DataEntry("yes"));
+        dataTreeMut.set("zed", new DataEntry(true));
+
+        DataTree.Immut snapshot = dataTreeMut.intoImmut();
+        try (ImmutGuard ignored = new ImmutGuard(snapshot)) {
+            dataTreeMut.set("hello", null);
+        }
+    }
+
+
+    @Test
+    public void intoImmutOnMutCannotBeMutatedByRemove() {
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.set("also", new DataEntry("yes"));
+        dataTreeMut.set("zed", new DataEntry(true));
+
+        DataTree.Immut snapshot = dataTreeMut.intoImmut();
+        try (ImmutGuard ignored = new ImmutGuard(snapshot)) {
+            dataTreeMut.remove("hello");
+        }
+    }
+
+
+    @Test
+    public void intoImmutOnMutCannotBeMutatedByClear() {
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.set("also", new DataEntry("yes"));
+        dataTreeMut.set("zed", new DataEntry(true));
+
+        DataTree.Immut snapshot = dataTreeMut.intoImmut();
+        try (ImmutGuard ignored = new ImmutGuard(snapshot)) {
+            dataTreeMut.clear();
+        }
+    }
+
+    @Test
+    public void equality() throws ClassNotFoundException {
         Class.forName(NonNull.class.getName());
-        EqualsVerifier.forClass(DataTree.class).verify();
+        EqualsVerifier.simple().forClass(DataTree.class).verify();
+    }
+
+    @Test
+    public void toStringTest() {
+        assertTrue(new DataTree.Mut().toString().contains("Mut"));
+        assertTrue(new DataTree.Immut().toString().contains("Immut"));
+    }
+
+    // DataStream implementation
+
+    @Test
+    public void getAsTree() {
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        assertSame(dataTreeMut, dataTreeMut.intoMut());
+    }
+
+    @Test
+    public void getAsStream() {
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.set("also", new DataEntry("yes"));
+        dataTreeMut.set("zed", new DataEntry(true));
+        Map<String, Object> expected = Map.of("hello", "goodbye", "also", "yes", "zed", true);
+        Map<String, Object> actual = new HashMap<>();
+        dataTreeMut.getAsStream()
+                .forEach((keyValue) -> {
+                    DataEntry entry = keyValue.getValue();
+                    assertNull(entry.getLineNumber());
+                    assertEquals(CommentData.empty(), entry.getComments());
+                    assertEquals(List.of(), entry.getComments(CommentLocation.INLINE));
+                    actual.put(keyValue.getKey().toString(), entry.getValue());
+                });
+        assertEquals(expected, actual);
     }
 }

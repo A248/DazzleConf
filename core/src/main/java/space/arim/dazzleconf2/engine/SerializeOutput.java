@@ -21,6 +21,7 @@ package space.arim.dazzleconf2.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 
@@ -125,7 +126,7 @@ public interface SerializeOutput {
      * This function should not be used in normal circumstances. It is a low-level means of setting the output
      * object, intended for when the caller has a ready object, or when the caller needs to pass a {@code List}.
      * <p>
-     * The caller guarantees that the passed object is valid according to {@link DataTree#validateValue(Object)}.
+     * The caller guarantees that the passed object is valid according to {@link DataEntry#validateValue(Object)}.
      * If this condition is not met, behavior is <b>not defined</b> and an exception may be thrown at a later point.
      *
      * @param value the object, nonnull
@@ -133,7 +134,7 @@ public interface SerializeOutput {
     void outObjectUnchecked(@NonNull Object value);
 
     /**
-     * Moves the last output out of this object and returns it to the caller.
+     * Gets the last output, clears it in this {@code SerializeOutput}, and returns it to the caller.
      * <p>
      * Any one of the "out" methods on this type will affect the return value of this method. Whichever was called
      * last will be yielded here, or {@code null} if none were called. Because this method also clears the stored
