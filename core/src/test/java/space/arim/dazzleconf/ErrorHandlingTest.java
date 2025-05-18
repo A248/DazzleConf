@@ -52,7 +52,7 @@ public class ErrorHandlingTest {
 
         DataTree.Mut sourceTree = new DataTree.Mut();
         sourceTree.set("hello", new DataEntry("goodbye"));
-        when(backend.readTree()).thenReturn(LoadResult.of(sourceTree));
+        when(backend.read()).thenAnswer((i) -> LoadResult.of((DataStreamable) sourceTree));
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
 
         assertEquals("goodbye", config.configureOrFallback(backend, errorPrint).hello());

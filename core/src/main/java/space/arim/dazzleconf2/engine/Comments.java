@@ -26,15 +26,29 @@ import java.lang.annotation.*;
 import java.util.List;
 
 /**
- * Adds comments to a configuration entry.
+ * Adds comments to a configuration entry or type.
  * <p>
  * This annotation can be repeated multiple times to specify comments in different locations. Please note that
  * writing this annotation multiple times for the same location will simply result in that location being overidden.
- *
+ * <p>
+ * <b>Usage on a method</b>
+ * <p>
+ * This annotation is frequently applied to configuration methods. If applied, the comments will be attached to that
+ * method where it is declared (due to the nature of Java inheritance, comments may need to be re-specified if the
+ * method is overidden).
+ * <p>
+ * <b>Usage on a class</b>
+ * <p>
+ * This annotation can also be applied to a class. If so, the comments will be associated with that class, and they
+ * will be added wherever a configuration method declares that class as its return type. If both the method-level
+ * annotation and class-level annotation exist, the method-level annotation will take precedence.
+ * <p>
+ * Additionally, if the annotated class is a configuration interface itself, the comments specified will become
+ * top-level comments in the configuration definition. Such top-level comments are passed directly to the backend.
  */
 @Repeatable(Comments.Container.class)
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ElementType.METHOD, ElementType.TYPE})
 public @interface Comments {
 
     /**
@@ -47,9 +61,11 @@ public @interface Comments {
     /**
      * Where the comments should be located.
      * <p>
-     * This function will set the comments on the corresponding data entry via
-     * {@link DataEntry#withComments(CommentLocation, List)} using the given location. If no location
-     * is specified, the default is {@link CommentLocation#ABOVE}
+     * This function will add the comments on the corresponding data entry via
+     * {@link DataEntry#withComments(CommentLocation, List)} using the given location, merging with existing comments
+     * at that location as necessary.
+     * <p>
+     * If no location is specified, the default is {@link CommentLocation#ABOVE}.
      *
      * @return where to place the comments
      */

@@ -33,15 +33,12 @@ public interface MigrateSource<C> {
 
     /**
      * Attempts to load this configuration version. If the old version isn't detectable or in use, returns an error.
-     * <p>
-     * The provided backend is the one being used to load the main configuration. However, implementations may or may
-     * not wish to make use of it.
      *
-     * @param mainBackend the backend for the main configuration, which may or may not be needed
+     * @param migrateContext migration context with different details to use if necessary
      * @return the old configuration version, or an error if not found and detected
      * @throws UncheckedIOException upon an I/O failure
      */
-    @NonNull LoadResult<@NonNull C> load(@NonNull Backend mainBackend);
+    @NonNull LoadResult<@NonNull C> load(@NonNull MigrateContext migrateContext);
 
     /**
      * Signals that the migration was fully completed.

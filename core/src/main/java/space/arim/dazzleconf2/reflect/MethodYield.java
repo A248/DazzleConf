@@ -23,7 +23,6 @@ import space.arim.dazzleconf2.internals.ImmutableCollections;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Bank of values yielded when calling an instantiated proxy

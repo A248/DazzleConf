@@ -32,7 +32,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  */
 @Retention(RUNTIME)
 @Target(METHOD)
-public @interface DefaultString {
+public @interface StringDefault {
 
     /**
      * The string value to provide as a default

@@ -26,6 +26,7 @@ import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.util.Locale;
@@ -110,13 +111,13 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     @Override
-    public void flagUpdate(@Nullable KeyPath keyPath) {
+    public void flagUpdate(@Nullable KeyPath keyPath, @NonNull UpdateReason updateReason) {
         if (keyPath == null) {
             keyPath = new KeyPath.Mut();
         }
         KeyPath.Mut keyPathMut = keyPath.intoMut();
         keyPathMut.addFront(source.mappedKey);
-        context.readOptions.loadListener().updatedMissingPath(keyPathMut.intoImmut());
+        context.readOptions.loadListener().updatedPath(keyPathMut.intoImmut(), updateReason);
     }
 
     @Override

@@ -20,10 +20,14 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.TypeToken;
+
+import java.util.Collection;
+import java.util.stream.Stream;
 
 /**
  * Provides the minimal methods for reading and writing configurations from data trees
@@ -38,6 +42,37 @@ public interface ConfigurationDefinition<C> {
      * @return a type token for the config interface
      */
     @NonNull TypeToken<C> getType();
+
+    /**
+     * Gets the top level comments on the configuration interface.
+     * <p>
+     * If none is set, an empty {@code Comments} might be returned.
+     *
+     * @return the top level comments, which may be empty if not set
+     */
+    DataEntry.@NonNull Comments getTopLevelComments();
+
+    /**
+     * Gets the unmapped key set. These are the same as the method names from the configuration interface.
+     * <p>
+     * The returned collection is immutable and ordered according to how this {@code ConfigurationDefinition} orders
+     * its entries. It is unmapped in the sense that a {@code KeyMapper} has not been applied to the elements.
+     *
+     * @return the ordered labels for this definition
+     */
+    @NonNull Collection<@NonNull String> getLabels();
+
+    /**
+     * Gets the unmapped key set, as a stream. These are the same as the method names from the configuration interface.
+     * <p>
+     * The returned stream is ordered according to how this {@code ConfigurationDefinition} orders its entries. It is
+     * unmapped in the sense that a {@code KeyMapper} has not been applied to the elements.
+     * <p>
+     * This function is semantically equivalent to <code>getLabels().stream()</code>.
+     *
+     * @return the ordered labels for this definition
+     */
+    @NonNull Stream<@NonNull String> getLabelsAsStream();
 
     /**
      * Loads the default configuration.
@@ -82,6 +117,8 @@ public interface ConfigurationDefinition<C> {
      * The output data tree does not need to be empty, but there are no guarantees that existing data will not be
      * overidden or cleared. The values of the provided configuration are written to it, and it does not matter
      * how the {@code config} parameter is implemented so long as it returns non-null values.
+     * <p>
+     * Values are guaranteed to be inserted in the provided tree in the same order as {@link #getLabels()} is ordered.
      *
      * @param config the configuration
      * @param dataTree the data tree to write to
@@ -107,8 +144,7 @@ public interface ConfigurationDefinition<C> {
          *
          * @return the key mapper, nonnull
          */
-        @NonNull
-        KeyMapper keyMapper();
+        @NonNull KeyMapper keyMapper();
 
         /**
          * The maximum number of errors to collect before exiting. Must be greater than 0.
@@ -116,7 +152,7 @@ public interface ConfigurationDefinition<C> {
          * If reading the configuration failed, the size of {@link LoadResult#getErrorContexts()} will be at most this
          * number.
          *
-         * @return the maximum number of errors to collect, default 12. Must be greater than 0
+         * @return the maximum number of errors to collect, default 8. Must be greater than 0
          */
         default int maximumErrorCollect() {
             return ReadOpts.DEFAULT_MAX_ERROR_TO_COLLECT;

@@ -44,9 +44,10 @@ public interface DeserializeInput {
     @NonNull Locale getLocale();
 
     /**
-     * The actual object which is being deserialized. This is guaranteed to be one of the canonical values used in
-     * {@link DataTree}, i.e. primitives, <code>String</code>, or <code>DataTree</code>, or an immutable
-     * <code>List</code> of one of those types.
+     * The actual object which is being deserialized.
+     * <p>
+     * This is guaranteed to be one of the canonical values used in {@link DataTree}, i.e. primitives,
+     * <code>String</code>, or <code>DataTree</code>, or an immutable <code>List</code> of one of those types.
      *
      * @return the object
      */
@@ -91,12 +92,18 @@ public interface DeserializeInput {
      * Signals that the data tree could use an update with respect to this object. For example, this might happen if
      * missing options were filled in with default values, and those default values need to be written to the backend.
      * <p>
-     * If the path being updated is only a sub-path of this one, then that sub-path should be provided.
+     * This function does not <b>actually</b> perform any updating. It is merely a notification that this object
+     * (or a part within it) could be updated. For actual in-place updates, make sure to implement
+     * {@link SerializeDeserialize#deserializeUpdate(DeserializeInput, SerializeOutput)}
+     * <p>
+     * If the path being updated is a sub-path of this one, then that sub-path should be provided as a non-null
+     * parameter.
      *
-     * @param subPath the sub path to be updated. May be null or empty if none exists. This path is relative to the
+     * @param subPath the sub path to be updated. May be empty if none exists. This path is relative to the
      *                location of the current object, meaning it should not overlap with {@link #absoluteKeyPath()}
+     * @param updateReason the reason that such path might be updated. May be {@code UpdateReason.OTHER} if unknown
      */
-    void flagUpdate(@Nullable KeyPath subPath);
+    void flagUpdate(@Nullable KeyPath subPath, @NonNull UpdateReason updateReason);
 
     /**
      * Makes a child and prepares it for deserialization. The child value is supposed to be taken "from" this object.

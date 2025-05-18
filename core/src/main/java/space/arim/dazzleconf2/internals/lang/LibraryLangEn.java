@@ -20,9 +20,7 @@
 package space.arim.dazzleconf2.internals.lang;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.DataTree;
 
-import java.util.List;
 import java.util.Locale;
 
 public final class LibraryLangEn implements LibraryLang {

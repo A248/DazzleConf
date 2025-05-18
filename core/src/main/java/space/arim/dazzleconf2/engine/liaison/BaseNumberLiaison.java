@@ -21,6 +21,7 @@ package space.arim.dazzleconf2.engine.liaison;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
@@ -32,6 +33,7 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
         implements TypeLiaison {
 
     @Override
+    @SideEffectFree
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
         Class<?> rawType = typeToken.getRawType();
         if (rawType.equals(primitiveType()) || rawType.equals(boxedType())) {
@@ -99,9 +101,9 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
 
                 public @Nullable TYPE deserIfPossible(@NonNull DeserializeInput deser) {
                     Object object = deser.object();
-                    TYPE fromOtherNumber = castNumbers(object);
-                    if (fromOtherNumber != null) {
-                        return fromOtherNumber;
+                    TYPE castNumbers = castNumbers(object);
+                    if (castNumbers != null) {
+                        return castNumbers;
                     }
                     if (object instanceof String) {
                         String string = (String) object;
@@ -133,6 +135,7 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
                                                                             @NonNull SerializeOutput updateTo) {
                     LoadResult<TYPE> result = deserialize(deser);
                     TYPE loaded;
+                    // Use identity equality to determine if the value changed
                     if (result.isSuccess() && (loaded = result.getOrThrow()) != deser.object()) {
                         serialize(loaded, updateTo);
                     }

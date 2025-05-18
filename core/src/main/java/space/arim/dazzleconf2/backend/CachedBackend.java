@@ -31,7 +31,7 @@ import java.util.Objects;
  * successfully read and caches it so that it can be reused.
  * <p>
  * This wrapper assumes that it, and only it, is the one writing to the delegate backend with
- * {@link Backend#writeTree(DataTree)}. If the monopoly on writing is violated, this class should not be used.
+ * {@link Backend#write(DataEntry.Comments, DataStreamable)}. If the monopoly on writing is violated, this class should not be used.
  */
 public final class CachedBackend implements Backend {
 
@@ -48,11 +48,12 @@ public final class CachedBackend implements Backend {
     }
 
     @Override
-    public @NonNull LoadResult<@Nullable DataTree> readTree() {
+    public @NonNull LoadResult<? extends @Nullable DataStreamable> read() {
         if (currentTree != null) {
             return LoadResult.of(currentTree);
         }
-        LoadResult<DataTree> read = delegate.readTree();
+        LoadResult<DataTree> read = delegate.read()
+                .map((streamable) -> streamable == null ? null : streamable.getAsTree());
         if (read.isSuccess()) {
             currentTree = read.getOrThrow();
         }
@@ -60,11 +61,11 @@ public final class CachedBackend implements Backend {
     }
 
     @Override
-    public void writeTree(@NonNull DataTree tree) {
-        Objects.requireNonNull(tree, "tree");
+    public void write(DataEntry.@Nullable Comments topLevelComments, @NonNull DataStreamable data) {
+        DataTree tree = data.getAsTree();
         // If delegate#writeTree throws an exception, we can't rely on whether that operation completed
         currentTree = null;
-        delegate.writeTree(tree);
+        delegate.write(topLevelComments, tree);
         currentTree = tree;
     }
 

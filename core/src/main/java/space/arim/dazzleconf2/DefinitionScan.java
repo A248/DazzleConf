@@ -20,13 +20,14 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.AccessChecking;
 import space.arim.dazzleconf2.reflect.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
-import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -50,6 +51,7 @@ final class DefinitionScan {
 
         private final KeyPath.Immut pathPrefix;
         private final TypeToken<V> typeToken;
+        private final List<String> labels = new ArrayList<>();
         private final LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons = new LinkedHashMap<>();
 
         // Seen before
@@ -92,12 +94,7 @@ final class DefinitionScan {
                     // libraries which are highly-reflective (seems like a no-brainer to at least read docs)
                     continue;
                 }
-                AnnotationContext methodAnnotations = new AnnotationContext() {
-                    @Override
-                    public <A extends Annotation> A getAnnotation(@NonNull Class<A> annotationClass) {
-                        return currentWalker.getAnnotation(methodId, annotationClass);
-                    }
-                };
+                AnnotatedElement methodAnnotations = currentWalker.getAnnotations(methodId);
                 // Check for @CallableFn
                 if (methodAnnotations.getAnnotation(CallableFn.class) != null) {
                     callableDefaultMethods.add(methodId);
@@ -116,14 +113,14 @@ final class DefinitionScan {
                 } else {
                     typeRequested = methodId.returnType();
                 }
+                String label = methodId.name();
                 LiaisonCache.HandleType<?> handleType;
                 try {
-                    handleType = liaisonCache.requestToHandle(
-                            new TypeToken<>(typeRequested), new AsHandshake(methodId.name())
-                    );
+                    handleType = liaisonCache.requestToHandle(new TypeToken<>(typeRequested), new AsHandshake(label));
                 } catch (DeveloperMistakeException rethrow) {
                     throw new DeveloperMistakeException("Failed to make type agent for " + methodId, rethrow);
                 }
+                labels.add(label);
                 methodNodes.add(handleType.makeMethodNode(
                         methodId, optional, methodAnnotations, defaultsInvoker
                 ));
@@ -149,16 +146,22 @@ final class DefinitionScan {
             } finally {
                 blockTypeLoop.exit(typeToken);
             }
-            return new Definition<>(typeToken, pathPrefix, typeSkeletons, libraryLang, methodMirror, instantiator);
+            // Top-level comments are unaffected by inheritance
+            DataEntry.@NonNull Comments topLevelComments = DataEntry.Comments.buildFrom(
+                    rawType.getAnnotationsByType(Comments.class)
+            );
+            return new Definition<>(
+                    typeToken, pathPrefix, topLevelComments, labels, typeSkeletons, libraryLang, methodMirror, instantiator
+            );
         }
 
         final class AsHandshake implements TypeLiaison.Handshake {
 
-            private final String pathAddition;
+            private final String label;
             private final BlockInfiniteLoop<TypeToken<?>> blockRequestLoop = new BlockInfiniteLoop<>();
 
-            AsHandshake(String pathAddition) {
-                this.pathAddition = pathAddition;
+            AsHandshake(String label) {
+                this.label = label;
             }
 
             @Override
@@ -174,7 +177,7 @@ final class DefinitionScan {
             @Override
             public @NonNull <U> ConfigurationDefinition<U> getConfiguration(@NonNull TypeToken<U> other) {
                 KeyPath.Mut subPath = new KeyPath.Mut(pathPrefix);
-                subPath.addBack(pathAddition);
+                subPath.addBack(label);
                 return new Run<>(subPath, other).read();
             }
         }

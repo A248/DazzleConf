@@ -26,12 +26,16 @@ import space.arim.dazzleconf2.ConfigurationDefinition;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
+import java.lang.reflect.AnnotatedElement;
+import java.util.function.Supplier;
+
 /**
  * Powerful handle for working with types, serializing them, and representing them throughout the library structure
  * and configuration construction process.
  * <p>
  * Type liaisons are first contacted when the configuration is constructed, and paired with configuration entries.
- * This act of pairing includes preparing an agent
+ * This act of pairing includes making the agent, associating the type with its serializer, and quering default values
+ * whenever the type is used as a return value.
  */
 public interface TypeLiaison {
 
@@ -58,7 +62,17 @@ public interface TypeLiaison {
     interface Agent<V> {
 
         /**
-         * Gets default values. These are often extracted in annotations
+         * Gets default values.
+         * <p>
+         * This function is called for each return type of a configuration interface method, on the agent corresponding
+         * to that return type.
+         * <p>
+         * Default values are often extracted from annotations. Method-level annotations are available via the provided
+         * {@link DefaultInit#methodAnnotations()}.
+         * <p>
+         * Note that this function does <b>NOT</b> handle the use of default methods to provide default values. This
+         * function provides default values before a default method can possibly do so; this function returning a
+         * non-null value may conflict with, or override, the result of the default method if one exists.
          *
          * @param defaultInit the init context
          * @return the default values, or null if no defaults are available
@@ -74,6 +88,30 @@ public interface TypeLiaison {
          */
         @NonNull SerializeDeserialize<V> makeSerializer();
 
+        /**
+         * A convenience API for cast-free, generic-safe agent creation, given raw type {@code V}.
+         * <p>
+         * If the provided {@code token} matches the given {@code matchWith} in raw type, then the factory is queried
+         * to return an agent. If the raw type does not match, {@code null} is returned.
+         * <p>
+         * Because Java does not have a good way to match on generic parameters, this function provides a helpful
+         * workaround.
+         *
+         * @param token the token for whom an agent might be provided for; annotations on this token are ignored
+         * @param matchWith the raw type to check if the token matches
+         * @param factory the supplier to make the agent assuming the token matches the given raw type
+         * @return the created agent if successful, or null if the token has a diffferent type
+         * @param <V> the token type
+         * @param <R> the raw type to look for
+         */
+        @SuppressWarnings("unchecked")
+        static <V, R> @Nullable Agent<R> matchOnToken(TypeToken<R> token, Class<V> matchWith, Supplier<Agent<V>> factory) {
+            if (token.getRawType().equals(matchWith)) {
+                // Success!
+                return (Agent<R>) factory.get();
+            }
+            return null;
+        }
     }
 
     /**
@@ -87,7 +125,7 @@ public interface TypeLiaison {
          *
          * @return the method level annotations
          */
-        @NonNull AnnotationContext methodAnnotations();
+        @NonNull AnnotatedElement methodAnnotations();
 
     }
 

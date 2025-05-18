@@ -49,13 +49,13 @@ final class TypeSkeleton {
 
     static final class MethodNode<V> {
 
-        private final Comments.Container comments;
+        final DataEntry.Comments comments;
         final boolean optional;
         final MethodId methodId;
         private final DefaultValues<V> defaultValues; // Can be null if optional, or if defaults unconfigured
         final SerializeDeserialize<V> serializer;
 
-        MethodNode(Comments.Container comments, boolean optional, MethodId methodId, DefaultValues<V> defaultValues,
+        MethodNode(DataEntry.Comments comments, boolean optional, MethodId methodId, DefaultValues<V> defaultValues,
                    SerializeDeserialize<V> serializer) {
             this.comments = comments;
             this.optional = optional;
@@ -119,29 +119,6 @@ final class TypeSkeleton {
             return defaultVal;
         }
 
-        DataEntry addComments(DataEntry dataEntry) {
-            if (comments != null) {
-                for (Comments addFrom : comments.value()) {
-                    // Append at this location
-                    CommentLocation location = addFrom.location();
-                    String[] addition = addFrom.value();
-
-                    // Check for existing comments
-                    List<String> existingAtLoc = dataEntry.getComments(location);
-                    List<String> newAtLoc;
-                    if (existingAtLoc.isEmpty()) {
-                        newAtLoc = Arrays.asList(addition);
-                    } else {
-                        newAtLoc = new ArrayList<>(existingAtLoc.size() + addition.length);
-                        newAtLoc.addAll(existingAtLoc);
-                        newAtLoc.addAll(Arrays.asList(addition));
-                    }
-                    dataEntry = dataEntry.withComments(location, newAtLoc);
-                }
-            }
-            return dataEntry;
-        }
-
         @Nullable DataEntry serialize(MethodMirror.Invoker invoker, SerializeOutput ser) {
             Object value;
             try {
@@ -165,7 +142,7 @@ final class TypeSkeleton {
                         "Serializer " + serializer + " did not produce any output for " + value
                 );
             }
-            return new DataEntry(output);
+            return new DataEntry(output).withComments(comments);
         }
     }
 }

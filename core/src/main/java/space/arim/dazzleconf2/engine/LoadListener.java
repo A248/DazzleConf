@@ -28,10 +28,11 @@ import space.arim.dazzleconf2.backend.KeyPath;
 public interface LoadListener {
 
     /**
-     * Called when an option was missing, so the value was supplied with {@link DefaultValues#ifMissing()}
+     * Called when a path is updated
      *
-     * @param entryPath the path of the formerly missing value
+     * @param entryPath the path of the entry
+     * @param updateReason the update reason
      */
-    void updatedMissingPath(@NonNull KeyPath entryPath);
+    void updatedPath(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason);
 
 }

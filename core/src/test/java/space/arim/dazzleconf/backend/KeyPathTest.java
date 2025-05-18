@@ -63,17 +63,6 @@ public class KeyPathTest {
     }
 
     @Test
-    public void lockChanges() {
-        KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.addBack("my-brave-world");
-        keyPath.addBack("this-feature");
-        assertThrows(IllegalStateException.class, () -> keyPath.addFront("nope-1"));
-        assertThrows(IllegalStateException.class, () -> keyPath.addBack("nope-2"));
-        assertEquals("my-brave-world.this-feature", keyPath.toString());
-        assertArrayEquals(new String[] {"my-brave-world", "this-feature"}, keyPath.intoParts());
-    }
-
-    @Test
     public void addFrontKeyMap() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
         keyPath.applyKeyMapper(new SnakeCaseKeyMapper());

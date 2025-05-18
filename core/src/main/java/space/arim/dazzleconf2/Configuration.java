@@ -32,6 +32,7 @@ import space.arim.dazzleconf2.reflect.Instantiator;
 import space.arim.dazzleconf2.reflect.ReifiedType;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Locale;
 
@@ -157,16 +158,16 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
     /**
      * Writes to the given data tree.
      * <p>
-     * The output data tree does not need to be empty, but there are no guarantees that existing data will not be
-     * overidden or cleared. The values of the provided configuration are written to it, and it does not matter
-     * how the {@code config} parameter is implemented so long as it returns non-null values.
+     * The output data tree does not need to be empty, but any existing data may be overwritten or cleared. The values
+     * of the provided configuration are written to it, and it does not matter how the {@code config} parameter is
+     * implemented so long as it returns non-null values without throwing exceptions.
      * <p>
      *  The key mapper used is either the one set during construction, or the one recommended by the backend.
      *
      * @param config the configuration
      * @param dataTree the data tree to write to
      */
-    void writeTo(@NonNull C config, @NonNull DataTree.Mut dataTree);
+    void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree);
 
     /**
      * Configures, migrates, and/or updates the backend as needed.
@@ -178,6 +179,7 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      *
      * @param backend the format backend
      * @return the loaded configuration
+     * @throws UncheckedIOException if the backend threw this error, it is propagated
      */
     @NonNull LoadResult<@NonNull C> configureWith(@NonNull Backend backend);
 
@@ -192,6 +194,7 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * @param backend the format backend
      * @param updateListener a listener which informs the caller if certain events happened
      * @return the loaded configuration
+     * @throws UncheckedIOException if the backend threw this error, it is propagated
      */
     @NonNull LoadResult<@NonNull C> configureWith(@NonNull Backend backend, @NonNull UpdateListener updateListener);
 
@@ -209,7 +212,8 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      *
      * @param backend the format backend
      * @param errorPrint if an error occured, it will be printed through this argument
-     * @return the loaded configuration
+     * @return the loaded configuration, or default configuration if an error occured
+     * @throws UncheckedIOException if the backend threw this error, it is propagated
      */
     @NonNull C configureOrFallback(@NonNull Backend backend, @NonNull ErrorPrint errorPrint);
 
@@ -228,7 +232,8 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * @param backend the format backend
      * @param updateListener a listener which informs the caller if certain events happened
      * @param errorPrint if an error occured, it will be printed through this argument
-     * @return the loaded configuration
+     * @return the loaded configuration, or default configuration if an error occured
+     * @throws UncheckedIOException if the backend threw this error, it is propagated
      */
     @NonNull C configureOrFallback(@NonNull Backend backend, @NonNull UpdateListener updateListener,
                                    @NonNull ErrorPrint errorPrint);

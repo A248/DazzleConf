@@ -19,6 +19,11 @@
 
 package space.arim.dazzleconf2.engine;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 /**
  * Denotes a callable default method in a configuration interface.
  * <p>
@@ -26,5 +31,7 @@ package space.arim.dazzleconf2.engine;
  * provide a default implementation, and their default implementation will be invoked if they are called.
  *
  */
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
 public @interface CallableFn {
 }

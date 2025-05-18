@@ -28,11 +28,14 @@ import space.arim.dazzleconf2.reflect.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 final class Definition<C> implements ConfigurationDefinition<C> {
 
     private final TypeToken<C> configType;
     private final KeyPath.Immut pathPrefix;
+    private final DataEntry.Comments topLevelComments;
+    private final String[] labels;
 
     private final LibraryLang libraryLang;
     private final MethodMirror methodMirror;
@@ -46,10 +49,13 @@ final class Definition<C> implements ConfigurationDefinition<C> {
 
     private static final InvokeDefaultFunction INVOKE_DEFAULT_VALUE = new InvokeDefaultFunction();
 
-    Definition(TypeToken<C> configType, KeyPath.Immut pathPrefix, Map<Class<?>, TypeSkeleton> typeSkeletons,
+    Definition(TypeToken<C> configType, KeyPath pathPrefix, DataEntry.Comments topLevelComments,
+               List<String> labels, LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons,
                LibraryLang libraryLang, MethodMirror methodMirror, Instantiator instantiator) {
         this.configType = Objects.requireNonNull(configType);
-        this.pathPrefix = Objects.requireNonNull(pathPrefix);
+        this.pathPrefix = pathPrefix.intoImmut();
+        this.topLevelComments = Objects.requireNonNull(topLevelComments);
+        this.labels = labels.toArray(new String[0]);
         this.libraryLang = Objects.requireNonNull(libraryLang);
         this.methodMirror = Objects.requireNonNull(methodMirror);
         this.instantiator = Objects.requireNonNull(instantiator);
@@ -76,6 +82,21 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     @Override
     public @NonNull TypeToken<C> getType() {
         return configType;
+    }
+
+    @Override
+    public DataEntry.@NonNull Comments getTopLevelComments() {
+        return topLevelComments;
+    }
+
+    @Override
+    public @NonNull Collection<@NonNull String> getLabels() {
+        return Collections.unmodifiableList(Arrays.asList(labels));
+    }
+
+    @Override
+    public @NonNull Stream<@NonNull String> getLabelsAsStream() {
+        return Arrays.stream(labels);
     }
 
     @Override
@@ -143,9 +164,9 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                         value = Optional.empty();
                     } else if ((value = methodNode.makeMissingValue(currentType)) != null) {
                         // 2.
-                        KeyPath.Mut keyPath = new KeyPath.Mut();
-                        keyPath.addFront(mappedKey);
-                        readOptions.loadListener().updatedMissingPath(keyPath);
+                        readOptions.loadListener().updatedPath(
+                                new KeyPath.Mut(mappedKey), UpdateReason.MISSING
+                        );
                         howToUpdate.insertMissingValue(dataTree, mappedKey, methodNode, value);
                     } else {
                         // 3.
@@ -243,7 +264,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             @Override
             public void insertMissingValue(DataTree.Mut dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode,
                                            Object value) {
-                dataTree.set(mappedKey, methodNode.addComments(new DataEntry(value)));
+                dataTree.set(mappedKey, new DataEntry(value).withComments(methodNode.comments));
             }
 
             @Override
@@ -254,9 +275,10 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             @Override
             public void updateIfDesired(DataTree.Mut dataTree, String mappedKey, DataEntry sourceEntry,
                                         TypeSkeleton.MethodNode<?> methodNode) {
-                Object lastOutput = outputForUpdate.getAndClearLastOutput();
-                if (lastOutput != null) {
-                    dataTree.set(mappedKey, methodNode.addComments(sourceEntry.withValue(lastOutput)));
+                Object update = outputForUpdate.getAndClearLastOutput();
+                if (update != null && !sourceEntry.getValue().equals(update)) {
+                    readOptions.loadListener().updatedPath(new KeyPath.Mut(mappedKey), UpdateReason.UPDATED);
+                    dataTree.set(mappedKey, sourceEntry.withValue(update));
                 }
             }
         });

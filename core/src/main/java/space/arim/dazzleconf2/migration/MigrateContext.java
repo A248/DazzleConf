@@ -20,39 +20,34 @@
 package space.arim.dazzleconf2.migration;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
-
-import java.util.Objects;
+import space.arim.dazzleconf2.engine.LoadListener;
 
 /**
- * Simple migration source from another configuration with this library
- *
- * @param <C> the config type
+ * Contextual resources to be used by migrations.
+ * <p>
+ * This interface is implemented by whichever caller is using a migration, and passed to the migration itself.
  */
-public final class MigrateFromConfig<C> implements MigrateSource<C> {
-
-    private final Configuration<C> config;
+public interface MigrateContext {
 
     /**
-     * Creates
+     * The backend being used to load the main configuration.
+     * <p>
+     * This will not necessarily be used by all migrations. Some migrations, for example, may source from a separate
+     * file, or combine different backends to get the data they need.
      *
-     * @param config the configuration to use
+     * @return the main backend being used to load the configuraion
      */
-    public MigrateFromConfig(@NonNull Configuration<C> config) {
-        this.config = Objects.requireNonNull(config);
-    }
+    @NonNull Backend mainBackend();
 
-    @Override
-    public @NonNull LoadResult<@NonNull C> load(@NonNull MigrateContext migrateContext) {
-        return migrateContext.mainBackend().read().flatMap(tree -> {
-            return tree == null ? LoadResult.failure() : config.readFrom(tree.getAsTree());
-        });
-    }
+    /**
+     * The listener allowing migrations to signal updated paths.
+     * <p>
+     * Migrations may optionally use this listener to identify which parts of a configuration (if applicable) were
+     * changed during the course of migration
+     *
+     * @return the load listener
+     */
+    @NonNull LoadListener loadListener();
 
-    @Override
-    public void onCompletion() {
-
-    }
 }

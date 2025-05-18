@@ -133,7 +133,7 @@ public interface SerializeOutput {
     void outObjectUnchecked(@NonNull Object value);
 
     /**
-     * Moves the last output out of this object and returns it to the caller.
+     * Gets the last output, clears it in this {@code SerializeOutput}, and returns it to the caller.
      * <p>
      * Any one of the "out" methods on this type will affect the return value of this method. Whichever was called
      * last will be yielded here, or {@code null} if none were called. Because this method also clears the stored

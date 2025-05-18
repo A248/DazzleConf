@@ -98,7 +98,9 @@ public interface Instantiator {
      * <p>
      * <b>Equality</b>
      * <p>
-     * The returned instance should have the same equality behavior as the delegate it currently wraps.
+     * The instance yielded as the shell ({@link ReloadShell#getShell()}) should have the same equality behavior as
+     * the delegate it currently wraps. The returned {@code ReloadShell} itself should use identity equality (only be
+     * equal to itself).
      *
      * @param classLoader where to generate the class file if necessary
      * @param iface the interface type

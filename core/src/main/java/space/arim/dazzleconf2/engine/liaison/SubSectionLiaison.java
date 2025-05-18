@@ -108,9 +108,9 @@ public final class SubSectionLiaison implements TypeLiaison {
                     private boolean updated;
 
                     @Override
-                    public void updatedMissingPath(@NonNull KeyPath entryPath) {
+                    public void updatedPath(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
                         updated = true;
-                        deser.flagUpdate(entryPath);
+                        deser.flagUpdate(entryPath, updateReason);
                     }
                 }
                 LoadResult<DataTree> requireDataTree = deser.requireDataTree();

@@ -24,7 +24,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.internals.MethodUtil;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.stream.Stream;
@@ -96,8 +95,8 @@ public final class DefaultMethodMirror implements MethodMirror {
         }
 
         @Override
-        public <A extends Annotation> @Nullable A getAnnotation(@NonNull MethodId methodId, @NonNull Class<A> annotation) {
-            return methodId.getMethod(enclosingType.rawType()).getAnnotation(annotation);
+        public @NonNull AnnotatedElement getAnnotations(@NonNull MethodId methodId) {
+            return methodId.getMethod(enclosingType.rawType());
         }
 
         @Override

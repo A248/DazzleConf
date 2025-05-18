@@ -21,6 +21,7 @@ package space.arim.dazzleconf2.engine.liaison;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.engine.*;
@@ -42,6 +43,7 @@ public final class ListLiaison implements TypeLiaison {
     public ListLiaison() {}
 
     @Override
+    @SideEffectFree
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
         if (typeToken.getRawType().equals(List.class)) {
             TypeToken<?> elementToken = new TypeToken<>(typeToken.getReifiedType().argumentAt(0));
@@ -147,7 +149,7 @@ public final class ListLiaison implements TypeLiaison {
                 public Object @Nullable [] updateIfDesired(List<?> input, int index, Object elemAtIndex,
                                                            Object[] writeBackUpdates) {
                     Object elemUpdate = updateTo.getAndClearLastOutput();
-                    if (elemUpdate != null) {
+                    if (elemUpdate != null && !elemAtIndex.equals(elemUpdate)) {
                         if (writeBackUpdates == null) {
                             // Init update array: fill in values retroactively.
                             // Values after the current position might very well be overwritten
@@ -181,7 +183,7 @@ public final class ListLiaison implements TypeLiaison {
                 Object elemOutput = ser.getAndClearLastOutput();
                 if (elemOutput == null) {
                     throw new DeveloperMistakeException(
-                            "Element serializer " + elementSerializer + " gave null output"
+                            "Element serializer " + elementSerializer + " did not produce output"
                     );
                 }
                 builtOutput[n] = elemOutput;

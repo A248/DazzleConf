@@ -23,78 +23,84 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Liaison for shorts
+ * Liaison for longs
  *
  */
-public final class ShortLiaison extends BaseNumberLiaison<Short, ShortDefault, ShortRange> {
+public final class LongLiaison extends BaseNumberLiaison<Long, LongDefault, LongRange> {
 
     /**
      * Creates
      */
-    public ShortLiaison() {}
+    public LongLiaison() {}
 
     @Override
-    @NonNull Class<Short> boxedType() {
-        return Short.class;
+    @NonNull Class<Long> boxedType() {
+        return Long.class;
     }
 
     @Override
-    @NonNull Class<Short> primitiveType() {
-        return short.class;
+    @NonNull Class<Long> primitiveType() {
+        return long.class;
     }
 
     @Override
-    @NonNull Class<ShortDefault> defaultAnnotation() {
-        return ShortDefault.class;
+    @NonNull Class<LongDefault> defaultAnnotation() {
+        return LongDefault.class;
     }
 
     @Override
-    @NonNull Short defaultValue(@NonNull ShortDefault defaultAnnotation) {
+    @NonNull Long defaultValue(@NonNull LongDefault defaultAnnotation) {
         return defaultAnnotation.value();
     }
 
     @Override
-    @Nullable Short castNumbers(@NonNull Object input) {
+    @Nullable Long castNumbers(@NonNull Object input) {
+        if (input instanceof Long) {
+            return (Long) input;
+        }
+        if (input instanceof Integer) {
+            return (long) ((int) input);
+        }
         if (input instanceof Short) {
-            return (Short) input;
+            return (long) ((short) input);
         }
         if (input instanceof Byte) {
-            return (short) ((byte) input);
+            return (long) ((byte) input);
         }
         return null;
     }
 
     @Override
-    @Nullable Short parseFrom(@NonNull String input) {
+    @Nullable Long parseFrom(@NonNull String input) {
         try {
-            return Short.parseShort(input);
+            return Long.parseLong(input);
         } catch (NumberFormatException ignored) {
             return null;
         }
     }
 
     @Override
-    @NonNull Class<ShortRange> rangeAnnotation() {
-        return ShortRange.class;
+    @NonNull Class<LongRange> rangeAnnotation() {
+        return LongRange.class;
     }
 
     @Override
-    @NonNull Short minFrom(@NonNull ShortRange shortRange) {
-        return shortRange.min();
+    @NonNull Long minFrom(@NonNull LongRange longRange) {
+        return longRange.min();
     }
 
     @Override
-    @NonNull Short maxFrom(@NonNull ShortRange shortRange) {
-        return shortRange.max();
+    @NonNull Long maxFrom(@NonNull LongRange longRange) {
+        return longRange.max();
     }
 
     @Override
-    boolean greaterOrEq(@NonNull Short value, @NonNull Short min) {
+    boolean greaterOrEq(@NonNull Long value, @NonNull Long min) {
         return value >= min;
     }
 
     @Override
-    boolean lessOrEq(@NonNull Short value, @NonNull Short max) {
+    boolean lessOrEq(@NonNull Long value, @NonNull Long max) {
         return value <= max;
     }
 }

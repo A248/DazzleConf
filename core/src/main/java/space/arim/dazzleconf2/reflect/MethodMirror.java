@@ -23,7 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 
-import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
 import java.util.stream.Stream;
 
@@ -75,18 +75,16 @@ public interface MethodMirror {
         @NonNull Stream<@NonNull MethodId> getViableMethods();
 
         /**
-         * Gets an annotation present on the specified method.
+         * Gets annotations present on the specified method.
          * <p>
          * The method must be taken from {@link #getViableMethods()}, meaning it must be accessible and located in
          * the type this {@code TypeWalker} is made for. This function is permitted to assume this precondition and
          * may behave unexpectedly if it is not met.
          *
          * @param methodId the method
-         * @param annotation the annotation
-         * @return the annotation, or null if it is not set
-         * @param <A> the annotation type
+         * @return the annotations on this method
          */
-        <A extends Annotation> @Nullable A getAnnotation(@NonNull MethodId methodId, @NonNull Class<A> annotation);
+        @NonNull AnnotatedElement getAnnotations(@NonNull MethodId methodId);
 
         /**
          * Moves to the directly declared super types of this type

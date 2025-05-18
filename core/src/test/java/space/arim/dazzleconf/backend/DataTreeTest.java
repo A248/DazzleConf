@@ -75,7 +75,7 @@ public class DataTreeTest {
         assertEquals(orderedKeys, List.of("hello", "also", "zed"));
         assertEquals(orderedValues, List.of("goodbye", "yes", true));
 
-        assertEquals(orderedKeys, new ArrayList<>(dataTreeMut.keySetView()));
+        assertEquals(orderedKeys, new ArrayList<>(dataTreeMut.getKeys()));
     }
 
     @Test
@@ -109,6 +109,6 @@ public class DataTreeTest {
         assertEquals(dataTreeMut, dataTreeMut.intoImmut().intoMut());
 
         Class.forName(NonNull.class.getName());
-        EqualsVerifier.forClass(DataTree.class).verify();
+        EqualsVerifier.simple().forClass(DataTree.class).verify();
     }
 }

@@ -132,7 +132,10 @@ public final class ConfigurationBuilder<C> {
      */
     public @This @NonNull ConfigurationBuilder<C> addPrimitiveTypeLiaisons() {
         // TODO - Impl
-        return addTypeLiaisons(new StringLiaison(), new IntegerLiaison(), new ShortLiaison());
+        return addTypeLiaisons(
+                new StringLiaison(),
+                new LongLiaison(), new IntegerLiaison(), new ShortLiaison(), new ByteLiaison()
+        );
     }
 
     /**
@@ -166,7 +169,8 @@ public final class ConfigurationBuilder<C> {
      * This method is closest to version 1's method of handling custom types. It is slightly more limited, as it cannot
      * allow you to depend on other serializers in the same way.
      *
-     * @param typeToken the type to handle
+     * @param typeToken the type to handle. Annotations will be matched <i>exactly</i>, meaning that the provided
+     *                  serializer will <i>NOT</i> apply to usage of the type with different annotations
      * @param serializeDeserialize the serialization for that type
      * @return this builder
      * @param <V> the type being handled by the serializer

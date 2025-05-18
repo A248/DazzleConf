@@ -23,11 +23,14 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
+import space.arim.dazzleconf2.migration.MigrateContext;
 import space.arim.dazzleconf2.migration.Migration;
 import space.arim.dazzleconf2.reflect.Instantiator;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 final class BuiltConfig<C> implements Configuration<C> {
 
@@ -79,6 +82,21 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     @Override
+    public DataEntry.@NonNull Comments getTopLevelComments() {
+        return definition.getTopLevelComments();
+    }
+
+    @Override
+    public @NonNull Collection<@NonNull String> getLabels() {
+        return definition.getLabels();
+    }
+
+    @Override
+    public @NonNull Stream<@NonNull String> getLabelsAsStream() {
+        return definition.getLabelsAsStream();
+    }
+
+    @Override
     public @NonNull C loadDefaults() {
         return definition.loadDefaults();
     }
@@ -107,7 +125,7 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     @Override
     public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree) {
-        return readFrom(dataTree, entryPath -> {});
+        return readFrom(dataTree, (entryPath, updateReason) -> {});
     }
 
     @Override
@@ -149,7 +167,7 @@ final class BuiltConfig<C> implements Configuration<C> {
         public void migrationSkip(@NonNull Migration<?, ?> migration, @NonNull List<@NonNull ErrorContext> errorContexts) {}
 
         @Override
-        public void updatedMissingPath(@NonNull KeyPath entryPath) {
+        public void updatedPath(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
             updated = true;
         }
 
@@ -178,9 +196,9 @@ final class BuiltConfig<C> implements Configuration<C> {
             }
 
             @Override
-            public void updatedMissingPath(@NonNull KeyPath entryPath) {
-                delegate.updatedMissingPath(entryPath);
+            public void updatedPath(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
                 updated = true;
+                delegate.updatedPath(entryPath, updateReason);
             }
         }
     }
@@ -189,22 +207,29 @@ final class BuiltConfig<C> implements Configuration<C> {
 
         RecordUpdates recordUpdates = (updateListener == null) ?
                 new RecordUpdates() : new RecordUpdates.WithDelegate(updateListener);
-        KeyMapper keyMapper = this.keyMapper;
-        if (keyMapper == null) {
-            keyMapper = backend.recommendKeyMapper();
-            Objects.requireNonNull(keyMapper, "Backend returned null key mapper");
-        }
+        KeyMapper keyMapper = (this.keyMapper != null) ? this.keyMapper : backend.recommendKeyMapper();
+        Objects.requireNonNull(keyMapper, "Backend returned null key mapper");
         // 1. Try to migrate if possible
         if (!migrations.isEmpty()) {
             // Try all migrations
             for (Migration<?, C> migration : migrations) {
-                LoadResult<C> attempt = migration.tryMigrate(backend);
+                LoadResult<C> attempt = migration.tryMigrate(new MigrateContext() {
+                    @Override
+                    public @NonNull Backend mainBackend() {
+                        return backend;
+                    }
+
+                    @Override
+                    public @NonNull LoadListener loadListener() {
+                        return recordUpdates;
+                    }
+                });
                 C migrated;
                 if (attempt.isSuccess() && (migrated = attempt.getOrThrow()) != null) {
                     // Update the backend with the migrated value
                     DataTree.Mut writeBack = new DataTree.Mut();
                     writeTo(migrated, writeBack, new WriteOpts(keyMapper));
-                    backend.writeTree(writeBack);
+                    backend.write(getTopLevelComments(), writeBack);
                     // Now signal completion, and finish
                     migration.onCompletion();
                     recordUpdates.migratedFrom(migration);
@@ -213,27 +238,47 @@ final class BuiltConfig<C> implements Configuration<C> {
                 recordUpdates.migrationSkip(migration, attempt.getErrorContexts());
                 // Keep going
             }
+            // Reset if necessary
+            recordUpdates.updated = false;
         }
         // 2. Load configuration
-        LoadResult<@Nullable DataTree> loadTreeResult = backend.readTree();
-        if (loadTreeResult.isFailure()) {
-            return LoadResult.failure(loadTreeResult.getErrorContexts());
+        LoadResult<? extends @Nullable DataStreamable> read = backend.read();
+        if (read.isFailure()) {
+            return LoadResult.failure(read.getErrorContexts());
         }
-        DataTree loadedTree = loadTreeResult.getOrThrow();
-        if (loadedTree == null) {
+        DataStreamable loadedStream = read.getOrThrow();
+        if (loadedStream == null) {
             // 3. Write defaults if necessary
             C defaults = loadDefaults();
             DataTree.Mut writeBack = new DataTree.Mut();
             writeTo(defaults, writeBack, new WriteOpts(keyMapper));
-            backend.writeTree(writeBack);
+            backend.write(getTopLevelComments(), writeBack);
             recordUpdates.loadedDefaults();
             return LoadResult.of(defaults);
         }
-        DataTree.Mut updatableTree = loadedTree.intoMut();
+        DataTree.Mut updatableTree = loadedStream.getAsTree().intoMut();
         LoadResult<C> loadResult = readWithUpdate(updatableTree, new ReadOpts(recordUpdates, keyMapper));
         if (loadResult.isSuccess() && recordUpdates.updated) {
             // 4. Update if necessary
-            backend.writeTree(updatableTree);
+            // Use stream to re-assert order: the backend can load in any order, and updates affect ordering too
+            Stream<Map.Entry<Object, DataEntry>> entryStream = getLabelsAsStream()
+                    .map((label) -> {
+                        String mappedKey = keyMapper.labelToKey(label).toString();
+                        return ImmutableCollections.mapEntryOf(mappedKey, updatableTree.get(mappedKey));
+                    });
+            backend.write(getTopLevelComments(), new DataStreamable() {
+                @Override
+                public @NonNull DataTree getAsTree() {
+                    DataTree.Mut collected = new DataTree.Mut();
+                    entryStream.forEachOrdered(entry -> collected.set(entry.getKey(), entry.getValue()));
+                    return collected;
+                }
+
+                @Override
+                public @NonNull Stream<Map.@NonNull Entry<@NonNull Object, @NonNull DataEntry>> getAsStream() {
+                    return entryStream;
+                }
+            });
         }
         return loadResult;
     }
