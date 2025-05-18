@@ -79,6 +79,96 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     @Override
+    public void walkDefinition(Visit<C> visit, WalkOptions walkOptions) {
+
+        for (int n = 0; n < superTypesArray.length; n++) {
+            Class<?> currentType = superTypesArray[n];
+            TypeSkeleton typeSkeleton = skeletonArray[n];
+
+            walkDefinitionForType(currentType, typeSkeleton, visit);
+        }
+    }
+
+    // Simple cache for MethodMirror.Invoker based on the instance provided
+    private final class InvocationCache {
+
+        private final Class<?> enclosingType;
+
+        // Build a cache of MethodMirror#makeInvoker based on receiver. If receiver changes, remake the invoker
+        private MethodMirror.Invoker lastInvoker;
+        private Object lastInvokerReceiver;
+
+        private InvocationCache(Class<?> enclosingType) {
+            this.enclosingType = enclosingType;
+        }
+
+        MethodMirror.Invoker invokerFor(Object receiver) {
+            if (lastInvokerReceiver == receiver) {
+                // Good! Found in cache
+                return lastInvoker;
+            }
+            // Cache miss
+            MethodMirror.Invoker invoker = methodMirror.makeInvoker(receiver, enclosingType);
+            lastInvoker = invoker;
+            lastInvokerReceiver = receiver;
+            return invoker;
+        }
+    }
+
+    private static class VisitedMethod<C, S, R> implements Visit.MethodElement<C, S, R> {
+
+        private final MethodId methodId;
+        private final Definition<C>.InvocationCache invocationCache;
+
+        private VisitedMethod(MethodId methodId, Definition<C>.InvocationCache invocationCache) {
+            this.methodId = methodId;
+            this.invocationCache = invocationCache;
+        }
+
+        @Override
+        public MethodId methodId() {
+            return methodId;
+        }
+
+        @Override
+        public TypeToken<R> returnValue() {
+            return new TypeToken<>(methodId.returnType());
+        }
+
+        @Override
+        public R invokeMethod(C configuration, Object... args) throws Throwable {
+            return castReturnType(invocationCache.invokerFor(configuration).invokeMethod(methodId(), args));
+        }
+
+        @Override
+        public R invokeMethodOnSuper(S implementor, Object... args) throws Throwable {
+            return castReturnType(invocationCache.invokerFor(implementor).invokeMethod(methodId(), args));
+        }
+
+        private R castReturnType(Object ret) {
+            return (R) ret;
+        }
+    }
+
+    private <S> void walkDefinitionForType(Class<S> currentType, TypeSkeleton typeSkeleton, Visit<C> visit) {
+        Visit.ElementVisitor<C, S> visitor = visit.visitTypeInHierarchy(currentType);
+        InvocationCache invocationCache = new InvocationCache(currentType);
+
+        for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
+            class Transparent extends VisitedMethod<C, S, Object> implements Visit.MethodTransparent<C, S, Object> {
+
+                private Transparent(MethodId methodId, InvocationCache invocationCache) {
+                    super(methodId, invocationCache);
+                }
+            }
+            visitor.visitTransparent(new Transparent(callableMethod, invocationCache));
+        }
+        for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
+            // TODO
+        }
+    }
+
+    @Override
     public @NonNull C loadDefaults() {
         MethodYield.Builder methodYield = new MethodYield.Builder();
         for (int n = 0; n < superTypesArray.length; n++) {

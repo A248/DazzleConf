@@ -74,6 +74,21 @@ public interface TypeLiaison {
          */
         @NonNull SerializeDeserialize<V> makeSerializer();
 
+        /**
+         * Verifies that the provided values are equal. If not equal, throws an {@code AssertionError} with the details.
+         * <p>
+         * This method is <b>NOT</b> a substitute for implementing <code>equals</code>/<code>hashCode</code> on the
+         * {@code V} type. Rather, this method is intended to provide more helpful error messages when values are
+         * not equal, such as during testing.
+         *
+         * @param value1 the first value
+         * @param value2 the second value
+         */
+        default void assertEquality(@NonNull V value1, @NonNull V value2) {
+            if (!value1.equals(value2)) {
+                throw new AssertionError("Not equal: " + value1 + " and " + value2);
+            }
+        }
     }
 
     /**
