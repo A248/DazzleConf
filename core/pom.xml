@@ -88,7 +88,6 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<argLine>
-						-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
 						-XX:+EnableDynamicAgentLoading -XX:TieredStopAtLevel=1 -XX:-TieredCompilation
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf.factory=ALL-UNNAMED
@@ -118,7 +117,7 @@
 			<plugin>
 				<groupId>org.pitest</groupId>
 				<artifactId>pitest-maven</artifactId>
-				<version>1.11.1</version>
+				<version>1.19.4</version>
 				<executions>
 					<execution>
 						<goals>
@@ -127,6 +126,7 @@
 					</execution>
 				</executions>
 				<configuration>
+					<verbose>true</verbose>
 					<coverageThreshold>75</coverageThreshold>
 					<mutationThreshold>75</mutationThreshold>
 					<threads>2</threads>
@@ -135,7 +135,7 @@
 					<dependency>
 						<groupId>org.pitest</groupId>
 						<artifactId>pitest-junit5-plugin</artifactId>
-						<version>1.1.2</version>
+						<version>1.2.3</version>
 					</dependency>
 				</dependencies>
 			</plugin>

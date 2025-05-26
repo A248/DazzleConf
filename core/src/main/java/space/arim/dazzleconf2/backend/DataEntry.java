@@ -217,6 +217,19 @@ public final class DataEntry {
         }
 
         /**
+         * Attaches comments and returns a new object.
+         * <p>
+         * If an empty array is specified, this function will clear the comments at the specified location.
+         *
+         * @param location where the comments are situated
+         * @param lines the comment lines to specify at this location
+         * @return a new instance of this class with the comments set
+         */
+        public @NonNull Comments setAt(@NonNull CommentLocation location, @NonNull String @NonNull ...lines) {
+            return setAt(location, Arrays.asList(lines));
+        }
+
+        /**
          * Appends comments at the following location and returns a new object.
          * <p>
          * If existing comments are set, they will come first.
@@ -243,6 +256,19 @@ public final class DataEntry {
             }
             newContents.put(location, combined);
             return new Comments(newContents);
+        }
+
+        /**
+         * Appends comments at the following location and returns a new object.
+         * <p>
+         * If existing comments are set, they will come first.
+         *
+         * @param location where the comments will be situated
+         * @param lines the comment lines to add at this location
+         * @return a new instance of this class with the comments appended
+         */
+        public @NonNull Comments appendAt(@NonNull CommentLocation location, @NonNull String @NonNull ...lines) {
+            return appendAt(location, Arrays.asList(lines));
         }
 
         /**
