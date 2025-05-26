@@ -41,6 +41,7 @@ public abstract class InstantiatorTest {
     private static <T> void assertEqualsBothWays(T val1, T val2) {
         assertEquals(val1, val2);
         assertEquals(val2, val1);
+        assertEquals(val1.hashCode(), val2.hashCode());
     }
 
     private static <T> void assertNotEqualsBothWays(T val1, T val2) {
