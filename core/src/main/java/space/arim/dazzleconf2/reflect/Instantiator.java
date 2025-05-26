@@ -71,6 +71,9 @@ public interface Instantiator {
      * is to say, using {@link MethodYield#valuesFor(Class)} with the interface will provide a complete map of method
      * IDs to return value instructions.
      * <p>
+     * Additionally, the targets will cover the complete type hierarchy for sub-interfaces. If one of the targets
+     * extends another interface, the parent interface will also be in the array.
+     * <p>
      * The {@code targets} array will always be delivered in a stable (deterministic) order, meaning the
      * {@code Instantiator} implementation can rely on that order to define equality across multiple instances produced
      * by this function.

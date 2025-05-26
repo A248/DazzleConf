@@ -58,7 +58,7 @@ public final class StringRoot implements ReadableRoot {
     }
 
     @Override
-    public <R> R useReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
+    public <R> R openReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
         try (Reader reader = new StringReader(content)) {
             return operation.operateUsing(reader);
         }

@@ -39,7 +39,7 @@ abstract class ProxyHandler implements InvocationHandler {
             if (methodName.equals("equals")) {
                 Object other = args[0];
                 InvocationHandler otherHandler;
-                return Proxy.isProxyClass(other.getClass())
+                return other == proxy || Proxy.isProxyClass(other.getClass())
                         && (otherHandler = Proxy.getInvocationHandler(other)) instanceof ProxyHandler
                         && implEquals(proxy, other, (ProxyHandler) otherHandler);
             }

@@ -23,6 +23,7 @@ import space.arim.dazzleconf2.ReloadShell;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Objects;
 
 final class ProxyHandlerToDelegate<I> extends ProxyHandler {
 
@@ -47,9 +48,13 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
 
     @Override
     boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler otherHandler) {
+        I delegate = this.delegate;
         if (otherHandler instanceof ProxyHandlerToDelegate) {
             ProxyHandlerToDelegate<?> that = (ProxyHandlerToDelegate<?>) otherHandler;
-            return delegate.equals(that.delegate);
+            return Objects.equals(delegate, that.delegate);
+        }
+        if (delegate == null) {
+            return otherHandler instanceof ProxyHandlerToEmpty;
         }
         return delegate.equals(otherProxy);
     }

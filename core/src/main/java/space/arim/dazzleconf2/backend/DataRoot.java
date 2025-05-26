@@ -42,7 +42,7 @@ public interface DataRoot {
     interface Operation<R, U> {
 
         /**
-         * Instructs the caller that this implementation does not buffer its calls to the utility in
+         * Instructs the caller that this implementation handles its own buffering to the utility in
          * {@link #operateUsing(Object)}
          *
          * @return whether this implementation buffers of its own accord

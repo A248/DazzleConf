@@ -63,7 +63,7 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
     }
 
     @Override
-    public <R> R useReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
+    public <R> R openReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
         class ReadableByteChannelOperation implements Operation<R, ReadableByteChannel> {
 
             @Override

@@ -47,7 +47,7 @@ public interface ReadableRoot extends DataRoot {
      * @return the operation result
      * @throws IOException upon failure to open
      */
-    <R> R useReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException;
+    <R> R openReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException;
 
     /**
      * Writes to a string
