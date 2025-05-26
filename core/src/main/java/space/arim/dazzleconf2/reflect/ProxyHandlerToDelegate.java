@@ -61,7 +61,7 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
 
     @Override
     int implHashCode() {
-        return delegate.hashCode();
+        return Objects.hashCode(delegate);
     }
 
     class AsReloadShell implements ReloadShell<I> {
