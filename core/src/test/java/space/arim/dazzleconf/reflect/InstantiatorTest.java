@@ -24,7 +24,6 @@ import space.arim.dazzleconf2.ReloadShell;
 import space.arim.dazzleconf2.reflect.*;
 
 import java.util.RandomAccess;
-import java.util.Set;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -47,6 +46,7 @@ public abstract class InstantiatorTest {
     private static <T> void assertNotEqualsBothWays(T val1, T val2) {
         assertNotEquals(val1, val2);
         assertNotEquals(val2, val1);
+        assertNotEquals(val1.toString(), val2.toString(), "toString should be implemented reasonably");
     }
 
     public interface EmptyInterface {
@@ -58,6 +58,7 @@ public abstract class InstantiatorTest {
         Object generated = instantiator.generate(classLoader, new Class[] {EmptyInterface.class}, new MethodYield.Builder().build());
         assertNotNull(generated);
         assertInstanceOf(EmptyInterface.class, generated);
+        assertTrue(instantiator.hasProduced(generated));
 
         assertEqualsBothWays(
                 generated,
@@ -67,20 +68,22 @@ public abstract class InstantiatorTest {
 
     @Test
     public void generateShellEmptyInterface() {
-        ReloadShell<EmptyInterface> reloadShell = instantiator.generateShell(classLoader, EmptyInterface.class, Set.of());
+        ReloadShell<EmptyInterface> reloadShell = instantiator.generateShell(classLoader, EmptyInterface.class);
         assertNull(reloadShell.getCurrentDelegate());
         EmptyInterface shell1 = reloadShell.getShell();
         assertNotNull(shell1);
         assertEqualsBothWays(shell1, shell1);
+        assertTrue(instantiator.hasProduced(shell1));
 
         EmptyInterface delegate = new EmptyInterface() {};
         reloadShell.setCurrentDelegate(delegate);
         assertEqualsBothWays(delegate, reloadShell.getCurrentDelegate());
+        assertFalse(instantiator.hasProduced(delegate));
 
         EmptyInterface shell2 = reloadShell.getShell();
         assertSame(shell1, shell2, "Shell stays constant");
 
-        ReloadShell<EmptyInterface> secondShell = instantiator.generateShell(classLoader, EmptyInterface.class, Set.of());
+        ReloadShell<EmptyInterface> secondShell = instantiator.generateShell(classLoader, EmptyInterface.class);
         assertNotEqualsBothWays(reloadShell, secondShell);
         assertNotEqualsBothWays(shell1, secondShell.getShell());
         secondShell.setCurrentDelegate(delegate);
@@ -93,8 +96,9 @@ public abstract class InstantiatorTest {
         Object generated = instantiator.generateEmpty(classLoader, EmptyInterface.class);
         assertNotNull(generated);
         assertInstanceOf(EmptyInterface.class, generated);
+        assertTrue(instantiator.hasProduced(generated));
 
-        assertEqualsBothWays(
+        assertNotEqualsBothWays(
                 generated,
                 instantiator.generate(classLoader, new Class[] {EmptyInterface.class}, new MethodYield.Builder().build())
         );
@@ -118,6 +122,7 @@ public abstract class InstantiatorTest {
         assertNotNull(generated);
         assertInstanceOf(SingleMethod.class, generated);
         assertEquals(toReturn, ((SingleMethod) generated).value());
+        assertTrue(instantiator.hasProduced(generated));
 
         assertEqualsBothWays(
                 generated,
@@ -140,6 +145,7 @@ public abstract class InstantiatorTest {
         assertInstanceOf(SingleMethod.class, generated);
         assertInstanceOf(additionalInterface, generated);
         assertEquals(toReturn, ((SingleMethod) generated).value());
+        assertTrue(instantiator.hasProduced(generated));
 
         assertNotEqualsBothWays(
                 generated,
@@ -149,21 +155,23 @@ public abstract class InstantiatorTest {
 
     @Test
     public void generateShellSingleMethod() {
-        ReloadShell<SingleMethod> reloadShell = instantiator.generateShell(classLoader, SingleMethod.class, Set.of());
+        ReloadShell<SingleMethod> reloadShell = instantiator.generateShell(classLoader, SingleMethod.class);
         assertNull(reloadShell.getCurrentDelegate());
         SingleMethod shell1 = reloadShell.getShell();
         assertNotNull(shell1);
         assertEqualsBothWays(shell1, shell1);
+        assertTrue(instantiator.hasProduced(shell1));
 
         SingleMethod delegate = () -> "delegated";
         reloadShell.setCurrentDelegate(delegate);
         assertEqualsBothWays(delegate, reloadShell.getCurrentDelegate());
         assertEquals("delegated", shell1.value());
+        assertFalse(instantiator.hasProduced(delegate));
 
         SingleMethod shell2 = reloadShell.getShell();
         assertSame(shell1, shell2, "Shell stays constant");
 
-        ReloadShell<SingleMethod> secondShell = instantiator.generateShell(classLoader, SingleMethod.class, Set.of());
+        ReloadShell<SingleMethod> secondShell = instantiator.generateShell(classLoader, SingleMethod.class);
         assertNotEqualsBothWays(reloadShell, secondShell);
         assertNotEqualsBothWays(shell1, secondShell.getShell());
         secondShell.setCurrentDelegate(delegate);
@@ -176,6 +184,7 @@ public abstract class InstantiatorTest {
         Object generated = instantiator.generateEmpty(classLoader, SingleMethod.class);
         assertNotNull(generated);
         assertInstanceOf(SingleMethod.class, generated);
+        assertTrue(instantiator.hasProduced(generated));
 
         MethodYield.Builder methodYield = new MethodYield.Builder();
         methodYield.addValue(
@@ -206,6 +215,7 @@ public abstract class InstantiatorTest {
         assertNotNull(generated);
         assertInstanceOf(InheritedMethod.class, generated);
         assertEquals(toReturn, ((InheritedMethod) generated).value());
+        assertTrue(instantiator.hasProduced(generated));
 
         assertEqualsBothWays(
                 generated,
@@ -228,6 +238,7 @@ public abstract class InstantiatorTest {
         assertInstanceOf(InheritedMethod.class, generated);
         assertInstanceOf(additionalInterface, generated);
         assertEquals(toReturn, ((InheritedMethod) generated).value());
+        assertTrue(instantiator.hasProduced(generated));
 
         assertNotEqualsBothWays(
                 generated,
@@ -237,21 +248,23 @@ public abstract class InstantiatorTest {
 
     @Test
     public void generateShellInheritedMethod() {
-        ReloadShell<InheritedMethod> reloadShell = instantiator.generateShell(classLoader, InheritedMethod.class, Set.of());
+        ReloadShell<InheritedMethod> reloadShell = instantiator.generateShell(classLoader, InheritedMethod.class);
         assertNull(reloadShell.getCurrentDelegate());
         InheritedMethod shell1 = reloadShell.getShell();
         assertNotNull(shell1);
         assertEqualsBothWays(shell1, shell1);
+        assertTrue(instantiator.hasProduced(shell1));
 
         InheritedMethod delegate = () -> "delegated";
         reloadShell.setCurrentDelegate(delegate);
         assertEqualsBothWays(delegate, reloadShell.getCurrentDelegate());
         assertEquals("delegated", shell1.value());
+        assertFalse(instantiator.hasProduced(delegate));
 
         InheritedMethod shell2 = reloadShell.getShell();
         assertSame(shell1, shell2, "Shell stays constant");
 
-        ReloadShell<InheritedMethod> secondShell = instantiator.generateShell(classLoader, InheritedMethod.class, Set.of());
+        ReloadShell<InheritedMethod> secondShell = instantiator.generateShell(classLoader, InheritedMethod.class);
         assertNotEqualsBothWays(reloadShell, secondShell);
         assertNotEqualsBothWays(shell1, secondShell.getShell());
         secondShell.setCurrentDelegate(delegate);
@@ -264,6 +277,7 @@ public abstract class InstantiatorTest {
         Object generated = instantiator.generateEmpty(classLoader, InheritedMethod.class);
         assertNotNull(generated);
         assertInstanceOf(InheritedMethod.class, generated);
+        assertTrue(instantiator.hasProduced(generated));
 
         MethodYield.Builder methodYield = new MethodYield.Builder();
         methodYield.addValue(
@@ -308,6 +322,7 @@ public abstract class InstantiatorTest {
         assertInstanceOf(PlusDefaultMethod.class, generated);
         assertEquals(toReturn, ((PlusDefaultMethod) generated).value());
         testGiveBack((PlusDefaultMethod) generated);
+        assertTrue(instantiator.hasProduced(generated));
 
         assertEqualsBothWays(
                 generated,
@@ -335,6 +350,7 @@ public abstract class InstantiatorTest {
         assertInstanceOf(additionalInterface, generated);
         assertEquals(toReturn, ((PlusDefaultMethod) generated).value());
         testGiveBack((PlusDefaultMethod) generated);
+        assertTrue(instantiator.hasProduced(generated));
 
         assertNotEqualsBothWays(
                 generated,
@@ -344,22 +360,24 @@ public abstract class InstantiatorTest {
 
     @Test
     public void generateShellPlusDefaultMethod() {
-        ReloadShell<PlusDefaultMethod> reloadShell = instantiator.generateShell(classLoader, PlusDefaultMethod.class, Set.of());
+        ReloadShell<PlusDefaultMethod> reloadShell = instantiator.generateShell(classLoader, PlusDefaultMethod.class);
         assertNull(reloadShell.getCurrentDelegate());
         PlusDefaultMethod shell1 = reloadShell.getShell();
         assertNotNull(shell1);
         assertEqualsBothWays(shell1, shell1);
+        assertTrue(instantiator.hasProduced(shell1));
 
         PlusDefaultMethod delegate = () -> "delegated";
         reloadShell.setCurrentDelegate(delegate);
         assertEqualsBothWays(delegate, reloadShell.getCurrentDelegate());
         assertEquals("delegated", shell1.value());
+        assertFalse(instantiator.hasProduced(delegate));
 
         PlusDefaultMethod shell2 = reloadShell.getShell();
         assertSame(shell1, shell2, "Shell stays constant");
         testGiveBack(shell1);
 
-        ReloadShell<PlusDefaultMethod> secondShell = instantiator.generateShell(classLoader, PlusDefaultMethod.class, Set.of());
+        ReloadShell<PlusDefaultMethod> secondShell = instantiator.generateShell(classLoader, PlusDefaultMethod.class);
         assertNotEqualsBothWays(reloadShell, secondShell);
         assertNotEqualsBothWays(shell1, secondShell.getShell());
         secondShell.setCurrentDelegate(delegate);
@@ -373,6 +391,7 @@ public abstract class InstantiatorTest {
         assertNotNull(generated);
         assertInstanceOf(PlusDefaultMethod.class, generated);
         testGiveBack((PlusDefaultMethod) generated);
+        assertTrue(instantiator.hasProduced(generated));
 
         MethodYield.Builder methodYield = new MethodYield.Builder();
         methodYield.addValue(

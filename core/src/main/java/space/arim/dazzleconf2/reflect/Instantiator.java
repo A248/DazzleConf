@@ -22,8 +22,6 @@ package space.arim.dazzleconf2.reflect;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ReloadShell;
 
-import java.util.Set;
-
 /**
  * Low level service capable of generating runtime implementations of interfaces.
  * <p>
@@ -96,8 +94,7 @@ public interface Instantiator {
                              @NonNull MethodYield methodYield);
 
     /**
-     * Makes a reloadable shell for the given interface type. The interface's methods are conveniently included as
-     * parameters.
+     * Makes a reloadable shell for the given interface type.
      * <p>
      * <b>Equality</b>
      * <p>
@@ -105,13 +102,12 @@ public interface Instantiator {
      * the delegate it currently wraps. The returned {@code ReloadShell} itself should use identity equality (only be
      * equal to itself).
      *
+     * @param <I>         the interface type
      * @param classLoader where to generate the class file if necessary
-     * @param iface the interface type
+     * @param iface       the interface type
      * @return a reload shell
-     * @param <I> the interface type
      */
-    <I> @NonNull ReloadShell<I> generateShell(@NonNull ClassLoader classLoader, @NonNull Class<I> iface,
-                                              @NonNull Set<@NonNull MethodId> methods);
+    <I> @NonNull ReloadShell<I> generateShell(@NonNull ClassLoader classLoader, @NonNull Class<I> iface);
 
     /**
      * Generates an "empty" implementation for the given interface type, which lets the caller use its default

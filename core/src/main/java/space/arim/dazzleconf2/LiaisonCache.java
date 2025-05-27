@@ -19,7 +19,7 @@
 
 package space.arim.dazzleconf2;
 
-import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.MethodId;
 import space.arim.dazzleconf2.reflect.MethodMirror;
@@ -115,11 +115,11 @@ final class LiaisonCache {
             DefaultValues<V> defaultValues = makeDefaultValues(
                     methodId, optional, () -> methodAnnotations, defaultsInvoker
             );
-            DataEntry.Comments comments;
+            CommentData comments;
             // Try the method itself first, then look at the return type's class declaration
-            comments = DataEntry.Comments.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
+            comments = CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
             if (comments.isEmpty()) {
-                comments = DataEntry.Comments.buildFrom(methodId.returnType().rawType().getAnnotationsByType(Comments.class));
+                comments = CommentData.buildFrom(methodId.returnType().rawType().getAnnotationsByType(Comments.class));
             }
             return new TypeSkeleton.MethodNode<>(comments, optional, methodId, defaultValues, serializer);
         }

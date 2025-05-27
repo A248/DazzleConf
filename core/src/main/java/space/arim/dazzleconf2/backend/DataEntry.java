@@ -22,29 +22,29 @@ package space.arim.dazzleconf2.backend;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.engine.CommentLocation;
-import space.arim.dazzleconf2.internals.ImmutableCollections;
 
 import java.util.*;
 
 /**
- * Immutable representation of a configuration entry as interoperable with backend formats.
+ * A data value, with associated metadata as interoperable with backend formats.
  * <p>
  * Values must conform to the canonical requirements. That means String, primitives, lists of these types, or
- * another {@link DataTree} for nesting.
+ * another {@link DataTree} for nesting. Although a {@code DataEntry} itself is immutable, its contents may not be,
+ * and mutable lists and mutable data trees are permitted to be the value.
  * <p>
  * Equality is defined for an entry based on its value. Comments and line numbers are <b>not</b> counted in
  * equality comparisons and hash code.
  */
 public final class DataEntry {
 
-    private final Object value;
+    private final @NonNull Object value;
     private final Integer lineNumber;
-    private final Comments comments;
+    private final CommentData comments;
 
     /**
      * Creates from a nonnull value.
      * <p>
-     * The value must conform to {@link DataTree#validateValue(Object)}
+     * The value must conform to {@link #validateValue(Object)}
      * I.e., it must be one of primitive, <code>String</code>, <code>List</code> with valid elements, or
      * <code>DataTree</code>. Null values are not valid.
      *
@@ -52,10 +52,10 @@ public final class DataEntry {
      * @throws IllegalArgumentException if the value is not of the canonical types
      */
     public DataEntry(@NonNull Object value) {
-        this(value, null, Comments.EMPTY);
+        this(value, null, CommentData.empty());
     }
 
-    private DataEntry(Object value, Integer lineNumber, Comments comments) {
+    private DataEntry(@NonNull Object value, Integer lineNumber, CommentData comments) {
         if (!validateValue(value)) {
             throw new IllegalArgumentException("Not a canonical value: " + value);
         }
@@ -118,7 +118,7 @@ public final class DataEntry {
      * @param comments the comments
      * @return a new data entry with the comments set
      */
-    public @NonNull DataEntry withComments(@NonNull Comments comments) {
+    public @NonNull DataEntry withComments(@NonNull CommentData comments) {
         return new DataEntry(value, lineNumber, comments);
     }
 
@@ -140,7 +140,7 @@ public final class DataEntry {
      *
      * @return the comments
      */
-    public @NonNull Comments getComments() {
+    public @NonNull CommentData getComments() {
         return comments;
     }
 
@@ -154,247 +154,6 @@ public final class DataEntry {
      */
     public @NonNull List<@NonNull String> getComments(@NonNull CommentLocation location) {
         return comments.getAt(location);
-    }
-
-    /**
-     * The comments on a data entry. Immutable.
-     * <p>
-     * This class stores a map of comment location to the lines of text at that location.
-     *
-     */
-    public static final class Comments {
-
-        private final Map<CommentLocation, List<String>> contents;
-
-        private static final Comments EMPTY = new Comments();
-
-        Comments(Map<CommentLocation, List<String>> contents) {
-            this.contents = contents;
-        }
-
-        private Comments() {
-            this.contents = ImmutableCollections.emptyMap();
-        }
-
-        /**
-         * Gets whether there are no comments
-         *
-         * @return true if no comments exist
-         */
-        public boolean isEmpty() {
-            return contents.isEmpty();
-        }
-
-        /**
-         * Gets the comments at the specified location.
-         * <p>
-         * The returned value may be immutable, or it may be a mutable copy.
-         *
-         * @param location the location
-         * @return the comment lines, or an empty list if none exist
-         */
-        public @NonNull List<@NonNull String> getAt(@NonNull CommentLocation location) {
-            return contents.getOrDefault(location, ImmutableCollections.emptyList());
-        }
-
-        /**
-         * Attaches comments and returns a new object.
-         * <p>
-         * If an empty list is specified, this function will clear the comments at the specified location.
-         *
-         * @param location where the comments are situated
-         * @param lines the comment lines to specify at this location
-         * @return a new instance of this class with the comments set
-         */
-        public @NonNull Comments setAt(@NonNull CommentLocation location, @NonNull List<@NonNull String> lines) {
-            if (lines.isEmpty()) {
-                return clearAt(location);
-            }
-            Map<CommentLocation, List<String>> newContents = new EnumMap<>(CommentLocation.class);
-            newContents.putAll(this.contents);
-            newContents.put(location, ImmutableCollections.listOf(lines));
-            return new Comments(newContents);
-        }
-
-        /**
-         * Attaches comments and returns a new object.
-         * <p>
-         * If an empty array is specified, this function will clear the comments at the specified location.
-         *
-         * @param location where the comments are situated
-         * @param lines the comment lines to specify at this location
-         * @return a new instance of this class with the comments set
-         */
-        public @NonNull Comments setAt(@NonNull CommentLocation location, @NonNull String @NonNull ...lines) {
-            return setAt(location, Arrays.asList(lines));
-        }
-
-        /**
-         * Appends comments at the following location and returns a new object.
-         * <p>
-         * If existing comments are set, they will come first.
-         *
-         * @param location where the comments will be situated
-         * @param lines the comment lines to add at this location
-         * @return a new instance of this class with the comments appended
-         */
-        public @NonNull Comments appendAt(@NonNull CommentLocation location, @NonNull List<@NonNull String> lines) {
-            if (lines.isEmpty()) {
-                return this;
-            }
-            Map<CommentLocation, List<String>> newContents = new EnumMap<>(CommentLocation.class);
-            newContents.putAll(this.contents);
-            List<String> existing = newContents.get(location);
-            List<String> combined;
-            if (existing == null) {
-                combined = ImmutableCollections.listOf(lines);
-            } else {
-                combined = new ArrayList<>(existing.size() + lines.size());
-                combined.addAll(existing);
-                combined.addAll(lines);
-                combined = ImmutableCollections.listOf(combined);
-            }
-            newContents.put(location, combined);
-            return new Comments(newContents);
-        }
-
-        /**
-         * Appends comments at the following location and returns a new object.
-         * <p>
-         * If existing comments are set, they will come first.
-         *
-         * @param location where the comments will be situated
-         * @param lines the comment lines to add at this location
-         * @return a new instance of this class with the comments appended
-         */
-        public @NonNull Comments appendAt(@NonNull CommentLocation location, @NonNull String @NonNull ...lines) {
-            return appendAt(location, Arrays.asList(lines));
-        }
-
-        /**
-         * Clears comments at some locations and returns a new object
-         *
-         * @param locations which comments to clear
-         * @return a new instance of this class with no comments at the specified locations
-         */
-        public @NonNull Comments clearAt(@NonNull CommentLocation @NonNull ... locations) {
-            boolean foundAny = false;
-            for (CommentLocation location : locations) {
-                foundAny = foundAny || contents.containsKey(location);
-            }
-            if (!foundAny) {
-                return this;
-            }
-            Map<CommentLocation, List<String>> newContents = new EnumMap<>(CommentLocation.class);
-            newContents.putAll(this.contents);
-            for (CommentLocation location : locations) {
-                newContents.remove(location);
-            }
-            if (newContents.isEmpty()) {
-                return EMPTY;
-            }
-            return new Comments(newContents);
-        }
-
-        /**
-         * Appends another set of comments to this one.
-         * <p>
-         * Any existing comments on this object will be placed first in the resulting product.
-         *
-         * @param other the other instance to append to this one
-         * @return a new instance with the given comments appended
-         */
-        public @NonNull Comments append(@NonNull Comments other) {
-            if (isEmpty()) {
-                return other;
-            }
-            if (other.isEmpty()) {
-                return this;
-            }
-            Map<CommentLocation, List<String>> combined = new EnumMap<>(CommentLocation.class);
-            for (CommentLocation location : CommentLocation.values()) {
-                List<String> ourLines = this.contents.get(location);
-                List<String> theirLines = other.contents.get(location);
-                if (ourLines == null && theirLines == null) {
-                    // Nothing to do
-                    continue;
-                }
-                List<String> combinedLines;
-                if (ourLines == null) {
-                    combinedLines = theirLines;
-                } else if (theirLines == null) {
-                    combinedLines = ourLines;
-                } else {
-                    combinedLines = new ArrayList<>(ourLines.size() + theirLines.size());
-                    combinedLines.addAll(ourLines);
-                    combinedLines.addAll(theirLines);
-                    combinedLines = ImmutableCollections.listOf(combinedLines);
-                }
-                combined.put(location, combinedLines);
-            }
-            return new Comments(combined);
-        }
-
-        /**
-         * Makes an instance of this class according to {@link space.arim.dazzleconf2.engine.Comments} annotations.
-         * <p>
-         * This function collects all the comments, in order, into a single object and returns it. If the argument
-         * array is null or empty, an empty object is returned.
-         *
-         * @param source the annotations to use
-         * @return a comments object
-         */
-        public static @NonNull Comments buildFrom(space.arim.dazzleconf2.engine.@NonNull Comments @Nullable [] source) {
-            if (source == null || source.length == 0) {
-                return EMPTY;
-            }
-            // A mutable result, containing mutable Lists
-            Map<CommentLocation, List<String>> builtContents = new EnumMap<>(CommentLocation.class);
-            for (space.arim.dazzleconf2.engine.Comments addFrom : source) {
-                // Extract annotation data
-                CommentLocation location = addFrom.location();
-                String[] value = addFrom.value();
-                if (value.length == 0) {
-                    continue;
-                }
-                // Add to existing comments
-                builtContents
-                        .computeIfAbsent(location, k -> new ArrayList<>(value.length))
-                        .addAll(Arrays.asList(value));
-            }
-            if (builtContents.isEmpty()) {
-                return EMPTY;
-            }
-            // Make immutable
-            for (CommentLocation location : CommentLocation.values()) {
-                builtContents.computeIfPresent(location, (loc, lines) -> ImmutableCollections.listOf(lines));
-            }
-            return new Comments(builtContents);
-        }
-
-        /**
-         * Returns an empty instance of {@code Comments}
-         *
-         * @return an empty instance
-         */
-        public static Comments empty() {
-            return EMPTY;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return obj instanceof Comments && contents.equals(((Comments) obj).contents);
-        }
-
-        @Override
-        public int hashCode() {
-            return contents.hashCode();
-        }
-
-        @Override
-        public String toString() {
-            return "DataEntry.Comments" + '{' + contents + '}';
-        }
     }
 
     @Override
@@ -417,6 +176,14 @@ public final class DataEntry {
      * @return true if a valid canonical value, false if not
      */
     public static boolean validateValue(@Nullable Object value) {
-        return DataTree.validateValue(value);
+        if (value instanceof List) {
+            for (Object elem : (List<?>) value) {
+                if (!validateValue(elem)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return value instanceof DataTree || DataTree.validateKey(value);
     }
 }

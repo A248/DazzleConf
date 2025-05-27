@@ -24,10 +24,7 @@ import space.arim.dazzleconf2.ReloadShell;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Default implementation of {@link Instantiator} using standard proxy reflection
@@ -77,8 +74,7 @@ public final class DefaultInstantiator implements Instantiator {
     }
 
     @Override
-    public <I> @NonNull ReloadShell<I> generateShell(@NonNull ClassLoader classLoader, @NonNull Class<I> iface,
-                                                     @NonNull Set<@NonNull MethodId> methods) {
+    public <I> @NonNull ReloadShell<I> generateShell(@NonNull ClassLoader classLoader, @NonNull Class<I> iface) {
         ProxyHandlerToDelegate<I> proxyHandler = new ProxyHandlerToDelegate<>();
         @SuppressWarnings("unchecked")
         I shell = (I) Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);

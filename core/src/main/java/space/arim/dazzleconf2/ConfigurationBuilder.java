@@ -89,7 +89,7 @@ public final class ConfigurationBuilder<C> {
      * @param locale the locale, nonnull
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> locale(Locale locale) {
+    public @This @NonNull ConfigurationBuilder<C> locale(@NonNull Locale locale) {
         this.locale = Objects.requireNonNull(locale, "locale");
         return this;
     }
@@ -103,7 +103,7 @@ public final class ConfigurationBuilder<C> {
      * @param typeLiaisons the type liaisons
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> addTypeLiaisons(TypeLiaison...typeLiaisons) {
+    public @This @NonNull ConfigurationBuilder<C> addTypeLiaisons(@NonNull TypeLiaison @NonNull ...typeLiaisons) {
         this.typeLiaisons.addAll(Arrays.asList(typeLiaisons));
         return this;
     }
@@ -117,7 +117,7 @@ public final class ConfigurationBuilder<C> {
      * @param typeLiaisons the type liaisons
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> addTypeLiaisons(List<TypeLiaison> typeLiaisons) {
+    public @This @NonNull ConfigurationBuilder<C> addTypeLiaisons(@NonNull List<@NonNull TypeLiaison> typeLiaisons) {
         this.typeLiaisons.addAll(typeLiaisons);
         return this;
     }
@@ -175,8 +175,8 @@ public final class ConfigurationBuilder<C> {
      * @return this builder
      * @param <V> the type being handled by the serializer
      */
-    public <V> @This @NonNull ConfigurationBuilder<C> addSimpleSerializer(TypeToken<V> typeToken,
-                                                                          SerializeDeserialize<V> serializeDeserialize) {
+    public <V> @This @NonNull ConfigurationBuilder<C> addSimpleSerializer(@NonNull TypeToken<V> typeToken,
+                                                                          @NonNull SerializeDeserialize<V> serializeDeserialize) {
         return addTypeLiaisons(new SimpleTypeLiaison<>(typeToken, serializeDeserialize));
     }
 
@@ -196,7 +196,7 @@ public final class ConfigurationBuilder<C> {
      * @param keyMapper the key mapper, or null to clear
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> keyMapper(KeyMapper keyMapper) {
+    public @This @NonNull ConfigurationBuilder<C> keyMapper(@Nullable KeyMapper keyMapper) {
         this.keyMapper = keyMapper;
         return this;
     }
@@ -204,10 +204,10 @@ public final class ConfigurationBuilder<C> {
     /**
      * Sets the method mirror
      *
-     * @param methodMirror the method mirror, nonnull
+     * @param methodMirror the method mirror
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> methodMirror(MethodMirror methodMirror) {
+    public @This @NonNull ConfigurationBuilder<C> methodMirror(@NonNull MethodMirror methodMirror) {
         this.methodMirror = Objects.requireNonNull(methodMirror);
         return this;
     }
@@ -215,10 +215,10 @@ public final class ConfigurationBuilder<C> {
     /**
      * Sets the instantiator
      *
-     * @param instantiator the instantiator, nonnull
+     * @param instantiator the instantiator
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> instantiator(Instantiator instantiator) {
+    public @This @NonNull ConfigurationBuilder<C> instantiator(@NonNull Instantiator instantiator) {
         this.instantiator = Objects.requireNonNull(instantiator);
         return this;
     }
@@ -232,7 +232,7 @@ public final class ConfigurationBuilder<C> {
      * @param migration the migration
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> addMigration(Migration<?, C> migration) {
+    public @This @NonNull ConfigurationBuilder<C> addMigration(@NonNull Migration<?, C> migration) {
         this.migrations.add(Objects.requireNonNull(migration));
         return this;
     }
@@ -246,7 +246,7 @@ public final class ConfigurationBuilder<C> {
      * @param migrations the migrations
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> addMigrations(List<Migration<?, C>> migrations) {
+    public @This @NonNull ConfigurationBuilder<C> addMigrations(@NonNull List<@NonNull Migration<?, C>> migrations) {
         this.migrations.addAll(migrations);
         return this;
     }
@@ -273,6 +273,6 @@ public final class ConfigurationBuilder<C> {
         ).read(configType);
 
         // Yield final
-        return new BuiltConfig<>(definition, locale, typeLiaisons, keyMapper, instantiator, migrations);
+        return new BuiltConfig<>(definition, locale, typeLiaisons, keyMapper, migrations);
     }
 }

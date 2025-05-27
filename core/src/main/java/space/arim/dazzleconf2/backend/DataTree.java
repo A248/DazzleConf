@@ -53,7 +53,7 @@ import java.util.stream.Stream;
  * <li>Lists of the above types. The List implementation must be immutable.
  * </ul>
  * Recall that keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime, and they can be
- * checked using {@link #validateKey(Object)} and {@link #validateValue(Object)}.
+ * checked using {@link #validateKey(Object)} and {@link DataEntry#validateValue(Object)}.
  * <p>
  * Mutability of this class is <b>not defined</b>. Please use {@link DataTree.Immut} or {@link DataTree.Mut} if you need
  * guaranteed mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
@@ -125,25 +125,6 @@ public abstract class DataTree implements DataStreamable {
      * @return an immutable data tree
      */
     public abstract DataTree.@NonNull Immut intoImmut();
-
-    /**
-     * Checks whether the given object is valid as a value in the data tree. Values must be one of primitive,
-     * <code>String</code>, <code>List</code> with valid elements, or <code>DataTree</code>. Null values are not valid.
-     *
-     * @param value the value
-     * @return true if a valid canonical value, false if not
-     */
-    public static boolean validateValue(@Nullable Object value) {
-        if (value instanceof List) {
-            for (Object elem : (List<?>) value) {
-                if (!validateValue(elem)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return value instanceof DataTree || validateKey(value);
-    }
 
     /**
      * Checks whether the given object is valid as a key in the data tree. Keys must be either primitive or

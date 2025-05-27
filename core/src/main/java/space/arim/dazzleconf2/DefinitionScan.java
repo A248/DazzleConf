@@ -20,7 +20,7 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.AccessChecking;
@@ -51,7 +51,7 @@ final class DefinitionScan {
 
         private final KeyPath.Immut pathPrefix;
         private final TypeToken<V> typeToken;
-        private final List<String> labels = new ArrayList<>();
+        private final ArrayList<String> labels = new ArrayList<>();
         private final LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons = new LinkedHashMap<>();
 
         // Seen before
@@ -73,14 +73,17 @@ final class DefinitionScan {
             if (!AccessChecking.isAccessible(currentType)) {
                 throw new DeveloperMistakeException("Configuration interface not accessible: " + currentType);
             }
-            Set<MethodId> callableDefaultMethods = new HashSet<>();
-            List<TypeSkeleton.MethodNode<?>> methodNodes = new ArrayList<>();
-            MethodMirror.Invoker defaultsInvoker = methodMirror.makeInvoker(defaultsProvider, currentType);
-
             // To avoid massively increasing the stack depth, skip using the stream itself
             // This is potentially important considering the madness of nested configuration sections
             // Thus, we collect and iterate to reduce stack depth
-            for (MethodId methodId : currentWalker.getViableMethods().collect(Collectors.toList())) {
+            List<MethodId> scannedMethods = currentWalker.getViableMethods().collect(Collectors.toList());
+
+            Set<MethodId> callableDefaultMethods = new HashSet<>();
+            List<TypeSkeleton.MethodNode<?>> methodNodes = new ArrayList<>(scannedMethods.size());
+            labels.ensureCapacity(labels.size() + scannedMethods.size());
+            MethodMirror.Invoker defaultsInvoker = methodMirror.makeInvoker(defaultsProvider, currentType);
+
+            for (MethodId methodId : scannedMethods) {
 
                 if (!covariantSeenBefore.add(new CovariantGuard(methodId))) {
                     //
@@ -121,9 +124,7 @@ final class DefinitionScan {
                     throw new DeveloperMistakeException("Failed to make type agent for " + methodId, rethrow);
                 }
                 labels.add(label);
-                methodNodes.add(handleType.makeMethodNode(
-                        methodId, optional, methodAnnotations, defaultsInvoker
-                ));
+                methodNodes.add(handleType.makeMethodNode(methodId, optional, methodAnnotations, defaultsInvoker));
             }
             typeSkeletons.put(currentType, new TypeSkeleton(callableDefaultMethods, methodNodes));
 
@@ -147,7 +148,7 @@ final class DefinitionScan {
                 blockTypeLoop.exit(typeToken);
             }
             // Top-level comments are unaffected by inheritance
-            DataEntry.@NonNull Comments topLevelComments = DataEntry.Comments.buildFrom(
+            @NonNull CommentData topLevelComments = CommentData.buildFrom(
                     rawType.getAnnotationsByType(Comments.class)
             );
             return new Definition<>(

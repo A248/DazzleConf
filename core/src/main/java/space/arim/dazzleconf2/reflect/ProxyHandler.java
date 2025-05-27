@@ -20,7 +20,6 @@
 package space.arim.dazzleconf2.reflect;
 
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
@@ -35,18 +34,26 @@ abstract class ProxyHandler implements InvocationHandler {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         if (method.getDeclaringClass().equals(Object.class)) {
-            String methodName = method.getName();
-            if (methodName.equals("equals")) {
-                Object other = args[0];
-                InvocationHandler otherHandler;
-                return other == proxy || Proxy.isProxyClass(other.getClass())
-                        && (otherHandler = Proxy.getInvocationHandler(other)) instanceof ProxyHandler
-                        && implEquals(proxy, other, (ProxyHandler) otherHandler);
+            switch (method.getName()) {
+                case "equals":
+                    Object other = args[0];
+                    InvocationHandler otherHandler;
+                    return other == proxy || Proxy.isProxyClass(other.getClass())
+                            && (otherHandler = Proxy.getInvocationHandler(other)) instanceof ProxyHandler
+                            && implEquals(proxy, other, (ProxyHandler) otherHandler);
+                case "hashCode":
+                    return implHashCode();
+                case "toString":
+                    StringBuilder output = new StringBuilder();
+                    output.append(getClass().getSimpleName());
+                    output.append("{ ");
+                    implToString(output);
+                    output.append(" }");
+                    return output.toString();
+                default:
+                    // Breaks the contract of java.lang.reflect.Proxy
+                    return null;
             }
-            if (methodName.equals("hashCode")) {
-                return implHashCode();
-            }
-            return invokeMethodOnSelf(method, args);
         }
         return implInvoke(method, args);
     }
@@ -57,19 +64,6 @@ abstract class ProxyHandler implements InvocationHandler {
 
     abstract int implHashCode();
 
-    private Object invokeMethodOnSelf(Method method, Object[] args) throws Throwable {
-        try {
-            return method.invoke(this, args);
-        } catch (IllegalAccessException | IllegalArgumentException ex) {
-            throw new AssertionError(ex);
+    abstract void implToString(StringBuilder output);
 
-        } catch (InvocationTargetException ex) {
-            Throwable cause = ex.getCause();
-            if (cause != null) {
-                throw cause;
-            } else {
-                throw ex;
-            }
-        }
-    }
 }

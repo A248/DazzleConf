@@ -21,7 +21,6 @@ package space.arim.dazzleconf2.reflect;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.DeveloperMistakeException;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
@@ -70,7 +69,6 @@ public interface MethodMirror {
          * @return a stream of methods
          * @throws IllegalStateException optionally, if the <code>ReifiedType</code> is malformed and does not represent
          * a valid type
-         * @throws DeveloperMistakeException if method-level generic parameters are declared
          */
         @NonNull Stream<@NonNull MethodId> getViableMethods();
 

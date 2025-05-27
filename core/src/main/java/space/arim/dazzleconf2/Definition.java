@@ -20,6 +20,7 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyPath;
@@ -34,7 +35,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
 
     private final TypeToken<C> configType;
     private final KeyPath.Immut pathPrefix;
-    private final DataEntry.Comments topLevelComments;
+    private final CommentData topLevelComments;
     private final String[] labels;
 
     private final LibraryLang libraryLang;
@@ -49,7 +50,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
 
     private static final InvokeDefaultFunction INVOKE_DEFAULT_VALUE = new InvokeDefaultFunction();
 
-    Definition(TypeToken<C> configType, KeyPath pathPrefix, DataEntry.Comments topLevelComments,
+    Definition(TypeToken<C> configType, KeyPath pathPrefix, CommentData topLevelComments,
                List<String> labels, LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons,
                LibraryLang libraryLang, MethodMirror methodMirror, Instantiator instantiator) {
         this.configType = Objects.requireNonNull(configType);
@@ -75,7 +76,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     @SuppressWarnings("unchecked")
     private C instantiate(MethodYield.Builder methodYield) {
         return (C) instantiator.generate(
-                configType.getRawType().getClassLoader(), superTypesArray, methodYield.build()
+                getReflectiveMandate().getClassLoader(), superTypesArray, methodYield.build()
         );
     }
 
@@ -85,18 +86,45 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     @Override
-    public DataEntry.@NonNull Comments getTopLevelComments() {
-        return topLevelComments;
+    public @NonNull Layout<C> getLayout() {
+        return new Layout<C>() {
+
+            @Override
+            public @NonNull CommentData getTopLevelComments() {
+                return topLevelComments;
+            }
+
+            @Override
+            public @NonNull Collection<@NonNull String> getLabels() {
+                return Collections.unmodifiableList(Arrays.asList(labels));
+            }
+
+            @Override
+            public @NonNull Stream<@NonNull String> getLabelsAsStream() {
+                return Arrays.stream(labels);
+            }
+        };
     }
 
     @Override
-    public @NonNull Collection<@NonNull String> getLabels() {
-        return Collections.unmodifiableList(Arrays.asList(labels));
-    }
+    public @NonNull ReflectiveMandate getReflectiveMandate() {
+        return new ReflectiveMandate() {
+            @Override
+            public @NonNull ClassLoader getClassLoader() {
+                // In the future, maybe we will provide more possibilities
+                return getType().getRawType().getClassLoader();
+            }
 
-    @Override
-    public @NonNull Stream<@NonNull String> getLabelsAsStream() {
-        return Arrays.stream(labels);
+            @Override
+            public @NonNull Instantiator getInstantiator() {
+                return instantiator;
+            }
+
+            @Override
+            public @NonNull MethodMirror getMethodMirror() {
+                return methodMirror;
+            }
+        };
     }
 
     @Override
@@ -118,8 +146,8 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         return instantiate(methodYield);
     }
 
-    private <D extends DataTree, S> @NonNull LoadResult<@NonNull C> readingNexus(
-            @NonNull D dataTree, @NonNull ReadOptions readOptions, Definition.@NonNull HowToUpdate<D, S> howToUpdate
+    private <DT extends DataTree> @NonNull LoadResult<@NonNull C> readingNexus(
+            @NonNull DT dataTree, @NonNull ReadOptions readOptions, Definition.@NonNull HowToUpdate<DT> howToUpdate
     ) {
         // Where we're located - mapped
         KeyPath.Immut mappedPathPrefix;
@@ -227,20 +255,20 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         return LoadResult.of(instantiate(methodYield));
     }
 
-    private interface HowToUpdate<D extends DataTree, S> {
+    private interface HowToUpdate<DT extends DataTree> {
 
-        void insertMissingValue(D dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode, Object value);
+        void insertMissingValue(DT dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode, Object value);
 
         <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser);
 
-        void updateIfDesired(D dataTree, String mappedKey, DataEntry sourceEntry,
+        void updateIfDesired(DT dataTree, String mappedKey, DataEntry sourceEntry,
                              TypeSkeleton.MethodNode<?> methodNode);
 
     }
 
     @Override
     public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree, @NonNull ReadOptions readOptions) {
-        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree, Void>() {
+        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree>() {
             @Override
             public void insertMissingValue(DataTree dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode,
                                            Object value) {}
@@ -260,7 +288,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     public @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadOptions readOptions) {
 
         SerializeOutput outputForUpdate = new SerOutput(readOptions.keyMapper());
-        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree.Mut, SerializeOutput>() {
+        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree.Mut>() {
             @Override
             public void insertMissingValue(DataTree.Mut dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode,
                                            Object value) {

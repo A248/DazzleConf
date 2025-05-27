@@ -103,13 +103,13 @@ public interface Backend {
      * @param data the streamable data tree
      * @throws UncheckedIOException upon I/O failure
      */
-    void write(DataEntry.@Nullable Comments topLevelComments, @NonNull DataStreamable data);
+    void write(@Nullable CommentData topLevelComments, @NonNull DataStreamable data);
 
     /**
      * Whether comments are supported in the following location.
      * <p>
      * If comments are not supported there, this format backend is free to ignore them during
-     * {@link #write(DataEntry.Comments, DataStreamable)}.
+     * {@link #write(CommentData, DataStreamable)}.
      * <p>
      * If comments <i>are</i> supported in this location, they <i>must</i> be supported by both <code>write</code>
      * and <code>read</code> methods. That is, comments at this location must correctly round-trip and

@@ -117,7 +117,7 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
         }
         KeyPath.Mut keyPathMut = keyPath.intoMut();
         keyPathMut.addFront(source.mappedKey);
-        context.readOptions.loadListener().updatedPath(keyPathMut.intoImmut(), updateReason);
+        context.readOptions.loadListener().updatedPath(keyPathMut, updateReason);
     }
 
     @Override

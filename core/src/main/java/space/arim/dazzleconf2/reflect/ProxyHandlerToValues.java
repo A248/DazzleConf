@@ -67,12 +67,12 @@ final class ProxyHandlerToValues extends ProxyHandler {
             return Arrays.equals(targets, that.targets) && fastValues.equals(that.fastValues);
         }
         if (otherHandler instanceof ProxyHandlerToDelegate) {
-            // Unwrap the delegate by forcing it to implement equality
+            // Invert direction => unwrap the delegate
             return otherHandler.implEquals(otherProxy, ourProxy, this);
         }
         if (otherHandler instanceof ProxyHandlerToEmpty) {
-            // The only possible condition where this might hold
-            return fastValues.isEmpty();
+            // We're never equal - we can never know if we implement the same interfaces
+            return false;
         }
         throw new UnsupportedOperationException();
     }
@@ -81,6 +81,14 @@ final class ProxyHandlerToValues extends ProxyHandler {
     int implHashCode() {
         // WARNING: Keep in sync with ProxyHandlerToEmpty#hashCode
         return fastValues.hashCode();
+    }
+
+    @Override
+    void implToString(StringBuilder output) {
+        for (Class<?> target : targets) {
+            output.append(target.getName()).append(',');
+        }
+        fastValues.forEach((k, v) -> output.append(k).append('=').append(v).append(','));
     }
 
     void initDefaultMethods(Object proxy, Set<Method> defaultMethods) {

@@ -50,17 +50,27 @@ final class ProxyHandlerToEmpty extends ProxyHandler {
 
     @Override
     boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler otherHandler) {
+        if (otherHandler instanceof ProxyHandlerToValues) {
+            // We're never equal - we can never know if we implement the same interfaces
+            return false;
+        }
+        if (otherHandler instanceof ProxyHandlerToDelegate) {
+            // Invert direction => unwrap the delegate
+            return otherHandler.implEquals(otherProxy, ourProxy, this);
+        }
         if (otherHandler instanceof ProxyHandlerToEmpty) {
             return iface.equals(((ProxyHandlerToEmpty) otherHandler).iface);
         }
-        // It's us - ProxyHandlerToValues or ProxyHandlerToDelegate
-        // By inverting the direction of equals, we get our peers to handle the implementation
-        return otherProxy.equals(ourProxy);
+        throw new UnsupportedOperationException();
     }
 
     @Override
     int implHashCode() {
-        // IMPORTANT: This matches up with ProxyHandlerToValues's fastValues.isEmpty() (hash of map is guaranteed zero)
-        return 0;
+        return iface.hashCode();
+    }
+
+    @Override
+    void implToString(StringBuilder output) {
+        output.append(iface.getName());
     }
 }

@@ -20,6 +20,7 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.MethodId;
@@ -49,13 +50,13 @@ final class TypeSkeleton {
 
     static final class MethodNode<V> {
 
-        final DataEntry.Comments comments;
+        final CommentData comments;
         final boolean optional;
         final MethodId methodId;
         private final DefaultValues<V> defaultValues; // Can be null if optional, or if defaults unconfigured
         final SerializeDeserialize<V> serializer;
 
-        MethodNode(DataEntry.Comments comments, boolean optional, MethodId methodId, DefaultValues<V> defaultValues,
+        MethodNode(CommentData comments, boolean optional, MethodId methodId, DefaultValues<V> defaultValues,
                    SerializeDeserialize<V> serializer) {
             this.comments = comments;
             this.optional = optional;
@@ -134,7 +135,9 @@ final class TypeSkeleton {
             if (optional && (value = ((Optional<?>) value).orElse(null)) == null) {
                 return null;
             }
-            serializer.serialize((V) value, ser);
+            @SuppressWarnings("unchecked")
+            V castValue = (V) value;
+            serializer.serialize(castValue, ser);
 
             Object output = ser.getAndClearLastOutput();
             if (output == null) {

@@ -10,7 +10,7 @@ For advanced handling, implement a `TypeLiaison`. These liaisons are far more po
 
 **TypeLiaison capabilities**
 
-A `TypeLiaison`. It can do the following:
+A `TypeLiaison` matches a type `V` and returns a `TypeLiaison.Agent<V>` to handle it. It can do the following:
 
 * Scanning for annotations on the requested type (*TYPE_USE* annotations)
 * Accessing generic arguments, e.g. getting the `T` argument from a `MyType<T>`
@@ -25,8 +25,6 @@ All of these capabilities are available through various APIs, where suitable.
 Example 1: `ListLiaison` captures any `List<T>`, accesses the `T` parameter, and handles elements of that list based on a serializer for `T`.
 
 Example 2: `EnumLiaison` works with any enum type, so long as `Class#isEnum` returns true.
-
-Example 3
 
 ## Configuration Objects
 

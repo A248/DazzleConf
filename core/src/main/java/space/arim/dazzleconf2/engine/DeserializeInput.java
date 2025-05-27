@@ -59,8 +59,7 @@ public interface DeserializeInput {
      *
      * @return an absolute key path
      */
-    @NonNull
-    KeyPath absoluteKeyPath();
+    @NonNull KeyPath absoluteKeyPath();
 
     /**
      * Gets the key mapper.
@@ -71,8 +70,7 @@ public interface DeserializeInput {
      *
      * @return the key mapper, never
      */
-    @NonNull
-    KeyMapper keyMapper();
+    @NonNull KeyMapper keyMapper();
 
     /**
      * Requires the object to be a string

@@ -20,10 +20,12 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.reflect.Instantiator;
+import space.arim.dazzleconf2.reflect.MethodMirror;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.Collection;
@@ -44,35 +46,97 @@ public interface ConfigurationDefinition<C> {
     @NonNull TypeToken<C> getType();
 
     /**
-     * Gets the top level comments on the configuration interface.
-     * <p>
-     * If none is set, an empty {@code Comments} might be returned.
+     * Gets the layout of the configuration interface
      *
-     * @return the top level comments, which may be empty if not set
+     * @return the scanned layout of the configuration interface
      */
-    DataEntry.@NonNull Comments getTopLevelComments();
+    @NonNull Layout<C> getLayout();
 
     /**
-     * Gets the unmapped key set. These are the same as the method names from the configuration interface.
+     * The layout of a configuration definition.
      * <p>
-     * The returned collection is immutable and ordered according to how this {@code ConfigurationDefinition} orders
-     * its entries. It is unmapped in the sense that a {@code KeyMapper} has not been applied to the elements.
+     * This layout includes all of a scanned interface's components.
      *
-     * @return the ordered labels for this definition
+     * @param <C> the configuration type
      */
-    @NonNull Collection<@NonNull String> getLabels();
+    interface Layout<C> {
+
+        /**
+         * Gets the top level comments on the configuration interface.
+         * <p>
+         * If none is set, an empty {@code Comments} might be returned.
+         *
+         * @return the top level comments, which may be empty if not set
+         */
+        @NonNull CommentData getTopLevelComments();
+
+        /**
+         * Gets the unmapped key set. These are the same as the method names from the configuration interface,
+         * excluding default methods annotated with <code>@CallableFn</code>.
+         * <p>
+         * The returned collection is immutable and ordered according to how this {@code ConfigurationDefinition} orders
+         * its entries. It is unmapped in the sense that a {@code KeyMapper} has not been applied to the elements.
+         *
+         * @return the ordered labels for this definition
+         */
+        @NonNull Collection<@NonNull String> getLabels();
+
+        /**
+         * Gets the unmapped key set, as a stream. These are the same as the method names from the configuration
+         * interface, excluding default methods annotated with <code>@CallableFn</code>.
+         * <p>
+         * The returned stream is ordered according to how this {@code ConfigurationDefinition} orders its entries. It is
+         * unmapped in the sense that a {@code KeyMapper} has not been applied to the elements.
+         * <p>
+         * This function is semantically equivalent to <code>getLabels().stream()</code>.
+         *
+         * @return the ordered labels for this definition
+         */
+        @NonNull Stream<@NonNull String> getLabelsAsStream();
+
+    }
 
     /**
-     * Gets the unmapped key set, as a stream. These are the same as the method names from the configuration interface.
-     * <p>
-     * The returned stream is ordered according to how this {@code ConfigurationDefinition} orders its entries. It is
-     * unmapped in the sense that a {@code KeyMapper} has not been applied to the elements.
-     * <p>
-     * This function is semantically equivalent to <code>getLabels().stream()</code>.
+     * Gets the options responsible for constructing and reflecting on instances
      *
-     * @return the ordered labels for this definition
+     * @return the reflection options
      */
-    @NonNull Stream<@NonNull String> getLabelsAsStream();
+    @NonNull ReflectiveMandate getReflectiveMandate();
+
+    /**
+     * How the definition operates by reflecting on configuration methods.
+     * <p>
+     * The definition is required to use the same objects as it provides here (or at least, it is required to rely
+     * on identical functionality).
+     *
+     */
+    interface ReflectiveMandate {
+
+        /**
+         * Gets the classloader in which to generate interface implementations.
+         * <p>
+         * This classloader is passed to the instantiator every time a configuration object is generated. It is
+         * usually the same classloader as the configuration object.
+         *
+         * @return the classloader
+         */
+        @NonNull ClassLoader getClassLoader();
+
+        /**
+         * Gets the instantiator used to generate interface implementations.
+         *
+         * @return the instantiator
+         */
+        @NonNull Instantiator getInstantiator();
+
+        /**
+         * Gets the method mirror used to retrieve and call methods on a configuration type.
+         *
+         * @return the method mirror
+         */
+        @NonNull MethodMirror getMethodMirror();
+
+    }
 
     /**
      * Loads the default configuration.
@@ -118,7 +182,8 @@ public interface ConfigurationDefinition<C> {
      * overidden or cleared. The values of the provided configuration are written to it, and it does not matter
      * how the {@code config} parameter is implemented so long as it returns non-null values.
      * <p>
-     * Values are guaranteed to be inserted in the provided tree in the same order as {@link #getLabels()} is ordered.
+     * Values are guaranteed to be inserted in the provided tree in the same order as the layout of this definition.
+     * Note that the order of the layout may differ from the source code order of methods.
      *
      * @param config the configuration
      * @param dataTree the data tree to write to

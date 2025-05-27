@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.ReloadShell;
 
 import java.lang.reflect.InvocationTargetException;
@@ -31,6 +33,10 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
 
     @Override
     Object implInvoke(Method method, Object[] args) throws Throwable {
+        I delegate = this.delegate;
+        if (delegate == null) {
+            throw new NullPointerException("delegate");
+        }
         try {
             return method.invoke(delegate, args);
         } catch (IllegalAccessException ex) {
@@ -54,7 +60,8 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
             return Objects.equals(delegate, that.delegate);
         }
         if (delegate == null) {
-            return otherHandler instanceof ProxyHandlerToEmpty;
+            // We lack the information to do anything else
+            return false;
         }
         return delegate.equals(otherProxy);
     }
@@ -62,6 +69,11 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
     @Override
     int implHashCode() {
         return Objects.hashCode(delegate);
+    }
+
+    @Override
+    void implToString(StringBuilder output) {
+        output.append(delegate);
     }
 
     class AsReloadShell implements ReloadShell<I> {
@@ -73,17 +85,17 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
         }
 
         @Override
-        public void setCurrentDelegate(I delegate) {
+        public void setCurrentDelegate(@Nullable I delegate) {
             ProxyHandlerToDelegate.this.delegate = delegate;
         }
 
         @Override
-        public I getCurrentDelegate() {
+        public @Nullable I getCurrentDelegate() {
             return delegate;
         }
 
         @Override
-        public I getShell() {
+        public @NonNull I getShell() {
             return shell;
         }
     }

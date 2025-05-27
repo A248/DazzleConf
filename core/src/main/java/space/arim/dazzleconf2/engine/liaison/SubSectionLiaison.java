@@ -85,19 +85,23 @@ public final class SubSectionLiaison implements TypeLiaison {
 
             @Override
             public @NonNull LoadResult<@NonNull V> deserialize(@NonNull DeserializeInput deser) {
-                return deser.requireDataTree().flatMap((dataTree -> {
-                    return configuration.readFrom(dataTree, new ConfigurationDefinition.ReadOptions() {
-                        @Override
-                        public @NonNull LoadListener loadListener() {
-                            return deser::flagUpdate;
-                        }
+                // In order to reduce stack depth, avoid functions like LoadResult#flatMap
+                LoadResult<DataTree> dataTreeResult = deser.requireDataTree();
+                if (dataTreeResult.isFailure()) {
+                    return LoadResult.failure(dataTreeResult.getErrorContexts());
+                }
+                DataTree dataTree = dataTreeResult.getOrThrow();
+                return configuration.readFrom(dataTree, new ConfigurationDefinition.ReadOptions() {
+                    @Override
+                    public @NonNull LoadListener loadListener() {
+                        return deser::flagUpdate;
+                    }
 
-                        @Override
-                        public @NonNull KeyMapper keyMapper() {
-                            return deser.keyMapper();
-                        }
-                    });
-                }));
+                    @Override
+                    public @NonNull KeyMapper keyMapper() {
+                        return deser.keyMapper();
+                    }
+                });
             }
 
             @Override

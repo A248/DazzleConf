@@ -19,20 +19,28 @@
 
 package space.arim.dazzleconf.backend;
 
-import org.junit.jupiter.api.Nested;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
+import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
-import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class DataEntryTest {
 
     private final DataEntry entry = new DataEntry("value");
+
+    @Test
+    public void constructor() {
+        assertThrows(IllegalArgumentException.class, () -> new DataEntry(new DataEntryTest()));
+        assertThrows(IllegalArgumentException.class, () -> new DataEntry(new LinkedHashMap<>()));
+        assertThrows(IllegalArgumentException.class, () -> new DataEntry(null));
+    }
 
     @Test
     public void value() {
@@ -54,67 +62,36 @@ public class DataEntryTest {
         assertEquals(42, entryWith42.getLineNumber());
     }
 
-    @Nested
-    class CommentsTest {
+    @Test
+    public void comments() {
+        CommentData comments = CommentData.empty().setAt(CommentLocation.ABOVE, "hi");
+        DataEntry commented = entry.withComments(comments);
+        assertEquals(comments, commented.getComments());
+        assertEquals(List.of("hi"), commented.getComments(CommentLocation.ABOVE));
+    }
 
-        @Test
-        public void setAt() {
-            DataEntry.Comments empty = DataEntry.Comments.empty();
-            DataEntry.Comments c1c2 = empty.setAt(CommentLocation.ABOVE, List.of("c1", "c2"));
-            assertEquals(empty, DataEntry.Comments.empty(), "immutable");
-            assertEquals(List.of("c1", "c2"), c1c2.getAt(CommentLocation.ABOVE));
-            assertEquals(List.of(), c1c2.getAt(CommentLocation.INLINE));
-        }
+    @Test
+    public void validateValue() {
+        // Valid
+        assertTrue(DataEntry.validateValue("hi"));
+        assertTrue(DataEntry.validateValue(0));
+        assertTrue(DataEntry.validateValue(0L));
+        assertTrue(DataEntry.validateValue(0f));
+        assertTrue(DataEntry.validateValue(0d));
+        assertTrue(DataEntry.validateValue((byte) 0));
+        assertTrue(DataEntry.validateValue((short) 0));
+        assertTrue(DataEntry.validateValue(false));
+        assertTrue(DataEntry.validateValue('c'));
+        assertTrue(DataEntry.validateValue(new DataTree.Immut()));
+        // Invalid
+        assertFalse(DataEntry.validateValue(new int[] {1, 3, 4}));
+        assertFalse(DataEntry.validateValue(this));
+        assertFalse(DataEntry.validateValue(new LinkedHashMap<>()));
+        assertFalse(DataEntry.validateValue(null));
+    }
 
-        @Test
-        public void append() {
-            DataEntry.Comments empty = DataEntry.Comments.empty();
-            DataEntry.Comments below = empty.setAt(CommentLocation.BELOW, "b1", "b2");
-            DataEntry.Comments overlap = empty.setAt(CommentLocation.BELOW, "overlap")
-                    .setAt(CommentLocation.INLINE, "untouched");
-            assertEquals(
-                    empty.setAt(CommentLocation.BELOW, "b1", "b2", "overlap")
-                                    .setAt(CommentLocation.INLINE, "untouched"),
-                    below.append(overlap)
-            );
-            assertEquals(
-                    empty.setAt(CommentLocation.BELOW, "overlap", "b1", "b2")
-                            .setAt(CommentLocation.INLINE, "untouched"),
-                    overlap.append(below)
-            );
-            assertEquals(List.of(), below.append(overlap).getAt(CommentLocation.ABOVE));
-            assertEquals(List.of(), overlap.append(below).getAt(CommentLocation.ABOVE));
-        }
-
-        @Test
-        public void appendAt() {
-            DataEntry.Comments empty = DataEntry.Comments.empty();
-            DataEntry.Comments c1c2 = empty.setAt(CommentLocation.ABOVE, List.of("c1", "c2"));
-            assertEquals(c1c2, empty.appendAt(CommentLocation.ABOVE, List.of("c1", "c2")));
-            List<String> inline = List.of("beside value");
-            DataEntry.Comments addInline = c1c2.appendAt(CommentLocation.INLINE, inline);
-            assertEquals(inline, addInline.getAt(CommentLocation.INLINE));
-            assertEquals(List.of(), addInline.getAt(CommentLocation.BELOW));
-
-            DataEntry.Comments combined = addInline.appendAt(CommentLocation.ABOVE, "to append");
-            assertEquals(List.of("c1", "c2", "to append"), combined.getAt(CommentLocation.ABOVE));
-            assertEquals(List.of(), combined.getAt(CommentLocation.BELOW));
-        }
-
-        @Test
-        public void empty() {
-            DataEntry.Comments empty = DataEntry.Comments.empty();
-            for (CommentLocation location : CommentLocation.values()) {
-                assertEquals(List.of(), empty.getAt(location));
-            }
-            DataEntry.Comments c1c2 = empty.setAt(CommentLocation.ABOVE, List.of("c1", "c2"));
-            assertEquals(c1c2, empty.append(c1c2));
-            assertEquals(c1c2, c1c2.append(empty));
-            List<String> inline = List.of("beside value");
-            DataEntry.Comments addInline = empty.appendAt(CommentLocation.INLINE, inline);
-            DataEntry.Comments setInline = empty.setAt(CommentLocation.INLINE, inline);
-            assertEquals(setInline, addInline);
-            assertEquals(setInline.getAt(CommentLocation.ABOVE), addInline.getAt(CommentLocation.ABOVE));
-        }
+    @Test
+    public void equals() {
+        EqualsVerifier.forClass(DataEntry.class).withOnlyTheseFields("value").verify();
     }
 }

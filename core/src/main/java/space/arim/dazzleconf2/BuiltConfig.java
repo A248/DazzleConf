@@ -26,7 +26,6 @@ import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf2.migration.MigrateContext;
 import space.arim.dazzleconf2.migration.Migration;
-import space.arim.dazzleconf2.reflect.Instantiator;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.*;
@@ -38,16 +37,14 @@ final class BuiltConfig<C> implements Configuration<C> {
     private final Locale locale;
     private final List<TypeLiaison> typeLiaisons;
     private final KeyMapper keyMapper;
-    private final Instantiator instantiator;
     private final List<Migration<?, C>> migrations;
 
     BuiltConfig(ConfigurationDefinition<C> definition, Locale locale, List<TypeLiaison> typeLiaisons,
-                KeyMapper keyMapper, Instantiator instantiator, List<Migration<?, C>> migrations) {
+                KeyMapper keyMapper, List<Migration<?, C>> migrations) {
         this.definition = Objects.requireNonNull(definition, "definition");
         this.locale = Objects.requireNonNull(locale, "locale");
         this.typeLiaisons = typeLiaisons;
         this.keyMapper = keyMapper;
-        this.instantiator = Objects.requireNonNull(instantiator, "instantiator");
         this.migrations = Objects.requireNonNull(migrations, "migrations");
     }
 
@@ -67,11 +64,6 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     @Override
-    public @NonNull Instantiator getInstantiator() {
-        return instantiator;
-    }
-
-    @Override
     public @NonNull List<@NonNull Migration<?, C>> getMigrations() {
         return migrations;
     }
@@ -82,18 +74,13 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     @Override
-    public DataEntry.@NonNull Comments getTopLevelComments() {
-        return definition.getTopLevelComments();
+    public @NonNull Layout<C> getLayout() {
+        return definition.getLayout();
     }
 
     @Override
-    public @NonNull Collection<@NonNull String> getLabels() {
-        return definition.getLabels();
-    }
-
-    @Override
-    public @NonNull Stream<@NonNull String> getLabelsAsStream() {
-        return definition.getLabelsAsStream();
+    public @NonNull ReflectiveMandate getReflectiveMandate() {
+        return definition.getReflectiveMandate();
     }
 
     @Override
@@ -205,6 +192,7 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     private LoadResult<C> configureWith0(@NonNull CachedBackend backend, @Nullable UpdateListener updateListener) {
 
+        Layout<C> layout = getLayout();
         RecordUpdates recordUpdates = (updateListener == null) ?
                 new RecordUpdates() : new RecordUpdates.WithDelegate(updateListener);
         KeyMapper keyMapper = (this.keyMapper != null) ? this.keyMapper : backend.recommendKeyMapper();
@@ -229,7 +217,7 @@ final class BuiltConfig<C> implements Configuration<C> {
                     // Update the backend with the migrated value
                     DataTree.Mut writeBack = new DataTree.Mut();
                     writeTo(migrated, writeBack, new WriteOpts(keyMapper));
-                    backend.write(getTopLevelComments(), writeBack);
+                    backend.write(layout.getTopLevelComments(), writeBack);
                     // Now signal completion, and finish
                     migration.onCompletion();
                     recordUpdates.migratedFrom(migration);
@@ -252,7 +240,7 @@ final class BuiltConfig<C> implements Configuration<C> {
             C defaults = loadDefaults();
             DataTree.Mut writeBack = new DataTree.Mut();
             writeTo(defaults, writeBack, new WriteOpts(keyMapper));
-            backend.write(getTopLevelComments(), writeBack);
+            backend.write(layout.getTopLevelComments(), writeBack);
             recordUpdates.loadedDefaults();
             return LoadResult.of(defaults);
         }
@@ -261,12 +249,12 @@ final class BuiltConfig<C> implements Configuration<C> {
         if (loadResult.isSuccess() && recordUpdates.updated) {
             // 4. Update if necessary
             // Use stream to re-assert order: the backend can load in any order, and updates affect ordering too
-            Stream<Map.Entry<Object, DataEntry>> entryStream = getLabelsAsStream()
+            Stream<Map.Entry<Object, DataEntry>> entryStream = layout.getLabelsAsStream()
                     .map((label) -> {
                         String mappedKey = keyMapper.labelToKey(label).toString();
                         return ImmutableCollections.mapEntryOf(mappedKey, updatableTree.get(mappedKey));
                     });
-            backend.write(getTopLevelComments(), new DataStreamable() {
+            backend.write(layout.getTopLevelComments(), new DataStreamable() {
                 @Override
                 public @NonNull DataTree getAsTree() {
                     DataTree.Mut collected = new DataTree.Mut();
@@ -300,5 +288,15 @@ final class BuiltConfig<C> implements Configuration<C> {
         }
         errorPrint.onError(result.getErrorContexts());
         return loadDefaults();
+    }
+
+    @Override
+    public @NonNull ReloadShell<C> makeReloadShell(@Nullable C initialValue) {
+        ReflectiveMandate reflectiveMandate = getReflectiveMandate();
+        ReloadShell<C> reloadShell = reflectiveMandate.getInstantiator().generateShell(
+                reflectiveMandate.getClassLoader(), getType().getRawType()
+        );
+        reloadShell.setCurrentDelegate(initialValue);
+        return reloadShell;
     }
 }
