@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2.engine.liaison;
 
+import space.arim.dazzleconf2.engine.DefaultValues;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
@@ -42,7 +44,10 @@ public @interface StringDefault {
     String value();
 
     /**
-     * The string value to provide as a missing value. If unset, this falls back to {@link #value()}
+     * The string value to provide as an "if missing" default. See {@link DefaultValues#ifMissing()} for
+     * considerations.
+     * <p>
+     * If unset, this falls back to {@link #value()}
      *
      * @return the value to provide when missing
      */

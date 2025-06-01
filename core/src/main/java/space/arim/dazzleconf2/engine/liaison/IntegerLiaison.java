@@ -54,6 +54,11 @@ public final class IntegerLiaison extends BaseNumberLiaison<Integer, IntegerDefa
     }
 
     @Override
+    @NonNull Integer ifMissing(@NonNull IntegerDefault defaultAnnotation) {
+        return defaultAnnotation.ifMissing();
+    }
+
+    @Override
     @Nullable Integer castNumbers(@NonNull Object input) {
         if (input instanceof Integer) {
             return (Integer) input;
@@ -63,6 +68,12 @@ public final class IntegerLiaison extends BaseNumberLiaison<Integer, IntegerDefa
         }
         if (input instanceof Byte) {
             return (int) ((byte) input);
+        }
+        if (input instanceof Long) {
+            long longValue = (Long) input;
+            if ((int) longValue == longValue) {
+                return (int) longValue;
+            }
         }
         return null;
     }

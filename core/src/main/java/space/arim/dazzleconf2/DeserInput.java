@@ -111,10 +111,7 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     @Override
-    public void flagUpdate(@Nullable KeyPath keyPath, @NonNull UpdateReason updateReason) {
-        if (keyPath == null) {
-            keyPath = new KeyPath.Mut();
-        }
+    public void flagUpdate(@NonNull KeyPath keyPath, @NonNull UpdateReason updateReason) {
         KeyPath.Mut keyPathMut = keyPath.intoMut();
         keyPathMut.addFront(source.mappedKey);
         context.readOptions.loadListener().updatedPath(keyPathMut, updateReason);

@@ -24,6 +24,6 @@ import space.arim.dazzleconf2.reflect.DefaultInstantiator;
 public class DefaultInstantiatorTest extends InstantiatorTest {
 
     public DefaultInstantiatorTest() {
-        super(new DefaultInstantiator());
+        super(new DefaultInstantiator(DefaultInstantiatorTest.class.getClassLoader()));
     }
 }

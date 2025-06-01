@@ -44,16 +44,8 @@ public final class StringRoot implements ReadableRoot {
         return true;
     }
 
-    /**
-     * Gets the current content, which may change
-     * @return the content
-     */
-    public @NonNull String getContent() {
-        return content;
-    }
-
     @Override
-    public @NonNull String readToString() throws IOException {
+    public @NonNull String readString() {
         return content;
     }
 
@@ -65,7 +57,7 @@ public final class StringRoot implements ReadableRoot {
     }
 
     @Override
-    public void writeString(@NonNull String content) throws IOException {
+    public void writeString(@NonNull String content) {
         this.content = Objects.requireNonNull(content);
     }
 

@@ -32,10 +32,21 @@ import java.util.*;
  */
 public final class DefaultInstantiator implements Instantiator {
 
+    private final ClassLoader classLoader;
+
     /**
-     * Creates
+     * Creates from a classloader.
+     * <p>
+     * The classloader provided is where generated proxies will be located.
      */
-    public DefaultInstantiator() {}
+    public DefaultInstantiator(@NonNull ClassLoader classLoader) {
+        this.classLoader = Objects.requireNonNull(classLoader);
+    }
+
+    @Override
+    public MethodMirror getMethodMirror() {
+        return new DefaultMethodMirror();
+    }
 
     @Override
     public boolean hasProduced(@NonNull Object instance) {
@@ -43,7 +54,7 @@ public final class DefaultInstantiator implements Instantiator {
     }
 
     @Override
-    public @NonNull Object generate(@NonNull ClassLoader classLoader, @NonNull Class<?> @NonNull [] targets,
+    public @NonNull Object generate(@NonNull Class<?> @NonNull [] targets,
                                     @NonNull MethodYield methodYield) {
 
         Map<String, Object> fastValues = new HashMap<>(20, 0.80f);
@@ -74,19 +85,17 @@ public final class DefaultInstantiator implements Instantiator {
     }
 
     @Override
-    public <I> @NonNull ReloadShell<I> generateShell(@NonNull ClassLoader classLoader, @NonNull Class<I> iface) {
+    public <I> @NonNull ReloadShell<I> generateShell(@NonNull Class<I> iface) {
         ProxyHandlerToDelegate<I> proxyHandler = new ProxyHandlerToDelegate<>();
-        @SuppressWarnings("unchecked")
-        I shell = (I) Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
+        I shell = iface.cast(Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler));
         return proxyHandler.new AsReloadShell(shell);
     }
 
     @Override
-    public @NonNull Object generateEmpty(@NonNull ClassLoader classLoader, @NonNull Class<?> iface) {
-        ProxyHandlerToEmpty proxyHandler = new ProxyHandlerToEmpty(iface);
-        Object proxy = Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler);
+    public <I> @NonNull I generateEmpty(@NonNull Class<I> iface) {
+        ProxyHandlerToEmpty<I> proxyHandler = new ProxyHandlerToEmpty<>(iface);
+        I proxy = iface.cast(Proxy.newProxyInstance(classLoader, new Class[]{iface}, proxyHandler));
         proxyHandler.initProxy(proxy);
         return proxy;
     }
-
 }

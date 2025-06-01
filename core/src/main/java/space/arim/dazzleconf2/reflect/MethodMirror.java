@@ -27,19 +27,38 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.stream.Stream;
 
 /**
- * Reflective access API for getting and invoking methods on a type.
+ * Low level service for traversing a type hierarchy and getting and invoking methods on types in that hierarchy.
+ * <p>
+ * <b>Usage</b>
+ * <p>
+ * Usage is only valid with interface types. A {@code MethodMirror} can traverse the declared methods of an interface
+ * yielding {@code MethodId} for each of them, and it can call those methods in a possibly-efficient manner. It should
+ * never return bridge or synthetic methods.
+ * <p>
+ * <b>Implementing</b>
+ * <p>
+ * Implementing this interface correctly requires a number of considerations. It is recommended to check the library
+ * source code as a reference implementation.
+ * <p>
+ * <b>API status</b>
+ * <p>
+ * Because of this API's status as a service provider, it may require updating to keep in sync with the library's
+ * minor versions. Some minor versions might offer new features, which would need to be implemented by this interface.
+ * <p>
+ * If implementations of {@code MethodMirror} are not updated, they will still be compatible with this library in a
+ * strict sense. Existing code will never break. However, newer features may be disabled or refuse to work.
  *
  */
 public interface MethodMirror {
 
     /**
-     * Starts making a type walker for the given type.
+     * Makes a type walker for the given type.
      * <p>
      * The type walker allows the caller to control movement and selection of super classes insofar as the control flow
      * suits them.
      *
      * @param reifiedType the reified type being walked
-     * @return the type walked
+     * @return the type walker
      */
     @NonNull TypeWalker typeWalker(ReifiedType.@NonNull Annotated reifiedType);
 
@@ -67,8 +86,6 @@ public interface MethodMirror {
          * help with this.
          *
          * @return a stream of methods
-         * @throws IllegalStateException optionally, if the <code>ReifiedType</code> is malformed and does not represent
-         * a valid type
          */
         @NonNull Stream<@NonNull MethodId> getViableMethods();
 

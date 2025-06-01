@@ -20,8 +20,6 @@
 package space.arim.dazzleconf;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.Configuration;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
@@ -31,20 +29,32 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@ExtendWith(MockitoExtension.class)
 public class ConfigurationTest {
 
     @Test
     public void simple() {
-        Configuration<HelloWorld> config = Configuration
-                .defaultBuilder(HelloWorld.class)
-                .build();
+        Configuration<HelloWorld> config = Configuration.defaultBuilder(HelloWorld.class).build();
         assertEquals("hi", config.loadDefaults().helloThere());
 
         DataTree.Mut sourceTree = new DataTree.Mut();
         sourceTree.set("helloThere", new DataEntry("goodbye"));
-
-        assertEquals("goodbye", config.readFrom(sourceTree).getOrThrow().helloThere());
+        HelloWorld loadedFromSource = config.readFrom(sourceTree.intoImmut()).getOrThrow();
+        assertEquals("goodbye", loadedFromSource.helloThere());
+        {
+            DataTree.Mut writeBack = new DataTree.Mut();
+            config.writeTo(loadedFromSource, writeBack);
+            assertEquals(sourceTree, writeBack);
+        }
+        DataTree.Mut writeCustom = new DataTree.Mut();
+        writeCustom.set("helloThere", new DataEntry("bye"));
+        DataTree.Mut output = new DataTree.Mut();
+        config.writeTo(new HelloWorld() {
+            @Override
+            public String helloThere() {
+                return "bye";
+            }
+        }, output);
+        assertEquals(writeCustom, output);
     }
 
     public interface HelloWorld {
@@ -59,10 +69,28 @@ public class ConfigurationTest {
         Configuration<GenericWorld<String>> config = Configuration
                 .defaultBuilder(new TypeToken<GenericWorld<String>>() {})
                 .build();
+        assertEquals(List.of(), config.loadDefaults().testList());
+
         List<String> testList = List.of("hi", "nope", "yes");
         DataTree.Mut sourceTree = new DataTree.Mut();
         sourceTree.set("testList", new DataEntry(testList));
-        assertEquals(testList, config.readFrom(sourceTree).getOrThrow().testList());
+        GenericWorld<String> loadedFromSource = config.readFrom(sourceTree).getOrThrow();
+        assertEquals(testList, loadedFromSource.testList());
+        {
+            DataTree.Mut writeBack = new DataTree.Mut();
+            config.writeTo(loadedFromSource, writeBack);
+            assertEquals(sourceTree, writeBack);
+        }
+        DataTree.Mut writeCustom = new DataTree.Mut();
+        writeCustom.set("testList", new DataEntry(List.of("1", "2")));
+        DataTree.Mut output = new DataTree.Mut();
+        config.writeTo(new GenericWorld<>() {
+            @Override
+            public List<String> testList() {
+                return List.of("1", "2");
+            }
+        }, output);
+        assertEquals(writeCustom, output);
     }
 
     public interface GenericWorld<T> {
@@ -71,4 +99,43 @@ public class ConfigurationTest {
             return List.of();
         }
     }
+
+    @Test
+    public void inherited() {
+        Configuration<InheritedWorld> config = Configuration.defaultBuilder(InheritedWorld.class).build();
+        assertEquals("hi", config.loadDefaults().helloThere());
+        assertEquals(List.of(), config.loadDefaults().testList());
+
+        List<Integer> testList = List.of(1, 3);
+        DataTree.Mut sourceTree = new DataTree.Mut();
+        sourceTree.set("helloThere", new DataEntry("goodbye"));
+        sourceTree.set("testList", new DataEntry(testList));
+        InheritedWorld loadedFromSource = config.readFrom(sourceTree).getOrThrow();
+        assertEquals("goodbye", loadedFromSource.helloThere());
+        assertEquals(testList, loadedFromSource.testList());
+        {
+            DataTree.Mut writeBack = new DataTree.Mut();
+            config.writeTo(loadedFromSource, writeBack);
+            assertEquals(sourceTree, writeBack);
+        }
+        DataTree.Mut writeCustom = new DataTree.Mut();
+        writeCustom.set("helloThere", new DataEntry("bye"));
+        writeCustom.set("testList", new DataEntry(List.of(4, 5)));
+        DataTree.Mut output = new DataTree.Mut();
+        config.writeTo(new InheritedWorld() {
+            @Override
+            public String helloThere() {
+                return "bye";
+            }
+
+            @Override
+            public List<Integer> testList() {
+                return List.of(4, 5);
+            }
+        }, output);
+        assertEquals(writeCustom, output);
+    }
+
+    public interface InheritedWorld extends GenericWorld<Integer>, HelloWorld {}
+
 }

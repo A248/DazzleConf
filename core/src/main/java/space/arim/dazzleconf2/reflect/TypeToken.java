@@ -20,23 +20,52 @@
 package space.arim.dazzleconf2.reflect;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 
-import java.lang.reflect.AnnotatedParameterizedType;
-import java.lang.reflect.AnnotatedType;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.*;
 import java.util.Objects;
 
 /**
- * Token for handling configuration types at runtime. Usage follows the common pattern for TypeToken in other
- * libraries: instantiate an anonymous subclass, fully specifying the generic type.
+ * Token for handling configuration-related types at runtime.
+ * <p>
+ * A {@code TypeToken} stores the annotated, reified type data for a single written type. It represents this
+ * information at the source level as the type parameter {@code V}, and at runtime via {@link #getReifiedType()}.
+ * <p>
+ * <b>Creation</b>
+ * <p>
+ * Construction of this type follows the common pattern seen in other libraries. The caller should instantiate an
+ * anonymous subclass, fully specifying the generic type. For example:
+ * <pre>
+ *     {@code
+ *     TypeToken<GenericConfig<String>> token = new TypeToken<GenericConfig<String>>() {};
+ *     }
+ * </pre>
+ * The type data will be extracted thanks to the use of the anonymous subclass, which retains the declaration of its
+ * superclass (and therefore the concrete generic parameter) at runtime. As one would expect, type variables are not
+ * permitted in the type declaration, as they defeat the very purpose of using {@code TypeToken} (which is a runtime,
+ * not source, variable) to begin with.
+ * <p>
+ * <b>Keying and Usage</b>
+ * <p>
+ * This class doubles as an immutable store of a single {@link ReifiedType.Annotated}. This class represents that type
+ * and can be thought of as a higher-level wrapper for it. It contains that same information at runtime, while also
+ * adding the source-level variable {@code V}.
+ * <p>
+ * Thus, in addition to extracting information upon subclass construction, this class can be used like any other POJO.
+ * Callers can use the trusted constructor {@link TypeToken#TypeToken(ReifiedType.Annotated)}, and they are expected to
+ * choose an appropriate type parameter based on their usage of this class.
+ * <p>
+ * Equality and hash code are defined based on the {@code ReifiedType.Annotated} this token represents. Subclases
+ * cannot override this behavior, which makes {@code TypeToken} safely consumable by various parts of the library and
+ * its callers.
  *
  * @param <V> the type
  */
 public class TypeToken<V> {
 
-    private final ReifiedType.Annotated reifiedType;
+    private final ReifiedType.@NonNull Annotated reifiedType;
 
     /**
      * Creates from a reified type.
@@ -61,22 +90,43 @@ public class TypeToken<V> {
      * TypeToken<GenericConfig<String>> token = new TypeToken<GenericConfig<String>>() {};
      * }
      * </pre>
+     *
+     * @throws DeveloperMistakeException if type variables were used in the type declaration
      */
     protected TypeToken() {
-        this.reifiedType = buildReified(extractTypeFromSubclass());
+        AnnotatedType typeFromSubclass = extractTypeFromSubclass();
+        this.reifiedType = new GenericContext(ReifiedType.Annotated.unannotated(Object.class)) {
+
+            @Override
+            ReifiedType.Annotated unknownVariable(String varName) {
+                throw new DeveloperMistakeException(
+                        "Type variables are rejected in TypeToken construction. Found variable '" + varName + '\''
+                );
+            }
+        }.reify(typeFromSubclass);
     }
 
     /**
      * Casts the argument to this type.
      * <p>
-     * Note that only the raw type ({@link #getRawType()}) can be checked at runtime, and not generic arguments.
+     * <b>Generic types</b>: Note that only the raw type ({@link #getRawType()}) can be checked at runtime, and not
+     * generic arguments.
+     * <p>
+     * <b>Primitive types</b>: This method accepts {@code obj} as a boxed argument if this type token represents a
+     * primitive type.
      *
      * @param obj the object
      * @return the cast value
      * @throws ClassCastException if the obj is not null and not assignable to this type
      */
-    public V cast(Object obj) {
-        return getRawType().cast(obj);
+    public final @PolyNull V cast(@PolyNull Object obj) {
+        Class<V> rawType = getRawType();
+        if (rawType.isPrimitive()) {
+            @SuppressWarnings("unchecked")
+            Class<V> wrapperType = (Class<V>) MethodType.methodType(rawType).wrap().returnType();
+            return wrapperType.cast(obj);
+        }
+        return rawType.cast(obj);
     }
 
     /**
@@ -98,32 +148,12 @@ public class TypeToken<V> {
         return reifiedType;
     }
 
-    private AnnotatedType extractTypeFromSubclass() {
+    private @NonNull AnnotatedType extractTypeFromSubclass() {
         AnnotatedType superClassType = getClass().getAnnotatedSuperclass();
         if (!(superClassType instanceof AnnotatedParameterizedType)) {
             throw new DeveloperMistakeException("Invalid TypeToken. Must subclass and specify generic arguments.");
         }
         return ((AnnotatedParameterizedType) superClassType).getAnnotatedActualTypeArguments()[0];
-    }
-
-    private static ReifiedType.@NonNull Annotated buildReified(AnnotatedType source) {
-
-        if (source instanceof AnnotatedParameterizedType) {
-            AnnotatedParameterizedType parameterizedSource = (AnnotatedParameterizedType) source;
-
-            Class<?> rawType = (Class<?>) ((ParameterizedType) parameterizedSource.getType()).getRawType();
-            AnnotatedType[] genericArgs = parameterizedSource.getAnnotatedActualTypeArguments();
-            ReifiedType.Annotated[] reifiedArgs = new ReifiedType.Annotated[genericArgs.length];
-            for (int n = 0; n < genericArgs.length; n++) {
-                reifiedArgs[n] = buildReified(genericArgs[n]);
-            }
-            return new ReifiedType.Annotated(rawType, reifiedArgs, source);
-        }
-        Type unannotated = source.getType();
-        if (unannotated instanceof Class) {
-            return new ReifiedType.Annotated((Class<?>) unannotated, source);
-        }
-        throw new DeveloperMistakeException("Invalid TypeToken. Generics must be fully reified.");
     }
 
     /**
@@ -146,7 +176,7 @@ public class TypeToken<V> {
     }
 
     @Override
-    public String toString() {
-        return "TypeToken{" + reifiedType + '}';
+    public final String toString() {
+        return "TypeToken" + '{' + reifiedType + '}';
     }
 }

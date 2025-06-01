@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2.engine.liaison;
 
+import space.arim.dazzleconf2.engine.DefaultValues;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
@@ -41,5 +43,13 @@ public @interface ShortDefault {
      * @return the short value
      */
     short value();
+
+    /**
+     * The short value to provide as an "if missing" default. See {@link DefaultValues#ifMissing()} for
+     * considerations.
+     *
+     * @return the short value if missing
+     */
+    short ifMissing();
 
 }

@@ -58,7 +58,7 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
     }
 
     @Override
-    public @NonNull String readToString() throws IOException {
+    public @NonNull String readString() throws IOException {
         return FileIO.readString(path, charset);
     }
 

@@ -37,7 +37,7 @@ public interface ReadableRoot extends DataRoot {
      * @return the read content
      * @throws IOException upon failure to open
      */
-    @NonNull String readToString() throws IOException;
+    @NonNull String readString() throws IOException;
 
     /**
      * Opens a reader to the data

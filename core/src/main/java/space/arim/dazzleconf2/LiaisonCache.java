@@ -65,7 +65,7 @@ final class LiaisonCache {
     static final class HandleType<V> {
 
         private final TypeToken<V> typeToken;
-        private final TypeLiaison.Agent<V> agent;
+        final TypeLiaison.Agent<V> agent;
         final SerializeDeserialize<V> serializer;
 
         private HandleType(TypeToken<V> typeToken, TypeLiaison.Agent<V> agent, SerializeDeserialize<V> serializer) {

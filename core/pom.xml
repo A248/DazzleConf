@@ -105,6 +105,20 @@
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf2.migration=ALL-UNNAMED
 						--add-opens space.arim.dazzleconf/space.arim.dazzleconf2.reflect=ALL-UNNAMED
 					</argLine>
+					<excludes>
+						<exclude>**/*$*</exclude>
+						<exclude>**/V1*</exclude>
+						<exclude>space/arim/dazzleconf/annote/*</exclude>
+						<exclude>space/arim/dazzleconf/factory/*</exclude>
+						<exclude>space/arim/dazzleconf/helper/*</exclude>
+						<exclude>space/arim/dazzleconf/internal/*</exclude>
+						<exclude>space/arim/dazzleconf/internal/error/*</exclude>
+						<exclude>space/arim/dazzleconf/internal/processor/*</exclude>
+						<exclude>space/arim/dazzleconf/internal/type/*</exclude>
+						<exclude>space/arim/dazzleconf/serialiser/*</exclude>
+						<exclude>space/arim/dazzleconf/sorter/*</exclude>
+						<exclude>space/arim/dazzleconf/validator/*</exclude>
+					</excludes>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -126,10 +140,12 @@
 					</execution>
 				</executions>
 				<configuration>
-					<verbose>true</verbose>
 					<coverageThreshold>75</coverageThreshold>
 					<mutationThreshold>75</mutationThreshold>
 					<threads>2</threads>
+					<excludedClasses>
+						<excludedClass>space.arim.dazzleconf.**</excludedClass>
+					</excludedClasses>
 				</configuration>
 				<dependencies>
 					<dependency>
@@ -153,6 +169,43 @@
 						<configuration>
 							<goals>verify --global-toolchains ${project.parent.basedir}/.github/workflows/toolchains.xml</goals>
 						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>v1-tests</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>run-v1-tests</id>
+								<goals>
+									<goal>test</goal>
+								</goals>
+								<configuration>
+									<excludes>
+										<exclude>**/*$*</exclude>
+									</excludes>
+									<includes>
+										<include>**/V1*Test.java</include>
+										<include>space/arim/dazzleconf/annote/*Test.java</include>
+										<include>space/arim/dazzleconf/factory/*Test.java</include>
+										<include>space/arim/dazzleconf/helper/*Test.java</include>
+										<include>space/arim/dazzleconf/internal/*Test.java</include>
+										<include>space/arim/dazzleconf/internal/error/*Test.java</include>
+										<include>space/arim/dazzleconf/internal/processor/*Test.java</include>
+										<include>space/arim/dazzleconf/internal/type/*Test.java</include>
+										<include>space/arim/dazzleconf/serialiser/*Test.java</include>
+										<include>space/arim/dazzleconf/sorter/*Test.java</include>
+										<include>space/arim/dazzleconf/validator/*Test.java</include>
+									</includes>
+								</configuration>
+							</execution>
+						</executions>
 					</plugin>
 				</plugins>
 			</build>
@@ -181,12 +234,6 @@
 			<artifactId>junit-jupiter-engine</artifactId>
 			<version>${junit.version}</version>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.checkerframework</groupId>
-			<artifactId>checker-qual</artifactId>
-			<version>${checkerqual.version}</version>
-			<optional>true</optional>
 		</dependency>
 	</dependencies>
 </project>

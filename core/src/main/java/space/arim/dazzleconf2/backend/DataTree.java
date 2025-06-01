@@ -55,8 +55,8 @@ import java.util.stream.Stream;
  * Recall that keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime, and they can be
  * checked using {@link #validateKey(Object)} and {@link DataEntry#validateValue(Object)}.
  * <p>
- * Mutability of this class is <b>not defined</b>. Please use {@link DataTree.Immut} or {@link DataTree.Mut} if you need
- * guaranteed mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
+ * Mutability of this class is <b>not defined</b>. Please use {@link DataTree.Mut} or {@link DataTree.Immut} if you need
+ * mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
  *
  */
 public abstract class DataTree implements DataStreamable {
@@ -179,7 +179,7 @@ public abstract class DataTree implements DataStreamable {
         @Override
         public @NonNull Mut intoMut() {
             Mut mutCopy = new Mut(data);
-            mutCopy.state = Mut.COPY_BEFORE_MUTATE;
+            mutCopy.dataFrozen = true;
             return mutCopy;
         }
 
@@ -195,11 +195,8 @@ public abstract class DataTree implements DataStreamable {
      */
     public static final class Mut extends DataTree {
 
-        private int state;
-
-        private static final int REGULAR = 0;
-        private static final int COPY_BEFORE_MUTATE = 1;
-        private static final int POISONED = 2;
+        // If the data in this Mut is shared with an Immut, it should not be modified
+        private boolean dataFrozen;
 
         /**
          * Creates
@@ -219,19 +216,15 @@ public abstract class DataTree implements DataStreamable {
 
         @Override
         public @NonNull Immut intoImmut() {
-            // SAFETY
-            // Setting state = POISONED prevents future modifications
-            state = POISONED;
+            // Setting dataFrozen prevents future modifications
+            dataFrozen = true;
             return new Immut(data);
         }
 
         private void ensureMutable() {
-            if (state == POISONED) {
-                throw new IllegalStateException("poisoned from #intoImmut");
-            }
-            if (state == COPY_BEFORE_MUTATE) {
+            if (dataFrozen) {
                 data = new LinkedHashMap<>(data);
-                state = REGULAR;
+                dataFrozen = false;
             }
         }
 

@@ -52,6 +52,7 @@ abstract class ProxyHandler implements InvocationHandler {
                     return output.toString();
                 default:
                     // Breaks the contract of java.lang.reflect.Proxy
+                    assert false : "Bad proxy; broken caller contract";
                     return null;
             }
         }

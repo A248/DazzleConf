@@ -78,10 +78,14 @@ public abstract class ImmutabilityGuard<V, S> implements AutoCloseable {
         assertEquals(initialSnapshot, latestSnapshot);
     }
 
-    @Override
-    public void close() {
+    public void check() {
         checkUnchanged();
         addedValues.forEach(ImmutabilityGuard::checkUnchanged);
+    }
+
+    @Override
+    public void close() {
+        check();
     }
 
 }

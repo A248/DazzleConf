@@ -25,7 +25,6 @@ import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.Instantiator;
-import space.arim.dazzleconf2.reflect.MethodMirror;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.Collection;
@@ -50,16 +49,14 @@ public interface ConfigurationDefinition<C> {
      *
      * @return the scanned layout of the configuration interface
      */
-    @NonNull Layout<C> getLayout();
+    @NonNull Layout getLayout();
 
     /**
      * The layout of a configuration definition.
      * <p>
      * This layout includes all of a scanned interface's components.
-     *
-     * @param <C> the configuration type
      */
-    interface Layout<C> {
+    interface Layout {
 
         /**
          * Gets the top level comments on the configuration interface.
@@ -97,46 +94,11 @@ public interface ConfigurationDefinition<C> {
     }
 
     /**
-     * Gets the options responsible for constructing and reflecting on instances
+     * Gets the instantiator used to generate interface implementations.
      *
-     * @return the reflection options
+     * @return the instantiator
      */
-    @NonNull ReflectiveMandate getReflectiveMandate();
-
-    /**
-     * How the definition operates by reflecting on configuration methods.
-     * <p>
-     * The definition is required to use the same objects as it provides here (or at least, it is required to rely
-     * on identical functionality).
-     *
-     */
-    interface ReflectiveMandate {
-
-        /**
-         * Gets the classloader in which to generate interface implementations.
-         * <p>
-         * This classloader is passed to the instantiator every time a configuration object is generated. It is
-         * usually the same classloader as the configuration object.
-         *
-         * @return the classloader
-         */
-        @NonNull ClassLoader getClassLoader();
-
-        /**
-         * Gets the instantiator used to generate interface implementations.
-         *
-         * @return the instantiator
-         */
-        @NonNull Instantiator getInstantiator();
-
-        /**
-         * Gets the method mirror used to retrieve and call methods on a configuration type.
-         *
-         * @return the method mirror
-         */
-        @NonNull MethodMirror getMethodMirror();
-
-    }
+    @NonNull Instantiator getInstantiator();
 
     /**
      * Loads the default configuration.
@@ -165,7 +127,7 @@ public interface ConfigurationDefinition<C> {
      * Reads from the data tree given, and updates it as necessary.
      * <p>
      * This function loads from the data tree, and it does not use migrations. However, if any entries need updating
-     * (as determined by {@link SerializeDeserialize#deserializeUpdate(DeserializeInput, SerializeOutput)} then the
+     * (as determined by {@link SerializeDeserialize#deserializeUpdate(DeserializeInput, SerializeOutput)}) then the
      * objects will be updated in the data tree. Callers can check whether any updates ocurred by using a load listener
      * in the read options.
      *

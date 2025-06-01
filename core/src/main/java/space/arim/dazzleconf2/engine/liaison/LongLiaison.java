@@ -54,6 +54,11 @@ public final class LongLiaison extends BaseNumberLiaison<Long, LongDefault, Long
     }
 
     @Override
+    @NonNull Long ifMissing(@NonNull LongDefault defaultAnnotation) {
+        return defaultAnnotation.ifMissing();
+    }
+
+    @Override
     @Nullable Long castNumbers(@NonNull Object input) {
         if (input instanceof Long) {
             return (Long) input;

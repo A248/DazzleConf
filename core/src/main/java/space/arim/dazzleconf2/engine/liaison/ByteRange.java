@@ -19,6 +19,12 @@
 
 package space.arim.dazzleconf2.engine.liaison;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.TYPE_USE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 /**
  * Controls the range of a byte.
  * <p>
@@ -26,6 +32,8 @@ package space.arim.dazzleconf2.engine.liaison;
  * supported by the byte liaison.
  *
  */
+@Retention(RUNTIME)
+@Target(TYPE_USE)
 public @interface ByteRange {
 
     /**

@@ -44,8 +44,8 @@ import java.util.function.Consumer;
  * <p>
  * <b>Mutability</b>
  * <p>
- * Mutability of this class is <b>not defined</b>. Please use {@link KeyPath.Immut} or {@link KeyPath.Mut} if you need
- * guaranteed mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
+ * Mutability of this class is <b>not defined</b>. Please use {@link KeyPath.Mut} or {@link KeyPath.Immut} if you need
+ * mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
  * <p>
  * <b>Key mapping</b>
  * <p>
@@ -64,6 +64,8 @@ public abstract class KeyPath implements Printable {
     /// The {@code KeyMapper} is lazily applied, meaning the contents of this collection are not mapped
     ArrayDeque<CharSequence> parts;
     transient KeyMapper keyMapper;
+
+    private static final ArrayDeque<CharSequence> SHARED_EMPTY_PARTS = new ArrayDeque<>();
 
     /**
      * Creates from the given parts
@@ -110,8 +112,8 @@ public abstract class KeyPath implements Printable {
     /**
      * Gets this key path as a mutable one.
      * <p>
-     * If not mutable, the data is copied to a new key path which is returned. This copying may be performed lazily, such
-     * as by deferring to the first mutative operation on the returned object.
+     * If not mutable, the data is copied to a new key path which is returned. This copying may be performed lazily,
+     * such as by deferring to the first mutative operation on the returned object.
      *
      * @return this key path if mutable, or a mutable copy if needed
      */
@@ -120,8 +122,8 @@ public abstract class KeyPath implements Printable {
     /**
      * Gets this key path as an immutable one.
      * <p>
-     * The data contained within this {@code KeyPath} is evacuated and moved into a new instance. After the call, the
-     * old instance (this object) is poisoned and must not be used.
+     * The data contained within this {@code KeyPath} is moved to an immutable instance. The old instance may still be
+     * used, but the implementation of this method may be optimized for the case that it is not.
      * <p>
      * If this instance is already {@code DataTree.Immut}, then it may be returned without changes.
      *
@@ -201,6 +203,14 @@ public abstract class KeyPath implements Printable {
     public static final class Immut extends KeyPath {
 
         /**
+         * Creates an empty key path
+         *
+         */
+        public Immut() {
+            super(SHARED_EMPTY_PARTS, null);
+        }
+
+        /**
          * Creates from the given parts
          *
          * @param parts the parts
@@ -227,7 +237,7 @@ public abstract class KeyPath implements Printable {
         @Override
         public @NonNull Mut intoMut() {
             Mut mutCopy = new Mut(parts, keyMapper);
-            mutCopy.state = Mut.COPY_BEFORE_MUTATE;
+            mutCopy.dataFrozen = true;
             return mutCopy;
         }
 
@@ -239,11 +249,17 @@ public abstract class KeyPath implements Printable {
 
     public static final class Mut extends KeyPath {
 
-        private int state;
+        // If the data in this Mut is shared with an Immut, it should not be modified
+        private boolean dataFrozen;
 
-        private static final int REGULAR = 0;
-        private static final int COPY_BEFORE_MUTATE = 1;
-        private static final int POISONED = 2;
+        /**
+         * Creates an empty key path
+         *
+         */
+        public Mut() {
+            super(SHARED_EMPTY_PARTS, null);
+            dataFrozen = true;
+        }
 
         /**
          * Creates from the given parts
@@ -276,19 +292,15 @@ public abstract class KeyPath implements Printable {
 
         @Override
         public @NonNull Immut intoImmut() {
-            // SAFETY
-            // Setting state = POISONED prevents future modifications
-            state = POISONED;
+            // Setting dataFrozen prevents future modifications
+            dataFrozen = true;
             return new Immut(parts, keyMapper);
         }
 
         private void ensureMutable() {
-            if (state == POISONED) {
-                throw new IllegalStateException("poisoned from #intoImmut");
-            }
-            if (state == COPY_BEFORE_MUTATE) {
+            if (dataFrozen) {
                 parts = new ArrayDeque<>(parts);
-                state = REGULAR;
+                dataFrozen = false;
             }
         }
 

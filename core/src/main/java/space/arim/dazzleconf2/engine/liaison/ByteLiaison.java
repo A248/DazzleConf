@@ -54,9 +54,32 @@ public final class ByteLiaison extends BaseNumberLiaison<Byte, ByteDefault, Byte
     }
 
     @Override
+    @NonNull Byte ifMissing(@NonNull ByteDefault defaultAnnotation) {
+        return defaultAnnotation.ifMissing();
+    }
+
+    @Override
     @Nullable Byte castNumbers(@NonNull Object input) {
         if (input instanceof Byte) {
             return (Byte) input;
+        }
+        if (input instanceof Short) {
+            short shortValue = (Short) input;
+            if ((byte) shortValue == shortValue) {
+                return (byte) shortValue;
+            }
+        }
+        if (input instanceof Integer) {
+            int intValue = (Integer) input;
+            if ((byte) intValue == intValue) {
+                return (byte) intValue;
+            }
+        }
+        if (input instanceof Long) {
+            long longValue = (Long) input;
+            if ((byte) longValue == longValue) {
+                return (byte) longValue;
+            }
         }
         return null;
     }

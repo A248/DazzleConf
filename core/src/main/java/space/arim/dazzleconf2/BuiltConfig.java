@@ -26,6 +26,7 @@ import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf2.migration.MigrateContext;
 import space.arim.dazzleconf2.migration.Migration;
+import space.arim.dazzleconf2.reflect.Instantiator;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.*;
@@ -74,13 +75,13 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     @Override
-    public @NonNull Layout<C> getLayout() {
+    public @NonNull Layout getLayout() {
         return definition.getLayout();
     }
 
     @Override
-    public @NonNull ReflectiveMandate getReflectiveMandate() {
-        return definition.getReflectiveMandate();
+    public @NonNull Instantiator getInstantiator() {
+        return definition.getInstantiator();
     }
 
     @Override
@@ -192,7 +193,7 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     private LoadResult<C> configureWith0(@NonNull CachedBackend backend, @Nullable UpdateListener updateListener) {
 
-        Layout<C> layout = getLayout();
+        Layout layout = getLayout();
         RecordUpdates recordUpdates = (updateListener == null) ?
                 new RecordUpdates() : new RecordUpdates.WithDelegate(updateListener);
         KeyMapper keyMapper = (this.keyMapper != null) ? this.keyMapper : backend.recommendKeyMapper();
@@ -249,7 +250,8 @@ final class BuiltConfig<C> implements Configuration<C> {
         if (loadResult.isSuccess() && recordUpdates.updated) {
             // 4. Update if necessary
             // Use stream to re-assert order: the backend can load in any order, and updates affect ordering too
-            Stream<Map.Entry<Object, DataEntry>> entryStream = layout.getLabelsAsStream()
+            Stream<Map.Entry<Object, DataEntry>> entryStream = layout
+                    .getLabelsAsStream()
                     .map((label) -> {
                         String mappedKey = keyMapper.labelToKey(label).toString();
                         return ImmutableCollections.mapEntryOf(mappedKey, updatableTree.get(mappedKey));
@@ -292,10 +294,7 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     @Override
     public @NonNull ReloadShell<C> makeReloadShell(@Nullable C initialValue) {
-        ReflectiveMandate reflectiveMandate = getReflectiveMandate();
-        ReloadShell<C> reloadShell = reflectiveMandate.getInstantiator().generateShell(
-                reflectiveMandate.getClassLoader(), getType().getRawType()
-        );
+        ReloadShell<C> reloadShell = getInstantiator().generateShell(getType().getRawType());
         reloadShell.setCurrentDelegate(initialValue);
         return reloadShell;
     }

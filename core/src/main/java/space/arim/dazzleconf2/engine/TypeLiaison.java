@@ -135,14 +135,26 @@ public interface TypeLiaison {
     interface Handshake {
 
         /**
-         * Gets another serializer. This function allows serializers to "depend" on each other by storing instances
-         * of other serializers
+         * Gets another type agent. This function allows agents to "depend" on each other by using instances of other
+         * agents.
+         *
+         * @param other the type being requested
+         * @return an agent for it
+         * @param <U> the type requested
+         * @throws DeveloperMistakeException if no liaison handles the requested type
+         * @throws IllegalStateException if a cyclic loop is detected with the other liaison
+         */
+        <U> @NonNull Agent<U> getOtherAgent(@NonNull TypeToken<U> other);
+
+        /**
+         * Gets another serializer. This function allows serializers to "depend" on each other by using instances of
+         * other serializers.
          *
          * @param other the type being requested
          * @return a serializer for it
          * @param <U> the type requested
-         * @throws DeveloperMistakeException if no serializer was configured for the requested type
-         * @throws IllegalStateException if a cyclic loop is detected with the other serializer
+         * @throws DeveloperMistakeException if no liaison handles the requested type
+         * @throws IllegalStateException if a cyclic loop is detected with the other liaison
          */
         <U> @NonNull SerializeDeserialize<U> getOtherSerializer(@NonNull TypeToken<U> other);
 

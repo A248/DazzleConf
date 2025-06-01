@@ -25,6 +25,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.*;
 
+import static space.arim.dazzleconf2.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
+
 /**
  * A possibly generic type, with its arguments fully specified.
  * <p>
@@ -40,10 +42,8 @@ import java.util.*;
 // TODO Make this class sealed in a versions/17 multi-release directory
 public class ReifiedType {
 
-    private final Class<?> rawType;
-    private final ReifiedType[] arguments;
-
-    static final ReifiedType.Annotated[] EMPTY_ARR = new ReifiedType.Annotated[] {};
+    private final @NonNull Class<?> rawType;
+    private final @NonNull ReifiedType @NonNull [] arguments;
 
     /**
      * Builds from nonnull input arguments.
@@ -53,17 +53,7 @@ public class ReifiedType {
      */
     public ReifiedType(@NonNull Class<?> rawType, @NonNull ReifiedType @NonNull [] arguments) {
         this.rawType = Objects.requireNonNull(rawType, "rawType");
-        this.arguments = arguments.clone();
-    }
-
-    /**
-     * Builds from simple raw type
-     *
-     * @param rawType the raw type
-     */
-    public ReifiedType(@NonNull Class<?> rawType) {
-        this.rawType = Objects.requireNonNull(rawType, "rawType");
-        this.arguments = EMPTY_ARR;
+        this.arguments = arguments == EMPTY_ARRAY ? EMPTY_ARRAY : arguments.clone();
     }
 
     /**
@@ -164,6 +154,11 @@ public class ReifiedType {
         private final AnnotatedElement annotations;
 
         /**
+         * A reusable empty array for this type
+         */
+        public static final ReifiedType.Annotated[] EMPTY_ARRAY = new ReifiedType.Annotated[0];
+
+        /**
          * Creates from nonnull input arguments
          * <p>
          * The provided {@code AnnotatedElement} must be immutable; it should return consistent results for consistent
@@ -180,17 +175,23 @@ public class ReifiedType {
         }
 
         /**
-         * Creates from nonnull input arguments
-         * <p>
-         * The provided {@code AnnotatedElement} must be immutable; it should return consistent results for consistent
-         * calls.
+         * Creates an unparameterized, unannotated reified type for the following raw class.
          *
          * @param rawType the raw type
-         * @param annotations the annotations source, which is trusted as immutable
+         * @return a {@code ReifiedType.Annotated} with no annotations and no generic arguments (if relevant) for the
+         * provided raw type
          */
-        public Annotated(@NonNull Class<?> rawType, @NonNull AnnotatedElement annotations) {
-            super(rawType);
-            this.annotations = Objects.requireNonNull(annotations, "annotations");
+        public static @NonNull Annotated unannotated(@NonNull Class<?> rawType) {
+            return new Annotated(rawType, EMPTY_ARRAY, void.class);
+        }
+
+        /**
+         * Gets a dummy annotated element, containing no annotations. This method is provided as a convenience.
+         *
+         * @return an unannotated {@code AnnotatedElement} object
+         */
+        public static AnnotatedElement unannotated() {
+            return void.class;
         }
 
         /**

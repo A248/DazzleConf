@@ -64,9 +64,8 @@ public final class ConfigurationBuilder<C> {
     // Settings
     private @Nullable Locale locale;
     private final List<TypeLiaison> typeLiaisons = new ArrayList<>();
-    private KeyMapper keyMapper;
-    private MethodMirror methodMirror = new DefaultMethodMirror();
-    private Instantiator instantiator = new DefaultInstantiator();
+    private @Nullable KeyMapper keyMapper;
+    private @Nullable Instantiator instantiator;
     private final List<Migration<?, C>> migrations = new ArrayList<>();
 
     /**
@@ -133,7 +132,7 @@ public final class ConfigurationBuilder<C> {
     public @This @NonNull ConfigurationBuilder<C> addPrimitiveTypeLiaisons() {
         // TODO - Impl
         return addTypeLiaisons(
-                new StringLiaison(),
+                new StringLiaison(), new CharacterLiaison(), new DoubleLiaison(), new FloatLiaison(),
                 new LongLiaison(), new IntegerLiaison(), new ShortLiaison(), new ByteLiaison()
         );
     }
@@ -144,17 +143,30 @@ public final class ConfigurationBuilder<C> {
      * The default type liaisons are capable of serializing primitive types, <code>String</code>s, and enum types,
      * plus lists of other serializable types, and configuration subsections.
      * <p>
+     * <b>Notable annotations</b>
+     * <p>
      * The default liaisons support the following annotations to modify their behavior:<ul>
-     *     <li><code>IntegerLiaison</code>: <code>@IntegerRange</code></li>
+     *     <li><code>StringLiaison</code>: <code>@StringDefault</code></li>
+     *     <li><code>LongLiaison</code>: <code>@LongRange</code> and <code>@LongDefault</code></li>
+     *     <li><code>IntegerLiaison</code>: <code>@IntegerRange</code> and <code>@IntegerDefault</code></li>
+     *     <li><code>ShortLiaison</code>: <code>@ShortRange</code> and <code>@ShortDefault</code></li>
+     *     <li><code>ByteLiaison</code>: <code>@ByteRange</code> and <code>@ByteDefault</code></li>
+     *     <li><code>DoubleLiaison</code>: <code>@DoubleRange</code> and <code>@DoubleDefault</code></li>
+     *     <li><code>FloatLiaison</code>: <code>@FloatRange</code> and <code>@FloatDefault</code></li>
      * </ul>
-     *
+     * <p>The "XRange" annotations for numeric types provide bounds checking for a specified range.
+     * <p>The "XDefault" annotations provide default values. There is mostly no difference between using default methods
+     * and the default value-providing annotations, but the annotations provide additional capabilities: like specifying
+     * an "if missing" value or being passed to dependent liaisons.
+     * <p>
+     * The annotations can also be depended upon by other liaisons, not just the default liaisons.
      *
      * @return this builder
      */
     public @This @NonNull ConfigurationBuilder<C> addDefaultTypeLiaisons() {
         addPrimitiveTypeLiaisons();
         // TODO - Impl & Javadoc
-        return addTypeLiaisons(new ListLiaison(), new SubSectionLiaison());
+        return addTypeLiaisons(new CollectionLiaison(), new SubSectionLiaison());
     }
 
     /**
@@ -198,17 +210,6 @@ public final class ConfigurationBuilder<C> {
      */
     public @This @NonNull ConfigurationBuilder<C> keyMapper(@Nullable KeyMapper keyMapper) {
         this.keyMapper = keyMapper;
-        return this;
-    }
-
-    /**
-     * Sets the method mirror
-     *
-     * @param methodMirror the method mirror
-     * @return this builder
-     */
-    public @This @NonNull ConfigurationBuilder<C> methodMirror(@NonNull MethodMirror methodMirror) {
-        this.methodMirror = Objects.requireNonNull(methodMirror);
         return this;
     }
 
@@ -265,11 +266,13 @@ public final class ConfigurationBuilder<C> {
         // Harden values
         Locale locale = (this.locale == null) ? Locale.getDefault() : this.locale;
         List<TypeLiaison> typeLiaisons = ImmutableCollections.listOf(this.typeLiaisons);
+        Instantiator instantiator = (this.instantiator == null) ?
+                new DefaultInstantiator(configType.getRawType().getClassLoader()) : this.instantiator;
         List<Migration<?, C>> migrations = ImmutableCollections.listOf(this.migrations);
 
         // Scan and build definition
         ConfigurationDefinition<C> definition = new DefinitionScan(
-                LibraryLang.loadLang(locale), new LiaisonCache(typeLiaisons), methodMirror, instantiator
+                LibraryLang.loadLang(locale), new LiaisonCache(typeLiaisons), instantiator
         ).read(configType);
 
         // Yield final

@@ -39,8 +39,8 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     private final String[] labels;
 
     private final LibraryLang libraryLang;
-    private final MethodMirror methodMirror;
     private final Instantiator instantiator;
+    private final MethodMirror methodMirror;
 
     /**
      * Includes both this type and all its super types. These arrays have equal length
@@ -52,14 +52,14 @@ final class Definition<C> implements ConfigurationDefinition<C> {
 
     Definition(TypeToken<C> configType, KeyPath pathPrefix, CommentData topLevelComments,
                List<String> labels, LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons,
-               LibraryLang libraryLang, MethodMirror methodMirror, Instantiator instantiator) {
+               LibraryLang libraryLang, Instantiator instantiator, MethodMirror methodMirror) {
         this.configType = Objects.requireNonNull(configType);
         this.pathPrefix = pathPrefix.intoImmut();
         this.topLevelComments = Objects.requireNonNull(topLevelComments);
         this.labels = labels.toArray(new String[0]);
         this.libraryLang = Objects.requireNonNull(libraryLang);
-        this.methodMirror = Objects.requireNonNull(methodMirror);
         this.instantiator = Objects.requireNonNull(instantiator);
+        this.methodMirror = Objects.requireNonNull(methodMirror);
 
         int numberOfSkeletons = typeSkeletons.size();
         Class<?>[] superTypesArray = new Class[numberOfSkeletons];
@@ -73,11 +73,8 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         this.skeletonArray = skeletonArray;
     }
 
-    @SuppressWarnings("unchecked")
-    private C instantiate(MethodYield.Builder methodYield) {
-        return (C) instantiator.generate(
-                getReflectiveMandate().getClassLoader(), superTypesArray, methodYield.build()
-        );
+    private C instantiate(MethodYield methodYield) {
+        return configType.cast(instantiator.generate(superTypesArray, methodYield));
     }
 
     @Override
@@ -86,8 +83,8 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     @Override
-    public @NonNull Layout<C> getLayout() {
-        return new Layout<C>() {
+    public @NonNull Layout getLayout() {
+        return new Layout() {
 
             @Override
             public @NonNull CommentData getTopLevelComments() {
@@ -107,29 +104,13 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     @Override
-    public @NonNull ReflectiveMandate getReflectiveMandate() {
-        return new ReflectiveMandate() {
-            @Override
-            public @NonNull ClassLoader getClassLoader() {
-                // In the future, maybe we will provide more possibilities
-                return getType().getRawType().getClassLoader();
-            }
-
-            @Override
-            public @NonNull Instantiator getInstantiator() {
-                return instantiator;
-            }
-
-            @Override
-            public @NonNull MethodMirror getMethodMirror() {
-                return methodMirror;
-            }
-        };
+    public @NonNull Instantiator getInstantiator() {
+        return instantiator;
     }
 
     @Override
     public @NonNull C loadDefaults() {
-        MethodYield.Builder methodYield = new MethodYield.Builder();
+        MethodYield methodYield = new MethodYield();
         for (int n = 0; n < superTypesArray.length; n++) {
             Class<?> currentType = superTypesArray[n];
             TypeSkeleton typeSkeleton = skeletonArray[n];
@@ -157,7 +138,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             mappedPathPrefix = mutPathPrefix.intoImmut();
         }
         // What we're building (an instance) and how we're doing that
-        MethodYield.Builder methodYield = new MethodYield.Builder();
+        MethodYield methodYield = new MethodYield();
         DeserInput.Context deserContext = new DeserInput.Context(libraryLang, readOptions, mappedPathPrefix);
 
         // Collected errors - get a certain maximum before quitting

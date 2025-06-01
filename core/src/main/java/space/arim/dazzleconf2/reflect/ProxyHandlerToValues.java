@@ -79,7 +79,6 @@ final class ProxyHandlerToValues extends ProxyHandler {
 
     @Override
     int implHashCode() {
-        // WARNING: Keep in sync with ProxyHandlerToEmpty#hashCode
         return fastValues.hashCode();
     }
 

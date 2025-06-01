@@ -24,16 +24,16 @@ import space.arim.dazzleconf2.DeveloperMistakeException;
 
 import java.lang.reflect.Method;
 
-final class ProxyHandlerToEmpty extends ProxyHandler {
+final class ProxyHandlerToEmpty<I> extends ProxyHandler {
 
-    private final Class<?> iface;
-    private Object proxy;
+    private final Class<I> iface;
+    private I proxy;
 
-    ProxyHandlerToEmpty(Class<?> iface) {
+    ProxyHandlerToEmpty(Class<I> iface) {
         this.iface = iface;
     }
 
-    void initProxy(Object proxy) {
+    void initProxy(I proxy) {
         this.proxy = proxy;
     }
 
@@ -59,7 +59,7 @@ final class ProxyHandlerToEmpty extends ProxyHandler {
             return otherHandler.implEquals(otherProxy, ourProxy, this);
         }
         if (otherHandler instanceof ProxyHandlerToEmpty) {
-            return iface.equals(((ProxyHandlerToEmpty) otherHandler).iface);
+            return iface.equals(((ProxyHandlerToEmpty<?>) otherHandler).iface);
         }
         throw new UnsupportedOperationException();
     }

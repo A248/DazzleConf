@@ -20,16 +20,24 @@
 package space.arim.dazzleconf2.internals.lang;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Locale;
 
-public final class LibraryLangEn implements LibraryLang {
+public final class LibraryLangEn extends LibraryLang.Base {
 
-    LibraryLangEn() {}
+    LibraryLangEn(@Nullable Locale overrideLocale) {
+        super(overrideLocale);
+    }
 
     @Override
-    public @NonNull Locale getLocale() {
+    protected Locale getActualLocale() {
         return Locale.ENGLISH;
+    }
+
+    @Override
+    public @NonNull LibraryLang pretendToUseLocale(@NonNull Locale usingLocale) {
+        return new LibraryLangEn(usingLocale);
     }
 
     @Override
@@ -49,17 +57,17 @@ public final class LibraryLangEn implements LibraryLang {
 
     @Override
     public @NonNull String missingValue() {
-        return "No value is configured here.";
+        return "No value is configured here. However, a value is required.";
     }
 
     @Override
     public @NonNull String wrongTypeForValue(Object value, String expectedType, String actualType) {
-        return "The value < " + value + " > is not a " + expectedType + ", but actually " + actualType;
+        return "The value < " + value + " > is not a " + expectedType + ". It should be a " + actualType + '.';
     }
 
     @Override
     public @NonNull String mustBeBetween(String value, Number min, Number max) {
-        return "The value < " + value + " > must be between " + min + " and " + max;
+        return "The value must be between " + min + " and " + max + ". However, it was " + value + '.';
     }
 
     @Override

@@ -53,6 +53,8 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
 
     abstract @NonNull TYPE defaultValue(@NonNull DEF_ANNOTE defaultAnnotation);
 
+    abstract @NonNull TYPE ifMissing(@NonNull DEF_ANNOTE defaultAnnotation);
+
     abstract @Nullable TYPE castNumbers(@NonNull Object input);
 
     abstract @Nullable TYPE parseFrom(@NonNull String input);
@@ -62,6 +64,10 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
     abstract @NonNull TYPE minFrom(@NonNull RANGE_ANNOTE rangeAnnote);
 
     abstract @NonNull TYPE maxFrom(@NonNull RANGE_ANNOTE rangeAnnote);
+
+    boolean isNaN(@NonNull TYPE value) {
+        return false;
+    }
 
     abstract boolean greaterOrEq(@NonNull TYPE value, @NonNull TYPE min);
 
@@ -79,16 +85,17 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
         public @Nullable DefaultValues<TYPE> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             DEF_ANNOTE defaultAnnotation = defaultInit.methodAnnotations().getAnnotation(defaultAnnotation());
             if (defaultAnnotation != null) {
-                TYPE value = defaultValue(defaultAnnotation);
+                TYPE defaultValue = defaultValue(defaultAnnotation);
+                TYPE ifMissing = ifMissing(defaultAnnotation);
                 return new DefaultValues<TYPE>() {
                     @Override
                     public @NonNull TYPE defaultValue() {
-                        return value;
+                        return defaultValue;
                     }
 
                     @Override
                     public @NonNull TYPE ifMissing() {
-                        return value;
+                        return ifMissing;
                     }
                 };
             }
@@ -115,9 +122,13 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
                 @Override
                 public @NonNull LoadResult<@NonNull TYPE> deserialize(@NonNull DeserializeInput deser) {
                     TYPE value = deserIfPossible(deser);
-                    if (value == null) {
+                    if (value == null ) {
                         LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
                         return deser.throwError(libraryLang.wrongTypeForValue(deser.object(), boxedType()));
+                    }
+                    if (isNaN(value)) {
+                        LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
+                        return deser.throwError(libraryLang.notANumber(value));
                     }
                     if (rangeAnnote != null) {
                         TYPE min = minFrom(rangeAnnote);

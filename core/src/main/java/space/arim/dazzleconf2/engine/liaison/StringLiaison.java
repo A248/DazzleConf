@@ -83,12 +83,6 @@ public final class StringLiaison implements TypeLiaison {
                 }
 
                 @Override
-                public @NonNull LoadResult<@NonNull String> deserializeUpdate(@NonNull DeserializeInput deser,
-                                                                              @NonNull SerializeOutput updateTo) {
-                    return deser.requireString();
-                }
-
-                @Override
                 public void serialize(@NonNull String value, @NonNull SerializeOutput ser) {
                     ser.outString(value);
                 }

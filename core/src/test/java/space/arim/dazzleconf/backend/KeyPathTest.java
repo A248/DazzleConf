@@ -19,9 +19,17 @@
 
 package space.arim.dazzleconf.backend;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import space.arim.dazzleconf2.backend.DefaultKeyMapper;
+import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
+
+import java.lang.reflect.Field;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -50,6 +58,10 @@ public class KeyPathTest {
         keyPath.addFront("my-brave-world");
         assertEquals("my-brave-world.this-feature.enabled", keyPath.toString());
         assertArrayEquals(new String[] {"my-brave-world", "this-feature", "enabled"}, keyPath.intoParts());
+        List<CharSequence> output = new ArrayList<>();
+        keyPath.forEach(output::add);
+        assertEquals(List.of("my-brave-world", "this-feature", "enabled"), output);
+        assertEquals(output, keyPath.intoPartsList());
     }
 
     @Test
@@ -60,6 +72,10 @@ public class KeyPathTest {
         keyPath.addBack("enabled");
         assertEquals("my-brave-world.this-feature.enabled", keyPath.toString());
         assertArrayEquals(new String[] {"my-brave-world", "this-feature", "enabled"}, keyPath.intoParts());
+        List<CharSequence> output = new ArrayList<>();
+        keyPath.forEach(output::add);
+        assertEquals(List.of("my-brave-world", "this-feature", "enabled"), output);
+        assertEquals(output, keyPath.intoPartsList());
     }
 
     @Test
@@ -69,6 +85,10 @@ public class KeyPathTest {
         keyPath.addFront("thisFeature");
         assertEquals("this-feature", keyPath.toString());
         assertArrayEquals(new String[] {"this-feature"}, keyPath.intoParts());
+        List<CharSequence> output = new ArrayList<>();
+        keyPath.forEach(output::add);
+        assertEquals(List.of("this-feature"), output);
+        assertEquals(output, keyPath.intoPartsList());
     }
 
     @Test
@@ -78,6 +98,10 @@ public class KeyPathTest {
         keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
         assertEquals("this-feature", keyPath.toString());
         assertArrayEquals(new String[] {"this-feature"}, keyPath.intoParts());
+        List<CharSequence> output = new ArrayList<>();
+        keyPath.forEach(output::add);
+        assertEquals(List.of("this-feature"), output);
+        assertEquals(output, keyPath.intoPartsList());
     }
 
     @Test
@@ -87,6 +111,10 @@ public class KeyPathTest {
         keyPath.addBack("thisFeature");
         assertEquals("this-feature", keyPath.toString());
         assertArrayEquals(new String[] {"this-feature"}, keyPath.intoParts());
+        List<CharSequence> output = new ArrayList<>();
+        keyPath.forEach(output::add);
+        assertEquals(List.of("this-feature"), output);
+        assertEquals(output, keyPath.intoPartsList());
     }
 
     @Test
@@ -96,6 +124,10 @@ public class KeyPathTest {
         keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
         assertEquals("this-feature", keyPath.toString());
         assertArrayEquals(new String[] {"this-feature"}, keyPath.intoParts());
+        List<CharSequence> output = new ArrayList<>();
+        keyPath.forEach(output::add);
+        assertEquals(List.of("this-feature"), output);
+        assertEquals(output, keyPath.intoPartsList());
     }
 
     @Test
@@ -174,7 +206,6 @@ public class KeyPathTest {
         keyPath.addFront("my-brave-world");
         keyPath.addBack("this-feature");
         keyPath = keyPath.intoImmut().intoMut();
-        keyPath = new KeyPath.Mut(keyPath);
         keyPath.addFront("section");
         keyPath.addBack("enabled");
         assertEquals("section.my-brave-world.this-feature.enabled", keyPath.toString());
@@ -187,7 +218,6 @@ public class KeyPathTest {
         keyPath.addBack("my-brave-world");
         keyPath.addBack("this-feature");
         keyPath = keyPath.intoImmut().intoMut();
-        keyPath = new KeyPath.Mut(keyPath);
         keyPath.addFront("section");
         keyPath.addBack("enabled");
         assertEquals("section.my-brave-world.this-feature.enabled", keyPath.toString());
@@ -300,5 +330,72 @@ public class KeyPathTest {
         keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
         assertEquals("section-mapped.my-brave-world.this-feature.enabled", keyPath.toString());
         assertArrayEquals(new String[] {"section-mapped", "my-brave-world", "this-feature", "enabled"}, keyPath.intoParts());
+    }
+
+    @Test
+    public void keyMapperAlreadySet() {
+        KeyPath.Mut keyPath = new KeyPath.Mut();
+        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        assertThrows(IllegalStateException.class, () -> keyPath.applyKeyMapper(new DefaultKeyMapper()));
+    }
+
+    @Test
+    public void keyMapperAlreadySetToSame() {
+        KeyPath.Mut keyPath = new KeyPath.Mut();
+        KeyMapper keyMapper = new SnakeCaseKeyMapper();
+        keyPath.applyKeyMapper(keyMapper);
+        assertThrows(IllegalStateException.class, () -> keyPath.applyKeyMapper(keyMapper));
+    }
+
+    @Test
+    public void intoMutOnMut() {
+        KeyPath.Mut keyPath = new KeyPath.Mut();
+        assertSame(keyPath, keyPath.intoMut());
+    }
+
+    @Test
+    public void intoMutOnImmut() {
+        KeyPath.Immut keyPath = new KeyPath.Immut("hi", "there");
+        assertArrayEquals(new String[] {"hi", "there"}, keyPath.intoMut().intoParts());
+    }
+
+    @Test
+    public void intoMutOnImmutCannotMutateImmut() {
+        KeyPath.Immut original = new KeyPath.Immut("hi", "there");
+        KeyPath.Mut mutable = original.intoMut();
+        mutable.addFront("start");
+        mutable.addBack("bye");
+        assertArrayEquals(new String[] {"hi", "there"}, original.intoParts());
+        assertArrayEquals(new String[] {"start", "hi", "there", "bye"}, mutable.intoParts());
+    }
+
+    @Test
+    public void intoImmutOnImmut() {
+        KeyPath.Immut keyPath = new KeyPath.Immut("hi", "there");
+        assertSame(keyPath, keyPath.intoImmut());
+    }
+
+    @Test
+    public void intoImmutOnMut() {
+        KeyPath.Mut keyPath = new KeyPath.Mut("hi", "there");
+        assertArrayEquals(new String[] {"hi", "there"}, keyPath.intoImmut().intoParts());
+    }
+
+    @Test
+    public void intoImmutOnMutCannotBeMutated() {
+        KeyPath.Mut original = new KeyPath.Mut("hi", "there");
+        KeyPath.Immut snapshot = original.intoImmut();
+        original.addFront("start");
+        original.addBack("bye");
+        assertArrayEquals(new String[] {"hi", "there"}, snapshot.intoParts());
+        assertArrayEquals(new String[] {"start", "hi", "there", "bye"}, original.intoParts());
+    }
+
+    @AfterAll
+    public static void sharedEmptyNotModified() throws NoSuchFieldException, IllegalAccessException {
+        Field field = KeyPath.class.getDeclaredField("SHARED_EMPTY_PARTS");
+        field.setAccessible(true);
+        ArrayDeque<?> sharedEmptyParts = (ArrayDeque<?>) field.get(null);
+        assertTrue(sharedEmptyParts.isEmpty());
     }
 }

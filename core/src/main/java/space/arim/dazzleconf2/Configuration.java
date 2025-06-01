@@ -94,7 +94,9 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
         if (configType.getTypeParameters().length != 0) {
             throw new IllegalArgumentException("Cannot use Configuration.builder(Class) with a generic type.");
         }
-        return defaultBuilder(new TypeToken<>(new ReifiedType.Annotated(configType, configType)));
+        return defaultBuilder(new TypeToken<>(new ReifiedType.Annotated(
+                configType, ReifiedType.Annotated.EMPTY_ARRAY, configType
+        )));
     }
 
     /**
