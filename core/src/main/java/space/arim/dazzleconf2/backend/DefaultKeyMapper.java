@@ -25,8 +25,24 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * Default, "no-op" mapper for keys and method names
  */
 public final class DefaultKeyMapper implements KeyMapper {
+
+    /**
+     * Creates
+     */
+    public DefaultKeyMapper() {}
+
     @Override
     public @NonNull CharSequence labelToKey(@NonNull String label) {
         return label;
+    }
+
+    @Override
+    public int hashCode() {
+        return DefaultKeyMapper.class.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof DefaultKeyMapper;
     }
 }

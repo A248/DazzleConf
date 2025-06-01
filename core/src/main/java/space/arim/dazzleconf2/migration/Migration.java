@@ -21,7 +21,6 @@ package space.arim.dazzleconf2.migration;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.Backend;
 
 import java.io.UncheckedIOException;
 import java.util.Objects;
@@ -54,7 +53,7 @@ public final class Migration<C_OLD, C_NEW> {
      * @return a load result that yields the newly transitioned configuration
      */
     public @NonNull LoadResult<@NonNull C_NEW> tryMigrate(@NonNull MigrateContext migrateContext) {
-        return migrateSource.load(migrateContext).map(transition::migrateFrom);
+        return migrateSource.load(migrateContext).map((loaded) -> transition.migrateFrom(loaded, migrateContext));
     }
 
     /**

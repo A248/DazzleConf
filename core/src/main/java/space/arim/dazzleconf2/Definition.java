@@ -20,10 +20,7 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
@@ -128,7 +125,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     private <DT extends DataTree> @NonNull LoadResult<@NonNull C> readingNexus(
-            @NonNull DT dataTree, @NonNull ReadOptions readOptions, Definition.@NonNull HowToUpdate<DT> howToUpdate
+            @NonNull DT dataTree, @NonNull ReadOptions readOptions, @NonNull HowToUpdate<DT> howToUpdate
     ) {
         // Where we're located - mapped
         KeyPath.Immut mappedPathPrefix;
@@ -179,7 +176,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                         howToUpdate.insertMissingValue(dataTree, mappedKey, methodNode, value);
                     } else {
                         // 3.
-                        LoadError loadError = new LoadError(libraryLang.missingValue(), libraryLang);
+                        LoadError loadError = new LoadError(Printable.preBuilt(libraryLang.missingValue()), libraryLang);
                         KeyPath.Mut entryPath = new KeyPath.Mut(mappedPathPrefix);
                         entryPath.addBack(mappedKey);
                         loadError.addDetail(ErrorContext.ENTRY_PATH, entryPath);
@@ -198,10 +195,9 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                     //
 
                     // Deserialization
-                    LoadResult<?> valueResult = howToUpdate.deserialize(methodNode.serializer,  new DeserInput(
-                            dataEntry.getValue(), new DeserInput.Source(dataEntry, mappedKey), deserContext
-                    ));
-
+                    LoadResult<?> valueResult = howToUpdate.deserialize(
+                            methodNode.serializer, new DeserInput.Base(dataEntry, mappedKey, deserContext)
+                    );
                     // Error handling
                     if (valueResult.isFailure()) {
                         // Append all error contexts
@@ -286,7 +282,6 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                                         TypeSkeleton.MethodNode<?> methodNode) {
                 Object update = outputForUpdate.getAndClearLastOutput();
                 if (update != null && !sourceEntry.getValue().equals(update)) {
-                    readOptions.loadListener().updatedPath(new KeyPath.Mut(mappedKey), UpdateReason.UPDATED);
                     dataTree.set(mappedKey, sourceEntry.withValue(update));
                 }
             }

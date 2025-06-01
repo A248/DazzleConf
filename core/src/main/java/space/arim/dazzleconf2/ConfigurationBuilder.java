@@ -43,17 +43,20 @@ import java.util.*;
  * A builder can be made either through the factory methods like {@link Configuration#defaultBuilder} or by direct
  * construction. If constructed directly, the builder is empty and type liaisons will need to be added to it.
  * <p>
+ * Direct construction can be useful if a clean slate is desired, without the default liaisons.
+ * <p>
  * <b>Type Liaisons</b>
  * <p>
- * Several methods add {@link TypeLiaison} instances. This builder stores type liaisons in the order they are added.
- * This is significant because earlier type liaisons will be queried first in the resulting configuration:<ul>
+ * Several methods add {@link TypeLiaison} instances. This builder stores type liaisons in the order they are added,
+ * which is significant because <i>later</i> type liaisons will be queried first in the resulting configuration:<ul>
  * <li>{@link #addTypeLiaisons(TypeLiaison...)}
  * <li>{@link #addTypeLiaisons(List)}
  * <li>{@link #addPrimitiveTypeLiaisons()}
  * <li>{@link #addDefaultTypeLiaisons()}
  * </ul>
- * To manage which liaisons apply to which types, callers are free to re-arrange calls to the above methods and use
- * direct construction if they wish to override default type handling.
+ * Callers can add liaisons for any type or types by adding their own {@code TypeLiaison} implementations. Because
+ * liaisons added <i>later</i> will take precedence, existing liaisons can be overidden by adding another liaison
+ * that covers the same type.
  *
  * @param <C> the configuration type
  */
@@ -94,10 +97,10 @@ public final class ConfigurationBuilder<C> {
     }
 
     /**
-     * Adds the following type liaisons to this builder
+     * Adds the following type liaisons to this builder.
      * <p>
-     * The order is significant, because type liaisons are queried to handle the configuration in the order in which
-     * they are declared. Some type liaisons (like for enums) can have a wildcard nature.
+     * The order is significant. Type liaisons added <i>later</i> will be queried <i>first</i> to handle configuration
+     * types. This matters because it lets the caller override existing liaisons.
      *
      * @param typeLiaisons the type liaisons
      * @return this builder
@@ -108,10 +111,10 @@ public final class ConfigurationBuilder<C> {
     }
 
     /**
-     * Adds the following type liaisons to this builder
+     * Adds the following type liaisons to this builder.
      * <p>
-     * The order is significant, because type liaisons are queried to handle the configuration in the order in which
-     * they are declared. Some type liaisons (like for enums) can have a wildcard nature.
+     * The order is significant. Type liaisons added <i>later</i> will be queried <i>first</i> to handle configuration
+     * types. This matters because it lets the caller override existing liaisons.
      *
      * @param typeLiaisons the type liaisons
      * @return this builder
@@ -124,29 +127,20 @@ public final class ConfigurationBuilder<C> {
     /**
      * Adds type liaisons for primitives and <code>String</code> to this builder.
      * <p>
-     * These type liaisons are part of the default set. However, unlike {@link #addDefaultTypeLiaisons()}, enum types
-     * are not covered by this method.
-     *
-     * @return this builder
-     */
-    public @This @NonNull ConfigurationBuilder<C> addPrimitiveTypeLiaisons() {
-        // TODO - Impl
-        return addTypeLiaisons(
-                new StringLiaison(), new CharacterLiaison(), new DoubleLiaison(), new FloatLiaison(),
-                new LongLiaison(), new IntegerLiaison(), new ShortLiaison(), new ByteLiaison()
-        );
-    }
-
-    /**
-     * Adds the default type liaisons to this builder.
+     * These type liaisons are part of the default set. However, unlike {@link #addDefaultTypeLiaisons()}, enum types,
+     * collections, and configuration subsections are not covered by this method.
      * <p>
-     * The default type liaisons are capable of serializing primitive types, <code>String</code>s, and enum types,
-     * plus lists of other serializable types, and configuration subsections.
+     * <b>Types Handled</b>
+     * <p>
+     * The type liaisons added by this method cover boolean/Boolean, char/Character, byte/Byte, short/Short,
+     * int/Integer, long/Long, float/Float, double/Double, and String. Using a boxed type is treated identically to
+     * using the primitive type (and nulls are rejected in either case).
      * <p>
      * <b>Notable annotations</b>
      * <p>
-     * The default liaisons support the following annotations to modify their behavior:<ul>
+     * The liaisons added by this method support the following annotations to modify their behavior:<ul>
      *     <li><code>StringLiaison</code>: <code>@StringDefault</code></li>
+     *     <li><code>BooleanLiaison</code>: <code>@BooleanDefault</code></li>
      *     <li><code>LongLiaison</code>: <code>@LongRange</code> and <code>@LongDefault</code></li>
      *     <li><code>IntegerLiaison</code>: <code>@IntegerRange</code> and <code>@IntegerDefault</code></li>
      *     <li><code>ShortLiaison</code>: <code>@ShortRange</code> and <code>@ShortDefault</code></li>
@@ -154,19 +148,61 @@ public final class ConfigurationBuilder<C> {
      *     <li><code>DoubleLiaison</code>: <code>@DoubleRange</code> and <code>@DoubleDefault</code></li>
      *     <li><code>FloatLiaison</code>: <code>@FloatRange</code> and <code>@FloatDefault</code></li>
      * </ul>
-     * <p>The "XRange" annotations for numeric types provide bounds checking for a specified range.
-     * <p>The "XDefault" annotations provide default values. There is mostly no difference between using default methods
-     * and the default value-providing annotations, but the annotations provide additional capabilities: like specifying
+     * <p>The "Range" annotations for numeric types provide bounds checking for a specified range. If the user input
+     * falls outside that range, it is rejected with an error message.
+     * <p>The "Default" annotations provide default values. There is mostly no difference between using default methods
+     * and the default value-providing annotations, but the annotations provide additional capabilities, like specifying
      * an "if missing" value or being passed to dependent liaisons.
      * <p>
-     * The annotations can also be depended upon by other liaisons, not just the default liaisons.
+     * The annotations mentioned here can also be depended upon by other liaisons, not just the default liaisons.
+     *
+     * @return this builder
+     */
+    public @This @NonNull ConfigurationBuilder<C> addPrimitiveTypeLiaisons() {
+        return addTypeLiaisons(
+                new CharacterLiaison(), new FloatLiaison(),  new DoubleLiaison(), new BooleanLiaison(),
+                new ByteLiaison(), new ShortLiaison(), new IntegerLiaison(), new LongLiaison(), new StringLiaison()
+        );
+    }
+
+    /**
+     * Adds the default type liaisons to this builder.
+     * <p>
+     * This method is called automatically if you are using <code>Configuration.defaultBuilder</code>.
+     * <p>
+     * <b>Types Handled</b>
+     * <p>
+     * The default type liaisons are capable of serializing primitive types, <code>String</code>s, enum types,
+     * collections (<code>Collection</code>/<code>List</code>/<code>Set</code>), and configuration subsections.
+     * <p>
+     * The full list of types handled by this method: boolean/Boolean, char/Character, byte/Byte, short/Short,
+     * int/Integer, long/Long, float/Float, double/Double, String, types for which <code>Class#isEnum</code> is true,
+     * Collection, List, Set, and interface types where the type usage is annotated with {@link SubSection}.
+     * <p>
+     * <b>Notable annotations</b>
+     * <p>
+     * The default liaisons support the following annotations to modify their behavior:<ul>
+     *     <li><code>StringLiaison</code>: <code>@StringDefault</code></li>
+     *     <li><code>BooleanLiaison</code>: <code>@BooleanDefault</code></li>
+     *     <li><code>LongLiaison</code>: <code>@LongRange</code> and <code>@LongDefault</code></li>
+     *     <li><code>IntegerLiaison</code>: <code>@IntegerRange</code> and <code>@IntegerDefault</code></li>
+     *     <li><code>ShortLiaison</code>: <code>@ShortRange</code> and <code>@ShortDefault</code></li>
+     *     <li><code>ByteLiaison</code>: <code>@ByteRange</code> and <code>@ByteDefault</code></li>
+     *     <li><code>DoubleLiaison</code>: <code>@DoubleRange</code> and <code>@DoubleDefault</code></li>
+     *     <li><code>FloatLiaison</code>: <code>@FloatRange</code> and <code>@FloatDefault</code></li>
+     * </ul>
+     * <p>The "Range" annotations for numeric types provide bounds checking for a specified range. If the user input
+     * falls outside that range, it is rejected with an error message.
+     * <p>The "Default" annotations provide default values. There is mostly no difference between using default methods
+     * and the default value-providing annotations, but the annotations provide additional capabilities, like specifying
+     * an "if missing" value or being passed to dependent liaisons.
+     * <p>
+     * The annotations mentioned here can also be depended upon by other liaisons, not just the default liaisons.
      *
      * @return this builder
      */
     public @This @NonNull ConfigurationBuilder<C> addDefaultTypeLiaisons() {
-        addPrimitiveTypeLiaisons();
-        // TODO - Impl & Javadoc
-        return addTypeLiaisons(new CollectionLiaison(), new SubSectionLiaison());
+        return addPrimitiveTypeLiaisons().addTypeLiaisons(new CollectionLiaison(), new EnumLiaison(), new SubSectionLiaison());
     }
 
     /**

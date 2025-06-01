@@ -23,7 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.internals.LibraryLangKey;
+import space.arim.dazzleconf2.internals.lang.LibraryLangKey;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.io.IOException;

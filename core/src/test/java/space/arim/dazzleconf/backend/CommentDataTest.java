@@ -140,6 +140,8 @@ class CommentDataTest {
         CommentData c1c2 = empty.setAt(CommentLocation.ABOVE, List.of("c1", "c2"));
         try (ImmutGuard ignored = new ImmutGuard(empty, c1c2)) {
             assertEquals(c1c2, empty.appendAt(CommentLocation.ABOVE, List.of("c1", "c2")));
+            assertSame(c1c2, c1c2.appendAt(CommentLocation.INLINE, List.of()));
+
             List<String> inline = List.of("beside value");
             CommentData addInline = c1c2.appendAt(CommentLocation.INLINE, inline);
             assertEquals(inline, addInline.getAt(CommentLocation.INLINE));
@@ -196,5 +198,10 @@ class CommentDataTest {
     @Test
     public void equals() {
         EqualsVerifier.forClass(CommentData.class).verify();
+    }
+
+    @Test
+    public void toStringTest() {
+        assertTrue(CommentData.empty().setAt(CommentLocation.ABOVE, "i love comments").toString().contains("love"));
     }
 }

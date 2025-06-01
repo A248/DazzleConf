@@ -17,24 +17,16 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.reflect;
+package space.arim.dazzleconf;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.mockito.ArgumentMatcher;
+import space.arim.dazzleconf2.ErrorContext;
 
-public final class Utilities {
+import java.util.List;
 
-    private Utilities() {}
-
-    public static <T> void assertEqualsBothWays(T val1, T val2) {
-        assertEquals(val1, val2);
-        assertEquals(val2, val1);
-        assertEquals(val1.hashCode(), val2.hashCode());
-    }
-
-    static <T> void assertNotEqualsBothWays(T val1, T val2) {
-        assertNotEquals(val1, val2);
-        assertNotEquals(val2, val1);
-        assertNotEquals(val1.toString(), val2.toString(), "toString should be implemented reasonably");
+public final class MatchNonEmptyErrors implements ArgumentMatcher<List<ErrorContext>> {
+    @Override
+    public boolean matches(List<ErrorContext> argument) {
+        return !argument.isEmpty();
     }
 }

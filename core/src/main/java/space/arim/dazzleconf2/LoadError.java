@@ -28,11 +28,11 @@ import java.util.*;
 
 final class LoadError implements ErrorContext, LibraryLang.Accessor {
 
-    private final CharSequence message;
+    private final Printable message;
     private final LibraryLang libraryLang;
     private final Map<Key<?>, Object> contexts = new LinkedHashMap<>();
 
-    LoadError(CharSequence message, LibraryLang libraryLang) {
+    LoadError(Printable message, LibraryLang libraryLang) {
         this.message = Objects.requireNonNull(message, "message");
         this.libraryLang = Objects.requireNonNull(libraryLang, "libraryLang");
     }
@@ -49,39 +49,18 @@ final class LoadError implements ErrorContext, LibraryLang.Accessor {
 
     @Override
     public @NonNull Printable mainMessage() {
-        return Printable.preBuilt(message);
+        return message;
     }
 
     @Override
     public @NonNull Printable displayDetails() {
-        return new Printable() {
-            @Override
-            public @NonNull String printString() {
-                StringBuilder output = new StringBuilder();
-                printTo(output);
-                return output.toString();
-            }
-
+        return new Printable.Abstract() {
             @Override
             public void printTo(@NonNull Appendable output) throws IOException {
                 for (Key<?> key : allKeys()) {
                     formatKeyData(output, key);
                     output.append('\n');
                 }
-            }
-
-            @Override
-            public void printTo(@NonNull StringBuilder output) {
-                try {
-                    printTo((Appendable) output);
-                } catch (IOException e) {
-                    throw new AssertionError("StringBuilder does not throw IOException", e);
-                }
-            }
-
-            @Override
-            public String toString() {
-                return printString();
             }
         };
     }

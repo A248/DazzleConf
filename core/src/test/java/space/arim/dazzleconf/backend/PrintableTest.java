@@ -32,6 +32,7 @@ public class PrintableTest {
     @Test
     public void preBuilt() throws IOException {
         assertThrows(NullPointerException.class, () -> Printable.preBuilt(null));
+
         Printable prebuilt = Printable.preBuilt("val");
         assertEquals("val", prebuilt.printString());
 
@@ -44,5 +45,27 @@ public class PrintableTest {
         assertEquals("val val", output.toString());
 
         assertEquals("val", prebuilt.toString());
+    }
+
+    @Test
+    public void join() throws IOException {
+        assertThrows(NullPointerException.class, () -> Printable.join((Printable[]) null));
+
+        Printable joined = Printable.join(
+                Printable.preBuilt("v1"),
+                Printable.join(Printable.preBuilt(" "), Printable.preBuilt("is"), Printable.preBuilt(" ")),
+                Printable.preBuilt("joined")
+        );
+        assertEquals("v1 is joined", joined.printString());
+        {
+            StringBuilder output = new StringBuilder();
+            joined.printTo(output);
+            assertEquals("v1 is joined", output.toString());
+        }
+        Appendable output = new StringBuilder();
+        joined.printTo(output);
+        assertEquals("v1 is joined", output.toString());
+
+        assertEquals("v1 is joined", joined.toString());
     }
 }

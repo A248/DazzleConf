@@ -145,6 +145,9 @@
 					<threads>2</threads>
 					<excludedClasses>
 						<excludedClass>space.arim.dazzleconf.**</excludedClass>
+						<excludedClass>space.arim.dazzleconf2.internals.ImmutableCollections</excludedClass>
+						<excludedClass>space.arim.dazzleconf2.internals.Java8DefaultMethodProvider</excludedClass>
+						<excludedClass>space.arim.dazzleconf2.internals.lang.**</excludedClass>
 					</excludedClasses>
 				</configuration>
 				<dependencies>
@@ -215,11 +218,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-api</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-params</artifactId>
+			<artifactId>junit-jupiter</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.mockito</groupId>

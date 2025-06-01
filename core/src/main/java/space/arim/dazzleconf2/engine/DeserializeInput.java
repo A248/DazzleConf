@@ -22,16 +22,22 @@ package space.arim.dazzleconf2.engine;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.*;
 
 import java.util.Locale;
 
 /**
- * An object from a data tree, that is being processed for deserialization. See {@link DataTree}
- *
+ * An object from a data tree, that is being processed for deserialization. See {@link DataTree}.
+ * <p>
+ * The object itself is provided by {@link #object()}.
+ * <p>
+ * <b>Implementation</b>
+ * <p>
+ * Instances of this type are implemented by the library and supplied to {@link SerializeDeserialize} implementations.
+ * Equality is not defined, and no thread safety is provided.
+ * <p>
+ * This type should not be implemented by library consumers. New methods may be added in the future; this interface
+ * should be considered sealed.
  */
 public interface DeserializeInput {
 
@@ -80,6 +86,9 @@ public interface DeserializeInput {
 
     /**
      * Requires the object to be a data tree, i.e. a map of key/value pairs.
+     * <p>
+     * Callers may want to pair use of this method with the key mapper ({@link #keyMapper()}) if they wish to
+     * read and write using string keys on the {@code DataTree}.
      *
      * @return the object as a data tree, or an error result if the type is mismatched
      */
@@ -90,8 +99,9 @@ public interface DeserializeInput {
      * missing options were filled in with default values, and those default values need to be written to the backend.
      * <p>
      * This function does not <b>actually</b> perform any updating. It is merely a notification that this object
-     * (or a part within it) could be updated. For actual in-place updates, make sure to implement
-     * {@link SerializeDeserialize#deserializeUpdate(DeserializeInput, SerializeOutput)}
+     * (or a part within it) is updatable. For actual in-place updates, make sure to implement
+     * {@link SerializeDeserialize#deserializeUpdate(DeserializeInput, SerializeOutput)} and submit an updated value
+     * to the {@code SerializeOutput} in the same place as where you call this method.
      * <p>
      * If the path being updated is a sub-path of this one, then that sub-path should be provided as a non-empty
      * parameter. An empty path should be passed if no sub-path exists.
@@ -103,8 +113,10 @@ public interface DeserializeInput {
     void flagUpdate(@NonNull KeyPath subPath, @NonNull UpdateReason updateReason);
 
     /**
-     * Makes a child and prepares it for deserialization. The child value is supposed to be taken "from" this object.
-     * For example, an element in a list would be a child object of the list.
+     * Makes a child and prepares it for deserialization.
+     * <p>
+     * The child value is supposed to be taken "from" this object. For example, an element in a list would be a child
+     * object of the list.
      *
      * @param value the child value to wrap
      * @return deserializable input
@@ -112,17 +124,20 @@ public interface DeserializeInput {
     @NonNull DeserializeInput makeChild(@NonNull Object value);
 
     /**
-     * Builds an error context based on the implementation
+     * Builds an error context based on the implementation.
+     * <p>
+     * This function takes a {@code Printable} for flexibility. Using {@link Printable#preBuilt(CharSequence)} will
+     * suffice in many cases.
      *
      * @param message the main error messge
      * @return an error context
      */
-    @NonNull ErrorContext buildError(@NonNull CharSequence message);
+    @NonNull ErrorContext buildError(@NonNull Printable message);
 
     /**
      * Builds an error context, wraps it in a <code>LoadResult</code> and returns it.
      * <p>
-     * This function does not actually throw anything. It is named as such so that your code will look like this:
+     * This function does not actually throw anything. It is named as such so that your code can look like this:
      * <pre>
      *     {@code
      *         return operable.throwError("failure");
@@ -134,4 +149,17 @@ public interface DeserializeInput {
      * @param <R> the type of the result value (can be anything since the result will be an error)
      */
     <R> @NonNull LoadResult<R> throwError(@NonNull CharSequence message);
+
+    /**
+     * Builds an error context, wraps it in a <code>LoadResult</code> and returns it.
+     * <p>
+     * This function does not actually throw anything. It is named as such to communicate the logical termination of
+     * a block of code.
+     *
+     * @param message the main error message
+     * @return an error result
+     * @param <R> the type of the result value (can be anything since the result will be an error)
+     */
+    <R> @NonNull LoadResult<R> throwError(@NonNull Printable message);
+
 }

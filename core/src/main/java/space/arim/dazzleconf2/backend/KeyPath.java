@@ -20,6 +20,7 @@
 package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.io.IOException;
 import java.util.*;
@@ -49,14 +50,8 @@ import java.util.function.Consumer;
  * <p>
  * <b>Key mapping</b>
  * <p>
- * A {@code KeyPath} stores strings without distinction. However, users can add key mapping with
- * {@link Mut#applyKeyMapper(KeyMapper)}. If a key mapper is applied, it will map all existing key parts in this
- * {@code KeyPath}, as well as automatically map new key parts added (whether to the front or part). When those
- * same key parts are output at a later time (e.g. through <code>printString</code> or <code>intoParts</code>),
- * they are guaranteed to have been run through the mapper.
- * <p>
- * A key mapper, if attached to an instance of this class, is treated as "invisible" to other {@code KeyPath}
- * instances. The key mapper itself will never be copied to another instance, even if its (mapped) key parts are.
+ * A key path stores strings without distinction and does not handle key mapping. For convenience, users can apply a
+ * key mapper to edit existing path elements, via {@link Mut#applyKeyMapper(KeyMapper)}.
  *
  */
 public abstract class KeyPath implements Printable {
@@ -72,18 +67,18 @@ public abstract class KeyPath implements Printable {
      *
      * @param parts the parts
      */
-    protected KeyPath(@NonNull String @NonNull...parts) {
+    KeyPath(@NonNull String @NonNull...parts) {
         this.parts = new ArrayDeque<>(Arrays.asList(parts));
     }
 
     /**
      * Creates from another key path.
      * <p>
-     * This will copy the contents of that key path into this one.
+     * This will copy the parts of that key path into this one.
      *
      * @param other the other key path
      */
-    protected KeyPath(@NonNull KeyPath other) {
+    KeyPath(@NonNull KeyPath other) {
         if (other.keyMapper == null) {
             this.parts = new ArrayDeque<>(other.parts);
         } else {
@@ -93,20 +88,103 @@ public abstract class KeyPath implements Printable {
         }
     }
 
-    protected KeyPath(ArrayDeque<CharSequence> parts, KeyMapper keyMapper) {
+    KeyPath(ArrayDeque<CharSequence> parts, KeyMapper keyMapper) {
         this.parts = parts;
         this.keyMapper = keyMapper;
     }
 
     /**
-     * Runs an action for each key part in the sequence
+     * Returns an empty key path.
+     * <p>
+     * This method is provided for convenience and readability. Mutability of the returned value is not specified.
      *
-     * @param action the action
+     * @return an empty key path
      */
-    public void forEach(Consumer<? super @NonNull CharSequence> action) {
-        for (CharSequence part : intoParts()) {
-            action.accept(part);
+    public static @NonNull KeyPath empty() {
+        return new Mut();
+    }
+
+    /**
+     * Gets whether this key path is empty
+     *
+     * @return true if empty
+     */
+    public boolean isEmpty() {
+        return parts.isEmpty();
+    }
+
+    /**
+     * Specifies either the start or the end of the key path sequence.
+     *
+     */
+    public enum SequenceBoundary {
+        /// The front of the key path
+        FRONT,
+        /// The back of the key path
+        BACK;
+
+        /**
+         * Returns the opposite boundary of this one.
+         * <p>
+         * I.e. {@code FRONT -> BACK} and {@code BACK -> FRONT}
+         *
+         * @return the opposite boundary of this one
+         */
+        public @NonNull SequenceBoundary opposite() {
+            return this == FRONT ? BACK : FRONT;
         }
+    }
+
+    /**
+     * Regarding this key path as a sequence of strings, this function returns either the very first value (if using
+     * {@code SequenceBoundary.FRONT}) or the very last value (if {@code SequenceBoundary.BACK}).
+     *
+     * @param where the front or the back
+     * @return the leading value at that end, or {@code null} if this key path is empty
+     */
+    public @Nullable CharSequence getLeading(@NonNull SequenceBoundary where) {
+        CharSequence edgeValue;
+        if (where.equals(SequenceBoundary.FRONT)) {
+            edgeValue = parts.peekFirst();
+        } else {
+            edgeValue = parts.peekLast();
+        }
+        if (edgeValue == null) {
+            return null;
+        }
+        String unmapped = edgeValue.toString();
+        KeyMapper keyMapper = this.keyMapper;
+        return keyMapper == null ? unmapped : keyMapper.labelToKey(unmapped).toString();
+    }
+
+    /**
+     * Runs an action for each key part in the sequence.
+     * <p>
+     * Lets the caller pick from which end of the sequence to start from, and move in the opposite direction.
+     *
+     * @param from   the edge to start from; this function will iterate from it toward the other end
+     * @param action the action on each part
+     */
+    public void iterateFrom(@NonNull SequenceBoundary from, Consumer<? super @NonNull CharSequence> action) {
+        CharSequence[] parts = intoParts();
+        if (from.equals(SequenceBoundary.FRONT)) {
+            for (CharSequence part : parts) {
+                action.accept(part);
+            }
+        } else {
+            for (int n = parts.length - 1; n >= 0; n--) {
+                action.accept(parts[n]);
+            }
+        }
+    }
+
+    /**
+     * Runs an action for each key part in the sequence, starting from the front
+     *
+     * @param action the action on each part
+     */
+    public void forEach(@NonNull Consumer<? super @NonNull CharSequence> action) {
+        iterateFrom(SequenceBoundary.FRONT, action);
     }
 
     /**
@@ -162,7 +240,28 @@ public abstract class KeyPath implements Printable {
     }
 
     @Override
-    public String toString() {
+    public final boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof KeyPath)) return false;
+
+        KeyPath that = (KeyPath) o;
+        if (keyMapper == that.keyMapper) {
+            // Careful: ArrayDeque does not implement equals based on its contents
+            return Arrays.equals(parts.toArray(), that.parts.toArray());
+        }
+        if (parts.size() != that.parts.size()) {
+            return false;
+        }
+        return Arrays.equals(intoParts(), that.intoParts());
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(intoParts());
+    }
+
+    @Override
+    public @NonNull String toString() {
         return printString();
     }
 
@@ -222,7 +321,7 @@ public abstract class KeyPath implements Printable {
         /**
          * Creates from another key path.
          * <p>
-         * This will copy the contents of that key path into this one.
+         * This will copy the parts of that key path into this one.
          *
          * @param other the other key path
          */
@@ -273,7 +372,7 @@ public abstract class KeyPath implements Printable {
         /**
          * Creates from another key path.
          * <p>
-         * This will copy the contents of that key path into this one.
+         * This will copy the parts of that key path into this one.
          *
          * @param other the other key path
          */
@@ -297,7 +396,23 @@ public abstract class KeyPath implements Printable {
             return new Immut(parts, keyMapper);
         }
 
+        private void flushKeyMapper() {
+            KeyMapper keyMapper = this.keyMapper;
+            if (keyMapper != null) {
+                if (!parts.isEmpty()) {
+                    ArrayDeque<CharSequence> mappedParts = new ArrayDeque<>(this.parts.size() + 8);
+                    for (CharSequence part : this.parts) {
+                        mappedParts.add(keyMapper.labelToKey(part.toString()));
+                    }
+                    this.parts = mappedParts;
+                    dataFrozen = false;
+                }
+                this.keyMapper = null;
+            }
+        }
+
         private void ensureMutable() {
+            flushKeyMapper();
             if (dataFrozen) {
                 parts = new ArrayDeque<>(parts);
                 dataFrozen = false;
@@ -305,21 +420,15 @@ public abstract class KeyPath implements Printable {
         }
 
         /**
-         * Applies a key mapper to all the key parts.
+         * Applies a key mapper to existing key parts.
          * <p>
-         * All existing key parts will be mapped through the provided argument, as will parts added later.
-         * <p>
-         * This method can only be called once per instance. Once called, the given key mapper will be attached to this
-         * key path, but the key mapper itself will not be visible or usable by other {@code KeyPath} instances. Only the
-         * mapped key parts (the result of applying the key mapper) will be observable.
+         * All existing key parts will be mapped through the provided argument. Parts added later will not be
+         * affected.
          *
          * @param keyMapper the key mapper
-         * @throws IllegalStateException if a key mapper has already been set
          */
         public void applyKeyMapper(@NonNull KeyMapper keyMapper) {
-            if (this.keyMapper != null) {
-                throw new IllegalStateException("key mapper already set");
-            }
+            flushKeyMapper();
             this.keyMapper = Objects.requireNonNull(keyMapper);
         }
 
@@ -347,5 +456,21 @@ public abstract class KeyPath implements Printable {
             parts.addLast(part);
         }
 
+        /**
+         * Adds another key path to this one, either at the front or back of this key path.
+         *
+         * @param boundary where to add the key path; should it be prepended at the front, or appended at the back
+         * @param toAdd that which is added to this one
+         */
+        public void addPath(@NonNull SequenceBoundary boundary, @NonNull KeyPath toAdd) {
+            if (toAdd.isEmpty()) {
+                return;
+            }
+            ensureMutable();
+            // Start from the other direction in the added key path
+            SequenceBoundary sourceStartFrom = boundary.opposite();
+            // And add values in the given direction in this key path
+            toAdd.iterateFrom(sourceStartFrom, (boundary == SequenceBoundary.FRONT) ? parts::addFirst : parts::addLast);
+        }
     }
 }

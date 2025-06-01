@@ -262,6 +262,6 @@ public final class CommentData {
 
     @Override
     public String toString() {
-        return "DataEntry.Comments" + '{' + contents + '}';
+        return getClass().getSimpleName() + '{' + contents + '}';
     }
 }

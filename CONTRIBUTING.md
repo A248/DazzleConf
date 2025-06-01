@@ -3,7 +3,7 @@
 
 ## Building from Source
 
-You will need JDK 15 (or greater), Maven, and Git.
+You will need JDK 21 (or greater), Maven, and Git.
 
 Steps:
 
@@ -19,11 +19,12 @@ For new features, do consider whether the feature requires or is best served by 
 Tangential features might be better implemented by another software component.
 
 With regards to code style, it is best to:
-* Avoid use of null. If necessary, use Optional for API return types.
-* Minimize code in constructors.
+* Avoid null and minimize code in constructors.
 * Make objects immutable.
 * Use object-oriented programming rather than static methods.
 * Generally, follow good practices for clean code.
+
+All reference values must be annotated with `@NonNull` or `@Nullable`. This is a hard requirement in order for the library to be smoothly interoperable with multiple JVM languages.
 
 ### A Note on Toolchains
 

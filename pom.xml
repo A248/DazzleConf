@@ -34,7 +34,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<checkerqual.version>3.49.2</checkerqual.version>
-		<junit.version>5.12.2</junit.version>
+		<junit.version>5.13.0</junit.version>
 		<mockito.version>5.1.1</mockito.version>
 		<equalsverifier.version>3.19.2</equalsverifier.version>
 	</properties>
@@ -128,9 +128,9 @@
 				<configuration>
 					<rules>
 						<requireJavaVersion>
-							<version>17</version>
+							<version>21</version>
 							<message>While this library maintains runtime compatibility with Java 8,
-								it requires JDK 17 as a build-time requirement.</message>
+								it requires JDK 21 as a build-time requirement.</message>
 						</requireJavaVersion>
 						<requireNoRepositories>
 							<message>Third-party repositories are not allowed</message>
@@ -184,7 +184,7 @@
 					<configuration>
 						<!-- Compile module descriptor with Java 11 -->
 						<release>11</release>
-						<testRelease>17</testRelease>
+						<testRelease>21</testRelease>
 					</configuration>
 					<executions>
 						<!-- Compile everything else with Java 8 compatibility -->
@@ -210,13 +210,6 @@
 					<configuration>
 						<argLine>-XX:TieredStopAtLevel=1 -XX:-TieredCompilation</argLine>
 					</configuration>
-					<dependencies>
-						<dependency>
-							<groupId>org.junit.jupiter</groupId>
-							<artifactId>junit-jupiter-engine</artifactId>
-							<version>${junit.version}</version>
-						</dependency>
-					</dependencies>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
@@ -278,13 +271,7 @@
 			</dependency>
 			<dependency>
 				<groupId>org.junit.jupiter</groupId>
-				<artifactId>junit-jupiter-api</artifactId>
-				<version>${junit.version}</version>
-				<scope>test</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.junit.jupiter</groupId>
-				<artifactId>junit-jupiter-params</artifactId>
+				<artifactId>junit-jupiter</artifactId>
 				<version>${junit.version}</version>
 				<scope>test</scope>
 			</dependency>

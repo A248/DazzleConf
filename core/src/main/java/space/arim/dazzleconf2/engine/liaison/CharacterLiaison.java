@@ -26,6 +26,9 @@ import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
+import static space.arim.dazzleconf2.backend.Printable.join;
+import static space.arim.dazzleconf2.backend.Printable.preBuilt;
+
 /**
  * Liaison for {@code char} and {@code Character}.
  * <p>
@@ -61,19 +64,40 @@ public final class CharacterLiaison implements TypeLiaison {
             return new SerializeDeserialize<Character>() {
                 @Override
                 public @NonNull LoadResult<@NonNull Character> deserialize(@NonNull DeserializeInput deser) {
-                    if (deser.object() instanceof Character) {
-                        return LoadResult.of((Character) deser.object());
+                    Object object = deser.object();
+                    if (object instanceof Character) {
+                        return LoadResult.of((Character) object);
                     }
-                    return deser.requireString().flatMap(string -> {
+                    if (object instanceof String) {
+                        String string = (String) object;
+
                         char[] chars = string.toCharArray();
                         if (chars.length != 1) {
                             LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
-                            return deser.throwError(libraryLang.wrongTypeForValue(
-                                    deser.object(), libraryLang.character(), libraryLang.text())
-                            );
+                            return deser.throwError(join(
+                                    preBuilt(libraryLang.badValue()),
+                                    preBuilt(" "),
+                                    libraryLang.wrongTypeForValue(object, libraryLang.character(), libraryLang.text())
+                            ));
                         }
+                        // Don't flag updates. Not all backends support char values directly, so String is acceptable
+                        // If we called deser.flagUpdate(), then some users would see perpetual update notifications
                         return LoadResult.of(chars[0]);
-                    });
+                    }
+                    LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
+                    return deser.throwError(libraryLang.wrongTypeForValue(object, Character.class));
+                }
+
+                @Override
+                public @NonNull LoadResult<@NonNull Character> deserializeUpdate(@NonNull DeserializeInput deser,
+                                                                                 @NonNull SerializeOutput updateTo) {
+                    LoadResult<Character> loadResult = deserialize(deser);
+                    Character updated;
+                    if (loadResult.isSuccess() && (updated = loadResult.getOrThrow()) != deser.object()) {
+                        // Even though we don't send update notifications, we can still update the value itself
+                        updateTo.outChar(updated);
+                    }
+                    return loadResult;
                 }
 
                 @Override

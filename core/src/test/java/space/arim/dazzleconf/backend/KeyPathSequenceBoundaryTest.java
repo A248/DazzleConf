@@ -17,20 +17,18 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.internals;
+package space.arim.dazzleconf.backend;
 
-import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import org.junit.jupiter.api.Test;
+import space.arim.dazzleconf2.backend.KeyPath;
 
-/**
- * Simple functional interface for dealing with {@link LibraryLang}
- */
-public interface LibraryLangKey {
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-    /**
-     * Gets the desired message
-     * @param libraryLang the library language chosen
-     * @return the message selected
-     */
-    String getMessage(LibraryLang libraryLang);
+public class KeyPathSequenceBoundaryTest {
 
+    @Test
+    public void opposite() {
+        assertEquals(KeyPath.SequenceBoundary.BACK, KeyPath.SequenceBoundary.FRONT.opposite());
+        assertEquals(KeyPath.SequenceBoundary.FRONT, KeyPath.SequenceBoundary.BACK.opposite());
+    }
 }

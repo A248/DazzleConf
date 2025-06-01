@@ -77,23 +77,22 @@ final class DefinitionScan {
             currentWalker.getViableMethods().forEachOrdered(methodId -> {
 
                 MethodLocator methodLocator = new MethodLocator(methodId);
-                AnnotatedElement annotations;
                 // We need to make sure that subclasses own the methods they override
                 // To do this, check existing types, and see if the current type is a sub-type of them
                 Class<?> existingOwner = methodsFoundWhere.get(methodLocator);
                 if (existingOwner == null) {
-                    annotations = currentWalker.getAnnotations(methodId);
+                    // All good
                 } else if (existingOwner.isAssignableFrom(currentType)) {
                     // There's an existing owner, but current type is a sub-type of it
                     // So, move ownership of this method to the current type
-                    annotations = classContentMap.get(existingOwner).ownedMethods.remove(methodLocator);
+                    classContentMap.get(existingOwner).ownedMethods.remove(methodLocator);
                 } else {
                     // We're currently in a super-type of the existing owner, due to diamond inheritance
                     // In that case, keep ownership of the method with them
                     assert currentType.isAssignableFrom(existingOwner);
                     return;
                 }
-                classContent.ownedMethods.put(methodLocator, annotations);
+                classContent.ownedMethods.put(methodLocator, currentWalker.getAnnotations(methodId));
                 methodsFoundWhere.put(methodLocator, currentType);
             });
             return currentWalker.getSuperTypes();
@@ -102,7 +101,9 @@ final class DefinitionScan {
         ConfigurationDefinition<V> read() {
             Class<V> rawType = typeToken.getRawType();
             if (!rawType.isInterface()) {
-                throw new DeveloperMistakeException("This library works exclusively with interfaces");
+                throw new DeveloperMistakeException(
+                        "This library works exclusively with interfaces. " + rawType + " is not an interface."
+                );
             }
             // 1. Scan type hierarchy; figure out method ownership
             List<MethodMirror.TypeWalker> currentWalkers = Collections.singletonList(
@@ -201,16 +202,6 @@ final class DefinitionScan {
             }
 
             @Override
-            public <U> TypeLiaison.@NonNull Agent<U> getOtherAgent(@NonNull TypeToken<U> other) {
-                blockRequestLoop.enter(other);
-                try {
-                    return liaisonCache.requestToHandle(other, this).agent;
-                } finally {
-                    blockRequestLoop.exit(other);
-                }
-            }
-
-            @Override
             public @NonNull <U> SerializeDeserialize<U> getOtherSerializer(@NonNull TypeToken<U> other) {
                 blockRequestLoop.enter(other);
                 try {
@@ -239,7 +230,7 @@ final class DefinitionScan {
 
         void enter(V value) {
             if (!seenBefore.add(value)) {
-                throw new IllegalStateException("Cycle detected: " + value);
+                throw new DeveloperMistakeException("Cycle detected. This type was requested before: " + value);
             }
         }
 

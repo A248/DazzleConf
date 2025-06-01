@@ -54,15 +54,7 @@ public final class StandardErrorPrint implements ErrorPrint {
             // See class javadoc. We're not really prepared to handle this
             throw new IllegalArgumentException("Error context list is empty");
         }
-        output.output(new Printable() {
-
-            @Override
-            public @NonNull String printString() {
-                StringBuilder output = new StringBuilder();
-                printTo(output);
-                return output.toString();
-            }
-
+        output.output(new Printable.Abstract() {
             @Override
             public void printTo(@NonNull Appendable output) throws IOException {
 
@@ -111,22 +103,8 @@ public final class StandardErrorPrint implements ErrorPrint {
                 if (cap != errorCount) {
                     output.append('+');
                     output.append(' ');
-                    output.append(lang.moreErrors(errorCount - cap));
+                    output.append(lang.more(errorCount - cap));
                 }
-            }
-
-            @Override
-            public void printTo(@NonNull StringBuilder output) {
-                try {
-                    printTo((Appendable) output);
-                } catch (IOException e) {
-                    throw new AssertionError("StringBuilder does not throw IOException", e);
-                }
-            }
-
-            @Override
-            public String toString() {
-                return printString();
             }
         });
     }

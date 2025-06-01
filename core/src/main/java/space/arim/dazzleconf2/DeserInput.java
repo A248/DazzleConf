@@ -20,25 +20,22 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
+import java.util.Arrays;
 import java.util.Locale;
 
-final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
+abstract class DeserInput implements DeserializeInput, LibraryLang.Accessor {
 
-    private final Object object;
-    private final Source source;
-    private final Context context;
+    final Source source;
+    final Context context;
 
-    DeserInput(Object object, Source source, Context context) {
-        this.object = object;
+    int childIdx;
+
+    DeserInput(Source source, Context context) {
         this.source = source;
         this.context = context;
     }
@@ -65,6 +62,70 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
         }
     }
 
+    abstract KeyPath getPathContribution();
+
+    @Override
+    public abstract @NonNull Object object();
+
+    @Override
+    public abstract @NonNull DeserializeInput makeChild(@NonNull Object value);
+
+    static class Base extends DeserInput {
+
+        Base(DataEntry dataEntry, String mappedKey, Context context) {
+            super(new Source(dataEntry, mappedKey), context);
+        }
+
+        @Override
+        KeyPath getPathContribution() {
+            return new KeyPath.Immut(source.mappedKey);
+        }
+
+        @Override
+        public @NonNull Object object() {
+            return source.dataEntry.getValue();
+        }
+
+        @Override
+        public @NonNull DeserializeInput makeChild(@NonNull Object value) {
+            return new Child(source, context, value, new int[] {childIdx++});
+        }
+    }
+
+    static class Child extends DeserInput {
+
+        private final Object value;
+        private final int[] childIdxPath;
+
+        Child(Source source, Context context, Object value, int[] childIdxPath) {
+            super(source, context);
+            this.value = value;
+            this.childIdxPath = childIdxPath;
+        }
+
+        @Override
+        KeyPath getPathContribution() {
+            KeyPath.Mut contribution = new KeyPath.Mut();
+            contribution.addBack(source.mappedKey);
+            for (int childIdxPathElem : childIdxPath) {
+                contribution.addBack("$" + childIdxPathElem);
+            }
+            return contribution;
+        }
+
+        @Override
+        public @NonNull Object object() {
+            return value;
+        }
+
+        @Override
+        public @NonNull DeserializeInput makeChild(@NonNull Object value) {
+            int[] newChildIdxPath = Arrays.copyOf(childIdxPath, childIdxPath.length + 1);
+            newChildIdxPath[childIdxPath.length] = childIdx++;
+            return new Child(source, context, value, newChildIdxPath);
+        }
+    }
+
     @Override
     public @NonNull LibraryLang getLibraryLang() {
         return context.libraryLang;
@@ -76,14 +137,9 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     @Override
-    public @NonNull Object object() {
-        return object;
-    }
-
-    @Override
     public @NonNull KeyPath absoluteKeyPath() {
         KeyPath.Mut path = context.mappedPathPrefix.intoMut();
-        path.addBack(source.mappedKey);
+        path.addPath(KeyPath.SequenceBoundary.BACK, getPathContribution());
         return path.intoImmut();
     }
 
@@ -113,17 +169,12 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     @Override
     public void flagUpdate(@NonNull KeyPath keyPath, @NonNull UpdateReason updateReason) {
         KeyPath.Mut keyPathMut = keyPath.intoMut();
-        keyPathMut.addFront(source.mappedKey);
+        keyPathMut.addPath(KeyPath.SequenceBoundary.FRONT, getPathContribution());
         context.readOptions.loadListener().updatedPath(keyPathMut, updateReason);
     }
 
     @Override
-    public @NonNull DeserializeInput makeChild(@NonNull Object value) {
-        return new DeserInput(value, source, context);
-    }
-
-    @Override
-    public @NonNull ErrorContext buildError(@NonNull CharSequence message) {
+    public @NonNull ErrorContext buildError(@NonNull Printable message) {
         LoadError loadError = new LoadError(message, context.libraryLang);
         // Add entry path
         loadError.addDetail(ErrorContext.ENTRY_PATH, absoluteKeyPath());
@@ -136,7 +187,12 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     @Override
-    public <R> @NonNull LoadResult<R> throwError(@NonNull CharSequence message) {
+    public @NonNull <R> LoadResult<R> throwError(@NonNull CharSequence message) {
+        return LoadResult.failure(buildError(Printable.preBuilt(message)));
+    }
+
+    @Override
+    public @NonNull <R> LoadResult<R> throwError(@NonNull Printable message) {
         return LoadResult.failure(buildError(message));
     }
 }

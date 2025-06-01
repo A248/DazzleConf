@@ -28,6 +28,8 @@ import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
+import static space.arim.dazzleconf2.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
+
 /**
  * Default implementation of {@link MethodMirror} using standard reflection.
  *
@@ -38,8 +40,6 @@ public final class DefaultMethodMirror implements MethodMirror {
      * Creates
      */
     public DefaultMethodMirror() {}
-
-    private static final ReifiedType[] EMPTY_PARAMS = new ReifiedType[0];
 
     @Override
     public @NonNull TypeWalker typeWalker(ReifiedType.@NonNull Annotated reifiedType) {
@@ -78,7 +78,7 @@ public final class DefaultMethodMirror implements MethodMirror {
 
                         AnnotatedType[] methodParameters = method.getAnnotatedParameterTypes();
                         ReifiedType[] reifiedParameters = (methodParameters.length == 0) ?
-                                EMPTY_PARAMS : new ReifiedType[methodParameters.length];
+                                EMPTY_ARRAY : new ReifiedType[methodParameters.length];
                         for (int n = 0; n < reifiedParameters.length; n++) {
                             reifiedParameters[n] = classGenerics.reify(methodParameters[n]);
                         }

@@ -64,7 +64,6 @@
  * At runtime, a value of the parent type can be one of either sub-type. For example, a {@code DataTree} could be either
  * {@code DataTree.Mut} or a {@code DataTree.Immut}. The API, however, is intended to elide instanceof checks by making
  * conversions between these types logical and efficient. Let's use {@code DataTree} as an example.
- * <p>
  * <ul>
  *     <li>An existing {@code DataTree} can be made mutable with {@link space.arim.dazzleconf2.backend.DataTree#intoMut()}.
  *     If the receiver data tree is not already mutable, a new object is created and the data is copied to it. For
@@ -73,7 +72,8 @@
  *     This function moves the data into a new immutable container and poisons the old {@code DataTree} instance. Thus, it
  *     mimics a Rust-like ownership model where the caller is expected to have exclusive access to the mutable data tree,
  *     and therefore the ability to move that data to a new place. If already immutable, the data tree yields itself.</li>
- *     <li>Thanks to lazy copying, repeated conversion using the aforementioned methods has negligible performance impact.</li>
+ *     <li>Thanks to lazy copying, repeated conversion using the aforementioned methods has low performance impact.
+ *     Copying is performed upon first mutation of a mutable instance that was created from an immutable one.</li>
  * </ul>
  * <p>
  * As expected, the {@code Mut} variant is not thread safe without the presence of external synchronization.

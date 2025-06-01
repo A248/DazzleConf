@@ -21,8 +21,12 @@ package space.arim.dazzleconf2.internals.lang;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.Printable;
 
+import java.util.Arrays;
 import java.util.Locale;
+
+import static space.arim.dazzleconf2.backend.Printable.preBuilt;
 
 public final class LibraryLangAr extends LibraryLang.Base {
 
@@ -57,22 +61,32 @@ public final class LibraryLangAr extends LibraryLang.Base {
 
     @Override
     public @NonNull String missingValue() {
-        return "لا يوجد إعداد هنا ولكنه مفروض.";
+        return "لا يوجد إختيار هنا ولكنه مفروض.";
     }
 
     @Override
-    public @NonNull String wrongTypeForValue(Object value, String expectedType, String actualType) {
-        return "الإعداد < " + value + " > هو من نوع " + actualType + " ولكنه مفروض من " + expectedType + '.';
+    public @NonNull Printable wrongTypeForValue(Object value, String expectedType, String actualType) {
+        return preBuilt("الإختيار < " + value + " > من نوع " + actualType + " ولكنه مفروض من " + expectedType + '.');
     }
 
     @Override
-    public @NonNull String mustBeBetween(String value, Number min, Number max) {
-        return "يجب ان يكون الإعداد بين " + min + " و" + max + " ولكنه بالفعل " + value + ".";
+    public @NonNull Printable mustBeBetween(String value, Number min, Number max) {
+        return preBuilt("يجب ان يكون الإختيار بين " + min + " و" + max + " ولكنه بالفعل " + value + ".");
     }
 
     @Override
-    public @NonNull String malformattedValue(String reason) {
-        return "هذا الإعداد ليس مرتباً جيداً لانه " + reason;
+    public @NonNull Printable notAccepted(@NonNull String value, @NonNull String[] permitted) {
+        return preBuilt("الإختيار < " + value + " > غير مقبول. لزاماً يكون بين " + Arrays.toString(permitted));
+    }
+
+    @Override
+    public @NonNull String forExample() {
+        return "مثلاً";
+    }
+
+    @Override
+    public @NonNull String badValue() {
+        return "الإعداد هنا لا يناسب.";
     }
 
     @Override
@@ -86,53 +100,47 @@ public final class LibraryLangAr extends LibraryLang.Base {
     }
 
     @Override
-    public @NonNull String moreErrors(int howMany) {
-        String number, singularOrPlural;
-        if (howMany == 1) {
-            number = "";
-            singularOrPlural = "خطأ";
-        } else if (howMany <= 10) {
-            number = " " + howMany;
-            singularOrPlural = "اخطاء";
-        } else {
-            number = " " + howMany;
-            singularOrPlural = "خطأ";
-        }
-        return "بالإضافة الى" + number + " " + singularOrPlural + " كمان...";
+    public @NonNull String more(int howMany) {
+        return formatNumber(howMany) + " كمان...";
+    }
+
+    @Override
+    public @NonNull String trueFalse() {
+        return "'true/false'";
     }
 
     @Override
     public @NonNull String text() {
-        return "نص";
+        return "النص";
     }
 
     @Override
     public @NonNull String smallInteger() {
-        return "عدد صحيح صغير";
+        return "العدد الصحيح الصغير";
     }
 
     @Override
     public @NonNull String integer() {
-        return "عدد صحيح";
+        return "العدد الصحيح";
     }
 
     @Override
     public @NonNull String character() {
-        return "حرف";
+        return "الحرف";
     }
 
     @Override
     public @NonNull String decimal() {
-        return "عدد عشري";
+        return "العدد عشري";
     }
 
     @Override
     public @NonNull String list() {
-        return "قائمة";
+        return "القائمة";
     }
 
     @Override
     public @NonNull String configurationSection() {
-        return "مجموعة إعدادات";
+        return "مجموعة إلاعدادات";
     }
 }

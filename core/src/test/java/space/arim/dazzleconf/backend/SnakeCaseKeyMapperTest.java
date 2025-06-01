@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf.backend;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
@@ -52,5 +53,10 @@ public class SnakeCaseKeyMapperTest {
     @Test
     public void malformed2() {
         assertEquals("m-b-w", keyMapper.labelToKey("MBW"));
+    }
+
+    @Test
+    public void equality() {
+        EqualsVerifier.forClass(SnakeCaseKeyMapper.class).verify();
     }
 }

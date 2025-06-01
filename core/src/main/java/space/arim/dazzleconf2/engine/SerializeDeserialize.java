@@ -122,7 +122,9 @@ public interface SerializeDeserialize<V> {
      *         }
      *         // Updating happens here
      *         updateTo.outInt(intVal);
-
+     *         // Best practice: include a signal that the update occured
+     *         deser.flagUpdate(KeyPath.empty(), UpdateReason.UPDATED);
+     *
      *         return LoadResult.of(intVal);
      *     });
      *     }

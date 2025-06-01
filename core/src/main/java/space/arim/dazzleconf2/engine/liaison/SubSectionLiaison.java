@@ -136,6 +136,7 @@ public final class SubSectionLiaison implements TypeLiaison {
                     }
                 });
                 if (result.isSuccess() && recordUpdates.updated) {
+                    // No need to call deser.flagUpdate(), since it will already have been called for child paths
                     updateTo.outDataTree(updatableTree);
                 }
                 return result;

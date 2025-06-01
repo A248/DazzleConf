@@ -21,6 +21,7 @@ package space.arim.dazzleconf2.internals.lang;
 
 import space.arim.dazzleconf2.backend.DataTree;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -62,8 +63,13 @@ final class ReadMe {
     //
 
     static String displayCanonicalType(LibraryLang lang, Class<?> type, Object typeAssist) {
+        assert !type.isPrimitive() : "Use wrapper type";
+
         if (type.equals(String.class)) {
             return lang.text();
+        }
+        if (type.equals(Boolean.class)) {
+            return lang.trueFalse();
         }
         if (type.equals(Byte.class)) {
             return lang.smallInteger();
