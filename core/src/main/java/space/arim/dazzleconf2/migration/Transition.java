@@ -32,9 +32,10 @@ public interface Transition<C_OLD, C_NEW> {
      * Migrates from one configuration to another
      *
      * @param previous the old config object
+     * @param migrateContext the migration context
      * @return the new config object
      */
-    @NonNull C_NEW migrateFrom(@NonNull C_OLD previous);
+    @NonNull C_NEW migrateFrom(@NonNull C_OLD previous, @NonNull MigrateContext migrateContext);
 
     /**
      * Chains on another transition after this one
@@ -47,9 +48,9 @@ public interface Transition<C_OLD, C_NEW> {
         class Chained implements Transition<C_OLD, C_NEWER> {
 
             @Override
-            public @NonNull C_NEWER migrateFrom(@NonNull C_OLD previous) {
-                C_NEW intermediate = Transition.this.migrateFrom(previous);
-                return next.migrateFrom(intermediate);
+            public @NonNull C_NEWER migrateFrom(@NonNull C_OLD previous, @NonNull MigrateContext migrateContext) {
+                C_NEW intermediate = Transition.this.migrateFrom(previous, migrateContext);
+                return next.migrateFrom(intermediate, migrateContext);
             }
         }
         return new Chained();

@@ -17,7 +17,7 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.reflect;
+package space.arim.dazzleconf;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -32,7 +32,7 @@ public final class Utilities {
         assertEquals(val1.hashCode(), val2.hashCode());
     }
 
-    static <T> void assertNotEqualsBothWays(T val1, T val2) {
+    public static <T> void assertNotEqualsBothWays(T val1, T val2) {
         assertNotEquals(val1, val2);
         assertNotEquals(val2, val1);
         assertNotEquals(val1.toString(), val2.toString(), "toString should be implemented reasonably");

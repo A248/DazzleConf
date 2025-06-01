@@ -102,7 +102,9 @@ final class DefinitionScan {
         ConfigurationDefinition<V> read() {
             Class<V> rawType = typeToken.getRawType();
             if (!rawType.isInterface()) {
-                throw new DeveloperMistakeException("This library works exclusively with interfaces");
+                throw new DeveloperMistakeException(
+                        "This library works exclusively with interfaces. " + rawType + " is not an interface."
+                );
             }
             // 1. Scan type hierarchy; figure out method ownership
             List<MethodMirror.TypeWalker> currentWalkers = Collections.singletonList(

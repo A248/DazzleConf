@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static space.arim.dazzleconf.Utilities.assertEqualsBothWays;
+import static space.arim.dazzleconf.Utilities.assertNotEqualsBothWays;
 
 public class KeyPathTest {
 
@@ -389,6 +391,36 @@ public class KeyPathTest {
         original.addBack("bye");
         assertArrayEquals(new String[] {"hi", "there"}, snapshot.intoParts());
         assertArrayEquals(new String[] {"start", "hi", "there", "bye"}, original.intoParts());
+    }
+
+    @Test
+    public void equality() {
+        KeyPath.Mut original = new KeyPath.Mut("bookCalled", "thereThere");
+        KeyPath.Mut copy = new KeyPath.Mut(original);
+        assertEquals(original, original);
+        assertEquals(original, copy);
+        assertEquals(copy, original);
+
+        KeyPath.Mut withKeyMapper = new KeyPath.Mut(original);
+        original.applyKeyMapper(new DefaultKeyMapper());
+        assertEqualsBothWays(original, withKeyMapper);
+        assertEqualsBothWays(new KeyPath.Immut("bookCalled", "thereThere"), withKeyMapper);
+    }
+
+    @Test
+    public void equalityDifferentKeyMapper() {
+        KeyPath.Mut original = new KeyPath.Mut("bookCalled", "thereThere");
+        KeyPath.Mut twin = new KeyPath.Mut(original);
+        KeyMapper keyMapper = new SnakeCaseKeyMapper();
+        twin.applyKeyMapper(keyMapper);
+        assertNotEqualsBothWays(original, twin);
+        assertEqualsBothWays(new KeyPath.Mut("book-called", "there-there"), twin);
+        assertEqualsBothWays(new KeyPath.Immut("book-called", "there-there"), twin);
+
+        original.applyKeyMapper(keyMapper);
+        assertEqualsBothWays(original, twin);
+        original.addBack("newKey");
+        assertNotEqualsBothWays(original, twin);
     }
 
     @AfterAll

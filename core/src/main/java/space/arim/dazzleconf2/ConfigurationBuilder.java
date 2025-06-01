@@ -124,13 +124,12 @@ public final class ConfigurationBuilder<C> {
     /**
      * Adds type liaisons for primitives and <code>String</code> to this builder.
      * <p>
-     * These type liaisons are part of the default set. However, unlike {@link #addDefaultTypeLiaisons()}, enum types
-     * are not covered by this method.
+     * These type liaisons are part of the default set. However, unlike {@link #addDefaultTypeLiaisons()}, enum types,
+     * collections, and configuration subsections are not covered by this method.
      *
      * @return this builder
      */
     public @This @NonNull ConfigurationBuilder<C> addPrimitiveTypeLiaisons() {
-        // TODO - Impl
         return addTypeLiaisons(
                 new StringLiaison(), new CharacterLiaison(), new DoubleLiaison(), new FloatLiaison(),
                 new LongLiaison(), new IntegerLiaison(), new ShortLiaison(), new ByteLiaison()
@@ -140,8 +139,8 @@ public final class ConfigurationBuilder<C> {
     /**
      * Adds the default type liaisons to this builder.
      * <p>
-     * The default type liaisons are capable of serializing primitive types, <code>String</code>s, and enum types,
-     * plus lists of other serializable types, and configuration subsections.
+     * The default type liaisons are capable of serializing primitive types, <code>String</code>s, enum types,
+     * collections (<code>Collection</code>/<code>List</code>/<code>Set</code>), and configuration subsections.
      * <p>
      * <b>Notable annotations</b>
      * <p>
@@ -154,19 +153,18 @@ public final class ConfigurationBuilder<C> {
      *     <li><code>DoubleLiaison</code>: <code>@DoubleRange</code> and <code>@DoubleDefault</code></li>
      *     <li><code>FloatLiaison</code>: <code>@FloatRange</code> and <code>@FloatDefault</code></li>
      * </ul>
-     * <p>The "XRange" annotations for numeric types provide bounds checking for a specified range.
-     * <p>The "XDefault" annotations provide default values. There is mostly no difference between using default methods
+     * <p>The "Range" annotations for numeric types provide bounds checking for a specified range.
+     * <p>The "Default" annotations provide default values. There is mostly no difference between using default methods
      * and the default value-providing annotations, but the annotations provide additional capabilities: like specifying
      * an "if missing" value or being passed to dependent liaisons.
      * <p>
-     * The annotations can also be depended upon by other liaisons, not just the default liaisons.
+     * The annotations mentioned here can also be depended upon by other liaisons, not just the default liaisons.
      *
      * @return this builder
      */
     public @This @NonNull ConfigurationBuilder<C> addDefaultTypeLiaisons() {
         addPrimitiveTypeLiaisons();
-        // TODO - Impl & Javadoc
-        return addTypeLiaisons(new CollectionLiaison(), new SubSectionLiaison());
+        return addTypeLiaisons(new CollectionLiaison(), new EnumLiaison(), new SubSectionLiaison());
     }
 
     /**

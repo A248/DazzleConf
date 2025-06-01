@@ -102,6 +102,11 @@ public final class LibraryLangAr extends LibraryLang.Base {
     }
 
     @Override
+    public @NonNull String trueFalse() {
+        return "'true/false'";
+    }
+
+    @Override
     public @NonNull String text() {
         return "نص";
     }

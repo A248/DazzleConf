@@ -17,32 +17,29 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.backend;
+package space.arim.dazzleconf;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.mockito.ArgumentMatcher;
+import space.arim.dazzleconf2.backend.DataStreamable;
+import space.arim.dazzleconf2.backend.DataTree;
 
-/**
- * Default, "no-op" mapper for keys and method names
- */
-public final class DefaultKeyMapper implements KeyMapper {
+import java.util.Objects;
 
-    /**
-     * Creates
-     */
-    public DefaultKeyMapper() {}
+public final class MatchDataTree implements ArgumentMatcher<DataStreamable> {
 
-    @Override
-    public @NonNull CharSequence labelToKey(@NonNull String label) {
-        return label;
+    private final DataTree expected;
+
+    public MatchDataTree(DataTree expected) {
+        this.expected = expected;
     }
 
     @Override
-    public int hashCode() {
-        return DefaultKeyMapper.class.hashCode();
+    public boolean matches(DataStreamable argument) {
+        return Objects.equals(expected, argument.getAsTree());
     }
 
     @Override
-    public boolean equals(Object obj) {
-        return obj instanceof DefaultKeyMapper;
+    public String toString() {
+        return getClass().getSimpleName() + '{' + expected + '}';
     }
 }

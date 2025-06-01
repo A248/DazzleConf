@@ -98,5 +98,25 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
         public @NonNull I getShell() {
             return shell;
         }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+
+            if (!(obj instanceof ReloadShell)) {
+                return false;
+            }
+            return Objects.equals(getCurrentDelegate(), ((ReloadShell<?>) obj).getCurrentDelegate());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(getCurrentDelegate());
+        }
+
+        @Override
+        public String toString() {
+            return getClass().getSimpleName() + '{' + getCurrentDelegate() + '}';
+        }
     }
 }

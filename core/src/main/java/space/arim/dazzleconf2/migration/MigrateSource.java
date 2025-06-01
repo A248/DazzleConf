@@ -21,7 +21,6 @@ package space.arim.dazzleconf2.migration;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.Backend;
 
 import java.io.UncheckedIOException;
 

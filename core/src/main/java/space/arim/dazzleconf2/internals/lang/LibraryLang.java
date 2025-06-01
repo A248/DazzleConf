@@ -89,6 +89,12 @@ public interface LibraryLang {
 
     @NonNull String moreErrors(int howMany);
 
+    default @NonNull String wrongTypeForValue(@NonNull Object value, @NonNull String expectedType) {
+        return wrongTypeForValue(
+                value, expectedType, ReadMe.displayCanonicalType(this, value.getClass(), value)
+        );
+    }
+
     default @NonNull String wrongTypeForValue(@NonNull Object value, @NonNull Class<?> expectedType) {
         return wrongTypeForValue(
                 value,
@@ -110,6 +116,8 @@ public interface LibraryLang {
                 NumberFormat.getInstance(getLocale()).format(value)
         );
     }
+
+    @NonNull String trueFalse();
 
     @NonNull String text();
 

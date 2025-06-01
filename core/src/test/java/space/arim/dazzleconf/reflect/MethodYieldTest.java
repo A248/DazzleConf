@@ -86,7 +86,7 @@ public class MethodYieldTest {
     public void equality() {
         EqualsVerifier.forClass(MethodYield.class)
                 .withPrefabValues(MethodId.class, sample, new MethodId("equality", ReifiedType.Annotated.unannotated(void.class), new ReifiedType[0], true))
-                .withPrefabValues(ReifiedType[].class, new ReifiedType.Annotated[0], new ReifiedType.Annotated[] {ReifiedType.Annotated.unannotated(void.class)})
+                .withPrefabValues(ReifiedType[].class, ReifiedType.Annotated.EMPTY_ARRAY, new ReifiedType.Annotated[] {ReifiedType.Annotated.unannotated(void.class)})
                 .verify();
     }
 

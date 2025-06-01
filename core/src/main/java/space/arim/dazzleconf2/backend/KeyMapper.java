@@ -20,6 +20,7 @@
 package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.Configuration;
 
 /**
@@ -27,6 +28,13 @@ import space.arim.dazzleconf2.Configuration;
  * <p>
  * For example, some formats (JSON) use lowerCamelCase for option names, whereas others use snake-case (YAML).
  * Fortunately, the key mapper is configured automatically when using {@link Configuration#configureWith(Backend)}.
+ * <p>
+ * <b>Equality</b>
+ * <p>
+ * Implementations of this class are required to provide <code>equals</code> and <code>hashCode</code> based on their
+ * concrete type and the functionality they implement. {@code KeyMapper}s which are different concrete classes must
+ * never be equal. However, if an implementation exposes additional settings to tweak its behavior, those settings
+ * should be tested for equality.
  */
 public interface KeyMapper {
 
@@ -37,5 +45,18 @@ public interface KeyMapper {
      * @return the key compponent
      */
     @NonNull CharSequence labelToKey(@NonNull String label);
+
+    /**
+     * Whether this key mapper is equal to another.
+     * <p>
+     * {@code KeyMapper} implementations are required to be equal to other instances of themselves. They cannot be
+     * equal to {@code KeyMapper}s of different concrete classes, but they should consider their own fields (if any)
+     * when comparing to their own concrete type. See the class javadoc for more details.
+     *
+     * @param other the object to test equality with
+     * @return true if equal
+     */
+    @Override
+    boolean equals(@Nullable Object other);
 
 }

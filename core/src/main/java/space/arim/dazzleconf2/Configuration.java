@@ -89,10 +89,11 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * @param <C> the config type
      * @param configType the config class, which cannot have generic parameters
      * @return a config builder, with the default type liaisons set
+     * @throws DeveloperMistakeException if the configuration class has generic parameters
      */
     static <C> @NonNull ConfigurationBuilder<C> defaultBuilder(@NonNull Class<C> configType) {
         if (configType.getTypeParameters().length != 0) {
-            throw new IllegalArgumentException("Cannot use Configuration.builder(Class) with a generic type.");
+            throw new DeveloperMistakeException("Cannot use Configuration.builder(Class) with a generic type.");
         }
         return defaultBuilder(new TypeToken<>(new ReifiedType.Annotated(
                 configType, ReifiedType.Annotated.EMPTY_ARRAY, configType

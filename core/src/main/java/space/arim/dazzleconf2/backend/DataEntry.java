@@ -166,6 +166,15 @@ public final class DataEntry {
         return value.hashCode();
     }
 
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + '{' +
+                "value=" + value +
+                ", lineNumber=" + lineNumber +
+                ", comments=" + comments +
+                '}';
+    }
+
     /**
      * Checks whether the given object is valid as a value.
      * <p>

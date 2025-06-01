@@ -26,6 +26,8 @@ import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.lang.reflect.AnnotatedElement;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class TypeTokenTest {
 
     @Test
@@ -35,5 +37,11 @@ public class TypeTokenTest {
                 .withPrefabValues(ReifiedType[].class, ReifiedType.Annotated.EMPTY_ARRAY, new ReifiedType.Annotated[] {ReifiedType.Annotated.unannotated(void.class)})
                 .withPrefabValues(AnnotatedElement.class, getClass().getConstructor(), getClass().getMethod("equality"))
                 .verify();
+    }
+
+    @Test
+    public void toStringTest() {
+        ReifiedType.Annotated type = ReifiedType.Annotated.unannotated(getClass());
+        assertTrue(new TypeToken<>(type).toString().contains(type.toString()));
     }
 }

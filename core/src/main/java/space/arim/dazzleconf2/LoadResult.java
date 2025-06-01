@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf2;
 
+import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.internals.ImmutableCollections;
@@ -30,10 +32,22 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * Result container for fallible configuration related operations.
+ * A result container for fallible operations.
  * <p>
- * This container is immutable and stores either a success value or an error value. Which is stored can be checked
- * with {@link #isSuccess()}
+ * This container is immutable and stores either a success value or an error value. If an error, the error contexts
+ * are provided through {@link #getErrorContexts()}.
+ * <p>
+ * <b>Nullability</b>
+ * <p>
+ * The success value may or may not be nullable. Callers are encouraged to choose type annotations appropriate to
+ * the succces value's nullabiility. For example, {@code LoadResult<@NonNull String>} may not check nullness at
+ * runtime, but it will provide type-level assistance (and interoperability with other JVM languages, like Kotlin).
+ * <p>
+ * <b>Equality</b>
+ * <p>
+ * This type implements equality based on the success value or error contexts. If the success value is equal to another,
+ * or the error contexts are equal, this {@code LoadResult} is equal. If one {@code LoadResult} succeeded but the other
+ * did not, they are not equal.
  *
  * @param <R> the type of the yielded value
  */
@@ -46,13 +60,15 @@ public final class LoadResult<R> {
     private final boolean success;
 
     private LoadResult(Object value, boolean success) {
-        this.value = Objects.requireNonNull(value);
+        this.value = value;
         this.success = success;
     }
 
     /**
      * Makes a successful load result
+     *
      * @param success the success value
+     * @param <R> the yield type
      * @return the load result
      */
     public static <R> @NonNull LoadResult<R> of(R success) {
@@ -61,7 +77,9 @@ public final class LoadResult<R> {
 
     /**
      * Creates a failed load result with the given error contexts
+     *
      * @param reasons the error contexts
+     * @param <R> the yield type, which can be chosen freely since the result is an error
      * @return the load result
      */
     public static <R> @NonNull LoadResult<R> failure(@NonNull ErrorContext @NonNull...reasons) {
@@ -70,7 +88,9 @@ public final class LoadResult<R> {
 
     /**
      * Creates a failed load result with the given error contexts
+     *
      * @param reasons the error contexts
+     * @param <R> the yield type, which can be chosen freely since the result is an error
      * @return the load result
      */
     public static <R> @NonNull LoadResult<R> failure(@NonNull List<@NonNull ErrorContext> reasons) {
@@ -185,7 +205,7 @@ public final class LoadResult<R> {
      */
     public R getOrThrow() {
         if (!success) {
-            throw new NoSuchElementException("Success value not present");
+            throw new NoSuchElementException("Success value not present. Error contexts: " + getErrorContexts());
         }
         return getValue();
     }
@@ -195,16 +215,18 @@ public final class LoadResult<R> {
         if (!(o instanceof LoadResult)) return false;
 
         LoadResult<?> that = (LoadResult<?>) o;
-        return value.equals(that.value);
+        return success == that.success && Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode() {
-        return value.hashCode();
+        int result = Objects.hashCode(value);
+        result = 31 * result + Boolean.hashCode(success);
+        return result;
     }
 
     @Override
     public String toString() {
-        return "LoadResult{" + value + '}';
+        return getClass().getSimpleName() + '{' + (success ? value : "errors = " + getErrorContexts()) + '}';
     }
 }

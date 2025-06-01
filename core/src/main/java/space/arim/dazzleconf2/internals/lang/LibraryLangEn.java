@@ -62,7 +62,7 @@ public final class LibraryLangEn extends LibraryLang.Base {
 
     @Override
     public @NonNull String wrongTypeForValue(Object value, String expectedType, String actualType) {
-        return "The value < " + value + " > is not a " + expectedType + ". It should be a " + actualType + '.';
+        return "The value < " + value + " > is a " + expectedType + ", but it should be a " + actualType + '.';
     }
 
     @Override
@@ -91,6 +91,11 @@ public final class LibraryLangEn extends LibraryLang.Base {
             return "1 more error ...";
         }
         return howMany + " more errors ...";
+    }
+
+    @Override
+    public @NonNull String trueFalse() {
+        return "true/false value";
     }
 
     @Override

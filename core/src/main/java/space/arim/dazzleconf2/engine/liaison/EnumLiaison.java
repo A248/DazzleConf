@@ -26,64 +26,74 @@ import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
+import java.util.StringJoiner;
+
 /**
- * Liaison for {@code char} and {@code Character}.
+ * A liaison for enum types.
  * <p>
- * This liaison does not support any default value-providing annotations.
+ * This liaison covers all types for which {@link Class#isEnum()} return true. It uses the enum names to match,
+ * in a case-insensitive fashion, user strings.
+ *
  */
-public final class CharacterLiaison implements TypeLiaison {
+public final class EnumLiaison implements TypeLiaison {
 
     /**
      * Creates
      */
-    public CharacterLiaison() {}
+    public EnumLiaison() {}
 
     @Override
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
         Class<V> rawType = typeToken.getRawType();
-        if (rawType.equals(char.class) || rawType.equals(Character.class)) {
+        if (rawType.isEnum()) {
             @SuppressWarnings("unchecked")
-            Agent<V> castAgent = (Agent<V>) new AgentImpl();
+            Agent<V> castAgent = (Agent<V>) new AgentImpl<>(rawType.asSubclass(Enum.class));
             return castAgent;
         }
         return null;
     }
 
-    private static final class AgentImpl implements Agent<Character> {
+    private static final class AgentImpl<E extends Enum<E>> implements Agent<E> {
+
+        private final Class<E> enumClass;
+        private final E[] enumConstants;
+
+        AgentImpl(Class<E> enumClass) {
+            this.enumClass = enumClass;
+            this.enumConstants = enumClass.getEnumConstants();
+        }
 
         @Override
-        public @Nullable DefaultValues<Character> loadDefaultValues(@NonNull DefaultInit defaultInit) {
+        public @Nullable DefaultValues<E> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             return null;
         }
 
         @Override
-        public @NonNull SerializeDeserialize<Character> makeSerializer() {
-            return new SerializeDeserialize<Character>() {
+        public @NonNull SerializeDeserialize<E> makeSerializer() {
+            return new SerializeDeserialize<E>() {
                 @Override
-                public @NonNull LoadResult<@NonNull Character> deserialize(@NonNull DeserializeInput deser) {
+                public @NonNull LoadResult<@NonNull E> deserialize(@NonNull DeserializeInput deser) {
                     Object object = deser.object();
-                    if (object instanceof Character) {
-                        return LoadResult.of((Character) object);
-                    }
                     if (object instanceof String) {
                         String string = (String) object;
 
-                        char[] chars = string.toCharArray();
-                        if (chars.length != 1) {
-                            LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
-                            return deser.throwError(libraryLang.wrongTypeForValue(
-                                    object, libraryLang.character(), libraryLang.text())
-                            );
+                        for (E enumVal : enumConstants) {
+                            if (enumVal.name().equalsIgnoreCase(string)) {
+                                return LoadResult.of(enumVal);
+                            }
                         }
-                        return LoadResult.of(chars[0]);
+                    }
+                    StringJoiner expected = new StringJoiner(", ");
+                    for (E enumVal : enumConstants) {
+                        expected.add(enumVal.name());
                     }
                     LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
-                    return deser.throwError(libraryLang.wrongTypeForValue(object, Character.class));
+                    return deser.throwError(libraryLang.wrongTypeForValue(object, expected.toString()));
                 }
 
                 @Override
-                public void serialize(@NonNull Character value, @NonNull SerializeOutput ser) {
-                    ser.outChar(value);
+                public void serialize(@NonNull E value, @NonNull SerializeOutput ser) {
+                    ser.outString(value.name());
                 }
             };
         }

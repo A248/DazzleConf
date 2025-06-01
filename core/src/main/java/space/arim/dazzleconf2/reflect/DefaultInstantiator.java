@@ -38,6 +38,9 @@ public final class DefaultInstantiator implements Instantiator {
      * Creates from a classloader.
      * <p>
      * The classloader provided is where generated proxies will be located.
+     *
+     * @param classLoader the classloader for generated proxies, typically the same classloader as that of the
+     *                    configuration type
      */
     public DefaultInstantiator(@NonNull ClassLoader classLoader) {
         this.classLoader = Objects.requireNonNull(classLoader);

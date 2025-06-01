@@ -29,6 +29,13 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  *
  */
 public final class SnakeCaseKeyMapper implements KeyMapper {
+
+    /**
+     * Creates
+     *
+     */
+    public SnakeCaseKeyMapper() {}
+
     @Override
     public @NonNull CharSequence labelToKey(@NonNull String label) {
 
@@ -49,5 +56,15 @@ public final class SnakeCaseKeyMapper implements KeyMapper {
         }
         builder.append(label, startAppend, label.length());
         return builder.toString();
+    }
+
+    @Override
+    public int hashCode() {
+        return SnakeCaseKeyMapper.class.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof SnakeCaseKeyMapper;
     }
 }

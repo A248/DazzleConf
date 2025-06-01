@@ -72,7 +72,7 @@ public abstract class KeyPath implements Printable {
      *
      * @param parts the parts
      */
-    protected KeyPath(@NonNull String @NonNull...parts) {
+    KeyPath(@NonNull String @NonNull...parts) {
         this.parts = new ArrayDeque<>(Arrays.asList(parts));
     }
 
@@ -83,7 +83,7 @@ public abstract class KeyPath implements Printable {
      *
      * @param other the other key path
      */
-    protected KeyPath(@NonNull KeyPath other) {
+    KeyPath(@NonNull KeyPath other) {
         if (other.keyMapper == null) {
             this.parts = new ArrayDeque<>(other.parts);
         } else {
@@ -93,7 +93,7 @@ public abstract class KeyPath implements Printable {
         }
     }
 
-    protected KeyPath(ArrayDeque<CharSequence> parts, KeyMapper keyMapper) {
+    KeyPath(ArrayDeque<CharSequence> parts, KeyMapper keyMapper) {
         this.parts = parts;
         this.keyMapper = keyMapper;
     }
@@ -159,6 +159,27 @@ public abstract class KeyPath implements Printable {
      */
     public @NonNull List<@NonNull CharSequence> intoPartsList() {
         return Arrays.asList(intoParts());
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof KeyPath)) return false;
+
+        KeyPath that = (KeyPath) o;
+        if (Objects.equals(keyMapper, that.keyMapper)) {
+            // Careful: ArrayDeque does not implement equals based on its contents
+            return Arrays.equals(parts.toArray(), that.parts.toArray());
+        }
+        if (parts.size() != that.parts.size()) {
+            return false;
+        }
+        return Arrays.equals(intoParts(), that.intoParts());
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(intoParts());
     }
 
     @Override
