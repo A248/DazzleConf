@@ -55,11 +55,9 @@ public final class EnumLiaison implements TypeLiaison {
 
     private static final class AgentImpl<E extends Enum<E>> implements Agent<E> {
 
-        private final Class<E> enumClass;
         private final E[] enumConstants;
 
         AgentImpl(Class<E> enumClass) {
-            this.enumClass = enumClass;
             this.enumConstants = enumClass.getEnumConstants();
         }
 

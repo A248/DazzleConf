@@ -126,13 +126,33 @@ public final class ConfigurationBuilder<C> {
      * <p>
      * These type liaisons are part of the default set. However, unlike {@link #addDefaultTypeLiaisons()}, enum types,
      * collections, and configuration subsections are not covered by this method.
+     * <p>
+     * <b>Notable annotations</b>
+     * <p>
+     * The liaisons added by this method support the following annotations to modify their behavior:<ul>
+     *     <li><code>StringLiaison</code>: <code>@StringDefault</code></li>
+     *     <li><code>BooleanLiaison</code>: <code>@BooleanDefault</code></li>
+     *     <li><code>LongLiaison</code>: <code>@LongRange</code> and <code>@LongDefault</code></li>
+     *     <li><code>IntegerLiaison</code>: <code>@IntegerRange</code> and <code>@IntegerDefault</code></li>
+     *     <li><code>ShortLiaison</code>: <code>@ShortRange</code> and <code>@ShortDefault</code></li>
+     *     <li><code>ByteLiaison</code>: <code>@ByteRange</code> and <code>@ByteDefault</code></li>
+     *     <li><code>DoubleLiaison</code>: <code>@DoubleRange</code> and <code>@DoubleDefault</code></li>
+     *     <li><code>FloatLiaison</code>: <code>@FloatRange</code> and <code>@FloatDefault</code></li>
+     * </ul>
+     * <p>The "Range" annotations for numeric types provide bounds checking for a specified range. If the user input
+     * falls outside that range, it is rejected with an error message.
+     * <p>The "Default" annotations provide default values. There is mostly no difference between using default methods
+     * and the default value-providing annotations, but the annotations provide additional capabilities: like specifying
+     * an "if missing" value or being passed to dependent liaisons.
+     * <p>
+     * The annotations mentioned here can also be depended upon by other liaisons, not just the default liaisons.
      *
      * @return this builder
      */
     public @This @NonNull ConfigurationBuilder<C> addPrimitiveTypeLiaisons() {
         return addTypeLiaisons(
                 new StringLiaison(), new CharacterLiaison(), new DoubleLiaison(), new FloatLiaison(),
-                new LongLiaison(), new IntegerLiaison(), new ShortLiaison(), new ByteLiaison()
+                new BooleanLiaison(), new LongLiaison(), new IntegerLiaison(), new ShortLiaison(), new ByteLiaison()
         );
     }
 
@@ -146,6 +166,7 @@ public final class ConfigurationBuilder<C> {
      * <p>
      * The default liaisons support the following annotations to modify their behavior:<ul>
      *     <li><code>StringLiaison</code>: <code>@StringDefault</code></li>
+     *     <li><code>BooleanLiaison</code>: <code>@BooleanDefault</code></li>
      *     <li><code>LongLiaison</code>: <code>@LongRange</code> and <code>@LongDefault</code></li>
      *     <li><code>IntegerLiaison</code>: <code>@IntegerRange</code> and <code>@IntegerDefault</code></li>
      *     <li><code>ShortLiaison</code>: <code>@ShortRange</code> and <code>@ShortDefault</code></li>
@@ -153,7 +174,8 @@ public final class ConfigurationBuilder<C> {
      *     <li><code>DoubleLiaison</code>: <code>@DoubleRange</code> and <code>@DoubleDefault</code></li>
      *     <li><code>FloatLiaison</code>: <code>@FloatRange</code> and <code>@FloatDefault</code></li>
      * </ul>
-     * <p>The "Range" annotations for numeric types provide bounds checking for a specified range.
+     * <p>The "Range" annotations for numeric types provide bounds checking for a specified range. If the user input
+     * falls outside that range, it is rejected with an error message.
      * <p>The "Default" annotations provide default values. There is mostly no difference between using default methods
      * and the default value-providing annotations, but the annotations provide additional capabilities: like specifying
      * an "if missing" value or being passed to dependent liaisons.
