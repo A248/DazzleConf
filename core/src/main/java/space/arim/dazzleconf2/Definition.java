@@ -20,10 +20,7 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.reflect.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
@@ -179,7 +176,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                         howToUpdate.insertMissingValue(dataTree, mappedKey, methodNode, value);
                     } else {
                         // 3.
-                        LoadError loadError = new LoadError(libraryLang.missingValue(), libraryLang);
+                        LoadError loadError = new LoadError(Printable.preBuilt(libraryLang.missingValue()), libraryLang);
                         KeyPath.Mut entryPath = new KeyPath.Mut(mappedPathPrefix);
                         entryPath.addBack(mappedKey);
                         loadError.addDetail(ErrorContext.ENTRY_PATH, entryPath);

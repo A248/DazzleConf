@@ -26,6 +26,9 @@ import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
+import static space.arim.dazzleconf2.backend.Printable.join;
+import static space.arim.dazzleconf2.backend.Printable.preBuilt;
+
 /**
  * Liaison for {@code char} and {@code Character}.
  * <p>
@@ -71,9 +74,11 @@ public final class CharacterLiaison implements TypeLiaison {
                         char[] chars = string.toCharArray();
                         if (chars.length != 1) {
                             LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
-                            return deser.throwError(libraryLang.wrongTypeForValue(
-                                    object, libraryLang.character(), libraryLang.text())
-                            );
+                            return deser.throwError(join(
+                                    preBuilt(libraryLang.badValue()),
+                                    preBuilt(" "),
+                                    libraryLang.wrongTypeForValue(object, libraryLang.character(), libraryLang.text())
+                            ));
                         }
                         return LoadResult.of(chars[0]);
                     }

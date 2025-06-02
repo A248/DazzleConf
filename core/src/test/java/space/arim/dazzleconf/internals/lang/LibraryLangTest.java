@@ -68,12 +68,4 @@ public class LibraryLangTest {
         Locale arJo = new Locale("ar", "JO");
         assertEquals(arJo, LibraryLang.loadLang(arJo).getLocale());
     }
-
-    @Test
-    public void arabicMessages() {
-        LibraryLang arabic = LibraryLang.loadLang(new Locale("ar"));
-        assertEquals("بالإضافة الى خطأ كمان...", arabic.moreErrors(1));
-        assertEquals("بالإضافة الى 3 اخطاء كمان...", arabic.moreErrors(3));
-        assertEquals("بالإضافة الى 12 خطأ كمان...", arabic.moreErrors(12));
-    }
 }

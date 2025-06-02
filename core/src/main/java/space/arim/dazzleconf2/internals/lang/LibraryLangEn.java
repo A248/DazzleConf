@@ -21,8 +21,12 @@ package space.arim.dazzleconf2.internals.lang;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.Printable;
 
+import java.util.Arrays;
 import java.util.Locale;
+
+import static space.arim.dazzleconf2.backend.Printable.preBuilt;
 
 public final class LibraryLangEn extends LibraryLang.Base {
 
@@ -61,18 +65,28 @@ public final class LibraryLangEn extends LibraryLang.Base {
     }
 
     @Override
-    public @NonNull String wrongTypeForValue(Object value, String expectedType, String actualType) {
-        return "The value < " + value + " > is a " + expectedType + ", but it should be a " + actualType + '.';
+    public @NonNull Printable wrongTypeForValue(Object value, String expectedType, String actualType) {
+        return preBuilt("The value < " + value + " > is a " + expectedType + ", but it should be a " + actualType + '.');
     }
 
     @Override
-    public @NonNull String mustBeBetween(String value, Number min, Number max) {
-        return "The value must be between " + min + " and " + max + ". However, it was " + value + '.';
+    public @NonNull Printable mustBeBetween(String value, Number min, Number max) {
+        return preBuilt("The value must be between " + min + " and " + max + ". However, it was " + value + '.');
     }
 
     @Override
-    public @NonNull String malformattedValue(String reason) {
-        return "This value is not formatted correctly because " + reason + '.';
+    public @NonNull Printable notAccepted(@NonNull String value, @NonNull String[] permitted) {
+        return preBuilt("The selected value " + value + " is not accepted. It should be one of " + Arrays.toString(permitted) + '.');
+    }
+
+    @Override
+    public @NonNull String forExample() {
+        return "for example";
+    }
+
+    @Override
+    public @NonNull String badValue() {
+        return "This value is not chosen correctly.";
     }
 
     @Override
@@ -86,11 +100,8 @@ public final class LibraryLangEn extends LibraryLang.Base {
     }
 
     @Override
-    public @NonNull String moreErrors(int howMany) {
-        if (howMany == 1) {
-            return "1 more error ...";
-        }
-        return howMany + " more errors ...";
+    public @NonNull String more(int howMany) {
+        return howMany + " more...";
     }
 
     @Override

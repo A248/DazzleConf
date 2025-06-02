@@ -21,10 +21,14 @@ package space.arim.dazzleconf2.internals.lang;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.Printable;
 
 import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.function.Function;
+
+import static space.arim.dazzleconf2.backend.Printable.join;
+import static space.arim.dazzleconf2.backend.Printable.preBuilt;
 
 /**
  * Language translation for the library itself. If you want to implement this and provide a translation for your
@@ -44,6 +48,7 @@ public interface LibraryLang {
             }
         }
     }
+
     /**
      * Gets the locale this {@code LibraryLang} represents
      *
@@ -77,44 +82,46 @@ public interface LibraryLang {
 
     @NonNull String missingValue();
 
-    @NonNull String wrongTypeForValue(Object value, String expectedType, String actualType);
+    @NonNull Printable wrongTypeForValue(Object value, String expectedType, String actualType);
 
-    @NonNull String mustBeBetween(String value, Number min, Number max);
+    @NonNull Printable mustBeBetween(String value, Number min, Number max);
 
-    @NonNull String malformattedValue(String reason);
+    @NonNull Printable notAccepted(@NonNull String value, @NonNull String[] permitted);
+
+    @NonNull String forExample();
+
+    @NonNull String badValue();
+
+    @NonNull String more(int howMany);
 
     @NonNull String errorIntro();
 
     @NonNull String errorContext();
 
-    @NonNull String moreErrors(int howMany);
-
-    default @NonNull String wrongTypeForValue(@NonNull Object value, @NonNull String expectedType) {
-        return wrongTypeForValue(
-                value, expectedType, ReadMe.displayCanonicalType(this, value.getClass(), value)
-        );
-    }
-
-    default @NonNull String wrongTypeForValue(@NonNull Object value, @NonNull Class<?> expectedType) {
-        return wrongTypeForValue(
+    default @NonNull Printable wrongTypeForValue(@NonNull Object value, @NonNull Class<?> expectedType) {
+        return join(preBuilt(badValue()), wrongTypeForValue(
                 value,
                 ReadMe.displayCanonicalType(this, expectedType, null),
                 ReadMe.displayCanonicalType(this, value.getClass(), value)
-        );
+        ));
     }
 
-    default @NonNull String outOfRange(@NonNull Object value, @NonNull Number min, @NonNull Number max) {
-        return mustBeBetween(
+    default @NonNull Printable outOfRange(@NonNull Object value, @NonNull Number min, @NonNull Number max) {
+        return join(preBuilt(badValue()), mustBeBetween(
                 ReadMe.displayCanonicalType(this, value.getClass(), value), min, max
-        );
+        ));
     }
 
-    default @NonNull String notANumber(@NonNull Number value) {
-        return wrongTypeForValue(
+    default @NonNull String formatNumber(@NonNull Number value) {
+        return NumberFormat.getInstance(getLocale()).format(value);
+    }
+
+    default @NonNull Printable notANumber(@NonNull Number value) {
+        return join(preBuilt(badValue()), preBuilt(" "), wrongTypeForValue(
                 value,
                 ReadMe.displayCanonicalType(this, value.getClass(), null),
                 NumberFormat.getInstance(getLocale()).format(value)
-        );
+        ));
     }
 
     @NonNull String trueFalse();

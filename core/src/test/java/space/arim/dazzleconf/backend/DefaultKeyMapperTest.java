@@ -21,42 +21,12 @@ package space.arim.dazzleconf.backend;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
+import space.arim.dazzleconf2.backend.DefaultKeyMapper;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-public class SnakeCaseKeyMapperTest {
-
-    private final KeyMapper keyMapper = new SnakeCaseKeyMapper();
-
-    @Test
-    public void simple() {
-        assertEquals("brave", keyMapper.labelToKey("brave"));
-    }
-
-    @Test
-    public void standard1() {
-        assertEquals("my-brave-world", keyMapper.labelToKey("myBraveWorld"));
-    }
-
-    @Test
-    public void standard2() {
-        assertEquals("my-brave-world-two", keyMapper.labelToKey("myBraveWorldTwo"));
-    }
-
-    @Test
-    public void malformed1() {
-        assertEquals("my-brave", keyMapper.labelToKey("MyBrave"));
-    }
-
-    @Test
-    public void malformed2() {
-        assertEquals("m-b-w", keyMapper.labelToKey("MBW"));
-    }
+public class DefaultKeyMapperTest {
 
     @Test
     public void equality() {
-        EqualsVerifier.forClass(SnakeCaseKeyMapper.class).verify();
+        EqualsVerifier.forClass(DefaultKeyMapper.class).verify();
     }
 }

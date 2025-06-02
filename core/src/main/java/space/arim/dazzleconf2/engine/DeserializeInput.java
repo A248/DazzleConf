@@ -22,10 +22,7 @@ package space.arim.dazzleconf2.engine;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.*;
 
 import java.util.Locale;
 
@@ -91,7 +88,8 @@ public interface DeserializeInput {
      * <p>
      * This function does not <b>actually</b> perform any updating. It is merely a notification that this object
      * (or a part within it) could be updated. For actual in-place updates, make sure to implement
-     * {@link SerializeDeserialize#deserializeUpdate(DeserializeInput, SerializeOutput)}
+     * {@link SerializeDeserialize#deserializeUpdate(DeserializeInput, SerializeOutput)}; note that calling this
+     * function <i>from that method</i> is unnecessary.
      * <p>
      * If the path being updated is a sub-path of this one, then that sub-path should be provided as a non-empty
      * parameter. An empty path should be passed if no sub-path exists.
@@ -100,7 +98,7 @@ public interface DeserializeInput {
      *                location of the current object, meaning it should not overlap with {@link #absoluteKeyPath()}
      * @param updateReason the reason that such path might be updated. May be {@code UpdateReason.OTHER} if unknown
      */
-    void flagUpdate(@NonNull KeyPath subPath, @NonNull UpdateReason updateReason);
+    void flagUpdatable(@NonNull KeyPath subPath, @NonNull UpdateReason updateReason);
 
     /**
      * Makes a child and prepares it for deserialization. The child value is supposed to be taken "from" this object.
@@ -112,17 +110,20 @@ public interface DeserializeInput {
     @NonNull DeserializeInput makeChild(@NonNull Object value);
 
     /**
-     * Builds an error context based on the implementation
+     * Builds an error context based on the implementation.
+     * <p>
+     * This function takes a {@code Printable} for flexibility. Using {@link Printable#preBuilt(CharSequence)} will
+     * suffice in many cases.
      *
      * @param message the main error messge
      * @return an error context
      */
-    @NonNull ErrorContext buildError(@NonNull CharSequence message);
+    @NonNull ErrorContext buildError(@NonNull Printable message);
 
     /**
      * Builds an error context, wraps it in a <code>LoadResult</code> and returns it.
      * <p>
-     * This function does not actually throw anything. It is named as such so that your code will look like this:
+     * This function does not actually throw anything. It is named as such so that your code can look like this:
      * <pre>
      *     {@code
      *         return operable.throwError("failure");
@@ -134,4 +135,17 @@ public interface DeserializeInput {
      * @param <R> the type of the result value (can be anything since the result will be an error)
      */
     <R> @NonNull LoadResult<R> throwError(@NonNull CharSequence message);
+
+    /**
+     * Builds an error context, wraps it in a <code>LoadResult</code> and returns it.
+     * <p>
+     * This function does not actually throw anything. It is named as such to communicate the logical termination of
+     * a block of code.
+     *
+     * @param message the main error message
+     * @return an error result
+     * @param <R> the type of the result value (can be anything since the result will be an error)
+     */
+    <R> @NonNull LoadResult<R> throwError(@NonNull Printable message);
+
 }

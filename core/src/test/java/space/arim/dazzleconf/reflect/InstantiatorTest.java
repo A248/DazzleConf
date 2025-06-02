@@ -71,6 +71,7 @@ public abstract class InstantiatorTest {
     public void generateShellEmptyInterface() {
         // Make shell
         ReloadShell<EmptyInterface> reloadShell = instantiator.generateShell(EmptyInterface.class);
+        assertEquals(reloadShell, reloadShell);
         assertNull(reloadShell.getCurrentDelegate());
         EmptyInterface shell = reloadShell.getShell();
         assertNotNull(shell);
@@ -110,6 +111,7 @@ public abstract class InstantiatorTest {
                 instantiator.generate(new Class[] {EmptyInterface.class}, new MethodYield())
         );
         assertEqualsBothWays(generated, instantiator.generateEmpty(EmptyInterface.class));
+        assertNotEqualsBothWays(generated, instantiator.generateEmpty(RandomAccess.class));
     }
 
     public interface SingleMethod {
@@ -168,6 +170,7 @@ public abstract class InstantiatorTest {
     public void generateShellSingleMethod() {
         // Make shell
         ReloadShell<SingleMethod> reloadShell = instantiator.generateShell(SingleMethod.class);
+        assertEquals(reloadShell, reloadShell);
         assertNull(reloadShell.getCurrentDelegate());
         SingleMethod shell = reloadShell.getShell();
         assertNotNull(shell);
@@ -244,6 +247,7 @@ public abstract class InstantiatorTest {
                 instantiator.generate(new Class[] {SingleMethod.class}, methodYield)
         );
         assertEqualsBothWays(generated, instantiator.generateEmpty(SingleMethod.class));
+        assertNotEqualsBothWays(generated, instantiator.generateEmpty(EmptyInterface.class));
     }
 
     public interface InheritedMethod extends SingleMethod {
@@ -298,6 +302,7 @@ public abstract class InstantiatorTest {
     public void generateShellInheritedMethod() {
         // Make a shell
         ReloadShell<InheritedMethod> reloadShell = instantiator.generateShell(InheritedMethod.class);
+        assertEquals(reloadShell, reloadShell);
         assertNull(reloadShell.getCurrentDelegate());
         InheritedMethod shell = reloadShell.getShell();
         assertNotNull(shell);
@@ -390,6 +395,7 @@ public abstract class InstantiatorTest {
                 instantiator.generate(new Class[] {SingleMethod.class, InheritedMethod.class}, methodYield)
         );
         assertEqualsBothWays(generated, instantiator.generateEmpty(InheritedMethod.class));
+        assertNotEqualsBothWays(generated, instantiator.generateEmpty(SingleMethod.class));
     }
 
     public interface PlusDefaultMethod extends InheritedMethod {
@@ -463,6 +469,7 @@ public abstract class InstantiatorTest {
     public void generateShellPlusDefaultMethod() {
         // Make a shell
         ReloadShell<PlusDefaultMethod> reloadShell = instantiator.generateShell(PlusDefaultMethod.class);
+        assertEquals(reloadShell, reloadShell);
         assertNull(reloadShell.getCurrentDelegate());
         PlusDefaultMethod shell = reloadShell.getShell();
         assertNotNull(shell);
@@ -520,6 +527,7 @@ public abstract class InstantiatorTest {
                 instantiator.generate(new Class[] {SingleMethod.class, InheritedMethod.class, PlusDefaultMethod.class}, methodYield)
         );
         assertEqualsBothWays(generated, instantiator.generateEmpty(PlusDefaultMethod.class));
+        assertNotEqualsBothWays(generated, instantiator.generateEmpty(SingleMethod.class));
     }
 
     @Nested

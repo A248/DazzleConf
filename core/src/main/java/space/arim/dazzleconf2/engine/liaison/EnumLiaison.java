@@ -26,7 +26,8 @@ import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
-import java.util.StringJoiner;
+import static space.arim.dazzleconf2.backend.Printable.join;
+import static space.arim.dazzleconf2.backend.Printable.preBuilt;
 
 /**
  * A liaison for enum types.
@@ -55,6 +56,7 @@ public final class EnumLiaison implements TypeLiaison {
 
     private static final class AgentImpl<E extends Enum<E>> implements Agent<E> {
 
+        // TODO: Cache usage of this data using a Map<String, E>
         private final E[] enumConstants;
 
         AgentImpl(Class<E> enumClass) {
@@ -81,12 +83,24 @@ public final class EnumLiaison implements TypeLiaison {
                             }
                         }
                     }
-                    StringJoiner expected = new StringJoiner(", ");
-                    for (E enumVal : enumConstants) {
-                        expected.add(enumVal.name());
-                    }
+                    // Failed to parse as the enum type. Let's build an error message that makes sense
                     LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
-                    return deser.throwError(libraryLang.wrongTypeForValue(object, expected.toString()));
+                    // If we have too many elements, just accept the first 4 elements alphabetically
+                    int numberAccepted = enumConstants.length;
+                    int exampleCount = Math.min(numberAccepted, 4);
+                    // If capped, append "+X more..." at the end
+                    boolean capped = exampleCount < numberAccepted;
+                    String[] acceptedExamples = new String[capped ? exampleCount + 1 : exampleCount];
+                    for (int n = 0; n < exampleCount; n++) {
+                        acceptedExamples[n] = enumConstants[n].name();
+                    }
+                    if (capped)
+                        acceptedExamples[exampleCount] = '+' +  libraryLang.more(numberAccepted - exampleCount);
+                    return deser.throwError(join(
+                            preBuilt(libraryLang.badValue()),
+                            preBuilt(" "),
+                            libraryLang.notAccepted(object.toString(), acceptedExamples)
+                    ));
                 }
 
                 @Override

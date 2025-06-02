@@ -17,20 +17,16 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.internals;
+package space.arim.dazzleconf;
 
-import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import org.mockito.ArgumentMatcher;
+import space.arim.dazzleconf2.ErrorContext;
 
-/**
- * Simple functional interface for dealing with {@link LibraryLang}
- */
-public interface LibraryLangKey {
+import java.util.List;
 
-    /**
-     * Gets the desired message
-     * @param libraryLang the library language chosen
-     * @return the message selected
-     */
-    String getMessage(LibraryLang libraryLang);
-
+public final class MatchNonEmptyErrors implements ArgumentMatcher<List<ErrorContext>> {
+    @Override
+    public boolean matches(List<ErrorContext> argument) {
+        return !argument.isEmpty();
+    }
 }

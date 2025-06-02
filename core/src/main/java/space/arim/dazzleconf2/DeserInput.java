@@ -20,11 +20,7 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
@@ -111,7 +107,7 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     @Override
-    public void flagUpdate(@NonNull KeyPath keyPath, @NonNull UpdateReason updateReason) {
+    public void flagUpdatable(@NonNull KeyPath keyPath, @NonNull UpdateReason updateReason) {
         KeyPath.Mut keyPathMut = keyPath.intoMut();
         keyPathMut.addFront(source.mappedKey);
         context.readOptions.loadListener().updatedPath(keyPathMut, updateReason);
@@ -123,7 +119,7 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     @Override
-    public @NonNull ErrorContext buildError(@NonNull CharSequence message) {
+    public @NonNull ErrorContext buildError(@NonNull Printable message) {
         LoadError loadError = new LoadError(message, context.libraryLang);
         // Add entry path
         loadError.addDetail(ErrorContext.ENTRY_PATH, absoluteKeyPath());
@@ -136,7 +132,12 @@ final class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     @Override
-    public <R> @NonNull LoadResult<R> throwError(@NonNull CharSequence message) {
+    public @NonNull <R> LoadResult<R> throwError(@NonNull CharSequence message) {
+        return LoadResult.failure(buildError(Printable.preBuilt(message)));
+    }
+
+    @Override
+    public @NonNull <R> LoadResult<R> throwError(@NonNull Printable message) {
         return LoadResult.failure(buildError(message));
     }
 }

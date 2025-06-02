@@ -179,7 +179,7 @@ public interface ConfigurationDefinition<C> {
          * If reading the configuration failed, the size of {@link LoadResult#getErrorContexts()} will be at most this
          * number.
          *
-         * @return the maximum number of errors to collect, default 8. Must be greater than 0
+         * @return the maximum number of errors to collect, default 12. Must be greater than 0
          */
         default int maximumErrorCollect() {
             return ReadOpts.DEFAULT_MAX_ERROR_TO_COLLECT;

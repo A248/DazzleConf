@@ -275,20 +275,23 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     @Override
     public @NonNull C configureOrFallback(@NonNull Backend backend, @NonNull ErrorPrint errorPrint) {
-        return handleErrors(configureWith(backend), errorPrint);
+        LoadResult<C> result = configureWith(backend);
+        if (result.isSuccess()) {
+            return result.getOrThrow();
+        }
+        errorPrint.onError(result.getErrorContexts());
+        return loadDefaults();
     }
 
     @Override
     public @NonNull C configureOrFallback(@NonNull Backend backend, @NonNull UpdateListener updateListener,
                                           @NonNull ErrorPrint errorPrint) {
-        return handleErrors(configureWith(backend, updateListener), errorPrint);
-    }
-
-    private @NonNull C handleErrors(LoadResult<@NonNull C> result, ErrorPrint errorPrint) {
+        LoadResult<C> result = configureWith(backend);
         if (result.isSuccess()) {
             return result.getOrThrow();
         }
         errorPrint.onError(result.getErrorContexts());
+        updateListener.loadedDefaults();
         return loadDefaults();
     }
 

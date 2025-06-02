@@ -21,6 +21,7 @@ package space.arim.dazzleconf2.internals.lang;
 
 import space.arim.dazzleconf2.backend.DataTree;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 

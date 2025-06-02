@@ -1,0 +1,108 @@
+/*
+ * DazzleConf
+ * Copyright © 2025 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
+ * and navigate to version 3 of the GNU Lesser General Public License.
+ */
+
+package space.arim.dazzleconf;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.ErrorPrint;
+import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.DefaultKeyMapper;
+import space.arim.dazzleconf2.engine.UpdateListener;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+public class ConfigureOrFallbackTest {
+
+    private final Backend backend;
+    private final ErrorPrint errorPrint;
+
+    public ConfigureOrFallbackTest(@Mock Backend backend, @Mock ErrorPrint errorPrint) {
+        this.backend = backend;
+        this.errorPrint = errorPrint;
+    }
+
+    public interface Config {
+
+        default int integral() {
+            return -1;
+        }
+
+    }
+
+    @BeforeEach
+    public void setup() {
+        when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
+    }
+
+    @Test
+    public void noErrors() {
+        Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set("integral", new DataEntry(1));
+        when(backend.read()).thenAnswer(i -> LoadResult.of(dataTree));
+        Config loaded = configuration.configureOrFallback(backend, errorPrint);
+        verifyNoInteractions(errorPrint);
+        assertEquals(1, loaded.integral());
+    }
+
+    @Test
+    public void noErrors(@Mock UpdateListener updateListener) {
+        Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set("integral", new DataEntry(1));
+        when(backend.read()).thenAnswer(i -> LoadResult.of(dataTree));
+        Config loaded = configuration.configureOrFallback(backend, updateListener, errorPrint);
+        verifyNoInteractions(errorPrint);
+        verifyNoInteractions(updateListener);
+        assertEquals(1, loaded.integral());
+    }
+
+    @Test
+    public void badValue() {
+        Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set("integral", new DataEntry("not an integer"));
+        when(backend.read()).thenAnswer(i -> LoadResult.of(dataTree));
+        Config loaded = configuration.configureOrFallback(backend, errorPrint);
+        verify(errorPrint).onError(argThat(new MatchNonEmptyErrors()));
+        assertEquals(-1, loaded.integral(), "fallback to default value");
+    }
+
+    @Test
+    public void badValue(@Mock UpdateListener updateListener) {
+        Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set("integral", new DataEntry("not an integer"));
+        when(backend.read()).thenAnswer(i -> LoadResult.of(dataTree));
+        Config loaded = configuration.configureOrFallback(backend, updateListener, errorPrint);
+        verify(errorPrint).onError(argThat(new MatchNonEmptyErrors()));
+        verify(updateListener).loadedDefaults();
+        assertEquals(-1, loaded.integral(), "fallback to default value");
+    }
+}

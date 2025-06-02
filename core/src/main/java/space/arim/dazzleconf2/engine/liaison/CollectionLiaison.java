@@ -186,7 +186,7 @@ public final class CollectionLiaison implements TypeLiaison {
                 @Override
                 public void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser,
                                              COLL built) {
-                    deser.flagUpdate(new KeyPath.Mut(), UpdateReason.OTHER);
+                    deser.flagUpdatable(new KeyPath.Mut(), UpdateReason.OTHER);
                 }
 
                 @Override
