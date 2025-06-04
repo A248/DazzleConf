@@ -23,14 +23,12 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.*;
-import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf2.migration.MigrateContext;
 import space.arim.dazzleconf2.migration.Migration;
 import space.arim.dazzleconf2.reflect.Instantiator;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.*;
-import java.util.stream.Stream;
 
 final class BuiltConfig<C> implements Configuration<C> {
 
@@ -249,26 +247,8 @@ final class BuiltConfig<C> implements Configuration<C> {
         LoadResult<C> loadResult = readWithUpdate(updatableTree, new ReadOpts(recordUpdates, keyMapper));
         if (loadResult.isSuccess() && recordUpdates.updated) {
             // 4. Update if necessary
-            // Use stream to re-assert order: the backend can load in any order, and updates affect ordering too
-            Stream<Map.Entry<Object, DataEntry>> entryStream = layout
-                    .getLabelsAsStream()
-                    .map((label) -> {
-                        String mappedKey = keyMapper.labelToKey(label).toString();
-                        return ImmutableCollections.mapEntryOf(mappedKey, updatableTree.get(mappedKey));
-                    });
-            backend.write(layout.getTopLevelComments(), new DataStreamable() {
-                @Override
-                public @NonNull DataTree getAsTree() {
-                    DataTree.Mut collected = new DataTree.Mut();
-                    entryStream.forEachOrdered(entry -> collected.set(entry.getKey(), entry.getValue()));
-                    return collected;
-                }
-
-                @Override
-                public @NonNull Stream<Map.@NonNull Entry<@NonNull Object, @NonNull DataEntry>> getAsStream() {
-                    return entryStream;
-                }
-            });
+            // Even though the backend can load in any order, we preserve ordering in round-trip fashion
+            backend.write(layout.getTopLevelComments(), updatableTree);
         }
         return loadResult;
     }

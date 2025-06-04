@@ -35,7 +35,7 @@ import java.util.*;
  * Equality is defined for an entry based on its value. Comments and line numbers are <b>not</b> counted in
  * equality comparisons and hash code.
  */
-public final class DataEntry {
+public final class DataEntry implements DataStreamable.Entry {
 
     private final @NonNull Object value;
     private final Integer lineNumber;
@@ -194,5 +194,23 @@ public final class DataEntry {
             return true;
         }
         return value instanceof DataTree || DataTree.validateKey(value);
+    }
+
+    @Override
+    public boolean isTreeLike() {
+        return value instanceof DataTree;
+    }
+
+    @Override
+    public @NonNull DataEntry getAsDataEntry() {
+        return this;
+    }
+
+    @Override
+    public @NonNull DataStreamable getAsDataStreamable() {
+        if (!(value instanceof DataTree)) {
+            throw new IllegalStateException("Not a data tree");
+        }
+        return (DataTree) value;
     }
 }

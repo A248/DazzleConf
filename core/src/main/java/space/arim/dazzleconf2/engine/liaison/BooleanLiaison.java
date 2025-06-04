@@ -22,6 +22,7 @@ package space.arim.dazzleconf2.engine.liaison;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
@@ -78,13 +79,21 @@ public final class BooleanLiaison implements TypeLiaison {
                     if (object instanceof Boolean) {
                         return LoadResult.of((Boolean) object);
                     }
+                    tryFromString:
                     if (object instanceof String) {
                         String string = (String) object;
-                        try {
-                            boolean parsed = Boolean.parseBoolean(string);
-                            if (updateTo != null) updateTo.outBoolean(parsed);
-                            return LoadResult.of(parsed);
-                        } catch (NumberFormatException ignored) {}
+                        boolean fromString;
+                        if ("true".equalsIgnoreCase(string)) {
+                            fromString = true;
+                        } else if ("false".equalsIgnoreCase(string)) {
+                            fromString = false;
+                        } else {
+                            break tryFromString;
+                        }
+                        // Success: now flag and perform updates, then yield
+                        deser.flagUpdate(KeyPath.empty(), UpdateReason.UPDATED);
+                        if (updateTo != null) updateTo.outBoolean(fromString);
+                        return LoadResult.of(fromString);
                     }
                     LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
                     return deser.throwError(libraryLang.wrongTypeForValue(object, Boolean.class));

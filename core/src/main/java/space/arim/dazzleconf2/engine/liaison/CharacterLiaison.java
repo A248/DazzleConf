@@ -80,10 +80,24 @@ public final class CharacterLiaison implements TypeLiaison {
                                     libraryLang.wrongTypeForValue(object, libraryLang.character(), libraryLang.text())
                             ));
                         }
+                        // Don't flag updates. Not all backends support char values directly, so String is acceptable
+                        // If we called deser.flagUpdate(), then some users would see perpetual update notifications
                         return LoadResult.of(chars[0]);
                     }
                     LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
                     return deser.throwError(libraryLang.wrongTypeForValue(object, Character.class));
+                }
+
+                @Override
+                public @NonNull LoadResult<@NonNull Character> deserializeUpdate(@NonNull DeserializeInput deser,
+                                                                                 @NonNull SerializeOutput updateTo) {
+                    LoadResult<Character> loadResult = deserialize(deser);
+                    Character updated;
+                    if (loadResult.isSuccess() && (updated = loadResult.getOrThrow()) != deser.object()) {
+                        // Even though we don't send update notifications, we can still update the value itself
+                        updateTo.outChar(updated);
+                    }
+                    return loadResult;
                 }
 
                 @Override

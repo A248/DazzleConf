@@ -17,25 +17,18 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.backend;
+package space.arim.dazzleconf.backend;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.Configuration;
+import org.junit.jupiter.api.Test;
+import space.arim.dazzleconf2.backend.KeyPath;
 
-/**
- * Simple interface for mapping method names into backend configuration keys.
- * <p>
- * For example, some formats (JSON) use lowerCamelCase for option names, whereas others use snake-case (YAML).
- * Fortunately, the key mapper is configured automatically when using {@link Configuration#configureWith(Backend)}.
- */
-public interface KeyMapper {
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-    /**
-     * Turns the argument into a key. The argument is usually a method name.
-     *
-     * @param label the method name
-     * @return the key compponent
-     */
-    @NonNull CharSequence labelToKey(@NonNull String label);
+public class KeyPathSequenceBoundaryTest {
 
+    @Test
+    public void opposite() {
+        assertEquals(KeyPath.SequenceBoundary.BACK, KeyPath.SequenceBoundary.FRONT.opposite());
+        assertEquals(KeyPath.SequenceBoundary.FRONT, KeyPath.SequenceBoundary.BACK.opposite());
+    }
 }

@@ -24,6 +24,8 @@ import space.arim.dazzleconf2.internals.ArrayType;
 
 import java.lang.reflect.*;
 
+import static space.arim.dazzleconf2.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
+
 /**
  * A low level helper for reifying generic members within context of a generic class declaration.
  * <p>
@@ -105,7 +107,7 @@ abstract class GenericContext {
         }
         Type rawType = type.getType();
         if (rawType instanceof Class) {
-            return ReifiedType.Annotated.unannotated((Class<?>) rawType);
+            return new ReifiedType.Annotated((Class<?>) rawType, EMPTY_ARRAY, type);
         }
         throw new IllegalStateException("Unable to reify type " + type + " within a method of " + parent);
     }

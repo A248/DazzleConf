@@ -28,6 +28,8 @@ import space.arim.dazzleconf2.reflect.DefaultInstantiator;
 import space.arim.dazzleconf2.reflect.Instantiator;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
+import java.util.Locale;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ConfigurationBuildTest {
@@ -35,6 +37,18 @@ public class ConfigurationBuildTest {
     public interface Config<A> {}
 
     private final TypeToken<Config<String>> configType = new TypeToken<>() {};
+
+    @Test
+    public void locale() {
+        Locale locale = Locale.CHINA;
+        assertSame(locale, Configuration.defaultBuilder(configType).locale(locale).build().getLocale());
+    }
+
+    @Test
+    public void clearLiaisons() {
+        assertFalse(Configuration.defaultBuilder(configType).build().getTypeLiaisons().isEmpty());
+        assertTrue(Configuration.defaultBuilder(configType).clearTypeLiaisons().build().getTypeLiaisons().isEmpty());
+    }
 
     @Test
     public void keyMapper() {

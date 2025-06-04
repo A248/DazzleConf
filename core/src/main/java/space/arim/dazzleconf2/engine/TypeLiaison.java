@@ -105,7 +105,8 @@ public interface TypeLiaison {
          * @param <R> the raw type to look for
          */
         @SuppressWarnings("unchecked")
-        static <V, R> @Nullable Agent<R> matchOnToken(TypeToken<R> token, Class<V> matchWith, Supplier<Agent<V>> factory) {
+        static <V, R> @Nullable Agent<R> matchOnToken(@NonNull TypeToken<R> token, @NonNull Class<V> matchWith,
+                                                      @NonNull Supplier<@NonNull Agent<V>> factory) {
             if (token.getRawType().equals(matchWith)) {
                 // Success!
                 return (Agent<R>) factory.get();
@@ -133,18 +134,6 @@ public interface TypeLiaison {
      * Callback interface allowing {@link Agent} to access certain resources
      */
     interface Handshake {
-
-        /**
-         * Gets another type agent. This function allows agents to "depend" on each other by using instances of other
-         * agents.
-         *
-         * @param other the type being requested
-         * @return an agent for it
-         * @param <U> the type requested
-         * @throws DeveloperMistakeException if no liaison handles the requested type
-         * @throws IllegalStateException if a cyclic loop is detected with the other liaison
-         */
-        <U> @NonNull Agent<U> getOtherAgent(@NonNull TypeToken<U> other);
 
         /**
          * Gets another serializer. This function allows serializers to "depend" on each other by using instances of

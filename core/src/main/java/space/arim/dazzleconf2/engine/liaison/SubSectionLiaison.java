@@ -94,7 +94,7 @@ public final class SubSectionLiaison implements TypeLiaison {
                 return configuration.readFrom(dataTree, new ConfigurationDefinition.ReadOptions() {
                     @Override
                     public @NonNull LoadListener loadListener() {
-                        return deser::flagUpdatable;
+                        return deser::flagUpdate;
                     }
 
                     @Override
@@ -114,7 +114,7 @@ public final class SubSectionLiaison implements TypeLiaison {
                     @Override
                     public void updatedPath(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
                         updated = true;
-                        deser.flagUpdatable(entryPath, updateReason);
+                        deser.flagUpdate(entryPath, updateReason);
                     }
                 }
                 LoadResult<DataTree> requireDataTree = deser.requireDataTree();
@@ -136,6 +136,7 @@ public final class SubSectionLiaison implements TypeLiaison {
                     }
                 });
                 if (result.isSuccess() && recordUpdates.updated) {
+                    // No need to call deser.flagUpdate(), since it will already have been called for child paths
                     updateTo.outDataTree(updatableTree);
                 }
                 return result;

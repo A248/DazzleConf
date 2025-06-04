@@ -39,7 +39,8 @@ import java.util.stream.Stream;
  * <code>KeyMapper</code> where appropriate to interface with key strings.
  * <p>
  * Additionally, a data tree maintains an order which is reflected in iteration operations. If created immutably, this
- * order is fixed at creation. If built mutably, the order will be the insertion order of the elements.
+ * order is fixed at creation. If built mutably, the order will be the insertion order of the elements. Note that
+ * re-inserting an existing key will <i>not</i> change the order.
  * <p>
  * <b>Keys and values</b>
  * <p>
@@ -290,7 +291,7 @@ public abstract class DataTree implements DataStreamable {
      * @return a stream of keys and data entries
      */
     @Override
-    public @NonNull Stream<Map.@NonNull Entry<@NonNull Object, @NonNull DataEntry>> getAsStream() {
+    public @NonNull Stream<Map.@NonNull Entry<@NonNull Object, ? extends DataStreamable.@NonNull Entry>> getAsStream() {
         return data.entrySet().stream();
     }
 

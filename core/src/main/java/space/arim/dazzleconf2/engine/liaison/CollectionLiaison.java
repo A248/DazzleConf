@@ -149,11 +149,11 @@ public final class CollectionLiaison implements TypeLiaison {
             }
             // Construct result
             COLL built = buildThenCast(output);
-            // Finish recording updates - check if size changed for Set, if so re-serialize everything
+            // Finish recording updates - check if size changed for Set, if handle notifications or updates
             if (built.size() != input.length) {
                 impl.updateSizeShrunk(elementSerializer, deser, built);
             } else {
-                impl.updateOtherwise(writeBackUpdates);
+                impl.updateMaybeOtherwise(writeBackUpdates);
             }
             return LoadResult.of(built);
         }
@@ -166,7 +166,7 @@ public final class CollectionLiaison implements TypeLiaison {
 
             void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser, COLL built);
 
-            void updateOtherwise(@Nullable U writeBackUpdates);
+            void updateMaybeOtherwise(@Nullable U writeBackUpdates);
 
         }
 
@@ -186,11 +186,11 @@ public final class CollectionLiaison implements TypeLiaison {
                 @Override
                 public void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser,
                                              COLL built) {
-                    deser.flagUpdatable(new KeyPath.Mut(), UpdateReason.OTHER);
+                    deser.flagUpdate(KeyPath.empty(), UpdateReason.OTHER);
                 }
 
                 @Override
-                public void updateOtherwise(@Nullable Void writeBackUpdates) {}
+                public void updateMaybeOtherwise(@Nullable Void writeBackUpdates) {}
             });
         }
 
@@ -219,15 +219,15 @@ public final class CollectionLiaison implements TypeLiaison {
 
                 @Override
                 public void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser, COLL built) {
-                    // We have a full collection of E - so just serialize the whole thing
-                    // Also, the caller of #deserializeUpdate is responsible for creating update notifications
-                    serialize(built, updateTo);
+                    deser.flagUpdate(KeyPath.empty(), UpdateReason.OTHER);
+                    serialize(built, updateTo); // Reserialize the whole collection
                 }
 
                 @Override
-                public void updateOtherwise(Object @Nullable [] writeBackUpdates) {
+                public void updateMaybeOtherwise(Object @Nullable [] writeBackUpdates) {
                     // If the size didn't shrink, then use our update array if it exists
                     if (writeBackUpdates != null) {
+                        deser.flagUpdate(KeyPath.empty(), UpdateReason.UPDATED);
                         updateTo.outObjectUnchecked(Arrays.asList(writeBackUpdates));
                     }
                 }

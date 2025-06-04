@@ -23,6 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
@@ -114,7 +115,11 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
                     }
                     if (object instanceof String) {
                         String string = (String) object;
-                        return parseFrom(string);
+                        TYPE fromString = parseFrom(string);
+                        if (fromString != null) {
+                            deser.flagUpdate(KeyPath.empty(), UpdateReason.UPDATED);
+                            return fromString;
+                        }
                     }
                     return null;
                 }

@@ -35,10 +35,10 @@ import java.util.Optional;
 final class LiaisonCache {
 
     private final Map<TypeToken<?>, HandleType<?>> cachedAgents = new HashMap<>();
-    private final List<TypeLiaison> typeLiaisons;
+    private final TypeLiaison[] typeLiaisons;
 
     LiaisonCache(List<TypeLiaison> typeLiaisons) {
-        this.typeLiaisons = typeLiaisons;
+        this.typeLiaisons = typeLiaisons.toArray(new TypeLiaison[0]);
     }
 
     <V> HandleType<V> requestToHandle(TypeToken<V> typeToken, TypeLiaison.Handshake handshake) {
@@ -48,8 +48,9 @@ final class LiaisonCache {
         if (cached != null) {
             return cached;
         }
-        // None found, so query the type liaisons
-        for (TypeLiaison liaison : typeLiaisons) {
+        // None found, so query the type liaisons. Remember to iterate backward
+        for (int n = typeLiaisons.length - 1; n >= 0; n--) {
+            TypeLiaison liaison = typeLiaisons[n];
             TypeLiaison.Agent<V> agent = liaison.makeAgent(typeToken, handshake);
             if (agent != null) {
                 cached = new HandleType<>(typeToken, agent, agent.makeSerializer());
@@ -65,7 +66,7 @@ final class LiaisonCache {
     static final class HandleType<V> {
 
         private final TypeToken<V> typeToken;
-        final TypeLiaison.Agent<V> agent;
+        private final TypeLiaison.Agent<V> agent;
         final SerializeDeserialize<V> serializer;
 
         private HandleType(TypeToken<V> typeToken, TypeLiaison.Agent<V> agent, SerializeDeserialize<V> serializer) {

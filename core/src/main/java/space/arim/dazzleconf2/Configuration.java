@@ -51,8 +51,9 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
     @NonNull Locale getLocale();
 
     /**
-     * Gets all type liaisons. The order of the list is relevant, with earlier values being sought to handle types
-     * before later values.
+     * Gets all type liaisons.
+     * <p>
+     * The order of the list is relevant, with <i>later</i> values being sought to handle types before earlier values.
      *
      * @return the type liaisons, which are immutable
      */

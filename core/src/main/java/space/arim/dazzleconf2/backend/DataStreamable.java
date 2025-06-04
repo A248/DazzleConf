@@ -57,6 +57,49 @@ public interface DataStreamable {
      * @return a stream of keys and data entries
      * @throws IllegalStateException if re-use was attempted and this {@code DataStreamable} is not re-usable
      */
-    @NonNull Stream<Map.@NonNull Entry<@NonNull Object, @NonNull DataEntry>> getAsStream();
+    @NonNull Stream<Map.@NonNull Entry<@NonNull Object, ? extends @NonNull Entry>> getAsStream();
 
+    /**
+     * An entry within a stream of data.
+     * <p>
+     * This type is a streamable version of {@link DataEntry}. It might either be a single entry, or a streamable
+     * tree-like source itself (for nesting). Callers should use
+     * <p>
+     * Like the stream itself, an entry should be treated as a single-use resource. Callers are permitted to use one
+     * of the "getAs" methods at most once.
+     *
+     */
+    interface Entry {
+
+        /**
+         * Whether this entry represents a tree-like value.
+         * <p>
+         * If {@code true}, callers are permitted to use {@link #getAsDataStreamable()} to stream the tree-like data.
+         *
+         * @return true if a treelike entry, false if a single entry
+         */
+        boolean isTreeLike();
+
+        /**
+         * Gets as a data entry, and potentially consumes this entry.
+         * <p>
+         * If this data entry represents a tree, the full tree will be loaded into memory and a {@code DataEntry}
+         * wrapping a {@code DataTree} will be returned.
+         *
+         * @return the data entry
+         * @throws IllegalStateException if re-use was attempted and this {@code Entry} is not re-usable
+         */
+        @NonNull DataEntry getAsDataEntry();
+
+        /**
+         * Gets as a nested {@code DataStreamable}, and potentially consumes this entry.
+         * <p>
+         * <b>Will fail if this entry represents just a single value.</b>
+         *
+         * @return the data streamable
+         * @throws IllegalStateException if this {@code Entry} is just a single entry, or if re-use was attempted and
+         * this {@code Entry} is not re-usable
+         */
+        @NonNull DataStreamable getAsDataStreamable();
+    }
 }

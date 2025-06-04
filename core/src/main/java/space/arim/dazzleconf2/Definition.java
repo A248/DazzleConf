@@ -125,7 +125,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     private <DT extends DataTree> @NonNull LoadResult<@NonNull C> readingNexus(
-            @NonNull DT dataTree, @NonNull ReadOptions readOptions, Definition.@NonNull HowToUpdate<DT> howToUpdate
+            @NonNull DT dataTree, @NonNull ReadOptions readOptions, @NonNull HowToUpdate<DT> howToUpdate
     ) {
         // Where we're located - mapped
         KeyPath.Immut mappedPathPrefix;
@@ -195,10 +195,9 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                     //
 
                     // Deserialization
-                    LoadResult<?> valueResult = howToUpdate.deserialize(methodNode.serializer,  new DeserInput(
-                            dataEntry.getValue(), new DeserInput.Source(dataEntry, mappedKey), deserContext
-                    ));
-
+                    LoadResult<?> valueResult = howToUpdate.deserialize(
+                            methodNode.serializer, new DeserInput.Base(dataEntry, mappedKey, deserContext)
+                    );
                     // Error handling
                     if (valueResult.isFailure()) {
                         // Append all error contexts
@@ -283,7 +282,6 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                                         TypeSkeleton.MethodNode<?> methodNode) {
                 Object update = outputForUpdate.getAndClearLastOutput();
                 if (update != null && !sourceEntry.getValue().equals(update)) {
-                    readOptions.loadListener().updatedPath(new KeyPath.Mut(mappedKey), UpdateReason.UPDATED);
                     dataTree.set(mappedKey, sourceEntry.withValue(update));
                 }
             }
