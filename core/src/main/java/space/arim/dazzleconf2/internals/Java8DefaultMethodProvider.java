@@ -39,7 +39,7 @@ class Java8DefaultMethodProvider implements DefaultMethodProvider {
 	}
 
 	@Override
-	public MethodHandle getMethodHandle(Method method)
+	public MethodHandle getMethodHandle(Method method, MethodHandles.Lookup lookup)
 			throws IllegalAccessException, InvocationTargetException, InstantiationException {
 		Class<?> declaringClass = method.getDeclaringClass();
 		return lookupConstructor.newInstance(declaringClass).unreflectSpecial(method, declaringClass);

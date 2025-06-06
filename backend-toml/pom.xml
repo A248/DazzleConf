@@ -1,0 +1,103 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	
+	<parent>
+		<groupId>space.arim.dazzleconf</groupId>
+		<artifactId>dazzleconf-parent</artifactId>
+		<version>1.3.0-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>dazzleconf-toml</artifactId>
+	<name>DazzleConf (TOML)</name>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>default-compile</id>
+						<configuration>
+							<release>8</release>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-XX:+EnableDynamicAgentLoading -XX:TieredStopAtLevel=1 -XX:-TieredCompilation</argLine>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<configuration>
+					<artifactSet>
+						<includes>
+							<include>io.github.wasabithumb:*</include>
+						</includes>
+					</artifactSet>
+					<filters>
+						<filter>
+							<artifact>io.github.wasabithumb:*</artifact>
+							<excludes>
+								<exclude>**/module-info.class</exclude>
+							</excludes>
+						</filter>
+					</filters>
+					<relocations>
+						<relocation>
+							<pattern>io.github.wasabithumb.jtoml</pattern>
+							<shadedPattern>space.arim.dazzleconf.backend.toml.libs.jtoml</shadedPattern>
+						</relocation>
+					</relocations>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.moditect</groupId>
+				<artifactId>moditect-maven-plugin</artifactId>
+				<configuration>
+					<module>
+						<moduleInfoSource>
+							module space.arim.dazzleconf.backend.toml {
+							exports space.arim.dazzleconf.backend.toml;
+							requires transitive space.arim.dazzleconf;
+							requires static org.checkerframework.checker.qual;
+							}
+						</moduleInfoSource>
+					</module>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+	
+	<dependencies>
+		<dependency>
+			<groupId>space.arim.dazzleconf</groupId>
+			<artifactId>dazzleconf-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.github.wasabithumb</groupId>
+			<artifactId>jtoml</artifactId>
+			<version>0.6.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-junit-jupiter</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>space.arim.dazzleconf</groupId>
+			<artifactId>dazzleconf-core</artifactId>
+			<version>${project.version}</version>
+			<type>test-jar</type>
+			<classifier>tests</classifier>
+		</dependency>
+	</dependencies>
+</project>

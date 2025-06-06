@@ -34,6 +34,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<checkerqual.version>3.49.2</checkerqual.version>
+		<apiguardian.version>1.1.2</apiguardian.version>
 		<junit.version>5.13.0</junit.version>
 		<mockito.version>5.1.1</mockito.version>
 		<equalsverifier.version>3.19.2</equalsverifier.version>
@@ -58,7 +59,7 @@
 		<developer>
 			<id>anandbeh</id>
 			<name>Anand Beh</name>
-			<email>theanandbeh@gmail.com</email>
+			<email>a248-dev@tuta.io</email>
 			<url>https://github.com/A248</url>
 			<roles>
 				<role>creator</role>
@@ -67,18 +68,7 @@
 			<timezone>America/New_York</timezone>
 		</developer>
 	</developers>
-	
-	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
-	</distributionManagement>
-	
+
 	<build>
 		<plugins>
 			<!-- Sources and javadoc -->
@@ -101,7 +91,6 @@
 				<version>3.5.0</version>
 				<configuration>
 					<source>8</source>
-					<excludePackageNames>space.arim.dazzleconf.internal:space.arim.dazzleconf.internal.*</excludePackageNames>
 				</configuration>
 				<executions>
 					<execution>
@@ -146,7 +135,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
-				<version>3.0.1</version>
+				<version>3.2.7</version>
 				<executions>
 					<execution>
 						<id>sign-artifacts</id>
@@ -155,6 +144,7 @@
 							<goal>sign</goal>
 						</goals>
 						<configuration>
+							<bestPractices>true</bestPractices>
 							<gpgArguments>
 								<arg>--pinentry-mode</arg>
 								<arg>loopback</arg>
@@ -166,12 +156,14 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-release-plugin</artifactId>
-				<version>3.0.0-M7</version>
+				<version>3.1.1</version>
 				<configuration>
 					<autoVersionSubmodules>true</autoVersionSubmodules>
 					<tagNameFormat>@{project.version}</tagNameFormat>
 					<preparationGoals>--quiet help:help</preparationGoals>
-					<goals>clean deploy -DskipTests -DskipPitest -Dinvoker.skip=true</goals>
+					<goals>clean deploy -DskipTests -DskipPitest -Dinvoker.skip=true -Prelease-to-central</goals>
+					<pushChanges>false</pushChanges>
+					<localCheckout>true</localCheckout>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -180,29 +172,49 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.10.1</version>
+					<version>3.14.0</version>
 					<configuration>
-						<!-- Compile module descriptor with Java 11 -->
-						<release>11</release>
 						<testRelease>21</testRelease>
 					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>3.4.2</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-shade-plugin</artifactId>
+					<version>3.6.0</version>
 					<executions>
-						<!-- Compile everything else with Java 8 compatibility -->
 						<execution>
-							<id>base-compile</id>
+							<phase>package</phase>
 							<goals>
-								<goal>compile</goal>
+								<goal>shade</goal>
 							</goals>
-							<configuration>
-								<release>8</release>
-								<excludes>
-									<exclude>module-info.java</exclude>
-								</excludes>
-							</configuration>
 						</execution>
 					</executions>
 				</plugin>
-				<!-- Testing -->
+				<plugin>
+					<groupId>org.moditect</groupId>
+					<artifactId>moditect-maven-plugin</artifactId>
+					<version>1.2.2.Final</version>
+					<executions>
+						<execution>
+							<id>add-module-info</id>
+							<phase>package</phase>
+							<goals>
+								<goal>add-module-info</goal>
+							</goals>
+							<configuration>
+								<overwriteExistingFiles>true</overwriteExistingFiles>
+							</configuration>
+						</execution>
+					</executions>
+					<configuration>
+						<failOnWarning>true</failOnWarning>
+					</configuration>
+				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
@@ -240,27 +252,54 @@
 						<localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
 						<settingsFile>src/it/settings.xml</settingsFile>
 						<goals>verify</goals>
+						<streamLogsOnFailures>true</streamLogsOnFailures>
 					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-install-plugin</artifactId>
+					<version>3.1.4</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-deploy-plugin</artifactId>
+					<version>3.1.4</version>
 				</plugin>
 			</plugins>
 		</pluginManagement>
 	</build>
 
+	<profiles>
+		<profile>
+			<id>release-to-central</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.sonatype.central</groupId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
+						<version>0.7.0</version>
+						<extensions>true</extensions>
+						<configuration>
+							<publishingServerId>central</publishingServerId>
+							<checksums>all</checksums>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 	<modules>
 		<module>core</module>
+		<!-- Version 2 format-specific "backends" -->
+		<module>backend-hocon</module>
+		<module>backend-toml</module>
+		<module>backend-yaml</module>
+		<!-- Version 1 format-specific "extensions" -->
 		<module>gson</module>
 		<module>snakeyaml</module>
         <module>hocon</module>
     </modules>
-
-	<dependencies>
-		<dependency>
-			<groupId>org.checkerframework</groupId>
-			<artifactId>checker-qual</artifactId>
-			<version>${checkerqual.version}</version>
-			<optional>true</optional>
-		</dependency>
-	</dependencies>
 
 	<dependencyManagement>
 		<dependencies>
@@ -268,6 +307,18 @@
 				<groupId>space.arim.dazzleconf</groupId>
 				<artifactId>dazzleconf-core</artifactId>
 				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.checkerframework</groupId>
+				<artifactId>checker-qual</artifactId>
+				<version>${checkerqual.version}</version>
+				<optional>true</optional>
+			</dependency>
+			<dependency>
+				<groupId>org.apiguardian</groupId>
+				<artifactId>apiguardian-api</artifactId>
+				<version>${apiguardian.version}</version>
+				<optional>true</optional>
 			</dependency>
 			<dependency>
 				<groupId>org.junit.jupiter</groupId>

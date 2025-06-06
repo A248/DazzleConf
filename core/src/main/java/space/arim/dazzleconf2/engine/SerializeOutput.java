@@ -23,7 +23,8 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.KeyMapper;
+
+import java.util.List;
 
 /**
  * The output for serialization, which is handed to {@link SerializeDeserialize#serialize}.
@@ -40,15 +41,7 @@ import space.arim.dazzleconf2.backend.KeyMapper;
  * extracted (and simultaneously cleared) by calling {@link #getAndClearLastOutput()}.
  *
  */
-public interface SerializeOutput {
-
-    /**
-     * Gets the key mapper being used
-     *
-     * @return the key mapper
-     */
-    @NonNull
-    KeyMapper keyMapper();
+public interface SerializeOutput extends SerializeContext {
 
     /**
      * Outputs a string
@@ -116,20 +109,27 @@ public interface SerializeOutput {
     /**
      * Outputs a data tree
      *
-     * @param value the data tree, nonnull
+     * @param value the data tree
      */
     void outDataTree(@NonNull DataTree value);
+
+    /**
+     * Outputs a list of data entries
+     *
+     * @param value the list of data entries
+     */
+    void outList(@NonNull List<@NonNull DataEntry> value);
 
     /**
      * Outputs the given object.
      * <p>
      * This function should not be used in normal circumstances. It is a low-level means of setting the output
-     * object, intended for when the caller has a ready object, or when the caller needs to pass a {@code List}.
+     * object, intended for when the caller has a ready object but does not know its exact type.
      * <p>
      * The caller guarantees that the passed object is valid according to {@link DataEntry#validateValue(Object)}.
      * If this condition is not met, behavior is <b>not defined</b> and an exception may be thrown at a later point.
      *
-     * @param value the object, nonnull
+     * @param value the object
      */
     void outObjectUnchecked(@NonNull Object value);
 

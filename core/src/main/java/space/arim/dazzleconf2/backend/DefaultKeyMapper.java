@@ -32,17 +32,8 @@ public final class DefaultKeyMapper implements KeyMapper {
     public DefaultKeyMapper() {}
 
     @Override
-    public @NonNull CharSequence labelToKey(@NonNull String label) {
+    public @NonNull CharSequence labelToKey(@NonNull CharSequence label) {
         return label;
     }
 
-    @Override
-    public int hashCode() {
-        return DefaultKeyMapper.class.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof DefaultKeyMapper;
-    }
 }

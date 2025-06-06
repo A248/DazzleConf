@@ -19,15 +19,18 @@
 
 package space.arim.dazzleconf2;
 
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.internals.lang.LibraryLangKey;
+import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf2.internals.lang.LibraryLangKey;
 
 import java.io.IOException;
-import java.util.*;
+import java.net.URL;
+import java.util.Locale;
+import java.util.Set;
 
 /**
  * Context holder for errors in {@link LoadResult}. This is a decorator around a type safe map, used to provide
@@ -52,6 +55,14 @@ public interface ErrorContext {
     Key<Printable> BACKEND_MESSAGE = new Key<>(LibraryLang::backendMessage, (output, value) -> value.printTo(output));
 
     /**
+     * A URL pointing to an online syntax linter.
+     * <p>
+     * If the backend wishes, it can provide this URL, to an online syntax linter, to help the user check what's wrong.
+     */
+    @API(status = API.Status.EXPERIMENTAL)
+    Key<URL> SYNTAX_LINTER = new Key<>(LibraryLang::syntaxLinter, (output, value) -> output.append(value.toExternalForm()));
+
+    /**
      * The locale to format messages in.
      *
      * @return the locale
@@ -60,7 +71,7 @@ public interface ErrorContext {
 
     /**
      * Gets the main message to display as the reason for this error. This won't include additional details; for that
-     * see {@link #displayDetails}.
+     * see {@link #display}.
      *
      * @return the message
      */
@@ -72,7 +83,7 @@ public interface ErrorContext {
      *
      * @return a displayable message
      */
-    @NonNull Printable displayDetails();
+    @NonNull Printable display();
 
     /**
      * Gets a piece of detail from this error context, if it is set
@@ -110,8 +121,10 @@ public interface ErrorContext {
     void copyDetailsInto(@NonNull ErrorContext target);
 
     /**
-     * Gets all the keys set on this error context. Implementations of this method are encouraged to provide
-     * stable, deterministic sorting of the returned set.
+     * Gets all the keys set on this error context.
+     * <p>
+     * Implementations of this method are encouraged to provide stable, deterministic sorting of the returned set.
+     * Mutability is not defined, and callers should not try to modify it.
      *
      * @return all the keys, may or may not be immutable
      */
@@ -134,5 +147,62 @@ public interface ErrorContext {
         interface FormatData<V> {
             void format(Appendable output, V value) throws IOException;
         }
+    }
+
+    /**
+     * A source of error contexts.
+     * <p>
+     * This class might be implemented in different places, and therefore provide different context keys in
+     * returned {@code ErrorContext}s.
+     *
+     */
+    interface Source {
+
+        /**
+         * The locale to format error messages in.
+         *
+         * @return the locale
+         */
+        @NonNull Locale getLocale();
+
+        /**
+         * Builds an error context based on the implementation.
+         * <p>
+         * This function takes a {@code Printable} for flexibility. Using {@link Printable#preBuilt(CharSequence)} will
+         * suffice in many cases.
+         *
+         * @param message the main error messge
+         * @return an error context
+         */
+        @NonNull ErrorContext buildError(@NonNull Printable message);
+
+        /**
+         * Builds an error context, wraps it in a <code>LoadResult</code> and returns it.
+         * <p>
+         * This function does not actually throw anything. It is named as such so that your code can look like this:
+         * <pre>
+         *     {@code
+         *         return operable.throwError("failure");
+         *     }
+         * </pre>
+         *
+         * @param message the main error message
+         * @return an error result
+         * @param <R> the type of the result value (can be anything since the result will be an error)
+         */
+        <R> @NonNull LoadResult<R> throwError(@NonNull CharSequence message);
+
+        /**
+         * Builds an error context, wraps it in a <code>LoadResult</code> and returns it.
+         * <p>
+         * This function does not actually throw anything. It is named as such to communicate the logical termination of
+         * a block of code.
+         *
+         * @param message the main error message
+         * @return an error result
+         * @param <R> the type of the result value (can be anything since the result will be an error)
+         */
+        <R> @NonNull LoadResult<R> throwError(@NonNull Printable message);
+
     }
 }

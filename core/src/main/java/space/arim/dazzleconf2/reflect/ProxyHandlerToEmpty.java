@@ -19,47 +19,44 @@
 
 package space.arim.dazzleconf2.reflect;
 
-import space.arim.dazzleconf2.internals.MethodUtil;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
 
-final class ProxyHandlerToEmpty<I> extends ProxyHandler {
+final class ProxyHandlerToEmpty<I> extends ProxyHandler<I> {
 
-    private final Class<I> iface;
-    private I proxy;
+    private DefaultMethodMap defaultMethodMap;
 
     ProxyHandlerToEmpty(Class<I> iface) {
-        this.iface = iface;
+        super(iface);
     }
 
-    void initProxy(I proxy) {
-        this.proxy = proxy;
+    void init(DefaultMethodMap defaultMethodMap) {
+        this.defaultMethodMap = defaultMethodMap;
     }
 
     @Override
     Object implInvoke(Method method, Object[] args) throws Throwable {
-        if (proxy == null) {
-            throw new IllegalStateException("initProxy not called");
+        MethodHandle methodHandle = defaultMethodMap.getHandleWithBoundReceiver(method);
+        if (methodHandle == null) {
+            if (method.isDefault()) {
+                throw new IllegalStateException();
+            } else {
+                throw new DeveloperMistakeException("Cannot call non-default configuration methods pre-initialization");
+            }
         }
-        if (!MethodUtil.isDefault(method)) {
-            throw new DeveloperMistakeException("Cannot call non-default configuration methods pre-initialization");
-        }
-        return MethodUtil.createDefaultMethodHandle(method).bindTo(proxy).invokeWithArguments(args);
+        return methodHandle.invokeWithArguments(args);
     }
 
     @Override
-    boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler otherHandler) {
-        if (otherHandler instanceof ProxyHandlerToValues) {
-            // We're never equal - we can never know if we implement the same interfaces
-            return false;
-        }
-        if (otherHandler instanceof ProxyHandlerToDelegate) {
-            // Invert direction => unwrap the delegate
+    boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler<?> otherHandler) {
+        if (otherHandler instanceof ProxyHandlerToValues || otherHandler instanceof ProxyHandlerToDelegate) {
+            // Invert direction => Let the other instance implement equality
             return otherHandler.implEquals(otherProxy, ourProxy, this);
         }
         if (otherHandler instanceof ProxyHandlerToEmpty) {
-            return iface.equals(((ProxyHandlerToEmpty<?>) otherHandler).iface);
+            return true;
         }
         throw new UnsupportedOperationException();
     }
@@ -70,7 +67,5 @@ final class ProxyHandlerToEmpty<I> extends ProxyHandler {
     }
 
     @Override
-    void implToString(StringBuilder output) {
-        output.append(iface.getName());
-    }
+    void implToString(StringBuilder output) {}
 }

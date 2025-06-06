@@ -20,20 +20,35 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.*;
-import space.arim.dazzleconf2.engine.*;
-import space.arim.dazzleconf2.reflect.*;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.CommentData;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.Printable;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
+import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf2.reflect.Instantiator;
+import space.arim.dazzleconf2.reflect.InvokeDefaultFunction;
+import space.arim.dazzleconf2.reflect.MethodId;
+import space.arim.dazzleconf2.reflect.MethodMirror;
+import space.arim.dazzleconf2.reflect.MethodYield;
+import space.arim.dazzleconf2.reflect.ReifiedType;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
-import java.util.*;
-import java.util.stream.Stream;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 final class Definition<C> implements ConfigurationDefinition<C> {
 
     private final TypeToken<C> configType;
-    private final KeyPath.Immut pathPrefix;
     private final CommentData topLevelComments;
-    private final String[] labels;
 
     private final LibraryLang libraryLang;
     private final Instantiator instantiator;
@@ -47,13 +62,11 @@ final class Definition<C> implements ConfigurationDefinition<C> {
 
     private static final InvokeDefaultFunction INVOKE_DEFAULT_VALUE = new InvokeDefaultFunction();
 
-    Definition(TypeToken<C> configType, KeyPath pathPrefix, CommentData topLevelComments,
-               List<String> labels, LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons,
-               LibraryLang libraryLang, Instantiator instantiator, MethodMirror methodMirror) {
+    Definition(TypeToken<C> configType, CommentData topLevelComments,
+               LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons, LibraryLang libraryLang,
+               Instantiator instantiator, MethodMirror methodMirror) {
         this.configType = Objects.requireNonNull(configType);
-        this.pathPrefix = pathPrefix.intoImmut();
         this.topLevelComments = Objects.requireNonNull(topLevelComments);
-        this.labels = labels.toArray(new String[0]);
         this.libraryLang = Objects.requireNonNull(libraryLang);
         this.instantiator = Objects.requireNonNull(instantiator);
         this.methodMirror = Objects.requireNonNull(methodMirror);
@@ -61,17 +74,14 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         int numberOfSkeletons = typeSkeletons.size();
         Class<?>[] superTypesArray = new Class[numberOfSkeletons];
         TypeSkeleton[] skeletonArray = new TypeSkeleton[numberOfSkeletons];
-        int index = 0;
+        // Start from the back: This means we read/write parent types first
+        int index = numberOfSkeletons;
         for (Map.Entry<Class<?>, TypeSkeleton> typeEntry : typeSkeletons.entrySet()) {
-            superTypesArray[index] = typeEntry.getKey();
-            skeletonArray[index++] = typeEntry.getValue();
+            superTypesArray[--index] = typeEntry.getKey();
+            skeletonArray[index] = typeEntry.getValue();
         }
         this.superTypesArray = superTypesArray;
         this.skeletonArray = skeletonArray;
-    }
-
-    private C instantiate(MethodYield methodYield) {
-        return configType.cast(instantiator.generate(superTypesArray, methodYield));
     }
 
     @Override
@@ -84,25 +94,25 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         return new Layout() {
 
             @Override
-            public @NonNull CommentData getTopLevelComments() {
+            public ReifiedType.@NonNull Annotated getReifiedType() {
+                return configType.getReifiedType();
+            }
+
+            @Override
+            public @NonNull CommentData getComments() {
                 return topLevelComments;
             }
 
             @Override
-            public @NonNull Collection<@NonNull String> getLabels() {
-                return Collections.unmodifiableList(Arrays.asList(labels));
+            public @NonNull Instantiator getInstantiator() {
+                return instantiator;
             }
 
             @Override
-            public @NonNull Stream<@NonNull String> getLabelsAsStream() {
-                return Arrays.stream(labels);
+            public @NonNull MethodMirror getMethodMirror() {
+                return methodMirror;
             }
         };
-    }
-
-    @Override
-    public @NonNull Instantiator getInstantiator() {
-        return instantiator;
     }
 
     @Override
@@ -113,30 +123,23 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             TypeSkeleton typeSkeleton = skeletonArray[n];
             // Add callable default methods
             for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
-                methodYield.addValue(currentType, callableMethod, INVOKE_DEFAULT_VALUE);
+                methodYield.addEntry(currentType, callableMethod, INVOKE_DEFAULT_VALUE);
             }
             // Add default values
             for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
                 Object defaultValue = methodNode.makeDefaultValue(currentType);
-                methodYield.addValue(currentType, methodNode.methodId, defaultValue);
+                methodYield.addEntry(currentType, methodNode.methodId, defaultValue);
             }
         }
-        return instantiate(methodYield);
+        return instantiator.generate(configType.getRawType(), methodYield);
     }
 
     private <DT extends DataTree> @NonNull LoadResult<@NonNull C> readingNexus(
             @NonNull DT dataTree, @NonNull ReadOptions readOptions, @NonNull HowToUpdate<DT> howToUpdate
     ) {
-        // Where we're located - mapped
-        KeyPath.Immut mappedPathPrefix;
-        {
-            KeyPath.Mut mutPathPrefix = this.pathPrefix.intoMut();
-            mutPathPrefix.applyKeyMapper(readOptions.keyMapper());
-            mappedPathPrefix = mutPathPrefix.intoImmut();
-        }
         // What we're building (an instance) and how we're doing that
         MethodYield methodYield = new MethodYield();
-        DeserInput.Context deserContext = new DeserInput.Context(libraryLang, readOptions, mappedPathPrefix);
+        DeserInput.Context deserContext = new DeserInput.Context(libraryLang, readOptions);
 
         // Collected errors - get a certain maximum before quitting
         ErrorContext[] collectedErrors = new ErrorContext[readOptions.maximumErrorCollect()];
@@ -149,78 +152,25 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             TypeSkeleton typeSkeleton = skeletonArray[n];
             // Add callable default methods
             for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
-                methodYield.addValue(currentType, callableMethod, INVOKE_DEFAULT_VALUE);
+                methodYield.addEntry(currentType, callableMethod, INVOKE_DEFAULT_VALUE);
             }
 
             // Add values for each method
             for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
 
-                Object value;
-                String mappedKey = readOptions.keyMapper().labelToKey(methodNode.methodId.name()).toString();
-                DataEntry dataEntry = dataTree.get(mappedKey);
-                if (dataEntry == null) {
-
-                    // Missing value. Three possibilities for the method:
-                    // 1. Optional -> okay
-                    // 2. Mandatory, so fill in the missing value -> okay, signal updated path
-                    // 3. Mandatory, and no missing value -> error
-
-                    if (methodNode.optional) {
-                        // 1.
-                        value = Optional.empty();
-                    } else if ((value = methodNode.makeMissingValue(currentType)) != null) {
-                        // 2.
-                        readOptions.loadListener().updatedPath(
-                                new KeyPath.Mut(mappedKey), UpdateReason.MISSING
-                        );
-                        howToUpdate.insertMissingValue(dataTree, mappedKey, methodNode, value);
-                    } else {
-                        // 3.
-                        LoadError loadError = new LoadError(Printable.preBuilt(libraryLang.missingValue()), libraryLang);
-                        KeyPath.Mut entryPath = new KeyPath.Mut(mappedPathPrefix);
-                        entryPath.addBack(mappedKey);
-                        loadError.addDetail(ErrorContext.ENTRY_PATH, entryPath);
-
-                        collectedErrors[errorCount++] = loadError;
-                        // Check if errors maxed out
+                ErrorContext[] errorContexts = readingNexusForEntry(
+                        methodYield, deserContext, currentType, methodNode, dataTree, readOptions, howToUpdate
+                );
+                if (errorContexts != null) {
+                    for (ErrorContext errorToAppend : errorContexts) {
+                        // Append this error
+                        collectedErrors[errorCount++] = errorToAppend;
+                        // Check if maxed out
                         if (errorCount == collectedErrors.length) {
-                            return LoadResult.failure(Arrays.asList(collectedErrors));
-                        }
-                        continue;
-                    }
-
-                } else {
-                    //
-                    // Main deserialization route - most cases go here
-                    //
-
-                    // Deserialization
-                    LoadResult<?> valueResult = howToUpdate.deserialize(
-                            methodNode.serializer, new DeserInput.Base(dataEntry, mappedKey, deserContext)
-                    );
-                    // Error handling
-                    if (valueResult.isFailure()) {
-                        // Append all error contexts
-                        List<ErrorContext> errorsToAppend = valueResult.getErrorContexts();
-                        for (ErrorContext errorToAppend : errorsToAppend) {
-                            // Append this error
-                            collectedErrors[errorCount++] = errorToAppend;
-                            // Check if maxed out
-                            if (errorCount == collectedErrors.length) {
-                                return LoadResult.failure(Arrays.asList(collectedErrors));
-                            }
+                            return LoadResult.failure(collectedErrors);
                         }
                     }
-                    // Update if desired
-                    howToUpdate.updateIfDesired(dataTree, mappedKey, dataEntry, methodNode);
-
-                    // Bail out if there are errors
-                    if (errorCount > 0) continue;
-                    // No errors - all good
-                    value = valueResult.getOrThrow();
-                    if (methodNode.optional) value = Optional.of(value);
                 }
-                methodYield.addValue(currentType, methodNode.methodId, value);
             }
         }
         // Error handling
@@ -229,12 +179,67 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             return LoadResult.failure(trimmedToSize);
         }
         // No errors - success
-        return LoadResult.of(instantiate(methodYield));
+        return LoadResult.of(instantiator.generate(configType.getRawType(), methodYield));
+    }
+
+    private <DT extends DataTree, V> @NonNull ErrorContext @Nullable [] readingNexusForEntry(
+            @NonNull MethodYield methodYield, DeserInput.@NonNull Context deserContext, @NonNull Class<?> currentType,
+            TypeSkeleton.@NonNull MethodNode<V> methodNode, @NonNull DT dataTree, @NonNull ReadOptions readOptions,
+            @NonNull HowToUpdate<DT> howToUpdate) {
+
+        Object value;
+        V missingValue;
+        String mappedKey = readOptions.keyMapper().labelToKey(methodNode.methodId.name()).toString();
+        DataEntry dataEntry = dataTree.get(mappedKey);
+        if (dataEntry == null) {
+
+            // Missing value. Three possibilities for the method:
+            // 1. Optional -> okay
+            // 2. Mandatory, so fill in the missing value -> okay, signal updated path
+            // 3. Mandatory, and no missing value -> error
+
+            if (methodNode.optional) {
+                // 1.
+                value = Optional.empty();
+            } else if ((value = missingValue = methodNode.makeMissingValue(currentType)) != null) {
+                // 2.
+                readOptions.notifyUpdate(new KeyPath.Mut(mappedKey), UpdateReason.MISSING);
+                howToUpdate.insertMissingValue(dataTree, mappedKey, methodNode, missingValue);
+            } else {
+                // 3.
+                LoadError loadError = new LoadError(Printable.preBuilt(libraryLang.missingValue()), libraryLang);
+                KeyPath.Mut entryPath = new KeyPath.Mut(readOptions.keyPath());
+                entryPath.addBack(mappedKey);
+                loadError.addDetail(ErrorContext.ENTRY_PATH, entryPath);
+                return new ErrorContext[] {loadError};
+            }
+        } else {
+            //
+            // Main deserialization route - most cases go here
+            //
+
+            // Deserialization
+            LoadResult<V> valueResult = howToUpdate.deserialize(
+                    methodNode.serializer, new DeserInput.Base(dataEntry, mappedKey, deserContext)
+            );
+            // Error handling
+            if (valueResult.isFailure()) {
+                return valueResult.getErrorContexts().toArray(new ErrorContext[0]);
+            }
+            // Update if desired
+            howToUpdate.updateIfDesired(dataTree, mappedKey, dataEntry, methodNode);
+
+            // No errors - all good
+            value = valueResult.getOrThrow();
+            if (methodNode.optional) value = Optional.of(value);
+        }
+        methodYield.addEntry(currentType, methodNode.methodId, value);
+        return null;
     }
 
     private interface HowToUpdate<DT extends DataTree> {
 
-        void insertMissingValue(DT dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode, Object value);
+        <V> void insertMissingValue(DT dataTree, String mappedKey, TypeSkeleton.MethodNode<V> methodNode, V missingValue);
 
         <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser);
 
@@ -247,8 +252,8 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree, @NonNull ReadOptions readOptions) {
         return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree>() {
             @Override
-            public void insertMissingValue(DataTree dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode,
-                                           Object value) {}
+            public <V> void insertMissingValue(DataTree dataTree, String mappedKey,
+                                               TypeSkeleton.MethodNode<V> methodNode, V missingValue) {}
 
             @Override
             public <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser) {
@@ -262,14 +267,19 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     @Override
-    public @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadOptions readOptions) {
+    public @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadWithUpdateOptions readOptions) {
 
-        SerializeOutput outputForUpdate = new SerOutput(readOptions.keyMapper());
+        // Updating comments, based on read options, usually depends on whether the backend needs it
+        ModifyComments modifyComments = new ModifyComments(readOptions);
+        // Updating values is based on calls to deserializeUpdate
+        SerializeOutput outputForUpdate = new SerOutput(readOptions.keyMapper(), modifyComments);
+
         return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree.Mut>() {
             @Override
-            public void insertMissingValue(DataTree.Mut dataTree, String mappedKey, TypeSkeleton.MethodNode<?> methodNode,
-                                           Object value) {
-                dataTree.set(mappedKey, new DataEntry(value).withComments(methodNode.comments));
+            public <V> void insertMissingValue(DataTree.Mut dataTree, String mappedKey,
+                                               TypeSkeleton.MethodNode<V> methodNode, V missingValue) {
+                DataEntry serializedMissingValue = methodNode.serialize(missingValue, outputForUpdate);
+                dataTree.set(mappedKey, serializedMissingValue.withComments(methodNode.comments));
             }
 
             @Override
@@ -280,9 +290,18 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             @Override
             public void updateIfDesired(DataTree.Mut dataTree, String mappedKey, DataEntry sourceEntry,
                                         TypeSkeleton.MethodNode<?> methodNode) {
+                boolean changed = false;
                 Object update = outputForUpdate.getAndClearLastOutput();
                 if (update != null && !sourceEntry.getValue().equals(update)) {
-                    dataTree.set(mappedKey, sourceEntry.withValue(update));
+                    sourceEntry = sourceEntry.withValue(update);
+                    changed = true;
+                }
+                if (modifyComments.isAnyLocationEnabled()) {
+                    sourceEntry = modifyComments.applyTo(sourceEntry, methodNode.comments);
+                    changed = true;
+                }
+                if (changed) {
+                    dataTree.set(mappedKey, sourceEntry);
                 }
             }
         });
@@ -291,7 +310,8 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     @Override
     public void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree, @NonNull WriteOptions writeOptions) {
 
-        SerializeOutput serOutput = new SerOutput(writeOptions.keyMapper());
+        ModifyComments modifyComments = new ModifyComments(writeOptions);
+        SerializeOutput serOutput = new SerOutput(writeOptions.keyMapper(), modifyComments);
 
         for (int n = 0; n < superTypesArray.length; n++) {
             MethodMirror.Invoker invoker = methodMirror.makeInvoker(config, superTypesArray[n]);
@@ -299,6 +319,9 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             for (TypeSkeleton.MethodNode<?> methodNode : skeletonArray[n].methodNodes) {
                 String mappedKey = writeOptions.keyMapper().labelToKey(methodNode.methodId.name()).toString();
                 DataEntry entry = methodNode.serialize(invoker, serOutput);
+                if (entry != null && modifyComments.isAnyLocationEnabled()) {
+                    entry = modifyComments.applyTo(entry, methodNode.comments);
+                }
                 dataTree.set(mappedKey, entry);
             }
         }

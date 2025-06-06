@@ -23,16 +23,37 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.common.returnsreceiver.qual.This;
 import org.checkerframework.dataflow.qual.SideEffectFree;
-import space.arim.dazzleconf2.engine.liaison.*;
-import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.TypeLiaison;
-import space.arim.dazzleconf2.migration.Migration;
-import space.arim.dazzleconf2.reflect.*;
+import space.arim.dazzleconf2.engine.liaison.BooleanLiaison;
+import space.arim.dazzleconf2.engine.liaison.ByteLiaison;
+import space.arim.dazzleconf2.engine.liaison.CharacterLiaison;
+import space.arim.dazzleconf2.engine.liaison.CollectionLiaison;
+import space.arim.dazzleconf2.engine.liaison.DoubleLiaison;
+import space.arim.dazzleconf2.engine.liaison.EnumLiaison;
+import space.arim.dazzleconf2.engine.liaison.FloatLiaison;
+import space.arim.dazzleconf2.engine.liaison.IntegerLiaison;
+import space.arim.dazzleconf2.engine.liaison.LongLiaison;
+import space.arim.dazzleconf2.engine.liaison.ShortLiaison;
+import space.arim.dazzleconf2.engine.liaison.SimpleTypeLiaison;
+import space.arim.dazzleconf2.engine.liaison.StringLiaison;
+import space.arim.dazzleconf2.engine.liaison.SubSection;
+import space.arim.dazzleconf2.engine.liaison.SubSectionLiaison;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf2.migration.Migration;
+import space.arim.dazzleconf2.reflect.DefaultReflectionService;
+import space.arim.dazzleconf2.reflect.Instantiator;
+import space.arim.dazzleconf2.reflect.ReflectionService;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
-import java.util.*;
+import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 /**
  * A builder for {@link Configuration}. The builder allows changing how the configuration is defined, read,
@@ -68,7 +89,8 @@ public final class ConfigurationBuilder<C> {
     private @Nullable Locale locale;
     private final List<TypeLiaison> typeLiaisons = new ArrayList<>();
     private @Nullable KeyMapper keyMapper;
-    private @Nullable Instantiator instantiator;
+    private MethodHandles.@Nullable Lookup lookup;
+    private @Nullable ReflectionService reflectionService;
     private final List<Migration<?, C>> migrations = new ArrayList<>();
 
     /**
@@ -250,18 +272,52 @@ public final class ConfigurationBuilder<C> {
     }
 
     /**
-     * Sets the instantiator
+     * Changes the lookup used by the library for reflective access.
+     * <p>
+     * If running on the module path, specifying a lookup can also bypass the need to <i>open</i> the configuration
+     * interface's module to the {@code space.arim.dazzleconf} module.
+     * <p>
+     * <b>Purpose</b>
+     * <p>
+     * Passing the lookup object allows library users to transmit their own privileged access to the library for
+     * reflective purposes. In return, the library promises it will not expose this lookup in a public interface.
+     * <p>
+     * This lookup may be used for reflective access to the configuration interface and its methods. Also, the lookup
+     * is passed to methods on {@link Instantiator}, meaning it might be used for class generation. Accordingly, the
+     * lookup should have full privileged access, such that it is usable with {@code MethodHandles.privateLookupIn}.
+     * <p>
+     * If this method is never called, the library will use its own lookup object. If running on the module path, the
+     * library lookup may be limited by the access granted to the library module, requiring library users to declare
+     * {@code opens <theirpackage> to space.arim.dazzleconf} in their JPMS module descriptor.
      *
-     * @param instantiator the instantiator
+     * @param lookup the privileged lookup. For most library users, {@code MethodHandles.lookup()} will suffice. Note
+     *               that the lookup <i>must</i> have full privileged access
      * @return this builder
      */
-    public @This @NonNull ConfigurationBuilder<C> instantiator(@NonNull Instantiator instantiator) {
-        this.instantiator = Objects.requireNonNull(instantiator);
+    public @This @NonNull ConfigurationBuilder<C> lookup(MethodHandles.@NonNull Lookup lookup) {
+        this.lookup = Objects.requireNonNull(lookup, "lookup");
         return this;
     }
 
     /**
-     * Adds the following migration to this builder
+     * Sets the reflection service.
+     * <p>
+     * The reflection service is used by the library to find methods, call methods, and generate implementations for
+     * the configuration interface.
+     *
+     * @param reflectionService the reflection service
+     * @return this builder
+     */
+    public @This @NonNull ConfigurationBuilder<C> reflectionService(@NonNull ReflectionService reflectionService) {
+        this.reflectionService = Objects.requireNonNull(reflectionService, "reflectionService");
+        return this;
+    }
+
+    /**
+     * Adds the following migration to this builder.
+     * <p>
+     * <b>Migrations are not trivial.</b> By using this method, you affirm that you have read the package javadoc for
+     * {@link space.arim.dazzleconf2.migration}, and you understand the "perpetual migration" trap.
      * <p>
      * The order is significant, because migrations are checked in the order in which they are declared. Thus,
      * migrations that come first need to ensure they aren't wrongly handling different or overlapping versions.
@@ -275,7 +331,10 @@ public final class ConfigurationBuilder<C> {
     }
 
     /**
-     * Adds the following migrations to this builder
+     * Adds the following migrations to this builder.
+     * <p>
+     * <b>Migrations are not trivial.</b> By using this method, you affirm that you have read the package javadoc for
+     * {@link space.arim.dazzleconf2.migration}, and you understand the "perpetual migration" trap.
      * <p>
      * The order is significant, because migrations are checked in the order in which they are declared. Thus,
      * migrations that come first need to ensure they aren't wrongly handling different or overlapping versions.
@@ -300,18 +359,25 @@ public final class ConfigurationBuilder<C> {
     public @NonNull Configuration<C> build() {
 
         // Harden values
-        Locale locale = (this.locale == null) ? Locale.getDefault() : this.locale;
         List<TypeLiaison> typeLiaisons = ImmutableCollections.listOf(this.typeLiaisons);
-        Instantiator instantiator = (this.instantiator == null) ?
-                new DefaultInstantiator(configType.getRawType().getClassLoader()) : this.instantiator;
         List<Migration<?, C>> migrations = ImmutableCollections.listOf(this.migrations);
+
+        // Load reflection (caller-sensitive)
+        MethodHandles.Lookup lookup = (this.lookup == null) ? MethodHandles.lookup() : this.lookup;
+        ReflectionService reflectionService = (this.reflectionService == null) ?
+                new DefaultReflectionService() : this.reflectionService;
+
+        // Load language (locale-sensitive)
+        Locale locale = (this.locale == null) ? Locale.getDefault() : this.locale;
+        LibraryLang libraryLang = LibraryLang.loadLang(locale);
 
         // Scan and build definition
         ConfigurationDefinition<C> definition = new DefinitionScan(
-                LibraryLang.loadLang(locale), new LiaisonCache(typeLiaisons), instantiator
-        ).read(configType);
+                libraryLang, new LiaisonCache(typeLiaisons),
+                reflectionService.makeInstantiator(lookup), reflectionService.makeMethodMirror(lookup)
+        ).new Run<>(configType).read();
 
         // Yield final
-        return new BuiltConfig<>(definition, locale, typeLiaisons, keyMapper, migrations);
+        return new BuiltConfig<>(definition, locale, libraryLang, typeLiaisons, keyMapper, migrations);
     }
 }

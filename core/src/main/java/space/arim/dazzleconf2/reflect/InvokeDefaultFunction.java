@@ -19,12 +19,15 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.apiguardian.api.API;
+
 /**
  * A marker value used for {@link MethodYield} that instructs the {@link Instantiator} to call the default method.
  * <p>
  * Equality on this object is not specified. Usage should test for it using <code>instanceof</code> checks.
  *
  */
+@API(status = API.Status.MAINTAINED)
 public final class InvokeDefaultFunction {
 
     /**

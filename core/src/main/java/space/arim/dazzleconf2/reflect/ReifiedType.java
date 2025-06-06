@@ -23,7 +23,8 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Objects;
 
 import static space.arim.dazzleconf2.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
 

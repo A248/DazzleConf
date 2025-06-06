@@ -23,13 +23,24 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.ReloadShell;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Objects;
 
-final class ProxyHandlerToDelegate<I> extends ProxyHandler {
+final class ProxyHandlerToDelegate<I> extends ProxyHandler<I> {
 
     private volatile I delegate;
+    private final MethodHandles.Lookup lookup;
+    private volatile boolean needLookup;
+
+    ProxyHandlerToDelegate(Class<I> iface, MethodHandles.Lookup lookup) {
+        super(iface);
+        this.lookup = lookup;
+    }
 
     @Override
     Object implInvoke(Method method, Object[] args) throws Throwable {
@@ -37,33 +48,39 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
         if (delegate == null) {
             throw new NullPointerException("delegate");
         }
-        try {
-            return method.invoke(delegate, args);
-        } catch (IllegalAccessException ex) {
-            throw new AssertionError(ex);
+        if (!needLookup) {
+            try {
+                return method.invoke(delegate, args);
+            } catch (IllegalAccessException ex) {
+                needLookup = true; // Data race okay
 
-        } catch (InvocationTargetException ex) {
-            Throwable cause = ex.getCause();
-            if (cause != null) {
-                throw cause;
-            } else {
-                throw ex;
+            } catch (InvocationTargetException ex) {
+                Throwable cause = ex.getCause();
+                if (cause != null) {
+                    throw cause;
+                } else {
+                    throw ex;
+                }
             }
         }
+        // The java.lang.reflect.Proxy API is just not suited to this case
+        MethodHandle methodHandle;
+        try {
+            methodHandle = lookup.unreflect(method);
+        } catch (IllegalAccessException ex) {
+            throw new IllegalStateException(ex);
+        }
+        return methodHandle.bindTo(delegate).invokeWithArguments(args);
     }
 
     @Override
-    boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler otherHandler) {
+    boolean implEquals(Object ourProxy, Object otherProxy, ProxyHandler<?> otherHandler) {
         I delegate = this.delegate;
         if (otherHandler instanceof ProxyHandlerToDelegate) {
             ProxyHandlerToDelegate<?> that = (ProxyHandlerToDelegate<?>) otherHandler;
             return Objects.equals(delegate, that.delegate);
         }
-        if (delegate == null) {
-            // We lack the information to do anything else
-            return false;
-        }
-        return delegate.equals(otherProxy);
+        return delegate != null && delegate.equals(otherProxy);
     }
 
     @Override
@@ -73,7 +90,7 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
 
     @Override
     void implToString(StringBuilder output) {
-        output.append(delegate);
+        output.append(',').append("delegate").append('=').append(delegate);
     }
 
     class AsReloadShell implements ReloadShell<I> {
@@ -86,7 +103,24 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
 
         @Override
         public void setCurrentDelegate(@Nullable I delegate) {
+            checkNotShell(delegate);
             ProxyHandlerToDelegate.this.delegate = delegate;
+        }
+
+        // Nothing we can do to stop race conditions
+        private void checkNotShell(Object arg) {
+            if (arg == null) {
+                return;
+            }
+            if (shell == arg) {
+                throw new IllegalArgumentException("Cannot set the delegate to the shell itself");
+            }
+            if (Proxy.isProxyClass(arg.getClass())) {
+                InvocationHandler argHandler = Proxy.getInvocationHandler(arg);
+                if (argHandler instanceof ProxyHandlerToDelegate) {
+                    checkNotShell(((ProxyHandlerToDelegate<?>) argHandler).delegate);
+                }
+            }
         }
 
         @Override
@@ -97,21 +131,6 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler {
         @Override
         public @NonNull I getShell() {
             return shell;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == this) return true;
-
-            if (!(obj instanceof ReloadShell)) {
-                return false;
-            }
-            return Objects.equals(getCurrentDelegate(), ((ReloadShell<?>) obj).getCurrentDelegate());
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(getCurrentDelegate());
         }
 
         @Override

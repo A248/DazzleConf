@@ -22,6 +22,7 @@ package space.arim.dazzleconf.backend;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.support.ParameterDeclarations;
 import space.arim.dazzleconf2.backend.KeyPath;
 
 import java.util.ArrayList;
@@ -48,7 +49,7 @@ public final class KeyPathVerify {
     public static class Provider implements ArgumentsProvider {
 
         @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+        public Stream<? extends Arguments> provideArguments(ParameterDeclarations parameters, ExtensionContext context) throws Exception {
             return Stream.of(
                     (BiConsumer<KeyPath, String[]>) (keyPath, content) -> assertEquals(String.join(".", content), keyPath.toString()),
                     (keyPath, content) -> assertArrayEquals(content, keyPath.intoParts()),

@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -27,7 +28,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.stream.Stream;
 
 /**
- * Low level service for traversing a type hierarchy and getting and invoking methods on types in that hierarchy.
+ * Service for traversing a type hierarchy and getting and invoking methods on types in that hierarchy.
  * <p>
  * <b>Usage</b>
  * <p>
@@ -39,16 +40,9 @@ import java.util.stream.Stream;
  * <p>
  * Implementing this interface correctly requires a number of considerations. It is recommended to check the library
  * source code as a reference implementation.
- * <p>
- * <b>API status</b>
- * <p>
- * Because of this API's status as a service provider, it may require updating to keep in sync with the library's
- * minor versions. Some minor versions might offer new features, which would need to be implemented by this interface.
- * <p>
- * If implementations of {@code MethodMirror} are not updated, they will still be compatible with this library in a
- * strict sense. Existing code will never break. However, newer features may be disabled or refuse to work.
  *
  */
+@API(status = API.Status.MAINTAINED)
 public interface MethodMirror {
 
     /**

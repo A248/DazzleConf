@@ -21,8 +21,8 @@ package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.engine.CommentLocation;
 
 import java.util.Objects;
 
@@ -31,12 +31,13 @@ import java.util.Objects;
  * successfully read and caches it so that it can be reused.
  * <p>
  * This wrapper assumes that it, and only it, is the one writing to the delegate backend with
- * {@link Backend#write(CommentData, DataStreamable)}. If the monopoly on writing is violated, this class should not be used.
+ * {@link Backend#write(Document)}. If the monopoly on writing is violated, this class should not
+ * be used.
  */
 public final class CachedBackend implements Backend {
 
     private final Backend delegate;
-    private DataTree currentTree;
+    private Document currentDocument;
 
     /**
      * Creates from the given delegate
@@ -48,34 +49,32 @@ public final class CachedBackend implements Backend {
     }
 
     @Override
-    public @NonNull LoadResult<? extends @Nullable DataStreamable> read() {
-        if (currentTree != null) {
-            return LoadResult.of(currentTree);
+    public @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource) {
+        if (currentDocument != null) {
+            return LoadResult.of(currentDocument);
         }
-        LoadResult<DataTree> read = delegate.read()
-                .map((streamable) -> streamable == null ? null : streamable.getAsTree());
+        LoadResult<Document> read = delegate.read(errorSource);
         if (read.isSuccess()) {
-            currentTree = read.getOrThrow();
+            currentDocument = read.getOrThrow();
         }
         return read;
     }
 
     @Override
-    public void write(@Nullable CommentData topLevelComments, @NonNull DataStreamable data) {
-        DataTree tree = data.getAsTree();
+    public void write(@NonNull Document document) {
         // If delegate#writeTree throws an exception, we can't rely on whether that operation completed
-        currentTree = null;
-        delegate.write(topLevelComments, tree);
-        currentTree = tree;
-    }
-
-    @Override
-    public boolean supportsComments(@NonNull CommentLocation location) {
-        return delegate.supportsComments(location);
+        currentDocument = null;
+        delegate.write(document);
+        currentDocument = document;
     }
 
     @Override
     public @NonNull KeyMapper recommendKeyMapper() {
         return delegate.recommendKeyMapper();
+    }
+
+    @Override
+    public @NonNull Meta meta() {
+        return delegate.meta();
     }
 }

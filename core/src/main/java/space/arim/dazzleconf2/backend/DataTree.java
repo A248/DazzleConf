@@ -21,12 +21,14 @@ package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.Pure;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.stream.Stream;
 
 /**
  * A tree of in-memory configuration data. This tree is essentially a map of keys to values representing in-memory
@@ -44,28 +46,55 @@ import java.util.stream.Stream;
  * <p>
  * <b>Keys and values</b>
  * <p>
- * Keys are represented as <code>Object</code> and must be one of the canonical types (excl. lists or nested trees).
- * Values are wrapped by {@link DataEntry}, but are also <code>Object</code> and must be one of the canonical types.
+ * Values are wrapped by {@link DataEntry} and must be one of the canonical types. Keys are represented as
+ * <code>Object</code> and must be one of the canonical types, excluding lists or trees.
  * <p>
  * Canonical types:<ul>
  * <li>String
  * <li>primitives represented by their boxed types
  * <li>DataTree for nesting
- * <li>Lists of the above types. The List implementation must be immutable.
+ * <li>Lists of {@code DataEntry}
  * </ul>
- * Recall that keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime, and they can be
+ * Keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime, and they can be
  * checked using {@link #validateKey(Object)} and {@link DataEntry#validateValue(Object)}.
  * <p>
  * Mutability of this class is <b>not defined</b>. Please use {@link DataTree.Mut} or {@link DataTree.Immut} if you need
  * mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
  *
  */
-public abstract class DataTree implements DataStreamable {
+public abstract class DataTree {
 
     @NonNull LinkedHashMap<Object, DataEntry> data;
 
     DataTree(LinkedHashMap<Object, DataEntry> data) {
         this.data = data;
+    }
+
+    /**
+     * Whether this data tree is devoid of key/value pairs
+     *
+     * @return true if empty
+     */
+    public boolean isEmpty() {
+        return data.isEmpty();
+    }
+
+    /**
+     * The number of key/value pairs in this data tree indicates its size
+     *
+     * @return the size of this data tree
+     */
+    public int size() {
+        return data.size();
+    }
+
+    /**
+     * Gets all the keys in this data tree.
+     *
+     * @return the key set, which may be immutable
+     */
+    public @NonNull Set<@NonNull Object> keySet() {
+        return Collections.unmodifiableSet(data.keySet());
     }
 
     /**
@@ -78,20 +107,9 @@ public abstract class DataTree implements DataStreamable {
      * @param key the key
      * @return the entry
      */
+    @Pure
     public @Nullable DataEntry get(@NonNull Object key) {
         return data.get(key);
-    }
-
-    /**
-     * Gets all the keys used in this tree.
-     * <p>
-     * The returned collection is a mutable copy; it is unaffected by the mutability of this {@code DataTree}, and
-     * concurrent updates to this tree will not affect it either.
-     *
-     * @return the key set, a mutable copy
-     */
-    public @NonNull Collection<@NonNull Object> getKeys() {
-        return new LinkedHashSet<>(data.keySet());
     }
 
     /**
@@ -156,13 +174,22 @@ public abstract class DataTree implements DataStreamable {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + '{' + data + '}';
+        StringBuilder output = new StringBuilder();
+        toString(new DataToString(output).new Scope(0));
+        return output.toString();
+    }
+
+    void toString(DataToString.Scope output) {
+        output.append(getClass().getSimpleName());
+        output.mapToString(data);
     }
 
     /**
-     * A data tree which is unmistakably immutable.
+     * A data tree which is immutable.
      * <p>
      * Note that although the tree itself is immutable, any {@code DataTree}s contained within it may or may not be.
+     * Thus, this type serves more as a hint that the tree should not be mutated, than a solid guarantee that its
+     * contents will never change.
      */
     public static final class Immut extends DataTree {
 
@@ -269,30 +296,50 @@ public abstract class DataTree implements DataStreamable {
             ensureMutable();
             data.clear();
         }
-    }
 
-    // Implementation of self as DataStreamable
+        /**
+         * Merges all data in the specified data tree into this one, merging nested sections.
+         * <p>
+         * If existing key/value pairs are shared between this tree and {@code source}, they will be overwritten and
+         * copied from {@code source}. Key/value pairs that are unique to this tree will be retained.
+         * <p>
+         * <b>Merging nested trees and lists</b>
+         * <p>
+         * If this function encounters a key/value pair that is shared between this tree and {@code source}, and both
+         * values are {@code DataTree}s, this function will act recursively and merge the two data trees. An
+         * {@code UnsupportedOperationException} will be thrown if this is impossible due to the presence of
+         * {@code DataTree.Immut}.
+         * <p>
+         * Lists are treated differently. If this function encounters a key/value pair that is shared, and both
+         * values are lists, this function will overwrite the whole list.
+         *
+         * @param source the tree whose entries to copy into this one
+         * @throws UnsupportedOperationException if this tree contains a {@code DataTree.Immut} or {@code List} that cannot be mutated
+         */
+        public void copyFrom(@NonNull DataTree source) {
+            ensureMutable();
+            source.forEach((key, copyEntry) -> {
+                Object copyValue = copyEntry.getValue();
+                if (copyValue instanceof DataTree) {
+                    DataTree copyTree = (DataTree) copyValue;
 
-    /**
-     * Returns this data tree, itself
-     *
-     * @return this object
-     */
-    @Override
-    public @NonNull DataTree getAsTree() {
-        return this;
-    }
+                    DataEntry existingEntry = data.get(key);
+                    if (existingEntry != null) {
+                        Object existingValue = existingEntry.getValue();
+                        if (existingValue instanceof DataTree.Mut) {
+                            ((DataTree.Mut) existingValue).copyFrom(copyTree);
+                            return;
 
-    /**
-     * Gets the data in this tree as a {@link Stream}.
-     * <p>
-     * The stream is ordered according to the insertion order of this tree.
-     *
-     * @return a stream of keys and data entries
-     */
-    @Override
-    public @NonNull Stream<Map.@NonNull Entry<@NonNull Object, ? extends DataStreamable.@NonNull Entry>> getAsStream() {
-        return data.entrySet().stream();
+                        } else if (existingValue instanceof DataTree.Immut) {
+                            throw new IllegalStateException(
+                                    "Tried to merge into data tree at " + key + " but it is immutable"
+                            );
+                        }
+                    }
+                }
+                data.put(key, copyEntry);
+            });
+        }
     }
 
 }

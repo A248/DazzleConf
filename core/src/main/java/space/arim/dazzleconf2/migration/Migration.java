@@ -53,7 +53,10 @@ public final class Migration<C_OLD, C_NEW> {
      * @return a load result that yields the newly transitioned configuration
      */
     public @NonNull LoadResult<@NonNull C_NEW> tryMigrate(@NonNull MigrateContext migrateContext) {
-        return migrateSource.load(migrateContext).map((loaded) -> transition.migrateFrom(loaded, migrateContext));
+        return migrateSource.load(migrateContext).map((loaded) -> {
+            C_NEW transitioned = transition.migrateFrom(loaded, migrateContext);
+            return Objects.requireNonNull(transitioned, "transition returned null");
+        });
     }
 
     /**
