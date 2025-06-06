@@ -23,6 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.Printable;
 
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Locale;
 
@@ -56,7 +57,17 @@ public final class LibraryLangAr extends LibraryLang.Base {
 
     @Override
     public @NonNull String backendMessage() {
-        return "";
+        return "تقرير التنسيق";
+    }
+
+    @Override
+    public @NonNull String syntaxLinter() {
+        return "توثيق التنسيق";
+    }
+
+    @Override
+    public @NonNull String failed() {
+        return "فشل";
     }
 
     @Override
@@ -91,7 +102,7 @@ public final class LibraryLangAr extends LibraryLang.Base {
 
     @Override
     public @NonNull String errorIntro() {
-        return "لقينا عقبات تمنع تحميل الإادادات";
+        return "لقينا اشكاليات في تحميل ملف التكوين";
     }
 
     @Override
@@ -141,6 +152,32 @@ public final class LibraryLangAr extends LibraryLang.Base {
 
     @Override
     public @NonNull String configurationSection() {
-        return "مجموعة إلاعدادات";
+        return "قسم التكوين";
+    }
+
+    @Override
+    public @NonNull String syntaxInvalidPleaseTryAt(@NonNull URL url) {
+        return "التنسيق في ملف التكوين لك غير صحيح. ارجوك ان تستخدم توثيق التنسيق في " + url +
+                ". نسخ ملف التكوين ولصقه هناك كي تحلل الاشكاليات.";
+    }
+
+    @Override
+    public @NonNull String syntax() {
+        return "التنسيق";
+    }
+
+    @Override
+    public @NonNull String otherReason() {
+        return "سبب اخر";
+    }
+
+    @Override
+    public @NonNull String yamlNotAMap() {
+        return "الملف الYAML لزاما يكون خريطة وليس نوعاً اخراً في تنسيق YAML";
+    }
+
+    @Override
+    public @NonNull String tomlDateType() {
+        return "لا يمكن استخدام انواع تاريخ من تنسيق TOML. من فضلك استخدم اقتباس.";
     }
 }

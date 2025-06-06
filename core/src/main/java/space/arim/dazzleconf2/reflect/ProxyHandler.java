@@ -29,7 +29,13 @@ import java.lang.reflect.Proxy;
  * Subclasses <b>MUST</b> be aware of each other and implement equality accordingly!
  *
  */
-abstract class ProxyHandler implements InvocationHandler {
+abstract class ProxyHandler<I> implements InvocationHandler {
+
+    final Class<I> iface;
+
+    ProxyHandler(Class<I> iface) {
+        this.iface = iface;
+    }
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
@@ -38,17 +44,23 @@ abstract class ProxyHandler implements InvocationHandler {
                 case "equals":
                     Object other = args[0];
                     InvocationHandler otherHandler;
-                    return other == proxy || Proxy.isProxyClass(other.getClass())
+                    ProxyHandler<?> otherProxyHandler;
+                    return other == proxy || other != null
+                            && Proxy.isProxyClass(other.getClass())
                             && (otherHandler = Proxy.getInvocationHandler(other)) instanceof ProxyHandler
-                            && implEquals(proxy, other, (ProxyHandler) otherHandler);
+                            && (otherProxyHandler = (ProxyHandler<?>) otherHandler).iface.equals(iface)
+                            && implEquals(proxy, other, otherProxyHandler);
                 case "hashCode":
                     return implHashCode();
                 case "toString":
                     StringBuilder output = new StringBuilder();
                     output.append(getClass().getSimpleName());
-                    output.append("{ ");
+                    output.append('{');
+                    output.append("interface");
+                    output.append('=');
+                    output.append(iface.getName());
                     implToString(output);
-                    output.append(" }");
+                    output.append('}');
                     return output.toString();
                 default:
                     // Breaks the contract of java.lang.reflect.Proxy
@@ -59,9 +71,13 @@ abstract class ProxyHandler implements InvocationHandler {
         return implInvoke(method, args);
     }
 
+    Object fastPathNoParams(String methodName) {
+        return null;
+    }
+
     abstract Object implInvoke(Method method, Object[] args) throws Throwable;
 
-    abstract boolean implEquals(Object proxy, Object other, ProxyHandler otherHandler);
+    abstract boolean implEquals(Object proxy, Object other, ProxyHandler<?> otherHandler);
 
     abstract int implHashCode();
 

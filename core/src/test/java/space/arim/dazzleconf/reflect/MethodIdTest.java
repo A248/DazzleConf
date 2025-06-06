@@ -26,6 +26,7 @@ import space.arim.dazzleconf2.reflect.ReifiedType;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static space.arim.dazzleconf.Utilities.assertEqualsBothWays;
 
 public class MethodIdTest {
 
@@ -50,9 +51,9 @@ public class MethodIdTest {
     @Test
     public void construct() {
         MethodId sampleOneId = new MethodId("sampleOne", voidType, new ReifiedType[] {stringType}, false);
+        assertNull(sampleOneId.getOpaqueCache());
         assertEquals("sampleOne", sampleOneId.name());
-        assertNull(sampleOneId.method());
-        assertEquals(sampleOne, sampleOneId.getMethod(Sample.class));
+        //assertEquals(sampleOne, sampleOneId.getMethod(Sample.class));
         assertEquals(voidType, sampleOneId.returnType());
         assertArrayEquals(new ReifiedType[] {stringType}, sampleOneId.parameters());
         assertEquals(1, sampleOneId.parameterCount());
@@ -60,9 +61,9 @@ public class MethodIdTest {
         assertFalse(sampleOneId.isDefault());
 
         MethodId sampleTwoId = assertDoesNotThrow(() -> new MethodId("sampleTwo", booleanType, new ReifiedType[0], true));
+        assertNull(sampleTwoId.getOpaqueCache());
         assertEquals("sampleTwo", sampleTwoId.name());
-        assertNull(sampleTwoId.method());
-        assertEquals(sampleTwo, sampleTwoId.getMethod(Sample.class));
+        //assertEquals(sampleTwo, sampleTwoId.getMethod(Sample.class));
         assertEquals(booleanType, sampleTwoId.returnType());
         assertArrayEquals(new ReifiedType[0], sampleTwoId.parameters());
         assertTrue(sampleTwoId.isDefault());
@@ -70,41 +71,37 @@ public class MethodIdTest {
 
     @Test
     public void constructNull() {
-        assertThrows(NullPointerException.class, () -> new MethodId((String) null, stringType, new ReifiedType[] {stringType}, false));
+        assertThrows(NullPointerException.class, () -> new MethodId(null, stringType, new ReifiedType[] {stringType}, false));
         assertThrows(NullPointerException.class, () -> new MethodId("sampleOne", null, new ReifiedType[] {stringType}, false));
         assertThrows(NullPointerException.class, () -> new MethodId("sampleOne", stringType, null, false));
         assertThrows(NullPointerException.class, () -> new MethodId("sampleOne", stringType, new ReifiedType[] {null}, false));
     }
 
+    record Cache(Method method) implements MethodId.OpaqueCache {}
+
     @Test
-    public void constructFromMethod() {
-        MethodId sampleOneId = assertDoesNotThrow(() -> new MethodId(sampleOne, voidType, new ReifiedType[] {stringType}, false));
-        assertEquals("sampleOne", sampleOneId.name());
-        assertEquals(sampleOne, sampleOneId.method());
-        assertSame(sampleOne, sampleOneId.getMethod(getClass()));
+    public void withOpaqueCache() {
+        MethodId original = new MethodId("sampleOne", voidType, new ReifiedType[] {stringType}, false);
+        MethodId withCache = original.withOpaqueCache(new Cache(sampleOne));
+        assertNotNull(withCache.getOpaqueCache());
+        assertSame(sampleOne, ((Cache) withCache.getOpaqueCache()).method);
 
-        assertThrows(IllegalArgumentException.class, () -> new MethodId(sampleOne, stringType, new ReifiedType[] {stringType}, false));
-        assertThrows(IllegalArgumentException.class, () -> new MethodId(sampleOne, voidType, new ReifiedType[] {}, false));
-        assertThrows(IllegalArgumentException.class, () -> new MethodId(sampleOne, voidType, new ReifiedType[] {stringType}, true));
-
-        MethodId sampleTwoId = assertDoesNotThrow(() -> new MethodId(sampleTwo, booleanType, new ReifiedType[0], true));
-        assertEquals("sampleTwo", sampleTwoId.name());
-        assertEquals(sampleTwo, sampleTwoId.method());
-        assertSame(sampleTwo, sampleTwoId.getMethod(getClass()));
-
-        assertThrows(IllegalArgumentException.class, () -> new MethodId(sampleTwo, stringType, new ReifiedType[0], true));
-        assertThrows(IllegalArgumentException.class, () -> new MethodId(sampleTwo, booleanType, new ReifiedType[] {stringType}, true));
-        assertThrows(IllegalArgumentException.class, () -> new MethodId(sampleTwo, booleanType, new ReifiedType[0], false));
+        assertEquals("sampleOne", withCache.name(), "same details");
+        assertEqualsBothWays(original, withCache);
+        MethodId withCacheCleared = withCache.withOpaqueCache(null);
+        assertNull(withCacheCleared.getOpaqueCache());
+        assertEqualsBothWays(withCache, withCacheCleared);
+        assertEqualsBothWays(original, withCacheCleared);
     }
 
     @Test
     public void toStringTest() {
-        MethodId sampleOne = new MethodId(this.sampleOne, voidType, new ReifiedType[] {stringType}, false);
+        MethodId sampleOne = new MethodId("sampleOne", voidType, new ReifiedType[] {stringType}, false);
         String toString = sampleOne.toString();
         assertTrue(toString.contains("sampleOne"));
         assertTrue(toString.contains(String.class.getSimpleName()));
 
-        MethodId sampleTwo = new MethodId(this.sampleTwo, booleanType, new ReifiedType[0], true);
+        MethodId sampleTwo = new MethodId("sampleTwo", booleanType, new ReifiedType[0], true);
         toString = sampleTwo.toString();
         assertTrue(toString.contains("default"));
         assertTrue(toString.contains("sampleTwo"));

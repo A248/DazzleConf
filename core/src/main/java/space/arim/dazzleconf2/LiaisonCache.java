@@ -19,8 +19,12 @@
 
 package space.arim.dazzleconf2;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.Comments;
+import space.arim.dazzleconf2.engine.DefaultValues;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.TypeLiaison;
 import space.arim.dazzleconf2.reflect.MethodId;
 import space.arim.dazzleconf2.reflect.MethodMirror;
 import space.arim.dazzleconf2.reflect.TypeToken;
@@ -91,8 +95,8 @@ final class LiaisonCache {
             Object defaultVal;
             try {
                 defaultVal = defaultsInvoker.invokeMethod(methodId);
-            } catch (InvocationTargetException e) {
-                throw new DeveloperMistakeException("Default method threw an exception", e);
+            } catch (InvocationTargetException ex) {
+                throw new DeveloperMistakeException("Default method threw an exception", ex);
             }
             if (defaultVal == null) {
                 throw new DeveloperMistakeException("Default method " + methodId + " returned null");
@@ -113,15 +117,24 @@ final class LiaisonCache {
         TypeSkeleton.MethodNode<V> makeMethodNode(MethodId methodId, boolean optional,
                                                   AnnotatedElement methodAnnotations,
                                                   MethodMirror.Invoker defaultsInvoker) {
-            DefaultValues<V> defaultValues = makeDefaultValues(
-                    methodId, optional, () -> methodAnnotations, defaultsInvoker
-            );
-            CommentData comments;
-            // Try the method itself first, then look at the return type's class declaration
-            comments = CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
-            if (comments.isEmpty()) {
-                comments = CommentData.buildFrom(methodId.returnType().rawType().getAnnotationsByType(Comments.class));
-            }
+            TypeLiaison.DefaultInit defaultInit = new TypeLiaison.DefaultInit() {
+                @Override
+                public @NonNull TypeToken<?> enclosingType() {
+                    return typeToken;
+                }
+
+                @Override
+                public @NonNull String label() {
+                    return methodId.name();
+                }
+
+                @Override
+                public @NonNull AnnotatedElement methodAnnotations() {
+                    return methodAnnotations;
+                }
+            };
+            DefaultValues<V> defaultValues = makeDefaultValues(methodId, optional, defaultInit, defaultsInvoker);
+            CommentData comments  = CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
             return new TypeSkeleton.MethodNode<>(comments, optional, methodId, defaultValues, serializer);
         }
     }

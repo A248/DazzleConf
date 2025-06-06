@@ -38,8 +38,8 @@
  * Root data is just bytes or string data; it is unparsed and could be full of a bajillion errors.
  * <p>
  * The {@link space.arim.dazzleconf2.backend.Backend} represents the configuration format itself. An implementation
- * should exist for YAML, Json, and any other configuration formats that are to be supported. A backend takes a data
- * root, and it allows reading or writing to that root in the form of loading or writing {@code DataTree}.
+ * might exist for YAML, HOCON, TOML, .ini, .properties, or any other configuration formats that are to be supported. A
+ * backend takes a data root, and it allows reading or writing to that root in the form of a data tree.
  * <p>
  * Some backends require specific roots. For example, a backend for a human-readable configuration format might
  * expect a {@code ReadableRoot}. A backend for byte serialization, in contrast, might need to use {@code BinaryRoot}

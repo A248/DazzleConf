@@ -19,67 +19,198 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.internals.ImmutableCollections;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * Bank of values yielded when calling an instantiated proxy.
  * <p>
- * This class is mutable. It is designed to be passed from its producer to its consumer.
+ * This class is mutable: it is designed to be passed from its producer to its consumer. If defensive copies are
+ * needed, see {@link #copy()}.
  */
+@API(status = API.Status.MAINTAINED)
 public final class MethodYield {
 
     private final @NonNull Map<Class<?>, Map<MethodId, Object>> backing;
+    private transient int sizeEstimate;
 
     /**
      * Creates an empty yield.
      * <p>
-     * Values can be added by calling {@link #addValue(Class, MethodId, Object)}.
+     * Values can be added by calling {@link #addEntry(Class, MethodId, Object)}.
      */
     public MethodYield() {
-        this.backing = new HashMap<>();
+        this(new HashMap<>());
+    }
+
+    private MethodYield(Map<Class<?>, Map<MethodId, Object>> backing) {
+        this.backing = backing;
     }
 
     /**
-     * Creates a method yield that is identical to the provided instance.
+     * Modifies this builder, adding a yielded value as given.
      * <p>
-     * Mutating this {@code MethodYield}, such as by adding or clearing values, will not affect the argument.
-     *
-     * @param copyFrom the method yield from which to copy
-     */
-    public MethodYield(@NonNull MethodYield copyFrom) {
-        this.backing = new HashMap<>(copyFrom.backing);
-    }
-
-    /**
-     * Modifies this builder, adding a yielded value as given
+     * If the given method already has a value set for it, it is replaced.
+     * <p>
+     * If the given method exists in {@code implementable} but was overidden by a subclass, the subclass should be
+     * passed instead.
      *
      * @param implementable the interface being implemented
      * @param method        a method within that interface
-     * @param value         the value to supply
+     * @param value         the value to return, or {@link InvokeDefaultFunction} to call the default implementation
      */
-    public void addValue(@NonNull Class<?> implementable, @NonNull MethodId method, @NonNull Object value) {
-        backing.computeIfAbsent(implementable, (k) -> new HashMap<>()).put(method, value);
+    public void addEntry(@NonNull Class<?> implementable, @NonNull MethodId method, @NonNull Object value) {
+        Objects.requireNonNull(implementable, "implementable");
+        Objects.requireNonNull(method, "method");
+        Objects.requireNonNull(value, "value");
+
+        Map<MethodId, Object> methodMap = backing.computeIfAbsent(implementable, (k) -> new HashMap<>());
+        if (methodMap.put(method, value) == null) {
+            sizeEstimate++;
+        }
     }
 
     /**
      * Clears all added values and starts over again
      */
-    public void clearValues() {
+    public void clear() {
         backing.clear();
+        sizeEstimate = 0;
     }
 
     /**
-     * Gets yieldable values for the given implementable interface
+     * Gets the yieldable values
      *
      * @param implementable the interface being implemented
      * @return the values for method calls on that interface's methods, immutable
      */
     public Map<@NonNull MethodId, @NonNull Object> valuesFor(@NonNull Class<?> implementable) {
         return backing.getOrDefault(implementable, ImmutableCollections.emptyMap());
+    }
+
+    /**
+     * Gets all entries added with {@link #addEntry(Class, MethodId, Object)}
+     *
+     * @return the iterable entries
+     */
+    public @NonNull Iterable<@NonNull Entry> entries() {
+        return new Iterable<Entry>() {
+            @Override
+            public @NonNull Iterator<Entry> iterator() {
+                return new Iter(backing.entrySet().iterator());
+            }
+
+            @Override
+            public void forEach(Consumer<? super Entry> action) {
+                backing.forEach((implementable, methodMap) -> {
+                    methodMap.entrySet().forEach(methodAndValue -> {
+                        action.accept(new Entry(implementable, methodAndValue));
+                    });
+                });
+            }
+        };
+    }
+
+    /**
+     * Gets the estimated number of entries
+     *
+     * @return the estimated size of this {@code MethodYield}
+     */
+    public int sizeEstimate() {
+        return sizeEstimate;
+    }
+
+    /**
+     * An entry added to the method yield
+     *
+     */
+    public static final class Entry {
+
+        private final Class<?> implementable;
+        private final Map.Entry<MethodId, Object> methodAndValue;
+
+        Entry(Class<?> implementable, Map.Entry<MethodId, Object> methodAndValue) {
+            this.implementable = implementable;
+            this.methodAndValue = methodAndValue;
+        }
+
+        /**
+         * Gets the interface being implemented
+         *
+         * @return the interface
+         */
+        public @NonNull Class<?> implementable() {
+            return implementable;
+        }
+
+        /**
+         * Gets the method
+         *
+         * @return the method
+         */
+        public @NonNull MethodId method() {
+            return methodAndValue.getKey();
+        }
+
+        /**
+         * Gets the return value for the method, or {@link InvokeDefaultFunction} to call the default implementation
+         *
+         * @return the return value; primitive values will be boxed
+         */
+        public @NonNull Object returnValue() {
+            return methodAndValue.getValue();
+        }
+    }
+
+    private static final class Iter implements Iterator<Entry> {
+
+        private final Iterator<Map.Entry<Class<?>, Map<MethodId, Object>>> backing;
+        private Class<?> currentType;
+        private Iterator<Map.Entry<MethodId, Object>> currentMap;
+
+        private Iter(Iterator<Map.Entry<Class<?>, Map<MethodId, Object>>> backing) {
+            this.backing = backing;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return (currentMap != null && currentMap.hasNext()) || backing.hasNext();
+        }
+
+        @Override
+        public Entry next() {
+            if (currentMap == null || !currentMap.hasNext()) {
+                Map.Entry<Class<?>, Map<MethodId, Object>> nextMap = backing.next();
+                currentType = nextMap.getKey();
+                currentMap = nextMap.getValue().entrySet().iterator();
+            }
+            return new Entry(currentType, currentMap.next());
+        }
+    }
+
+    /**
+     * Returns a deep copy of this method yield's contents.
+     * <p>
+     * Mutating this {@code MethodYield}, such as by adding or clearing values, will not affect the copy; likewise
+     * mutating the copy will not affect this instance.
+     *
+     * @return a copy of this method yield's contents
+     */
+    public @NonNull MethodYield copy() {
+        Map<Class<?>, Map<MethodId, Object>> copyBacking = new HashMap<>(this.backing.size());
+        backing.forEach((clazz, values) -> {
+            copyBacking.put(clazz, new HashMap<>(values));
+        });
+        MethodYield copy = new MethodYield(copyBacking);
+        copy.sizeEstimate = sizeEstimate;
+        return copy;
     }
 
     @Override

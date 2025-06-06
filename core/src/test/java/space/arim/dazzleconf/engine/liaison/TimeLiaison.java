@@ -61,11 +61,13 @@ public final class TimeLiaison implements TypeLiaison {
     private final class InstantAgent implements Agent<Instant> {
 
         @Override
+        @SideEffectFree
         public @Nullable DefaultValues<Instant> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             return null;
         }
 
         @Override
+        @SideEffectFree
         public @NonNull SerializeDeserialize<Instant> makeSerializer() {
             return new SerializeDeserialize<Instant>() {
                 @Override
@@ -79,11 +81,6 @@ public final class TimeLiaison implements TypeLiaison {
                         }
                         return LoadResult.of(parsed);
                     });
-                }
-
-                @Override
-                public @NonNull LoadResult<@NonNull Instant> deserializeUpdate(@NonNull DeserializeInput deser, @NonNull SerializeOutput updateTo) {
-                    return deserialize(deser);
                 }
 
                 @Override

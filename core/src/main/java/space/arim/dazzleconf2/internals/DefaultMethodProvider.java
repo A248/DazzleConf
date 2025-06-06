@@ -20,12 +20,13 @@
 package space.arim.dazzleconf2.internals;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public interface DefaultMethodProvider {
 
-	MethodHandle getMethodHandle(Method method)
+	MethodHandle getMethodHandle(Method method, MethodHandles.Lookup lookup)
 			throws IllegalAccessException, InstantiationException, InvocationTargetException;
 
 }

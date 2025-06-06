@@ -1,4 +1,5 @@
 module space.arim.dazzleconf {
+	requires static org.apiguardian.api;
     requires static org.checkerframework.checker.qual;
 	exports space.arim.dazzleconf;
 	exports space.arim.dazzleconf.annote;
@@ -12,6 +13,8 @@ module space.arim.dazzleconf {
 	exports space.arim.dazzleconf2.backend;
 	exports space.arim.dazzleconf2.engine;
 	exports space.arim.dazzleconf2.engine.liaison;
+	exports space.arim.dazzleconf2.internals.lang to space.arim.dazzleconf.backend.hocon,
+			space.arim.dazzleconf.backend.toml, space.arim.dazzleconf.backend.yaml;
 	exports space.arim.dazzleconf2.migration;
 	exports space.arim.dazzleconf2.reflect;
 }

@@ -24,7 +24,11 @@ import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 final class LoadError implements ErrorContext, LibraryLang.Accessor {
 
@@ -53,13 +57,21 @@ final class LoadError implements ErrorContext, LibraryLang.Accessor {
     }
 
     @Override
-    public @NonNull Printable displayDetails() {
+    public @NonNull Printable display() {
         return new Printable.Abstract() {
             @Override
             public void printTo(@NonNull Appendable output) throws IOException {
+
+                // Append the main message
+                output.append(libraryLang.failed());
+                output.append(':');
+                output.append(' ');
+                message.printTo(output);
+
+                // Append each of the detail values
                 for (Key<?> key : allKeys()) {
+                    output.append("\n  ");
                     formatKeyData(output, key);
-                    output.append('\n');
                 }
             }
         };
@@ -109,4 +121,21 @@ final class LoadError implements ErrorContext, LibraryLang.Accessor {
         return contexts.keySet();
     }
 
+    abstract static class Factory implements Source, LibraryLang.Accessor {
+
+        @Override
+        public @NonNull Locale getLocale() {
+            return getLibraryLang().getLocale();
+        }
+
+        @Override
+        public @NonNull <R> LoadResult<R> throwError(@NonNull CharSequence message) {
+            return LoadResult.failure(buildError(Printable.preBuilt(message)));
+        }
+
+        @Override
+        public @NonNull <R> LoadResult<R> throwError(@NonNull Printable message) {
+            return LoadResult.failure(buildError(message));
+        }
+    }
 }

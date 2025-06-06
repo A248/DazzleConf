@@ -21,9 +21,7 @@ package space.arim.dazzleconf2.internals.lang;
 
 import space.arim.dazzleconf2.backend.DataTree;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 
 final class ReadMe {
 
@@ -62,7 +60,7 @@ final class ReadMe {
     //
     //
 
-    static String displayCanonicalType(LibraryLang lang, Class<?> type, Object typeAssist) {
+    static String displayCanonicalType(LibraryLang lang, Class<?> type) {
         assert !type.isPrimitive() : "Use wrapper type";
 
         if (type.equals(String.class)) {
@@ -83,10 +81,10 @@ final class ReadMe {
         if (type.equals(Float.class) || type.equals(Double.class)) {
             return lang.decimal();
         }
-        if (typeAssist instanceof List || type.equals(List.class)) {
+        if (List.class.isAssignableFrom(type)) {
             return lang.list();
         }
-        if (typeAssist instanceof DataTree || type.equals(DataTree.class)) {
+        if (DataTree.class.isAssignableFrom(type)) {
             return lang.configurationSection();
         }
         throw new IllegalArgumentException("Not a canonical type " + type);

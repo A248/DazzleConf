@@ -20,15 +20,18 @@
 package space.arim.dazzleconf2.migration;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.engine.LoadListener;
+import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.engine.UpdateListener;
+import space.arim.dazzleconf2.engine.UpdateReason;
 
 /**
  * Contextual resources to be used by migrations.
  * <p>
- * This interface is implemented by whichever caller is using a migration, and passed to the migration itself.
+ * This interface is implemented by the caller when passed to migrations.
  */
-public interface MigrateContext {
+public interface MigrateContext extends UpdateListener {
 
     /**
      * The backend being used to load the main configuration.
@@ -41,13 +44,27 @@ public interface MigrateContext {
     @NonNull Backend mainBackend();
 
     /**
-     * The listener allowing migrations to signal updated paths.
+     * Allows migrations to signal updated paths.
      * <p>
-     * Migrations may optionally use this listener to identify which parts of a configuration (if applicable) were
-     * changed during the course of migration
-     *
-     * @return the load listener
+     * Migrations may optionally use this method to identify which parts of a configuration (if applicable) were
+     * changed during the course of migration.
+
+     * @param entryPath the path of the entry
+     * @param updateReason the update reason, note that some implementors will discard this parameter in favor of
+     *                     {@code UpdateReason.MIGRATED} even if a different value is passed
      */
-    @NonNull LoadListener loadListener();
+    @Override
+    void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason);
+
+    /**
+     * A factory allowing migrations to produce errors.
+     * <p>
+     * Unlike other parts of the API, the error source is provided as a getter, and not as an extended interface.
+     * This reflects the want to make implementing {@code MigrateContext} convenient, if library users wish to call
+     * migrations using their own approach.
+     *
+     * @return a factory for error production
+     */
+    ErrorContext.@NonNull Source errorSource();
 
 }

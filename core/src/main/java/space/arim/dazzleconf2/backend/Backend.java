@@ -22,6 +22,7 @@ package space.arim.dazzleconf2.backend;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.engine.CommentLocation;
@@ -38,12 +39,21 @@ import java.io.UncheckedIOException;
  * commenting workarounds, or accept escape sequences. Backends can provide such options through constructor
  * parameters.
  * <p>
- * Some configuration formats define null values. If a backend discovers a null value, it should treat the key/value
- * pair as non-existent.
+ * <b>Null values</b>
+ * <p>
+ * Some configuration formats define null values. If a backend discovers a null value, it is recommended that the
+ * backend act in a user-friendly manner, either by substituting the literal string "null", or by behaving as if the
+ * referring key-value pair or list element did not exist.
+ * <p>
+ * A null value caused by the user string <code>null</code> should be replaced by the literal value "null". However, a
+ * null value which is the implicit result of user omission (e.g., a key-value pair but missing the value), might cause
+ * the backend to omit the containing entry (whether a key-value pair or list element).
+ * <p>
+ * <b>Comments</b>
  * <p>
  * Backends are not required to support comments, but it is strongly preferred if they do. If comments <i>are</i>
- * supported, the backend <b>must</b> round-trip those comments between successive calls to <code>read</code> and
- * <code>write</code>.
+ * supported, the backend is required to report it in {@link Meta#supportsComments(boolean, boolean, CommentLocation)},
+ * and comments (where supported) must be read and written alongside data.
  * <p>
  * <b>Data roots</b>
  * <p>
@@ -54,19 +64,7 @@ import java.io.UncheckedIOException;
 public interface Backend {
 
     /**
-     * Reads data.
-     * <p>
-     * <b>Success values and streaming</b>
-     * <p>
-     * Upon success, the backend returns streamable data. It is recommended for the backend to implement
-     * {@link DataStreamable#getAsStream()} in an efficient manner.
-     * <p>
-     * Streams cannot communicate errors, however, meaning that any errors need to be returned from this method itself.
-     * Thus, this method cannot provide "pure" streaming, and some kind of intermediate buffer (like format-specific
-     * data) will need to be loaded into memory before this method can return.
-     * <p>
-     * However, there is still value in the backend implementing a stream-efficient return value. Some callers might
-     * want to filter keys and values before adding them to a data tree, and other callers may not want a tree at all.
+     * Reads data. Upon full success, the backend returns a nonnull document.
      * <p>
      * <b>Emptiness</b>
      * <p>
@@ -74,54 +72,52 @@ public interface Backend {
      * backend were using a {@link PathRoot} and the file in question did not exist: the implementor of this method
      * would check {@link DataRoot#dataExists()} in this case.
      * <p>
-     * In other cases, data might exist, but it will be blank. For example, a blank file is a valid document in YAML,
-     * and the implementor of this method would thus return a non-null {@code DataTree} with no content in it.
+     * In other cases, data might exist but be blank. Here, {@code Backend}s should behave in a manner appropriate
+     * to the validity of blank data in their schema. Either {@code null} or an error should be returned depending on
+     * whether blank data is a syntax exception. For example, a blank file is a valid document in YAML, and the
+     * implementor of this method would return a null document. A blank file is not valid in JSON, so a parse error
+     * might be triggered instead.
      * <p>
      * <b>Syntax errors</b>
      * <p>
-     * If the loading failed because the data exists but was malformatted, an error result should be returned. The
-     * error message can be given as {@link ErrorContext#BACKEND_MESSAGE}.
+     * If the loading failed because the data is malformatted, an error result should be returned. The error message
+     * can be given as {@link ErrorContext#BACKEND_MESSAGE}. Additionally, backends can recommend a syntax linter by
+     * using {@link ErrorContext#SYNTAX_LINTER}.
      * <p>
      * <b>IO errors</b>
      * <p>
-     * A backend is permitted to throw {@code UncheckedIOException} in two places: either this method itself, or in
-     * usage of the {@code Stream} returned by the streamable instance. The latter case is rare but theoretically
-     * possible.
+     * A backend is permitted to throw {@code UncheckedIOException} to handle I/O errors coming from the data root.
      *
+     * @param errorSource a factory for the backend to produce errors
      * @return a load result of the data
      * @throws UncheckedIOException upon I/O failure
      */
-    @NonNull LoadResult<? extends @Nullable DataStreamable> read();
+    @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource);
 
     /**
-     * Writes the provided data to the source.
+     * Writes the provided data tree to the source.
      * <p>
-     * Implementations are encouraged to stream the data (via {@link DataStreamable#getAsStream()}) where possible.
-     * Streaming may be more efficient in some cases.
+     * <b>Comments</b>
      * <p>
-     * If a comment header is provided, some of it may need to be written before the rest of the data, and some of it
+     * If the comment header is non-empty, some of it may need to be written before the rest of the data, and some of it
      * may need to be written after the data. If not supported by this backend, this comment header may be ignored.
-     *
-     * @param topLevelComments the comments applying to the whole document
-     * @param data the streamable data tree
-     * @throws UncheckedIOException upon I/O failure
-     */
-    void write(@Nullable CommentData topLevelComments, @NonNull DataStreamable data);
-
-    /**
-     * Whether comments are supported in the following location.
      * <p>
-     * If comments are not supported there, this format backend is free to ignore them during
-     * {@link #write(CommentData, DataStreamable)}.
+     * <b>Unsupported Data</b>
      * <p>
-     * If comments <i>are</i> supported in this location, they <i>must</i> be supported by both <code>write</code>
-     * and <code>read</code> methods. That is, comments at this location must correctly round-trip and
-     * {@link DataEntry#getComments()} should return the same value after being written and re-read.
+     * Not all configuration formats follow a data structure that aligns with {@link DataTree}'s key/value model with
+     * nestable trees. For example, <code>.properties</code> files don't provide nested sections, and HOCON supports
+     * only string-valued keys (integer keys are impossible).
+     * <p>
+     * When unsupported data structure is encountered, the implementor should throw {@link DeveloperMistakeException}.
+     * Throwing an exception is the appropriate way to signal an incompatible configuration structure. While this makes
+     * some configuration definitions constricted to compatible formats, such fail-fast behavior follows this library's
+     * culture. If need be, library users can always write migrations to change their configuration definition.
      *
-     * @param location where are we talking about
-     * @return if comments are supported in this location
+     * @param document the document to write
+     * @throws UncheckedIOException      upon I/O failure
+     * @throws DeveloperMistakeException if some aspects of the data structure are not supported by this backend
      */
-    boolean supportsComments(@NonNull CommentLocation location);
+    void write(@NonNull Document document);
 
     /**
      * Recommends a {@link KeyMapper} appropriate to the backend format.
@@ -133,4 +129,156 @@ public interface Backend {
      */
     @NonNull KeyMapper recommendKeyMapper();
 
+    /**
+     * A document loaded from, or writable to, a backend.
+     *
+     */
+    interface Document {
+
+        /**
+         * The document-level comments.
+         * <p>
+         * These comments exist at the top-level of the document, and they are not attached to any particular entry.
+         *
+         * @return the document-level comments, or {@code CommentData.empty()} for none
+         */
+        @NonNull CommentData comments();
+
+        /**
+         * The data itself, in the form of a navigable tree
+         *
+         * @return the data
+         */
+        @NonNull DataTree data();
+
+        /**
+         * Returns a document consisting of the following data, without commments
+         *
+         * @param dataTree the data
+         * @return a document containing the data
+         */
+        static @NonNull Document simple(@NonNull DataTree dataTree) {
+            return new Document() {
+                @Override
+                public @NonNull CommentData comments() {
+                    return CommentData.empty();
+                }
+
+                @Override
+                public @NonNull DataTree data() {
+                    return dataTree;
+                }
+            };
+        }
+    }
+
+    /**
+     * Gets information about this backend itself.
+     * <p>
+     * The returned meta should behave consistently if invoked on identical backends. It should not be affected by
+     * the state of this {@code Backend} (or data contained in it), but only by its properties and capabilities.
+     *
+     * @return meta information about the backend
+     */
+    @NonNull Meta meta();
+
+    /**
+     * Defines metadata about a backend.
+     * <p>
+     * For callers familiar with the {@code java.sql} module, this type is analogous to JDBC's DatabaseMetaData. It
+     * provides information about the backend implementation itself, such as its supported capabilities.
+     * <p>
+     * New methods may be added to this interface in the future, but they will always be default methods.
+     * Implementors of {@code Backend} are encouraged to keep up-to-date with this interface by checking minor version
+     * release notes.
+     *
+     */
+    interface Meta {
+
+        /**
+         * Whether comments are supported in the following context.
+         * <p>
+         * The context is defined by whether the comments are placed on the document level or on specific entries, if
+         * the comments are being read or written, and where the comments are located with respect to entries. For example,
+         * {@code documentLevel = true}, false, and {@code ABOVE} specifies the writability of the document-level header,
+         * and {@code documentLevel = false}, true, and {@code INLINE} specify the capability to read inline comments on
+         * entries. The return value would then indicate whether comments are handled in this context.
+         * <p>
+         * <b>Implications</b>
+         * <p>
+         * If comments are not supported in this context, this format backend is free to ignore them during
+         * {@link #write(Document)}.
+         * <p>
+         * If this method returns true for <code>reading = true</code> and <code>reading = false</code> with otherwise
+         * identical {@code documentLevel} and {@code location}, that implies that comments in such context will
+         * be correctly read -- and identically reconstituted -- by <code>read</code> provided they were written by
+         * <code>write</code>.
+         * <p>
+         * <b>Ignored comments during reading</b>
+         * <p>
+         * Note that some backends may expose comments in other places, not covered by this library. An example would be
+         * comments on list entries - because the API only supports comments on map entries. These comments are impossible
+         * to return from a call to <code>read</code>, meaning they are necessarily produced by the end user. Such
+         * kind of comments should have no bearing on this method's results.
+         *
+         * @param documentLevel true for the document level, false for entry-level comments
+         * @param reading       true for reading comments, false for writing them
+         * @param location      the location of the comments for whom support is queried
+         * @return if the backend supports comments in this context
+         */
+        boolean supportsComments(boolean documentLevel, boolean reading, @NonNull CommentLocation location);
+
+        /**
+         * Whether this backend supports preservation of data entry order.
+         * <p>
+         * The {@code reading} parameter defines where ordering happens. If ordering is preserved when reading, this
+         * method should return true when {@code reading = true}, and if ordering is preserved when writing, it should
+         * return true when {@code writing = true}.
+         * <p>
+         * <b>Implications</b>
+         * <p>
+         * If order is not preserved during reading, entries in a data tree may be read in any order. If not
+         * preserved during writing, the serialized format may be written in a different order.
+         * <p>
+         * If order is preserved in both contexts, then the backend should preserve a stable iteration order across
+         * multiple calls to {@code read} and {@code write} using the same data. Loading a data tree should produce an
+         * order which remains stable if that same tree is written and re-read at a later point.
+         *
+         * @param reading true for reading data, false for writing it
+         * @return if order is preserved across the reading or writing operation
+         */
+        boolean preservesOrder(boolean reading);
+
+        /**
+         * Whether the backend writes {@code float} values by casting them to {@code double}.
+         * <p>
+         * Some backend formats do not inherently support floats, but the {@code Backend} implementation is required
+         * to write them if they appear.
+         * <p>
+         * <b>Implictions</b>
+         * <p>
+         * If this method returns true, he {@code Backend} will write float values by first casting them to doubles.
+         * Conversion operations may lead to a loss of precision in some cases.
+         *
+         * @return if the backend writes float as doubles
+         */
+        boolean writesFloatAsDouble();
+
+        /**
+         * Whether the backend only recognizes string keys.
+         * <p>
+         * Some backend formats do not support non-string keys, meaning that all keys (no matter what type they appear
+         * to be) will be loaded as strings.
+         * <p>
+         * <b>Implications</b>
+         * <p>
+         * If this method returns true, all keys in a loaded {@code DataTree} will be strings. During writing, if a
+         * non-string key is encountered, the {@code Backend} implementation will convert the key to a string using its
+         * {@code toString()} method.
+         *
+         * @return if the backend loads all keys as strings, and writes them as strings likewise
+         */
+        boolean allKeysAreStrings();
+
+    }
 }

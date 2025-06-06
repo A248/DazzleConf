@@ -22,33 +22,23 @@ package space.arim.dazzleconf2.reflect;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ReloadShell;
 
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Default implementation of {@link Instantiator} using standard proxy reflection
  *
  */
-public final class DefaultInstantiator implements Instantiator {
+final class DefaultInstantiator implements Instantiator {
 
-    private final ClassLoader classLoader;
+    private final MethodHandles.Lookup lookup;
 
-    /**
-     * Creates from a classloader.
-     * <p>
-     * The classloader provided is where generated proxies will be located.
-     *
-     * @param classLoader the classloader for generated proxies, typically the same classloader as that of the
-     *                    configuration type
-     */
-    public DefaultInstantiator(@NonNull ClassLoader classLoader) {
-        this.classLoader = Objects.requireNonNull(classLoader);
-    }
-
-    @Override
-    public MethodMirror getMethodMirror() {
-        return new DefaultMethodMirror();
+    DefaultInstantiator(MethodHandles.Lookup lookup) {
+        this.lookup = Objects.requireNonNull(lookup);
     }
 
     @Override
@@ -56,49 +46,59 @@ public final class DefaultInstantiator implements Instantiator {
         return Proxy.isProxyClass(instance.getClass()) && Proxy.getInvocationHandler(instance) instanceof ProxyHandler;
     }
 
+    private <I> @NonNull I produceProxy(ProxyHandler<I> proxyHandler) {
+        Class<I> iface = proxyHandler.iface;
+        return iface.cast(Proxy.newProxyInstance(iface.getClassLoader(), new Class[] {iface}, proxyHandler));
+    }
+
     @Override
-    public @NonNull Object generate(@NonNull Class<?> @NonNull [] targets,
-                                    @NonNull MethodYield methodYield) {
+    public <I> @NonNull I generate(@NonNull Class<I> iface, @NonNull MethodYield methodYield) {
 
-        Map<String, Object> fastValues = new HashMap<>(20, 0.80f);
-        Set<Method> defaultMethods = null;
+        ProxyHandlerToValues<I> proxyHandler = new ProxyHandlerToValues<>(iface);
+        I proxy = produceProxy(proxyHandler);
 
-        for (Class<?> target : targets) {
-            for (Map.Entry<MethodId, Object> entry : methodYield.valuesFor(target).entrySet()) {
+        int methodCount = methodYield.sizeEstimate();
+        // Use lower load factors for faster retrieval (1/4 for fastValues, 1/2 for defaultMethodMap)
+        Map<String, Object> fastValues = new HashMap<>((int) (methodCount / 0.24f), 0.26f);
+        DefaultMethodMap defaultMethodMap = new DefaultMethodMap(new HashMap<>(methodCount, 0.5f));
 
-                MethodId methodId = entry.getKey();
-                Object value = entry.getValue();
+        for (MethodYield.Entry entry : methodYield.entries()) {
+            MethodId methodId = entry.method();
+            Object value = entry.returnValue();
 
-                if (value instanceof InvokeDefaultFunction) {
-                    if (defaultMethods == null) {
-                        defaultMethods = new HashSet<>();
-                    }
-                    defaultMethods.add(methodId.getMethod(target));
-                } else {
-                    fastValues.put(methodId.name(), value);
-                }
+            if (value instanceof InvokeDefaultFunction) {
+                MethodId.OpaqueCache methodCache = methodId.getOpaqueCache();
+                assert methodCache instanceof MethodCache;
+                defaultMethodMap.addMethod(lookup, ((MethodCache) methodCache).method, proxy);
+            } else {
+                fastValues.put(methodId.name(), value);
             }
         }
-        ProxyHandlerToValues proyHandler = new ProxyHandlerToValues(targets, fastValues);
-        Object proxy = Proxy.newProxyInstance(classLoader, targets, proyHandler);
-        if (defaultMethods != null) {
-            proyHandler.initDefaultMethods(proxy, defaultMethods);
-        }
+        proxyHandler.init(fastValues, defaultMethodMap);
         return proxy;
     }
 
     @Override
     public <I> @NonNull ReloadShell<I> generateShell(@NonNull Class<I> iface) {
-        ProxyHandlerToDelegate<I> proxyHandler = new ProxyHandlerToDelegate<>();
-        I shell = iface.cast(Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler));
+        ProxyHandlerToDelegate<I> proxyHandler = new ProxyHandlerToDelegate<>(iface, lookup);
+        I shell = produceProxy(proxyHandler);
         return proxyHandler.new AsReloadShell(shell);
     }
 
     @Override
     public <I> @NonNull I generateEmpty(@NonNull Class<I> iface) {
         ProxyHandlerToEmpty<I> proxyHandler = new ProxyHandlerToEmpty<>(iface);
-        I proxy = iface.cast(Proxy.newProxyInstance(classLoader, new Class[]{iface}, proxyHandler));
-        proxyHandler.initProxy(proxy);
+        I proxy = produceProxy(proxyHandler);
+
+        DefaultMethodMap defaultMethodMap = new DefaultMethodMap(new HashMap<>());
+        for (Method method : iface.getMethods()) {
+            if (method.isDefault()) {
+                defaultMethodMap.addMethod(lookup, method, proxy);
+            }
+        }
+        proxyHandler.init(defaultMethodMap);
+
         return proxy;
     }
+
 }

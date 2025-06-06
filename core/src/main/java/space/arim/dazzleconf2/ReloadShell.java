@@ -39,6 +39,8 @@ public interface ReloadShell<C> {
      * This function is thread safe; the assignment is performed with at least acquire/release semantics.
      *
      * @param delegate the delegate value
+     * @throws IllegalArgumentException if the argument to {@code delegate} is the shell itself, or creates a cycle
+     * (such as with other {@code ReloadShell}s) pointing to the shell
      */
     void setCurrentDelegate(@Nullable C delegate);
 

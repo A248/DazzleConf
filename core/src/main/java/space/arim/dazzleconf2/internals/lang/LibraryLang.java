@@ -23,6 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.Printable;
 
+import java.net.URL;
 import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.function.Function;
@@ -80,6 +81,10 @@ public interface LibraryLang {
 
     @NonNull String backendMessage();
 
+    @NonNull String syntaxLinter();
+
+    @NonNull String failed();
+
     @NonNull String missingValue();
 
     @NonNull Printable wrongTypeForValue(Object value, String expectedType, String actualType);
@@ -99,16 +104,16 @@ public interface LibraryLang {
     @NonNull String errorContext();
 
     default @NonNull Printable wrongTypeForValue(@NonNull Object value, @NonNull Class<?> expectedType) {
-        return join(preBuilt(badValue()), wrongTypeForValue(
+        return join(preBuilt(badValue()), preBuilt(" "), wrongTypeForValue(
                 value,
-                ReadMe.displayCanonicalType(this, expectedType, null),
-                ReadMe.displayCanonicalType(this, value.getClass(), value)
+                ReadMe.displayCanonicalType(this, expectedType),
+                ReadMe.displayCanonicalType(this, value.getClass())
         ));
     }
 
     default @NonNull Printable outOfRange(@NonNull Object value, @NonNull Number min, @NonNull Number max) {
-        return join(preBuilt(badValue()), mustBeBetween(
-                ReadMe.displayCanonicalType(this, value.getClass(), value), min, max
+        return join(preBuilt(badValue()), preBuilt(" "), mustBeBetween(
+                ReadMe.displayCanonicalType(this, value.getClass()), min, max
         ));
     }
 
@@ -119,7 +124,7 @@ public interface LibraryLang {
     default @NonNull Printable notANumber(@NonNull Number value) {
         return join(preBuilt(badValue()), preBuilt(" "), wrongTypeForValue(
                 value,
-                ReadMe.displayCanonicalType(this, value.getClass(), null),
+                ReadMe.displayCanonicalType(this, value.getClass()),
                 NumberFormat.getInstance(getLocale()).format(value)
         ));
     }
@@ -139,6 +144,16 @@ public interface LibraryLang {
     @NonNull String list();
 
     @NonNull String configurationSection();
+
+    @NonNull String syntaxInvalidPleaseTryAt(@NonNull URL url);
+
+    @NonNull String syntax();
+
+    @NonNull String otherReason();
+
+    @NonNull String yamlNotAMap();
+
+    @NonNull String tomlDateType();
 
     static @NonNull LibraryLang loadLang(@NonNull Locale usingLocale) {
 

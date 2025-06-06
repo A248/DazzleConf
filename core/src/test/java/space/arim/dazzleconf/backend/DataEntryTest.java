@@ -94,4 +94,10 @@ public class DataEntryTest {
     public void equals() {
         EqualsVerifier.forClass(DataEntry.class).withOnlyTheseFields("value").verify();
     }
+
+    @Test
+    public void toStringTest() {
+        assertTrue(new DataEntry("hello").toString().contains(DataEntry.class.getSimpleName()));
+        assertTrue(new DataEntry("hello").toString().contains("hello"));
+    }
 }

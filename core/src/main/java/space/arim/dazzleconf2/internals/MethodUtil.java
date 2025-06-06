@@ -18,13 +18,13 @@
  */
 package space.arim.dazzleconf2.internals;
 
+import space.arim.dazzleconf2.internals.jdk11.Java9DefaultMethodProvider;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
-import space.arim.dazzleconf2.internals.jdk11.Java11DefaultMethodProvider;
 
 public final class MethodUtil {
 
@@ -35,7 +35,9 @@ public final class MethodUtil {
 	 * 
 	 * @param method the method
 	 * @return the qualified name
+	 * @deprecated for use by dazzleconf 1 code only
 	 */
+	@Deprecated
 	public static String getQualifiedName(Method method) {
 		return method.getDeclaringClass().getName() + "#" + method.getName();
 	}
@@ -45,7 +47,9 @@ public final class MethodUtil {
 	 * 
 	 * @param method the method, known to be declared in an interface
 	 * @return true if the method is a default method
+	 * @deprecated for use by dazzleconf 1 code only
 	 */
+	@Deprecated
 	public static boolean isDefault(Method method) {
 		int modifiers = method.getModifiers();
 		boolean isDefault = ((modifiers & (Modifier.ABSTRACT | Modifier.PUBLIC | Modifier.STATIC)) ==
@@ -58,11 +62,12 @@ public final class MethodUtil {
 	 * Creates a method handle invoking a default method
 	 * 
 	 * @param method the method
+	 * @param lookup the lookup to use for privileged access
 	 * @return a method handle for the default method
 	 */
-	public static MethodHandle createDefaultMethodHandle(Method method)
+	public static MethodHandle createDefaultMethodHandle(Method method, MethodHandles.Lookup lookup)
 			throws IllegalAccessException, InstantiationException, InvocationTargetException {
-		return DEFAULT_METHOD_PROVIDER.getMethodHandle(method);
+		return DEFAULT_METHOD_PROVIDER.getMethodHandle(method, lookup);
 	}
 	
 	private static final DefaultMethodProvider DEFAULT_METHOD_PROVIDER = createDefaultMethodProvider();
@@ -70,7 +75,7 @@ public final class MethodUtil {
 	private static DefaultMethodProvider createDefaultMethodProvider() {
 		try {
 			MethodHandles.class.getDeclaredMethod("privateLookupIn", Class.class, MethodHandles.Lookup.class);
-			return new Java11DefaultMethodProvider();
+			return new Java9DefaultMethodProvider();
 		} catch (NoSuchMethodException nsme) {
 			return new Java8DefaultMethodProvider();
 		}

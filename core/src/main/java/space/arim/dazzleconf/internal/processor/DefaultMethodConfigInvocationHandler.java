@@ -19,6 +19,7 @@
 package space.arim.dazzleconf.internal.processor;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -43,10 +44,11 @@ class DefaultMethodConfigInvocationHandler extends ConfigInvocationHandler {
 	
 	private static Map<Method, MethodHandle> buildDefaultMethodsMap(Object proxy, Set<Method> defaultMethods) {
 		Map<Method, MethodHandle> result = new HashMap<>(defaultMethods.size());
+		MethodHandles.Lookup lookup = MethodHandles.lookup();
 		for (Method method : defaultMethods) {
             MethodHandle methodHandle;
             try {
-                methodHandle = MethodUtil.createDefaultMethodHandle(method).bindTo(proxy);
+                methodHandle = MethodUtil.createDefaultMethodHandle(method, lookup).bindTo(proxy);
             } catch (IllegalAccessException | InstantiationException | InvocationTargetException ex) {
 				throw new IllDefinedConfigException(
 						"Unable to generate default method accessor for " + MethodUtil.getQualifiedName(method), ex

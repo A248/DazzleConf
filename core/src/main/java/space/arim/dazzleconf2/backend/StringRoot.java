@@ -21,7 +21,11 @@ package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.Objects;
 
 /**
@@ -32,7 +36,7 @@ public final class StringRoot implements ReadableRoot {
     private String content;
 
     /**
-     * Creates from the given nonnull content
+     * Creates from the given initial ccontent
      * @param content the content
      */
     public StringRoot(@NonNull String content) {

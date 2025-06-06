@@ -33,8 +33,9 @@ import java.nio.file.Path;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 
-@TestInstance(TestInstance.Lifecycle.PER_METHOD)
+@TestInstance(PER_METHOD)
 public class PathRootTest {
 
     private final Path file;

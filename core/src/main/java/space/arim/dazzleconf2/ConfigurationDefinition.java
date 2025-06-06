@@ -19,16 +19,22 @@
 
 package space.arim.dazzleconf2;
 
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.UpdateListener;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
 import space.arim.dazzleconf2.reflect.Instantiator;
+import space.arim.dazzleconf2.reflect.MethodMirror;
+import space.arim.dazzleconf2.reflect.ReifiedType;
 import space.arim.dazzleconf2.reflect.TypeToken;
-
-import java.util.Collection;
-import java.util.stream.Stream;
 
 /**
  * Provides the minimal methods for reading and writing configurations from data trees
@@ -49,65 +55,63 @@ public interface ConfigurationDefinition<C> {
      *
      * @return the scanned layout of the configuration interface
      */
+    @API(status = API.Status.MAINTAINED)
     @NonNull Layout getLayout();
 
     /**
      * The layout of a configuration definition.
      * <p>
-     * This layout includes all of a scanned interface's components.
+     * This layout includes all of a scanned interface's components, as well as reflective services used to access
+     * those components.
      */
+    @API(status = API.Status.MAINTAINED)
     interface Layout {
+
+        /**
+         * Gets the type of the configuration interface.
+         * <p>
+         * This is always the same type as {@link ConfigurationDefinition#getType()}.
+         *
+         * @return the type of the configuration interface
+         */
+        ReifiedType.@NonNull Annotated getReifiedType();
 
         /**
          * Gets the top level comments on the configuration interface.
          * <p>
-         * If none is set, an empty {@code Comments} might be returned.
+         * These are the comments that exist at the global level and are not tied to any specific entry. If none are
+         * set, an empty {@code Comments} is returned.
          *
          * @return the top level comments, which may be empty if not set
          */
-        @NonNull CommentData getTopLevelComments();
+        @NonNull CommentData getComments();
 
         /**
-         * Gets the unmapped key set. These are the same as the method names from the configuration interface,
-         * excluding default methods annotated with <code>@CallableFn</code>.
-         * <p>
-         * The returned collection is immutable and ordered according to how this {@code ConfigurationDefinition} orders
-         * its entries. It is unmapped in the sense that a {@code KeyMapper} has not been applied to the elements.
+         * Gets the instantiator used to generate interface implementations.
          *
-         * @return the ordered labels for this definition
+         * @return the instantiator
          */
-        @NonNull Collection<@NonNull String> getLabels();
+        @NonNull Instantiator getInstantiator();
 
         /**
-         * Gets the unmapped key set, as a stream. These are the same as the method names from the configuration
-         * interface, excluding default methods annotated with <code>@CallableFn</code>.
-         * <p>
-         * The returned stream is ordered according to how this {@code ConfigurationDefinition} orders its entries. It is
-         * unmapped in the sense that a {@code KeyMapper} has not been applied to the elements.
-         * <p>
-         * This function is semantically equivalent to <code>getLabels().stream()</code>.
+         * Gets the method mirror used to invoke methods
          *
-         * @return the ordered labels for this definition
+         * @return the method mirror
          */
-        @NonNull Stream<@NonNull String> getLabelsAsStream();
+        @NonNull MethodMirror getMethodMirror();
 
     }
-
-    /**
-     * Gets the instantiator used to generate interface implementations.
-     *
-     * @return the instantiator
-     */
-    @NonNull Instantiator getInstantiator();
 
     /**
      * Loads the default configuration.
      * <p>
      * This will build a configuration object using only the default-providing mechanisms (i.e. annotations and
-     * default methods).
+     * default methods). Therefore, to use this method, every configuration entry is required to have a default value
+     * attached; if an entry lacks a default value, {@code DeveloperMistakeException} will be thrown.
      *
      * @return a configuration using wholly default values
-     * @throws DeveloperMistakeException if one of the default-providing methods threw an exception, or gave null
+     * @throws DeveloperMistakeException if one of the default-providing methods threw an exception, or gave null.
+     * Alternatively, if a configuration entry is lacking a default value set either by default methods or annotations
      */
     @NonNull C loadDefaults();
 
@@ -135,7 +139,7 @@ public interface ConfigurationDefinition<C> {
      * @param readOptions full parameters to customize the operation
      * @return the loaded configuration, or an error if failed
      */
-    @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadOptions readOptions);
+    @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadWithUpdateOptions readOptions);
 
     /**
      * Writes to the given data tree.
@@ -157,21 +161,26 @@ public interface ConfigurationDefinition<C> {
      * Parameters for reading a configuration from a tree
      *
      */
-    interface ReadOptions {
-
-        /**
-         * Listener which informs the caller if certain events happened
-         *
-         * @return the load listener
-         */
-        @NonNull LoadListener loadListener();
+    interface ReadOptions extends UpdateListener {
 
         /**
          * The key mapper to use
          *
-         * @return the key mapper, nonnull
+         * @return the key mapper
          */
         @NonNull KeyMapper keyMapper();
+
+        /**
+         * Gets the absolute key path at which the configuration is being read.
+         * <p>
+         * This path is intended as a debug value and might be used in error messages, such as by using it to prefi
+         * sub-paths within this configuration. The implementor of this method can return an empty path to represent
+         * the root configuration or if the path prefix is unknown.
+         *
+         * @return the path at which the configuration is read, or an empty {@code KeyPath} if none. It is recommended
+         * to return a {@code KeyPath.Immut}, since the caller might modify this return value
+         */
+        @NonNull KeyPath keyPath();
 
         /**
          * The maximum number of errors to collect before exiting. Must be greater than 0.
@@ -182,7 +191,35 @@ public interface ConfigurationDefinition<C> {
          * @return the maximum number of errors to collect, default 12. Must be greater than 0
          */
         default int maximumErrorCollect() {
-            return ReadOpts.DEFAULT_MAX_ERROR_TO_COLLECT;
+            return 12;
+        }
+
+    }
+
+    /**
+     * Parameters for reading a configuration and updating it in-place
+     *
+     */
+    interface ReadWithUpdateOptions extends ReadOptions, WriteOptions {
+
+        /**
+         * Controls whether comments on existing data entries are refreshed.
+         * <p>
+         * Newly-added entries (due to missing values) will always have comments set. This setting controls whether
+         * existing entries in the data tree will have their comments refreshed at the given location: i.e., by setting
+         * the comments anew on the entry.
+         * <p>
+         * This function can be used, for example, to continually write comments on entries, if the backend supports
+         * writing but not reading comments. Use {@link Backend.Meta#supportsComments(boolean, boolean, CommentLocation)}
+         * to check the extent of backend support.
+         *
+         * @param location the location of comments with respect to the entry
+         * @return whether refreshing should take place for entry comments there
+         */
+        @Override
+        @API(status = API.Status.EXPERIMENTAL)
+        default boolean writeEntryComments(@NonNull CommentLocation location) {
+            return false;
         }
 
     }
@@ -196,9 +233,28 @@ public interface ConfigurationDefinition<C> {
         /**
          * The key mapper to use
          *
-         * @return the key mapper, nonnull
+         * @return the key mapper
          */
         @NonNull KeyMapper keyMapper();
+
+        /**
+         * Controls whether comments are written to data entries.
+         * <p>
+         * If enabled (the default), comment data is copied from the configuration definition to entries in the output
+         * data tree. If disabled, written {@code DataEntry}s will be without comments.
+         * <p>
+         * <b>Backend support</b>
+         * <p>
+         * Note that even if this function returns true, the backend is not guaranteed to support writing comments.
+         * Please consult the documentation of the {@link Backend} regarding comment support.
+         *
+         * @param location the location of the entry comments being written
+         * @return whether data entries should be written with comments here, default true
+         */
+        @API(status = API.Status.EXPERIMENTAL)
+        default boolean writeEntryComments(@NonNull CommentLocation location) {
+            return true;
+        }
     }
 
 }

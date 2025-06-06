@@ -20,18 +20,27 @@
 package space.arim.dazzleconf;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.ConfigurationBuilder;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.backend.DefaultKeyMapper;
 import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.reflect.DefaultInstantiator;
-import space.arim.dazzleconf2.reflect.Instantiator;
+import space.arim.dazzleconf2.reflect.DefaultReflectionService;
+import space.arim.dazzleconf2.reflect.ReflectionService;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class ConfigurationBuildTest {
 
     public interface Config<A> {}
@@ -58,10 +67,16 @@ public class ConfigurationBuildTest {
     }
 
     @Test
-    public void instantiator() {
-        assertInstanceOf(DefaultInstantiator.class, Configuration.defaultBuilder(configType).build().getInstantiator());
-        Instantiator instantiator = new DefaultInstantiator(getClass().getClassLoader());
-        assertSame(instantiator, Configuration.defaultBuilder(configType).instantiator(instantiator).build().getInstantiator());
+    public void reflectionService(@Mock ReflectionService reflectionService) {
+        DefaultReflectionService defaultReflectionService = new DefaultReflectionService();
+        when(reflectionService.makeInstantiator(any())).thenReturn(defaultReflectionService.makeInstantiator(MethodHandles.lookup()));
+        when(reflectionService.makeMethodMirror(any())).thenReturn(defaultReflectionService.makeMethodMirror(MethodHandles.lookup()));
+        ConfigurationBuilder<?> builder = Configuration.defaultBuilder(configType).reflectionService(reflectionService);
+        Configuration.Layout layout = assertDoesNotThrow(builder::build).getLayout();
+        assertNotNull(layout.getInstantiator());
+        assertNotNull(layout.getMethodMirror());
+        verify(reflectionService).makeInstantiator(any());
+        verify(reflectionService).makeMethodMirror(any());
     }
 
     @Test

@@ -21,7 +21,11 @@ package space.arim.dazzleconf2.reflect;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.Pure;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
@@ -29,19 +33,38 @@ import java.util.Objects;
 /**
  * Identifiers for a method.
  * <p>
- * Compared to the standard reflection API, this class provides constructability, generic type reification, and a
- * more lightweight form.
+ * This class is immutable. Compared to the standard reflection API, this class provides constructability, generic type
+ * reification, and a more lightweight form.
+ * <p>
+ * <b>Usage</b>
+ * <p>
+ * A {@code MethodId} is not coupled to a declaring class; in fact, it does not verify the existence of a real method
+ * with its details. This means that callers can construct arbitrary instances.
+ * <p>
+ * This comes with the drawback that a {@code MethodId} is not itself invocable. Instead, the {@link MethodMirror} is
+ * tasked with calling methods on it.
+ * <p>
+ * To assist the {@code MethodMirror} implementation, it can store an opaque object (invisible to callers) to attach
+ * cache information. This cache information is returned by {@link #getOpaqueCache()}. Importantly, the method mirror
+ * can depend on the preservation of this information, since external callers are forbidden from using method ID
+ * instances except those produced by the mirror itself.
+ * <p>
+ * <b>Equality</b>
+ * <p>
+ * A method ID is equal to another based on its name, return type, parameters, and default status. If callers want to
+ * ignore the return type or default status, they must implement that logic themselves.
  *
  */
 public final class MethodId {
 
-    private final Object methodOrName;
+    private final transient OpaqueCache opaqueCache;
+    private final String name;
     private final ReifiedType.Annotated returnType;
     private final ReifiedType[] parameters;
     private final boolean isDefault;
 
     /**
-     * Builds from nonnull arguments
+     * Builds from arguments
      *
      * @param name the method name
      * @param returnType its return type
@@ -50,7 +73,8 @@ public final class MethodId {
      */
     public MethodId(@NonNull String name, ReifiedType.@NonNull Annotated returnType,
                     @NonNull ReifiedType @NonNull [] parameters, boolean isDefault) {
-        this.methodOrName = Objects.requireNonNull(name, "name");
+        this.opaqueCache = null;
+        this.name = Objects.requireNonNull(name, "name");
         this.returnType = Objects.requireNonNull(returnType, "returnType");
         this.parameters = parameters.clone();
         for (ReifiedType parameter : this.parameters) {
@@ -59,65 +83,58 @@ public final class MethodId {
         this.isDefault = isDefault;
     }
 
-    /**
-     * Builds using a method instead of just a method name
-     *
-     * @param method the method
-     * @param returnType its return type
-     * @param parameters the method parameters, excluding the receiver type
-     * @param isDefault whether the method is implemented by default
-     * @throws IllegalArgumentException if the method information does not match the return type or arguments
-     */
-    public MethodId(@NonNull Method method, ReifiedType.@NonNull Annotated returnType,
-                    @NonNull ReifiedType @NonNull [] parameters, boolean isDefault) {
-        if (!method.getReturnType().equals(returnType.rawType())) {
-            throw new IllegalArgumentException(
-                    "Return type mismatch; expected " + method.getReturnType() + ", not " + returnType.rawType()
-            );
-        }
-        if (method.getParameterCount() != parameters.length) {
-            throw new IllegalArgumentException(
-                    "Parameter count mismatch; expected " + method.getParameterCount() + ", not " + parameters.length
-            );
-        }
-        for (int n = 0; n < parameters.length; n++) {
-            Class<?> expected = method.getParameterTypes()[n];
-            Class<?> actual = parameters[n].rawType();
-            if (!expected.equals(actual)) {
-                throw new IllegalArgumentException(
-                        "Parameter type mismatch; expected " + expected + ", not " + actual
-                );
-            }
-        }
-        if (!(method.isDefault() == isDefault)) {
-            throw new IllegalArgumentException(
-                    "Default status mismatch; expected " + method.isDefault() + ", not " + isDefault
-            );
-        }
-        this.methodOrName = method;
-        this.returnType = Objects.requireNonNull(returnType, "returnType");
-        this.parameters = parameters.clone();
+    private MethodId(OpaqueCache opaqueCache, String name, ReifiedType.Annotated returnType,
+                     ReifiedType[] parameters, boolean isDefault) {
+        this.opaqueCache = opaqueCache;
+        this.name = name;
+        this.returnType = returnType;
+        this.parameters = parameters;
         this.isDefault = isDefault;
     }
+
+    /**
+     * Creates a new method ID, with the argument set as the opaque cache.
+     * <p>
+     * Because the opaque cache is not included in equality considerations, the returned object will always be
+     * <i>equal</i> to this one (according to {@code equals}) even if not referentially equal.
+     *
+     * @param opaqueCache the opaque cache, or {@code null} for none
+     * @return a new method ID with the cache attached
+     */
+    public @NonNull MethodId withOpaqueCache(@Nullable OpaqueCache opaqueCache) {
+        if (this.opaqueCache == opaqueCache) {
+            return this;
+        }
+        return new MethodId(opaqueCache, name, returnType, parameters, isDefault);
+    }
+
+    /**
+     * Gets the opaque cache attached to this method ID, if one exists.
+     * <p>
+     * Most library users will have no need of calling this function. It is intended to help {@code MethodMirror}
+     * implementations store data inside a {@code MethodId}, to speed up calling actual methods.
+     *
+     * @return the opaque cache, or null
+     */
+    @Pure
+    public @Nullable OpaqueCache getOpaqueCache() {
+        return opaqueCache;
+    }
+
+    /**
+     * A marker interface for cache data appended to a {@code MethodId}.
+     * <p>
+     * Callers should check if cache data is an instance of their specific implementation of this interface.
+     *
+     */
+    public interface OpaqueCache {}
 
     /**
      * The method name
      * @return the method name
      */
     public @NonNull String name() {
-        if (methodOrName instanceof Method) {
-            return ((Method) methodOrName).getName();
-        }
-        return (String) methodOrName;
-    }
-
-    /**
-     * Gets the method if this was constructed with a method via
-     * {@link MethodId#MethodId(Method, ReifiedType.Annotated, ReifiedType[], boolean)}
-     * @return the method if constructed with one, or null empty unset
-     */
-    public @Nullable Method method() {
-        return (methodOrName instanceof Method) ? (Method) methodOrName : null;
+        return name;
     }
 
     /**
@@ -128,21 +145,30 @@ public final class MethodId {
      *
      * @param declaringClass the containing class
      * @return the method
-     * @throws IllegalStateException possibly, if the wrong class was specified
+     * @throws IllegalArgumentException if the wrong class was specified
      */
-    public @NonNull Method getMethod(@NonNull Class<?> declaringClass) {
-        if (methodOrName instanceof Method) {
-            // Fast-path: Most of the time we're here
-            return (Method) methodOrName;
-        }
+    @NonNull Method getMethod(@NonNull Class<?> declaringClass) {
         Class<?>[] rawParams = new Class[parameters.length];
         for (int n = 0; n < parameters.length; n++) {
             rawParams[n] = parameters[n].rawType();
         }
         try {
-            return declaringClass.getMethod(name(), rawParams);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Specified method does not exist on target class", e);
+            return declaringClass.getMethod(name, rawParams);
+        } catch (NoSuchMethodException ex) {
+            throw new IllegalArgumentException("Specified method does not exist on target class", ex);
+        }
+    }
+
+    @NonNull MethodHandle getMethodHandle(MethodHandles.@NonNull Lookup lookup, @NonNull Class<?> declaringClass)
+            throws IllegalAccessException {
+        Class<?>[] rawParams = new Class[parameters.length];
+        for (int n = 0; n < parameters.length; n++) {
+            rawParams[n] = parameters[n].rawType();
+        }
+        try {
+            return lookup.findVirtual(declaringClass, name, MethodType.methodType(returnType.rawType(), rawParams));
+        } catch (NoSuchMethodException ex) {
+            throw new IllegalArgumentException("Specified method does not exist on target class", ex);
         }
     }
 
@@ -196,13 +222,13 @@ public final class MethodId {
         if (!(o instanceof MethodId)) return false;
 
         MethodId methodId = (MethodId) o;
-        return isDefault == methodId.isDefault && name().equals(methodId.name())
+        return isDefault == methodId.isDefault && name.equals(methodId.name)
                 && returnType.equals(methodId.returnType) && Arrays.equals(parameters, methodId.parameters);
     }
 
     @Override
     public int hashCode() {
-        int result = name().hashCode();
+        int result = name.hashCode();
         result = 31 * result + returnType.hashCode();
         result = 31 * result + Arrays.hashCode(parameters);
         result = 31 * result + Boolean.hashCode(isDefault);
@@ -215,7 +241,7 @@ public final class MethodId {
         if (isDefault) {
             builder.append("default ");
         }
-        builder.append(name());
+        builder.append(name);
         builder.append('(');
         for (int n = 0; n < parameters.length; n++) {
             if (n != 0) {

@@ -35,6 +35,8 @@ public final class Utilities {
     public static <T> void assertNotEqualsBothWays(T val1, T val2) {
         assertNotEquals(val1, val2);
         assertNotEquals(val2, val1);
-        assertNotEquals(val1.toString(), val2.toString(), "toString should be implemented reasonably");
+        if (val1 != null && val2 != null) {
+            assertNotEquals(val1.toString(), val2.toString(), "toString should be implemented reasonably");
+        }
     }
 }

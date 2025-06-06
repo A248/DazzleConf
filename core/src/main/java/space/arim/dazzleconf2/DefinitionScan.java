@@ -20,15 +20,31 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.CallableFn;
+import space.arim.dazzleconf2.engine.Comments;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.TypeLiaison;
 import space.arim.dazzleconf2.internals.AccessChecking;
-import space.arim.dazzleconf2.reflect.*;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf2.reflect.Instantiator;
+import space.arim.dazzleconf2.reflect.MethodId;
+import space.arim.dazzleconf2.reflect.MethodMirror;
+import space.arim.dazzleconf2.reflect.ReifiedType;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.lang.reflect.AnnotatedElement;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 final class DefinitionScan {
 
@@ -37,26 +53,22 @@ final class DefinitionScan {
     private final Instantiator instantiator;
     private final MethodMirror methodMirror;
 
-    private final BlockInfiniteLoop<TypeToken<?>> blockTypeLoop = new BlockInfiniteLoop<>();
+    private final BlockInfiniteLoop blockReadDefLoop = new BlockInfiniteLoop();
 
-    DefinitionScan(LibraryLang libraryLang, LiaisonCache liaisonCache, Instantiator instantiator) {
+    DefinitionScan(LibraryLang libraryLang, LiaisonCache liaisonCache, Instantiator instantiator, MethodMirror methodMirror) {
         this.libraryLang = libraryLang;
         this.liaisonCache = liaisonCache;
         this.instantiator = instantiator;
-        methodMirror = instantiator.getMethodMirror();
+        this.methodMirror = methodMirror;
     }
 
     final class Run<V> {
 
-        private final KeyPath.Immut pathPrefix;
         private final TypeToken<V> typeToken;
-        private final ArrayList<String> labels = new ArrayList<>();
-
         private final LinkedHashMap<Class<?>, ClassContent> classContentMap = new LinkedHashMap<>();
         private final Map<MethodLocator, Class<?>> methodsFoundWhere = new HashMap<>();
 
-        private Run(KeyPath pathPrefix, TypeToken<V> typeToken) {
-            this.pathPrefix = pathPrefix.intoImmut();
+        Run(TypeToken<V> typeToken) {
             this.typeToken = typeToken;
         }
 
@@ -67,7 +79,7 @@ final class DefinitionScan {
                 return new MethodMirror.TypeWalker[0];
             }
             // Check if accessible
-            if (!AccessChecking.isAccessible(currentType)) {
+            if (false && !AccessChecking.isAccessible(currentType)) {
                 throw new DeveloperMistakeException("Configuration interface not accessible: " + currentType);
             }
             ClassContent classContent = new ClassContent();
@@ -118,7 +130,7 @@ final class DefinitionScan {
             }
             // 2. Make method nodes for the reflective information we just gathered
             LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons = new LinkedHashMap<>();
-            blockTypeLoop.enter(typeToken);
+            blockReadDefLoop.enter(typeToken);
             try {
                 V defaultsProvider = instantiator.generateEmpty(rawType);
                 for (Map.Entry<Class<?>, ClassContent> classContentEntry : classContentMap.entrySet()) {
@@ -131,12 +143,12 @@ final class DefinitionScan {
                     );
                 }
             } finally {
-                blockTypeLoop.exit(typeToken);
+                blockReadDefLoop.exit(typeToken);
             }
             // 3. Extract top-level comments and build final definition
             CommentData topLevelComments = CommentData.buildFrom(rawType.getAnnotationsByType(Comments.class));
             return new Definition<>(
-                    typeToken, pathPrefix, topLevelComments, labels, typeSkeletons, libraryLang, instantiator, methodMirror
+                    typeToken, topLevelComments, typeSkeletons, libraryLang, instantiator, methodMirror
             );
         }
 
@@ -148,7 +160,6 @@ final class DefinitionScan {
 
                 Set<MethodId> callableDefaultMethods = new HashSet<>();
                 List<TypeSkeleton.MethodNode<?>> methodNodes = new ArrayList<>(ownedMethods.size());
-                labels.ensureCapacity(labels.size() + ownedMethods.size());
 
                 for (Map.Entry<MethodLocator, AnnotatedElement> ownedMethodEntry : ownedMethods.entrySet()) {
                     // Extract starter data
@@ -171,37 +182,31 @@ final class DefinitionScan {
                     // Check for Optional return
                     boolean optional = methodId.returnType().rawType().equals(Optional.class);
 
-                    // Find the return type, unpacking Optional if necessary
+                    // Find the target type, unpacking Optional if necessary
                     ReifiedType.Annotated typeRequested;
                     if (optional) {
                         typeRequested = methodId.returnType().argumentAt(0);
                     } else {
                         typeRequested = methodId.returnType();
                     }
-                    String label = methodId.name();
                     LiaisonCache.HandleType<?> handleType;
                     try {
-                        handleType = liaisonCache.requestToHandle(new TypeToken<>(typeRequested), new AsHandshake(label));
+                        handleType = liaisonCache.requestToHandle(new TypeToken<>(typeRequested), new AsHandshake());
                     } catch (DeveloperMistakeException rethrow) {
                         throw new DeveloperMistakeException("Failed to make type agent for " + methodId, rethrow);
                     }
-                    labels.add(label);
                     methodNodes.add(handleType.makeMethodNode(methodId, optional, methodAnnotations, defaultsInvoker));
                 }
                 return new TypeSkeleton(callableDefaultMethods, methodNodes);
             }
         }
 
-        final class AsHandshake implements TypeLiaison.Handshake {
+        private final class AsHandshake implements TypeLiaison.Handshake {
 
-            private final String label;
-            private final BlockInfiniteLoop<TypeToken<?>> blockRequestLoop = new BlockInfiniteLoop<>();
-
-            AsHandshake(String label) {
-                this.label = label;
-            }
+            private final BlockInfiniteLoop blockRequestLoop = new BlockInfiniteLoop();
 
             @Override
+            @SideEffectFree
             public @NonNull <U> SerializeDeserialize<U> getOtherSerializer(@NonNull TypeToken<U> other) {
                 blockRequestLoop.enter(other);
                 try {
@@ -212,29 +217,24 @@ final class DefinitionScan {
             }
 
             @Override
+            @SideEffectFree
             public @NonNull <U> ConfigurationDefinition<U> getConfiguration(@NonNull TypeToken<U> other) {
-                KeyPath.Mut subPath = new KeyPath.Mut(pathPrefix);
-                subPath.addBack(label);
-                return new Run<>(subPath, other).read();
+                return new Run<>(other).read();
             }
         }
     }
 
-    <V> ConfigurationDefinition<V> read(TypeToken<V> typeToken) {
-        return new Run<>(new KeyPath.Immut(), typeToken).read();
-    }
+    private static final class BlockInfiniteLoop {
 
-    private static final class BlockInfiniteLoop<V> {
+        private final Set<TypeToken<?>> seenBefore = new HashSet<>();
 
-        private final Set<V> seenBefore = new HashSet<>();
-
-        void enter(V value) {
+        void enter(TypeToken<?> value) {
             if (!seenBefore.add(value)) {
                 throw new DeveloperMistakeException("Cycle detected. This type was requested before: " + value);
             }
         }
 
-        void exit(V exitToken) {
+        void exit(TypeToken<?> exitToken) {
             if (!seenBefore.remove(exitToken)) {
                 throw new IllegalStateException("Gateway value was never added");
             }

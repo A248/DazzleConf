@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import space.arim.dazzleconf.MatchDocumentData;
+import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.CommentLocation;
@@ -34,7 +36,7 @@ import static org.mockito.Mockito.*;
 public class CachedBackendTest {
 
     @Test
-    public void readOnce(@Mock Backend delegate) {
+    public void readOnce(@Mock Backend delegate, @Mock ErrorContext.Source errorSource) {
         DataTree.Immut data;
         {
             DataTree.Mut builder = new DataTree.Mut();
@@ -43,15 +45,15 @@ public class CachedBackendTest {
             builder.set("k3", new DataEntry("v3"));
             data = builder.intoImmut();
         }
-        when(delegate.read()).thenAnswer((i) -> LoadResult.of(data));
+        when(delegate.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(data)));
         CachedBackend backend = new CachedBackend(delegate);
-        assertEquals(data, backend.read().getOrThrow());
-        assertEquals(data, backend.read().getOrThrow());
-        verify(delegate, times(1)).read();
+        assertEquals(data, backend.read(errorSource).getOrThrow().data());
+        assertEquals(data, backend.read(errorSource).getOrThrow().data());
+        verify(delegate, times(1)).read(any());
     }
 
     @Test
-    public void refreshOnWrite(@Mock Backend delegate) {
+    public void refreshOnWrite(@Mock Backend delegate, @Mock ErrorContext.Source errorSource) {
         DataTree.Immut initialData;
         {
             DataTree.Mut builder = new DataTree.Mut();
@@ -62,19 +64,19 @@ public class CachedBackendTest {
         }
         DataTree.Immut empty = new DataTree.Immut();
 
-        when(delegate.read()).thenAnswer((i) -> LoadResult.of(initialData));
+        when(delegate.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(initialData)));
         CachedBackend backend = new CachedBackend(delegate);
-        assertEquals(initialData, backend.read().getOrThrow());
-        assertEquals(initialData, backend.read().getOrThrow());
-        backend.write(null, empty);
-        assertEquals(empty, backend.read().getOrThrow());
-        assertEquals(empty, backend.read().getOrThrow());
+        assertEquals(initialData, backend.read(errorSource).getOrThrow().data());
+        assertEquals(initialData, backend.read(errorSource).getOrThrow().data());
+        backend.write(Backend.Document.simple(empty));
+        assertEquals(empty, backend.read(errorSource).getOrThrow().data());
+        assertEquals(empty, backend.read(errorSource).getOrThrow().data());
 
-        verify(delegate, times(1)).read();
+        verify(delegate, times(1)).read(any());
     }
 
     @Test
-    public void writePassthrough(@Mock Backend delegate) {
+    public void writePassthrough(@Mock Backend delegate, @Mock ErrorContext.Source errorSource) {
         DataTree.Immut data;
         {
             DataTree.Mut builder = new DataTree.Mut();
@@ -84,17 +86,21 @@ public class CachedBackendTest {
             data = builder.intoImmut();
         }
         CachedBackend backend = new CachedBackend(delegate);
-        backend.write(null, data);
-        backend.write(null, data);
-        verify(delegate, times(2)).write(null, data);
+        backend.write(Backend.Document.simple(data));
+        backend.write(Backend.Document.simple(data));
+        verify(delegate, times(2)).write(argThat(new MatchDocumentData(data)));
     }
 
     @Test
-    public void supportsComments(@Mock Backend delegate) {
-        when(delegate.supportsComments(CommentLocation.BELOW)).thenReturn(true);
+    public void metaPassthrough(@Mock Backend delegate, @Mock Backend.Meta delegateMeta) {
+        when(delegate.meta()).thenReturn(delegateMeta);
+        when(delegateMeta.supportsComments(false, false, CommentLocation.BELOW)).thenReturn(true);
         CachedBackend backend = new CachedBackend(delegate);
-        assertTrue(backend.supportsComments(CommentLocation.BELOW));
-        assertFalse(backend.supportsComments(CommentLocation.INLINE));
+        Backend.Meta backendMeta = backend.meta();
+        assertTrue(backendMeta.supportsComments(false, false, CommentLocation.BELOW));
+        assertFalse(backendMeta.supportsComments(true, false, CommentLocation.BELOW));
+        assertFalse(backendMeta.supportsComments(false, true, CommentLocation.BELOW));
+        assertFalse(backendMeta.supportsComments(false, false, CommentLocation.INLINE));
     }
 
     @Test

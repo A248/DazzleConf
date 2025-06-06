@@ -27,6 +27,7 @@
 	</parent>
 
 	<artifactId>dazzleconf-core</artifactId>
+	<name>DazzleConf (Core)</name>
 	
 	<build>
 		<plugins>
@@ -45,9 +46,20 @@
                     Then add multi-release source sets.
                     -->
 					<execution>
+						<id>default-compile</id>
+						<!-- Compile everything + module descriptor with Java 11 -->
+						<configuration>
+							<release>11</release>
+						</configuration>
+					</execution>
+					<execution>
 						<!-- Recompilation of almost everything for Java 8 -->
 						<id>base-compile</id>
+						<goals>
+							<goal>compile</goal>
+						</goals>
 						<configuration>
+							<release>8</release>
 							<excludes>
 								<exclude>module-info.java</exclude>
 								<exclude>space/arim/dazzleconf2/internals/jdk11/**</exclude>
@@ -61,6 +73,7 @@
 							<goal>compile</goal>
 						</goals>
 						<configuration>
+							<release>11</release>
 							<compileSourceRoots>
 								<compileSourceRoot>${project.basedir}/src/main/java11</compileSourceRoot>
 							</compileSourceRoots>
@@ -120,6 +133,29 @@
 						<exclude>space/arim/dazzleconf/validator/*</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<excludePackageNames>
+						space.arim.dazzleconf.internal;
+						space.arim.dazzleconf.internal.*;
+						space.arim.dazzleconf2.internals;
+						space.arim.dazzleconf2.internals.*;
+					</excludePackageNames>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>test-jar</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -217,6 +253,14 @@
 	
 	<dependencies>
 		<dependency>
+			<groupId>org.checkerframework</groupId>
+			<artifactId>checker-qual</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apiguardian</groupId>
+			<artifactId>apiguardian-api</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter</artifactId>
 		</dependency>
@@ -228,10 +272,10 @@
 			<groupId>nl.jqno.equalsverifier</groupId>
 			<artifactId>equalsverifier</artifactId>
 		</dependency>
-		<dependency> <!-- Required for pitest's forked JVM schenanigans (PITEST-910) -->
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-engine</artifactId>
-			<version>${junit.version}</version>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-text</artifactId>
+			<version>1.13.1</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

@@ -22,12 +22,19 @@ package space.arim.dazzleconf2.backend;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.internals.FileIO;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.Writer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -43,13 +50,27 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
     private final Charset charset;
 
     /**
-     * Creates from a path and a charset, neither of which can be null
+     * Creates from a path and a charset.
+     * <p>
+     * The charset will be used for operations which read or write textual data.
+     *
      * @param path the path
      * @param charset the charset
      */
     public PathRoot(@NonNull Path path, @NonNull Charset charset) {
         this.path = Objects.requireNonNull(path, "path");
         this.charset = Objects.requireNonNull(charset, "charset");
+    }
+
+    /**
+     * Creates from a path.
+     * <p>
+     * UTF-8 charset will be used for operations which read or write textual data.
+     *
+     * @param path the path
+     */
+    public PathRoot(@NonNull Path path) {
+        this(path, StandardCharsets.UTF_8);
     }
 
     @Override

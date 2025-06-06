@@ -25,9 +25,8 @@ import space.arim.dazzleconf2.reflect.MethodId;
 import space.arim.dazzleconf2.reflect.MethodYield;
 import space.arim.dazzleconf2.reflect.ReifiedType;
 
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MethodYieldTest {
@@ -39,47 +38,58 @@ public class MethodYieldTest {
     }
 
     @Test
-    public void valuesFor() {
+    public void empty() {
         MethodYield methodYield = new MethodYield();
-        methodYield.addValue(MethodYieldTest.class, sample, "s");
-        assertEquals(Map.of(), methodYield.valuesFor(/* sole superclass */ Object.class));
-        assertEquals(Map.of(sample, "s"), methodYield.valuesFor(MethodYieldTest.class));
+        assertFalse(methodYield.entries().iterator().hasNext());
     }
 
     @Test
-    public void clearValues() {
+    public void addEntry() {
         MethodYield methodYield = new MethodYield();
-        methodYield.addValue(MethodYieldTest.class, sample, "my value");
-        methodYield.clearValues();
-        assertEquals(Map.of(), methodYield.valuesFor(MethodYieldTest.class));
+        methodYield.addEntry(MethodYieldTest.class, sample, "my value");
+        MethodYield.Entry entry = methodYield.entries().iterator().next();
+        assertEquals(MethodYieldTest.class, entry.implementable());
+        assertEquals(sample,  entry.method());
+        assertEquals("my value", entry.returnValue());
     }
 
     @Test
-    public void constructFromOther() {
-        MethodYield original = new MethodYield();
-        original.addValue(MethodYieldTest.class, sample, "s");
-        MethodYield copy = new MethodYield(original);
-        assertEquals(Map.of(sample, "s"), copy.valuesFor(MethodYieldTest.class));
+    public void clear() {
+        MethodYield methodYield = new MethodYield();
+        methodYield.addEntry(MethodYieldTest.class, sample, "my value");
+        methodYield.clear();
+        assertFalse(methodYield.entries().iterator().hasNext());
     }
 
     @Test
-    public void constructFromOtherCannotMutate() {
+    public void copy() {
         MethodYield original = new MethodYield();
-        original.addValue(MethodYieldTest.class, sample, "s");
-        MethodYield copy = new MethodYield(original);
-        assertEquals(Map.of(sample, "s"), copy.valuesFor(MethodYieldTest.class));
-        copy.clearValues();
-        assertEquals(Map.of(sample, "s"), original.valuesFor(MethodYieldTest.class));
+        original.addEntry(MethodYieldTest.class, sample, "s");
+        MethodYield copy = original.copy();
+        MethodYield.Entry entry = copy.entries().iterator().next();
+        assertEquals(MethodYieldTest.class, entry.implementable());
+        assertEquals(sample,  entry.method());
+        assertEquals("s", entry.returnValue());
     }
 
     @Test
-    public void constructFromOtherCannotBeMutated() {
+    public void copyCannotMutate() {
         MethodYield original = new MethodYield();
-        original.addValue(MethodYieldTest.class, sample, "s");
-        MethodYield copy = new MethodYield(original);
-        assertEquals(Map.of(sample, "s"), copy.valuesFor(MethodYieldTest.class));
-        original.clearValues();
-        assertEquals(Map.of(sample, "s"), copy.valuesFor(MethodYieldTest.class));
+        original.addEntry(MethodYieldTest.class, sample, "s");
+        MethodYield copy = original.copy();
+        assertTrue(original.entries().iterator().hasNext());
+        copy.clear();
+        assertTrue(original.entries().iterator().hasNext());
+    }
+
+    @Test
+    public void copyCannotBeMutated() {
+        MethodYield original = new MethodYield();
+        original.addEntry(MethodYieldTest.class, sample, "s");
+        MethodYield copy = original.copy();
+        assertTrue(copy.entries().iterator().hasNext());
+        original.clear();
+        assertTrue(copy.entries().iterator().hasNext());
     }
 
     @Test
@@ -93,7 +103,7 @@ public class MethodYieldTest {
     @Test
     public void toStringTest() {
         MethodYield methodYield = new MethodYield();
-        methodYield.addValue(MethodYieldTest.class, sample, "myvalue");
+        methodYield.addEntry(MethodYieldTest.class, sample, "myvalue");
         assertTrue(methodYield.toString().contains("myvalue"));
     }
 }
