@@ -141,8 +141,8 @@ public final class MethodId {
         }
         try {
             return declaringClass.getMethod(name(), rawParams);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Specified method does not exist on target class", e);
+        } catch (NoSuchMethodException ex) {
+            throw new IllegalStateException("Specified method does not exist on target class", ex);
         }
     }
 

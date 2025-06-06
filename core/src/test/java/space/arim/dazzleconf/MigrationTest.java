@@ -75,7 +75,7 @@ public class MigrationTest {
                 new MigrateSource<String>() {
                     @Override
                     public @NonNull LoadResult<@NonNull String> load(@NonNull MigrateContext migrateContext) {
-                        DataTree dataTree = migrateContext.mainBackend().read().getOrThrow().getAsTree();
+                        DataTree dataTree = migrateContext.mainBackend().read(any()).getOrThrow().data();
                         DataEntry oldHello = dataTree.get("old-hello");
                         assertNotNull(oldHello);
                         return LoadResult.of((String) oldHello.getValue());
@@ -84,6 +84,11 @@ public class MigrationTest {
                     @Override
                     public void onCompletion() {
                         runs.getAndIncrement();
+                    }
+
+                    @Override
+                    public @NonNull MigrateSource<String> addFilter(@NonNull Filter<String> filter) {
+                        throw new UnsupportedOperationException();
                     }
                 },
                 (previous, migrateContext) -> {
@@ -105,12 +110,10 @@ public class MigrationTest {
                 .defaultBuilder(Destination.class)
                 .addMigration(migration)
                 .build();
-        when(backend.read()).thenAnswer((i) -> {
-            DataTree.Mut dataTree = new DataTree.Mut();
-            dataTree.set("version", new DataEntry("old"));
-            dataTree.set("old-hello", new DataEntry("old-goodbye"));
-            return LoadResult.of(dataTree);
-        });
+        DataTree.Mut sourceTree = new DataTree.Mut();
+        sourceTree.set("version", new DataEntry("old"));
+        sourceTree.set("old-hello", new DataEntry("old-goodbye"));
+        when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(sourceTree)));
         Destination migrated = config.configureWith(backend).getOrThrow();
         assertEquals("old-goodbye", migrated.hello());
         assertEquals('W', migrated.affirmative());
@@ -140,6 +143,11 @@ public class MigrationTest {
                     public void onCompletion() {
                         throw new AssertionError("Does not complete");
                     }
+
+                    @Override
+                    public @NonNull MigrateSource<String> addFilter(@NonNull Filter<String> filter) {
+                        throw new UnsupportedOperationException();
+                    }
                 },
                 dummyTransition
         );
@@ -147,7 +155,7 @@ public class MigrationTest {
                 .defaultBuilder(Destination.class)
                 .addMigration(migration)
                 .build();
-        when(backend.read()).thenAnswer((i) -> LoadResult.of(null));
+        when(backend.read(any())).thenReturn(LoadResult.of(null));
         Destination defaultValues = config.configureWith(backend, updateListener).getOrThrow();
         assertEquals("goodbye", defaultValues.hello());
         assertEquals('y', defaultValues.affirmative());
@@ -171,6 +179,11 @@ public class MigrationTest {
                     public void onCompletion() {
                         throw new AssertionError("Does not complete");
                     }
+
+                    @Override
+                    public @NonNull MigrateSource<String> addFilter(@NonNull Filter<String> filter) {
+                        throw new UnsupportedOperationException();
+                    }
                 },
                 dummyTransition
         );
@@ -178,7 +191,7 @@ public class MigrationTest {
                 new MigrateSource<String>() {
                     @Override
                     public @NonNull LoadResult<@NonNull String> load(@NonNull MigrateContext migrateContext) {
-                        DataTree dataTree = migrateContext.mainBackend().read().getOrThrow().getAsTree();
+                        DataTree dataTree = migrateContext.mainBackend().read(any()).getOrThrow().data();
                         DataEntry oldHello =  dataTree.get("old-hello");
                         assertNotNull(oldHello);
                         return LoadResult.of(oldHello.getValue() + "-first");
@@ -186,6 +199,11 @@ public class MigrationTest {
 
                     @Override
                     public void onCompletion() {}
+
+                    @Override
+                    public @NonNull MigrateSource<String> addFilter(@NonNull Filter<String> filter) {
+                        throw new UnsupportedOperationException();
+                    }
                 },
                 ((Transition<String, String>) (previous, migrateContext) -> { return previous + "-chain"; }).chain(
                         (previous, migrateContext) -> new Destination() {
@@ -205,7 +223,7 @@ public class MigrationTest {
                 new MigrateSource<String>() {
                     @Override
                     public @NonNull LoadResult<@NonNull String> load(@NonNull MigrateContext migrateContext) {
-                        DataTree dataTree = migrateContext.mainBackend().read().getOrThrow().getAsTree();
+                        DataTree dataTree = migrateContext.mainBackend().read(any()).getOrThrow().data();
                         DataEntry oldHello =  dataTree.get("old-hello");
                         assertNotNull(oldHello);
                         return LoadResult.of(oldHello.getValue() + "-second");
@@ -213,6 +231,11 @@ public class MigrationTest {
 
                     @Override
                     public void onCompletion() {}
+
+                    @Override
+                    public @NonNull MigrateSource<String> addFilter(@NonNull Filter<String> filter) {
+                        throw new UnsupportedOperationException();
+                    }
                 },
                 (previous, migrateContext) -> new Destination() {
                     @Override
@@ -233,12 +256,10 @@ public class MigrationTest {
                 .build();
         assertEquals(List.of(skipMigration, firstApplicable, secondApplicable), config.getMigrations());
 
-        when(backend.read()).thenAnswer((i) -> {
-            DataTree.Mut dataTree = new DataTree.Mut();
-            dataTree.set("version", new DataEntry("old"));
-            dataTree.set("old-hello", new DataEntry("old-goodbye"));
-            return LoadResult.of(dataTree);
-        });
+        DataTree.Mut sourceTree = new DataTree.Mut();
+        sourceTree.set("version", new DataEntry("old"));
+        sourceTree.set("old-hello", new DataEntry("old-goodbye"));
+        when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(sourceTree)));
         Destination migrated = config.configureWith(backend, updateListener).getOrThrow();
         assertEquals("old-goodbye-first-chain", migrated.hello());
         assertEquals('1', migrated.affirmative());
@@ -252,7 +273,7 @@ public class MigrationTest {
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
         expectedWriteBack.set("hello", new DataEntry("old-goodbye-first-chain"));
         expectedWriteBack.set("affirmative", new DataEntry('1'));
-        verify(backend).write(eq(CommentData.empty()), argThat(new MatchDataTree(expectedWriteBack)));
+        verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 
 }

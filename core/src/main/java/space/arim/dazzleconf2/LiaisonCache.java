@@ -20,7 +20,10 @@
 package space.arim.dazzleconf2;
 
 import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.Comments;
+import space.arim.dazzleconf2.engine.DefaultValues;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.TypeLiaison;
 import space.arim.dazzleconf2.reflect.MethodId;
 import space.arim.dazzleconf2.reflect.MethodMirror;
 import space.arim.dazzleconf2.reflect.TypeToken;
@@ -91,8 +94,8 @@ final class LiaisonCache {
             Object defaultVal;
             try {
                 defaultVal = defaultsInvoker.invokeMethod(methodId);
-            } catch (InvocationTargetException e) {
-                throw new DeveloperMistakeException("Default method threw an exception", e);
+            } catch (InvocationTargetException ex) {
+                throw new DeveloperMistakeException("Default method threw an exception", ex);
             }
             if (defaultVal == null) {
                 throw new DeveloperMistakeException("Default method " + methodId + " returned null");

@@ -65,7 +65,7 @@ public class ConfigureTest {
     public void erroredOut(@Mock ErrorContext errorContext) {
         Configuration<Config> config = Configuration.defaultBuilder(Config.class).build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
-        when(backend.read()).thenAnswer((i) -> LoadResult.failure(errorContext));
+        when(backend.read(any())).thenReturn(LoadResult.failure(errorContext));
         LoadResult<Config> configureWith = config.configureWith(backend);
         assertTrue(configureWith.isFailure());
         assertEquals(List.of(errorContext), configureWith.getErrorContexts());
@@ -77,7 +77,7 @@ public class ConfigureTest {
                 .defaultBuilder(MigrationTest.Destination.class)
                 .build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
-        when(backend.read()).thenAnswer((i) -> LoadResult.of(null));
+        when(backend.read(any())).thenReturn(LoadResult.of(null));
         MigrationTest.Destination defaultValues = config.configureWith(backend, updateListener).getOrThrow();
         assertEquals("goodbye", defaultValues.hello());
         assertEquals('y', defaultValues.affirmative());
@@ -90,7 +90,7 @@ public class ConfigureTest {
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
         expectedWriteBack.set("hello", new DataEntry("goodbye"));
         expectedWriteBack.set("affirmative", new DataEntry('y'));
-        verify(backend).write(eq(CommentData.empty()), argThat(new MatchDataTree(expectedWriteBack)));
+        verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 
     @Test
@@ -99,9 +99,7 @@ public class ConfigureTest {
                 .defaultBuilder(MigrationTest.Destination.class)
                 .build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
-        when(backend.read()).thenAnswer((i) -> {
-            return LoadResult.of(new DataTree.Mut());
-        });
+        when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(new DataTree.Immut())));
         MigrationTest.Destination withMissing = config.configureWith(backend, updateListener).getOrThrow();
         assertEquals("goodbye-default-if-missing", withMissing.hello());
         assertEquals('y', withMissing.affirmative());
@@ -115,7 +113,7 @@ public class ConfigureTest {
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
         expectedWriteBack.set("hello", new DataEntry("goodbye-default-if-missing"));
         expectedWriteBack.set("affirmative", new DataEntry('y'));
-        verify(backend).write(eq(CommentData.empty()), argThat(new MatchDataTree(expectedWriteBack)));
+        verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 
     @Test
@@ -124,11 +122,9 @@ public class ConfigureTest {
                 .defaultBuilder(MigrationTest.Destination.class)
                 .build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
-        when(backend.read()).thenAnswer((i) -> {
-            DataTree.Mut dataTree = new DataTree.Mut();
-            dataTree.set("hello", new DataEntry("present"));
-            return LoadResult.of(dataTree);
-        });
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set("hello", new DataEntry("present"));
+        when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
         MigrationTest.Destination withMissing = config.configureWith(backend, updateListener).getOrThrow();
         assertEquals("present", withMissing.hello());
         assertEquals('y', withMissing.affirmative());
@@ -141,6 +137,6 @@ public class ConfigureTest {
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
         expectedWriteBack.set("hello", new DataEntry("present"));
         expectedWriteBack.set("affirmative", new DataEntry('y'));
-        verify(backend).write(eq(CommentData.empty()), argThat(new MatchDataTree(expectedWriteBack)));
+        verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 }

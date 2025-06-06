@@ -22,8 +22,14 @@ package space.arim.dazzleconf2.engine;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.DataEntry;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.util.List;
+
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * Adds comments to a configuration entry or type.
@@ -47,8 +53,8 @@ import java.util.List;
  * top-level comments in the configuration definition. Such top-level comments are passed directly to the backend.
  */
 @Repeatable(Comments.Container.class)
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD, ElementType.TYPE})
+@Retention(RUNTIME)
+@Target({METHOD, TYPE})
 public @interface Comments {
 
     /**
@@ -77,8 +83,8 @@ public @interface Comments {
      * Users do not need this directly and relying on the repeatability of {@link Comments} is far more ergonomic.
      *
      */
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RUNTIME)
+    @Target({METHOD, TYPE})
     @interface Container {
 
         /**

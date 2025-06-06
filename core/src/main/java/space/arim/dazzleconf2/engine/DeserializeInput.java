@@ -22,9 +22,11 @@ package space.arim.dazzleconf2.engine;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.*;
-
-import java.util.Locale;
+import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyPath;
 
 /**
  * An object from a data tree, that is being processed for deserialization. See {@link DataTree}.
@@ -36,17 +38,11 @@ import java.util.Locale;
  * Instances of this type are implemented by the library and supplied to {@link SerializeDeserialize} implementations.
  * Equality is not defined, and no thread safety is provided.
  * <p>
- * This type should not be implemented by library consumers. New methods may be added in the future; this interface
- * should be considered sealed.
+ * This type should not be implemented by library consumers. New methods may be added in the future, and this interface
+ * should be considered sealed. If library consumers decide to implement this interface, they might expose themselves
+ * to {@code NoSuchMethodError}s if they pass their implementation to more up-to-date liaisons.
  */
-public interface DeserializeInput {
-
-    /**
-     * The locale to format error messages in.
-     *
-     * @return the locale
-     */
-    @NonNull Locale getLocale();
+public interface DeserializeInput extends ErrorContext.Source {
 
     /**
      * The actual object which is being deserialized.
@@ -117,49 +113,12 @@ public interface DeserializeInput {
      * <p>
      * The child value is supposed to be taken "from" this object. For example, an element in a list would be a child
      * object of the list.
+     * <p>
+     * The child value is checked to conform to {@link DataEntry#validateValue(Object)}.
      *
      * @param value the child value to wrap
      * @return deserializable input
      */
     @NonNull DeserializeInput makeChild(@NonNull Object value);
-
-    /**
-     * Builds an error context based on the implementation.
-     * <p>
-     * This function takes a {@code Printable} for flexibility. Using {@link Printable#preBuilt(CharSequence)} will
-     * suffice in many cases.
-     *
-     * @param message the main error messge
-     * @return an error context
-     */
-    @NonNull ErrorContext buildError(@NonNull Printable message);
-
-    /**
-     * Builds an error context, wraps it in a <code>LoadResult</code> and returns it.
-     * <p>
-     * This function does not actually throw anything. It is named as such so that your code can look like this:
-     * <pre>
-     *     {@code
-     *         return operable.throwError("failure");
-     *     }
-     * </pre>
-     *
-     * @param message the main error message
-     * @return an error result
-     * @param <R> the type of the result value (can be anything since the result will be an error)
-     */
-    <R> @NonNull LoadResult<R> throwError(@NonNull CharSequence message);
-
-    /**
-     * Builds an error context, wraps it in a <code>LoadResult</code> and returns it.
-     * <p>
-     * This function does not actually throw anything. It is named as such to communicate the logical termination of
-     * a block of code.
-     *
-     * @param message the main error message
-     * @return an error result
-     * @param <R> the type of the result value (can be anything since the result will be an error)
-     */
-    <R> @NonNull LoadResult<R> throwError(@NonNull Printable message);
 
 }

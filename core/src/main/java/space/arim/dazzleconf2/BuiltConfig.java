@@ -21,27 +21,42 @@ package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.backend.*;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.CachedBackend;
+import space.arim.dazzleconf2.backend.CommentData;
+import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.DefaultKeyMapper;
+import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.Printable;
+import space.arim.dazzleconf2.engine.LoadListener;
+import space.arim.dazzleconf2.engine.TypeLiaison;
+import space.arim.dazzleconf2.engine.UpdateListener;
+import space.arim.dazzleconf2.engine.UpdateReason;
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.migration.MigrateContext;
 import space.arim.dazzleconf2.migration.Migration;
 import space.arim.dazzleconf2.reflect.Instantiator;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 final class BuiltConfig<C> implements Configuration<C> {
 
     private final ConfigurationDefinition<C> definition;
     private final Locale locale;
+    private final LibraryLang libraryLang;
     private final List<TypeLiaison> typeLiaisons;
     private final KeyMapper keyMapper;
     private final List<Migration<?, C>> migrations;
 
-    BuiltConfig(ConfigurationDefinition<C> definition, Locale locale, List<TypeLiaison> typeLiaisons,
-                KeyMapper keyMapper, List<Migration<?, C>> migrations) {
+    BuiltConfig(ConfigurationDefinition<C> definition, Locale locale, LibraryLang libraryLang,
+                List<TypeLiaison> typeLiaisons, KeyMapper keyMapper, List<Migration<?, C>> migrations) {
         this.definition = Objects.requireNonNull(definition, "definition");
         this.locale = Objects.requireNonNull(locale, "locale");
+        this.libraryLang = libraryLang;
         this.typeLiaisons = typeLiaisons;
         this.keyMapper = keyMapper;
         this.migrations = Objects.requireNonNull(migrations, "migrations");
@@ -191,32 +206,69 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     private LoadResult<C> configureWith0(@NonNull CachedBackend backend, @Nullable UpdateListener updateListener) {
 
+        // 0. Setup
         Layout layout = getLayout();
         RecordUpdates recordUpdates = (updateListener == null) ?
                 new RecordUpdates() : new RecordUpdates.WithDelegate(updateListener);
         KeyMapper keyMapper = (this.keyMapper != null) ? this.keyMapper : backend.recommendKeyMapper();
         Objects.requireNonNull(keyMapper, "Backend returned null key mapper");
+        ErrorContext.Source errorSource = new LoadError.Factory() {
+            @Override
+            public @NonNull ErrorContext buildError(@NonNull Printable message) {
+                return new LoadError(message, libraryLang);
+            }
+
+            @Override
+            public @NonNull LibraryLang getLibraryLang() {
+                return libraryLang;
+            }
+        };
+
         // 1. Try to migrate if possible
         if (!migrations.isEmpty()) {
+            // Build migraton context
+            class MigrateCtx extends LoadError.Factory implements MigrateContext {
+
+                @Override
+                public @NonNull Backend mainBackend() {
+                    return backend;
+                }
+
+                @Override
+                public @NonNull LoadListener loadListener() {
+                    return recordUpdates;
+                }
+
+                @Override
+                public @NonNull ErrorContext buildError(@NonNull Printable message) {
+                    return new LoadError(message, libraryLang);
+                }
+
+                @Override
+                public @NonNull LibraryLang getLibraryLang() {
+                    return libraryLang;
+                }
+            }
+            MigrateCtx migrateCtx = new MigrateCtx();
             // Try all migrations
             for (Migration<?, C> migration : migrations) {
-                LoadResult<C> attempt = migration.tryMigrate(new MigrateContext() {
-                    @Override
-                    public @NonNull Backend mainBackend() {
-                        return backend;
-                    }
-
-                    @Override
-                    public @NonNull LoadListener loadListener() {
-                        return recordUpdates;
-                    }
-                });
+                LoadResult<C> attempt = migration.tryMigrate(migrateCtx);
                 C migrated;
                 if (attempt.isSuccess() && (migrated = attempt.getOrThrow()) != null) {
                     // Update the backend with the migrated value
-                    DataTree.Mut writeBack = new DataTree.Mut();
-                    writeTo(migrated, writeBack, new WriteOpts(keyMapper));
-                    backend.write(layout.getTopLevelComments(), writeBack);
+                    DataTree.Mut migratedData = new DataTree.Mut();
+                    writeTo(migrated, migratedData, new WriteOpts(keyMapper));
+                    backend.write(new Backend.Document() {
+                        @Override
+                        public @NonNull CommentData comments() {
+                            return layout.getComments();
+                        }
+
+                        @Override
+                        public @NonNull DataTree data() {
+                            return migratedData;
+                        }
+                    });
                     // Now signal completion, and finish
                     migration.onCompletion();
                     recordUpdates.migratedFrom(migration);
@@ -229,26 +281,45 @@ final class BuiltConfig<C> implements Configuration<C> {
             recordUpdates.updated = false;
         }
         // 2. Load configuration
-        LoadResult<? extends @Nullable DataStreamable> read = backend.read();
+        LoadResult<Backend.@Nullable Document> read = backend.read(errorSource);
         if (read.isFailure()) {
             return LoadResult.failure(read.getErrorContexts());
         }
-        DataStreamable loadedStream = read.getOrThrow();
-        if (loadedStream == null) {
+        Backend.Document document = read.getOrThrow();
+        if (document == null) {
             // 3. Write defaults if necessary
             C defaults = loadDefaults();
-            DataTree.Mut writeBack = new DataTree.Mut();
-            writeTo(defaults, writeBack, new WriteOpts(keyMapper));
-            backend.write(layout.getTopLevelComments(), writeBack);
+            DataTree.Mut defaultData = new DataTree.Mut();
+            writeTo(defaults, defaultData, new WriteOpts(keyMapper));
+            backend.write(new Backend.Document() {
+                @Override
+                public @NonNull CommentData comments() {
+                    return layout.getComments();
+                }
+
+                @Override
+                public @NonNull DataTree data() {
+                    return defaultData;
+                }
+            });
             recordUpdates.loadedDefaults();
             return LoadResult.of(defaults);
         }
-        DataTree.Mut updatableTree = loadedStream.getAsTree().intoMut();
+        DataTree.Mut updatableTree = document.data().intoMut();
         LoadResult<C> loadResult = readWithUpdate(updatableTree, new ReadOpts(recordUpdates, keyMapper));
         if (loadResult.isSuccess() && recordUpdates.updated) {
-            // 4. Update if necessary
-            // Even though the backend can load in any order, we preserve ordering in round-trip fashion
-            backend.write(layout.getTopLevelComments(), updatableTree);
+            // 4. Update if necessary: preserves order thanks to DataTree's order guarantees
+            backend.write(new Backend.Document() {
+                @Override
+                public @NonNull CommentData comments() {
+                    return document.comments();
+                }
+
+                @Override
+                public @NonNull DataTree data() {
+                    return updatableTree;
+                }
+            });
         }
         return loadResult;
     }

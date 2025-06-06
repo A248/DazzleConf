@@ -43,8 +43,9 @@ import java.util.Locale;
 public interface Configuration<C> extends ConfigurationDefinition<C> {
 
     /**
-     * Gets the locale used at the library level. This will be used to display error messages such as in
-     * {@link ErrorContext#displayDetails()}
+     * Gets the locale used at the library level.
+     * <p>
+     * This will be used to display error messages such as in {@link ErrorContext#display()}.
      *
      * @return the locale for error messages
      */
@@ -77,14 +78,21 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
     /**
      * Convenience method for building a configuration.
      * <p>
-     * This will automaticallly add the default type liaisons to the returned builder. The default type liaisons
-     * cover primitive types, <code>String</code>, and enums, and they will take precedence over any type liaisons
-     * added later. Please see {@link ConfigurationBuilder#addDefaultTypeLiaisons()} for more details. Callers who do
-     * not want this behavior may construct a builder directly.
+     * Produces a configuration builder for the supplied raw type, assuming it has no generic parameters. The type is
+     * treated as unannotated.
      * <p>
-     * Note that the configuration type <code>configType</code> cannot use generic parameters. <code>Class</code>
-     * objects are not parameterized, meaning the type {@code C} would not be available at runtime. If you need to
-     * use a parameterized configuration type, please use {@link #defaultBuilder(TypeToken)} and specify the generic
+     * <b>Default liaisons</b>
+     * <p>
+     * This method will automaticallly add the default type liaisons to the returned builder. The default type liaisons
+     * cover primitive types, {@code String}, enums, {@code Collection}, {@code List}, and {@code Set}. Please see
+     * {@link ConfigurationBuilder#addDefaultTypeLiaisons()} for more details. Callers who do not want this behavior
+     * may either construct a builder directly or add later type liaisons (which will override earlier liaisons).
+     * <p>
+     * <b>Generic Parameters</b>
+     * <p>
+     * That the configuration type <code>configType</code> cannot use generic parameters. <code>Class</code> objects
+     * are not parameterized, meaning the type {@code C} would not be available at runtime. If you need to use a
+     * parameterized configuration type, please use {@link #defaultBuilder(TypeToken)} and specify the generic
      * arguments by creating a type token.
      *
      * @param <C> the config type
@@ -97,7 +105,7 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
             throw new DeveloperMistakeException("Cannot use Configuration.builder(Class) with a generic type.");
         }
         return defaultBuilder(new TypeToken<>(new ReifiedType.Annotated(
-                configType, ReifiedType.Annotated.EMPTY_ARRAY, configType
+                configType, ReifiedType.Annotated.EMPTY_ARRAY, ReifiedType.Annotated.unannotated()
         )));
     }
 
@@ -114,9 +122,9 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * <b>Default liaisons</b>
      * <p>
      * This method will automaticallly add the default type liaisons to the returned builder. The default type liaisons
-     * cover primitive types, <code>String</code>, and enums, and they will take precedence over any type liaisons
-     * added later. Please see {@link ConfigurationBuilder#addDefaultTypeLiaisons()} for more details. Callers who do
-     * not want this behavior may construct a builder directly instead of using this method.
+     * cover primitive types, {@code String}, enums, {@code Collection}, {@code List}, and {@code Set}. Please see
+     * {@link ConfigurationBuilder#addDefaultTypeLiaisons()} for more details. Callers who do not want this behavior
+     * may either construct a builder directly or add later type liaisons (which will override earlier liaisons).
      *
      * @param <C> the config type
      * @param configType the reified type token, the runtime equivalent of {@code C}

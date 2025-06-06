@@ -24,7 +24,8 @@ import org.checkerframework.checker.nullness.qual.PolyNull;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 
 import java.lang.invoke.MethodType;
-import java.lang.reflect.*;
+import java.lang.reflect.AnnotatedParameterizedType;
+import java.lang.reflect.AnnotatedType;
 import java.util.Objects;
 
 /**

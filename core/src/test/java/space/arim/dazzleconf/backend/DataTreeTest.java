@@ -22,8 +22,9 @@ package space.arim.dazzleconf.backend;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import space.arim.dazzleconf.ImmutabilityGuard;
-import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.CommentLocation;
@@ -32,37 +33,41 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DataTreeTest {
 
-    static class ImmutGuard extends ImmutabilityGuard<DataTree.Immut, Map<String, Object>> {
+    static class ImmutGuard extends ImmutabilityGuard<DataTree.Immut, Map<Object, DataEntry>> {
 
         protected ImmutGuard(DataTree.Immut value, DataTree.Immut...extra) {
             super(value, extra);
         }
 
         @Override
-        protected Map<String, Object> takeSnapshot(DataTree.Immut value) {
-            return value.getAsStream()
-                    .map(entry -> Map.entry(entry.getKey().toString(), entry.getValue()))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        protected Map<Object, DataEntry> takeSnapshot(DataTree.Immut value) {
+            Map<Object, DataEntry> snapshot = new HashMap<>();
+            value.forEach((key, entry) -> snapshot.put(key.toString(), entry));
+            return Map.copyOf(snapshot);
         }
-    };
+    }
+
     @Test
     public void populateEntries() {
         // Sample values
-        DataTree.Mut dataTreeValue = new DataTree.Mut();
-        dataTreeValue.set("hello", new DataEntry("goodbye"));
-        dataTreeValue.set(1, new DataEntry("key is not a string"));
+        DataTree.Mut dataTree = new DataTree.Mut();
+        assertTrue(dataTree.isEmpty());
+        assertEquals(0, dataTree.size());
+        dataTree.set("hello", new DataEntry("goodbye"));
+        dataTree.set(1, new DataEntry("key is not a string"));
+        assertFalse(dataTree.isEmpty());
+        assertEquals(2, dataTree.size());
 
         Object[] validValues = new Object[] {
                 3, (byte) 4, Long.MAX_VALUE, Double.MIN_VALUE, (float) 42.7,
                 false, 'c', "string",
                 List.of(4, true, "list of mixed types"),
-                dataTreeValue
+                dataTree
         };
         // Verify usage
         for (Object validValue : validValues) {
@@ -94,6 +99,31 @@ public class DataTreeTest {
         assertEquals(orderedValues, List.of("goodbye", "yes", true));
 
         assertEquals(orderedKeys, new ArrayList<>(dataTreeMut.getKeys()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void deleteKeyWhileIterating(boolean fromImmut) {
+        // This test checks the concurrent modifiability of DataTree#getKeys()
+        DataTree.Mut dataTreeMut = new DataTree.Mut();
+        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.set("also", new DataEntry("yes"));
+        dataTreeMut.set("zed", new DataEntry(true));
+
+        if (fromImmut) dataTreeMut = dataTreeMut.intoImmut().intoMut();
+        for (Object key : dataTreeMut.getKeys()) {
+            if (key.equals("also")) {
+                dataTreeMut.remove(key);
+            }
+        }
+        List<Object> orderedKeys = new ArrayList<>();
+        List<Object> orderedValues = new ArrayList<>();
+        dataTreeMut.forEach((k, v) -> {
+            orderedKeys.add(k);
+            orderedValues.add(v.getValue());
+        });
+        assertEquals(orderedKeys, List.of("hello", "zed"));
+        assertEquals(orderedValues, List.of("goodbye", true));
     }
 
     @Test
@@ -242,33 +272,5 @@ public class DataTreeTest {
     public void toStringTest() {
         assertTrue(new DataTree.Mut().toString().contains("Mut"));
         assertTrue(new DataTree.Immut().toString().contains("Immut"));
-    }
-
-    // DataStream implementation
-
-    @Test
-    public void getAsTree() {
-        DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        assertSame(dataTreeMut, dataTreeMut.intoMut());
-    }
-
-    @Test
-    public void getAsStream() {
-        DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        dataTreeMut.set("also", new DataEntry("yes"));
-        dataTreeMut.set("zed", new DataEntry(true));
-        Map<String, Object> expected = Map.of("hello", "goodbye", "also", "yes", "zed", true);
-        Map<String, Object> actual = new HashMap<>();
-        dataTreeMut.getAsStream()
-                .forEach((keyValue) -> {
-                    DataEntry entry = keyValue.getValue();
-                    assertNull(entry.getLineNumber());
-                    assertEquals(CommentData.empty(), entry.getComments());
-                    assertEquals(List.of(), entry.getComments(CommentLocation.INLINE));
-                    actual.put(keyValue.getKey().toString(), entry.getValue());
-                });
-        assertEquals(expected, actual);
     }
 }

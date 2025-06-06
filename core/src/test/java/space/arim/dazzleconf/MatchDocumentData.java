@@ -20,26 +20,21 @@
 package space.arim.dazzleconf;
 
 import org.mockito.ArgumentMatcher;
-import space.arim.dazzleconf2.backend.DataStreamable;
+import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.DataTree;
 
 import java.util.Objects;
 
-public final class MatchDataTree implements ArgumentMatcher<DataStreamable> {
+public final class MatchDocumentData implements ArgumentMatcher<Backend.Document> {
 
-    private final DataTree expected;
+    private final DataTree dataTree;
 
-    public MatchDataTree(DataTree expected) {
-        this.expected = expected;
+    public MatchDocumentData(DataTree dataTree) {
+        this.dataTree = dataTree;
     }
 
     @Override
-    public boolean matches(DataStreamable argument) {
-        return Objects.equals(expected, argument.getAsTree());
-    }
-
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + '{' + expected + '}';
+    public boolean matches(Backend.Document argument) {
+        return Objects.equals(dataTree, argument.data());
     }
 }

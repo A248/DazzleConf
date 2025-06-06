@@ -20,15 +20,20 @@
 package space.arim.dazzleconf2.migration;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.ErrorContext;
+import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.engine.LoadListener;
+
+import java.util.Locale;
 
 /**
  * Contextual resources to be used by migrations.
  * <p>
- * This interface is implemented by whichever caller is using a migration, and passed to the migration itself.
+ * This interface is implemented by the caller when passed to migrations.
  */
-public interface MigrateContext {
+public interface MigrateContext extends ErrorContext.Source {
 
     /**
      * The backend being used to load the main configuration.
@@ -50,4 +55,43 @@ public interface MigrateContext {
      */
     @NonNull LoadListener loadListener();
 
+    /**
+     * Creates a new migration context that delegates to this one, but uses the specified load listener.
+     *
+     * @param loadListener the load listener to use
+     * @return a new migration context with only the load listener changed
+     */
+    default @NonNull MigrateContext withLoadListener(@NonNull LoadListener loadListener) {
+        return new MigrateContext() {
+            @Override
+            public @NonNull Backend mainBackend() {
+                return MigrateContext.this.mainBackend();
+            }
+
+            @Override
+            public @NonNull LoadListener loadListener() {
+                return loadListener;
+            }
+
+            @Override
+            public @NonNull Locale getLocale() {
+                return MigrateContext.this.getLocale();
+            }
+
+            @Override
+            public @NonNull ErrorContext buildError(@NonNull Printable message) {
+                return MigrateContext.this.buildError(message);
+            }
+
+            @Override
+            public @NonNull <R> LoadResult<R> throwError(@NonNull CharSequence message) {
+                return MigrateContext.this.throwError(message);
+            }
+
+            @Override
+            public @NonNull <R> LoadResult<R> throwError(@NonNull Printable message) {
+                return MigrateContext.this.throwError(message);
+            }
+        };
+    }
 }

@@ -25,12 +25,22 @@ import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.DefaultValues;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
+import space.arim.dazzleconf2.engine.TypeLiaison;
+import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -106,11 +116,13 @@ public final class CollectionLiaison implements TypeLiaison {
         }
 
         @Override
+        @SideEffectFree
         public @Nullable DefaultValues<COLL> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             return null;
         }
 
         @Override
+        @SideEffectFree
         public @NonNull SerializeDeserialize<COLL> makeSerializer() {
             return this;
         }

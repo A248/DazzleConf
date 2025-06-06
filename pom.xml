@@ -202,6 +202,40 @@
 						</execution>
 					</executions>
 				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-shade-plugin</artifactId>
+					<version>3.6.0</version>
+					<configuration>
+						<artifactSet>
+							<excludes>
+								<exclude>module-info.class</exclude>
+							</excludes>
+						</artifactSet>
+					</configuration>
+					<executions>
+						<execution>
+							<phase>package</phase>
+							<goals>
+								<goal>shade</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.moditect</groupId>
+					<artifactId>moditect-maven-plugin</artifactId>
+					<version>1.2.2.Final</version>
+					<executions>
+						<execution>
+							<id>add-module-info</id>
+							<phase>package</phase>
+							<goals>
+								<goal>add-module-info</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
 				<!-- Testing -->
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
@@ -248,6 +282,9 @@
 
 	<modules>
 		<module>core</module>
+		<!-- Version 2 format-specific "backends" -->
+		<module>backend-yaml</module>
+		<!-- Version 1 format-specific "extensions" -->
 		<module>gson</module>
 		<module>snakeyaml</module>
         <module>hocon</module>

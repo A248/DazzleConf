@@ -22,6 +22,7 @@ package space.arim.dazzleconf.internal.error;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.support.ParameterDeclarations;
 import space.arim.dazzleconf.serialiser.URLValueSerialiser;
 
 import java.nio.file.StandardCopyOption;
@@ -31,7 +32,7 @@ import java.util.stream.Stream;
 public class StandardErrorArgumentsProvider implements ArgumentsProvider {
 
 	@Override
-	public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) throws Exception {
+	public Stream<? extends Arguments> provideArguments(ParameterDeclarations parameters, ExtensionContext extensionContext) throws Exception {
 		var developerErrors = Stream.of(
 				DeveloperError.expectedMap(Errors.When.LOAD_CONFIG, "key", new Object()),
 				DeveloperError.replacedObject("key", "replaced", "replacement"),

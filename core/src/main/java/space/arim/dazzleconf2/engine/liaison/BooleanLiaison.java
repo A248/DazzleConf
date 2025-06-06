@@ -21,9 +21,15 @@ package space.arim.dazzleconf2.engine.liaison;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.DefaultValues;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
+import space.arim.dazzleconf2.engine.TypeLiaison;
+import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
@@ -38,6 +44,7 @@ public final class BooleanLiaison implements TypeLiaison {
     public BooleanLiaison() {}
 
     @Override
+    @SideEffectFree
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
         Class<V> rawType = typeToken.getRawType();
         if (rawType.equals(boolean.class) || rawType.equals(Boolean.class)) {
@@ -51,6 +58,7 @@ public final class BooleanLiaison implements TypeLiaison {
     private static final class AgentImpl implements Agent<Boolean> {
 
         @Override
+        @SideEffectFree
         public @Nullable DefaultValues<Boolean> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             BooleanDefault booleanDefault = defaultInit.methodAnnotations().getAnnotation(BooleanDefault.class);
             if (booleanDefault != null) {
@@ -70,6 +78,7 @@ public final class BooleanLiaison implements TypeLiaison {
         }
 
         @Override
+        @SideEffectFree
         public @NonNull SerializeDeserialize<Boolean> makeSerializer() {
             return new SerializeDeserialize<Boolean>() {
 

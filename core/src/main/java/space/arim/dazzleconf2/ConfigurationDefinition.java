@@ -23,7 +23,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.LoadListener;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
 import space.arim.dazzleconf2.reflect.Instantiator;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
@@ -61,11 +64,12 @@ public interface ConfigurationDefinition<C> {
         /**
          * Gets the top level comments on the configuration interface.
          * <p>
-         * If none is set, an empty {@code Comments} might be returned.
+         * These are the comments that exist at the global level and are not tied to any specific entry. If none are
+         * set, an empty {@code Comments} is returned.
          *
          * @return the top level comments, which may be empty if not set
          */
-        @NonNull CommentData getTopLevelComments();
+        @NonNull CommentData getComments();
 
         /**
          * Gets the unmapped key set. These are the same as the method names from the configuration interface,

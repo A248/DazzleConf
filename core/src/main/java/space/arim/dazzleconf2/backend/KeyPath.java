@@ -23,7 +23,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
@@ -105,12 +108,21 @@ public abstract class KeyPath implements Printable {
     }
 
     /**
-     * Gets whether this key path is empty
+     * Whether this key path is empty
      *
      * @return true if empty
      */
     public boolean isEmpty() {
         return parts.isEmpty();
+    }
+
+    /**
+     * Gets the number of key parts in the sequence
+     *
+     * @return the number of parts in this key path
+     */
+    public int size() {
+        return parts.size();
     }
 
     /**
@@ -290,8 +302,8 @@ public abstract class KeyPath implements Printable {
     public void printTo(@NonNull StringBuilder output) {
         try {
             printTo((Appendable) output);
-        } catch (IOException e) {
-            throw new AssertionError("StringBuilder does not throw IOException", e);
+        } catch (IOException ex) {
+            throw new AssertionError("StringBuilder does not throw IOException", ex);
         }
     }
 

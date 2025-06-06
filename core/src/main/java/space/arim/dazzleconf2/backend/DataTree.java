@@ -24,9 +24,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.stream.Stream;
 
 /**
  * A tree of in-memory configuration data. This tree is essentially a map of keys to values representing in-memory
@@ -60,12 +63,30 @@ import java.util.stream.Stream;
  * mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
  *
  */
-public abstract class DataTree implements DataStreamable {
+public abstract class DataTree {
 
     @NonNull LinkedHashMap<Object, DataEntry> data;
 
     DataTree(LinkedHashMap<Object, DataEntry> data) {
         this.data = data;
+    }
+
+    /**
+     * Whether this data tree is devoid of key/value pairs
+     *
+     * @return true if empty
+     */
+    public boolean isEmpty() {
+        return data.isEmpty();
+    }
+
+    /**
+     * The number of key/value pairs in this data tree indicates its size
+     *
+     * @return the size of this data tree
+     */
+    public int size() {
+        return data.size();
     }
 
     /**
@@ -85,14 +106,12 @@ public abstract class DataTree implements DataStreamable {
     /**
      * Gets all the keys used in this tree.
      * <p>
-     * The returned collection is a mutable copy; it is unaffected by the mutability of this {@code DataTree}, and
-     * concurrent updates to this tree will not affect it either.
+     * The returned collection may be a mutable copy, or it may be an immutable snapshot. Importantly, it will not be
+     * affected by concurrent updates to this tree.
      *
-     * @return the key set, a mutable copy
+     * @return the key set, a mutable copy or an immutable snapshot
      */
-    public @NonNull Collection<@NonNull Object> getKeys() {
-        return new LinkedHashSet<>(data.keySet());
-    }
+    public abstract @NonNull Collection<@NonNull Object> getKeys();
 
     /**
      * Runs an action for each key/value pair.
@@ -178,6 +197,11 @@ public abstract class DataTree implements DataStreamable {
         }
 
         @Override
+        public @NonNull Collection<@NonNull Object> getKeys() {
+            return Collections.unmodifiableSet(data.keySet());
+        }
+
+        @Override
         public @NonNull Mut intoMut() {
             Mut mutCopy = new Mut(data);
             mutCopy.dataFrozen = true;
@@ -208,6 +232,12 @@ public abstract class DataTree implements DataStreamable {
 
         Mut(LinkedHashMap<Object, DataEntry> data) {
             super(data);
+        }
+
+        @Override
+        public @NonNull Collection<@NonNull Object> getKeys() {
+            Set<Object> dataKeySet = data.keySet();
+            return dataFrozen ? Collections.unmodifiableSet(dataKeySet) : new LinkedHashSet<>(dataKeySet);
         }
 
         @Override
@@ -269,30 +299,6 @@ public abstract class DataTree implements DataStreamable {
             ensureMutable();
             data.clear();
         }
-    }
-
-    // Implementation of self as DataStreamable
-
-    /**
-     * Returns this data tree, itself
-     *
-     * @return this object
-     */
-    @Override
-    public @NonNull DataTree getAsTree() {
-        return this;
-    }
-
-    /**
-     * Gets the data in this tree as a {@link Stream}.
-     * <p>
-     * The stream is ordered according to the insertion order of this tree.
-     *
-     * @return a stream of keys and data entries
-     */
-    @Override
-    public @NonNull Stream<Map.@NonNull Entry<@NonNull Object, ? extends DataStreamable.@NonNull Entry>> getAsStream() {
-        return data.entrySet().stream();
     }
 
 }

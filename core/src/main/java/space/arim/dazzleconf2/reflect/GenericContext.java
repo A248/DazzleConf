@@ -22,7 +22,14 @@ package space.arim.dazzleconf2.reflect;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.internals.ArrayType;
 
-import java.lang.reflect.*;
+import java.lang.reflect.AnnotatedArrayType;
+import java.lang.reflect.AnnotatedParameterizedType;
+import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.AnnotatedTypeVariable;
+import java.lang.reflect.AnnotatedWildcardType;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 
 import static space.arim.dazzleconf2.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
 

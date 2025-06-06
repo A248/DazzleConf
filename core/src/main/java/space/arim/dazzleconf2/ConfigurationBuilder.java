@@ -23,16 +23,35 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.common.returnsreceiver.qual.This;
 import org.checkerframework.dataflow.qual.SideEffectFree;
-import space.arim.dazzleconf2.engine.liaison.*;
-import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.TypeLiaison;
-import space.arim.dazzleconf2.migration.Migration;
-import space.arim.dazzleconf2.reflect.*;
+import space.arim.dazzleconf2.engine.liaison.BooleanLiaison;
+import space.arim.dazzleconf2.engine.liaison.ByteLiaison;
+import space.arim.dazzleconf2.engine.liaison.CharacterLiaison;
+import space.arim.dazzleconf2.engine.liaison.CollectionLiaison;
+import space.arim.dazzleconf2.engine.liaison.DoubleLiaison;
+import space.arim.dazzleconf2.engine.liaison.EnumLiaison;
+import space.arim.dazzleconf2.engine.liaison.FloatLiaison;
+import space.arim.dazzleconf2.engine.liaison.IntegerLiaison;
+import space.arim.dazzleconf2.engine.liaison.LongLiaison;
+import space.arim.dazzleconf2.engine.liaison.ShortLiaison;
+import space.arim.dazzleconf2.engine.liaison.SimpleTypeLiaison;
+import space.arim.dazzleconf2.engine.liaison.StringLiaison;
+import space.arim.dazzleconf2.engine.liaison.SubSection;
+import space.arim.dazzleconf2.engine.liaison.SubSectionLiaison;
+import space.arim.dazzleconf2.internals.ImmutableCollections;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf2.migration.Migration;
+import space.arim.dazzleconf2.reflect.DefaultInstantiator;
+import space.arim.dazzleconf2.reflect.Instantiator;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 /**
  * A builder for {@link Configuration}. The builder allows changing how the configuration is defined, read,
@@ -261,7 +280,10 @@ public final class ConfigurationBuilder<C> {
     }
 
     /**
-     * Adds the following migration to this builder
+     * Adds the following migration to this builder.
+     * <p>
+     * <b>Migrations are not trivial.</b> By using this method, you affirm that you have read the package javadoc for
+     * {@link space.arim.dazzleconf2.migration}, and you understand the "perpetual migration" trap.
      * <p>
      * The order is significant, because migrations are checked in the order in which they are declared. Thus,
      * migrations that come first need to ensure they aren't wrongly handling different or overlapping versions.
@@ -275,7 +297,10 @@ public final class ConfigurationBuilder<C> {
     }
 
     /**
-     * Adds the following migrations to this builder
+     * Adds the following migrations to this builder.
+     * <p>
+     * <b>Migrations are not trivial.</b> By using this method, you affirm that you have read the package javadoc for
+     * {@link space.arim.dazzleconf2.migration}, and you understand the "perpetual migration" trap.
      * <p>
      * The order is significant, because migrations are checked in the order in which they are declared. Thus,
      * migrations that come first need to ensure they aren't wrongly handling different or overlapping versions.
@@ -306,12 +331,15 @@ public final class ConfigurationBuilder<C> {
                 new DefaultInstantiator(configType.getRawType().getClassLoader()) : this.instantiator;
         List<Migration<?, C>> migrations = ImmutableCollections.listOf(this.migrations);
 
+        // Load language
+        LibraryLang libraryLang = LibraryLang.loadLang(locale);
+
         // Scan and build definition
         ConfigurationDefinition<C> definition = new DefinitionScan(
-                LibraryLang.loadLang(locale), new LiaisonCache(typeLiaisons), instantiator
+                libraryLang, new LiaisonCache(typeLiaisons), instantiator
         ).read(configType);
 
         // Yield final
-        return new BuiltConfig<>(definition, locale, typeLiaisons, keyMapper, migrations);
+        return new BuiltConfig<>(definition, locale, libraryLang, typeLiaisons, keyMapper, migrations);
     }
 }

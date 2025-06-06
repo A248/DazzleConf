@@ -19,18 +19,25 @@
 
 package space.arim.dazzleconf;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.ErrorPrint;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.*;
+import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.DefaultKeyMapper;
+import space.arim.dazzleconf2.engine.UpdateListener;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class ErrorHandlingTest {
@@ -43,27 +50,73 @@ public class ErrorHandlingTest {
         this.errorPrint = errorPrint;
     }
 
-    @Test
-    public void success() {
-        Configuration<HelloWorld> config = Configuration
-                .defaultBuilder(HelloWorld.class)
-                .build();
-        assertEquals("hi", config.loadDefaults().hello());
+    public interface Config {
 
-        DataTree.Mut sourceTree = new DataTree.Mut();
-        sourceTree.set("hello", new DataEntry("goodbye"));
-        when(backend.read()).thenAnswer((i) -> LoadResult.of((DataStreamable) sourceTree));
-        when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
-
-        assertEquals("goodbye", config.configureOrFallback(backend, errorPrint).hello());
-        verifyNoInteractions(errorPrint);
-    }
-
-    public interface HelloWorld {
-
-        default String hello() {
-            return "hi";
+        default int integral() {
+            return -1;
         }
+
     }
 
+    @BeforeEach
+    public void setup() {
+        when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
+    }
+
+    @Test
+    public void noErrors() {
+        Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set("integral", new DataEntry(1));
+        when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
+        Config loaded = configuration.configureOrFallback(backend, errorPrint);
+        verifyNoInteractions(errorPrint);
+        assertEquals(1, loaded.integral());
+    }
+
+    @Test
+    public void noErrors(@Mock UpdateListener updateListener) {
+        Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set("integral", new DataEntry(1));
+        when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
+        Config loaded = configuration.configureOrFallback(backend, updateListener, errorPrint);
+        verifyNoInteractions(errorPrint);
+        verifyNoInteractions(updateListener);
+        assertEquals(1, loaded.integral());
+    }
+
+    @Test
+    public void errorFromBackend(@Mock ErrorContext errorContext) {
+        Configuration<Config> config = Configuration
+                .defaultBuilder(Config.class)
+                .build();
+        when(backend.read(any())).thenReturn(LoadResult.failure(errorContext));
+
+        assertEquals(-1, config.configureOrFallback(backend, errorPrint).integral());
+        verify(errorPrint).onError(List.of(errorContext));
+    }
+
+    @Test
+    public void badValue() {
+        Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set("integral", new DataEntry("not an integer"));
+        when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
+        Config loaded = configuration.configureOrFallback(backend, errorPrint);
+        verify(errorPrint).onError(argThat(list -> !list.isEmpty()));
+        assertEquals(-1, loaded.integral(), "fallback to default value");
+    }
+
+    @Test
+    public void badValue(@Mock UpdateListener updateListener) {
+        Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set("integral", new DataEntry("not an integer"));
+        when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
+        Config loaded = configuration.configureOrFallback(backend, updateListener, errorPrint);
+        verify(errorPrint).onError(argThat(list -> !list.isEmpty()));
+        verify(updateListener).loadedDefaults();
+        assertEquals(-1, loaded.integral(), "fallback to default value");
+    }
 }

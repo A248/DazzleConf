@@ -20,12 +20,31 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.*;
-import space.arim.dazzleconf2.engine.*;
-import space.arim.dazzleconf2.reflect.*;
+import space.arim.dazzleconf2.backend.CommentData;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.Printable;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
+import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf2.reflect.Instantiator;
+import space.arim.dazzleconf2.reflect.InvokeDefaultFunction;
+import space.arim.dazzleconf2.reflect.MethodId;
+import space.arim.dazzleconf2.reflect.MethodMirror;
+import space.arim.dazzleconf2.reflect.MethodYield;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 final class Definition<C> implements ConfigurationDefinition<C> {
@@ -84,7 +103,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         return new Layout() {
 
             @Override
-            public @NonNull CommentData getTopLevelComments() {
+            public @NonNull CommentData getComments() {
                 return topLevelComments;
             }
 

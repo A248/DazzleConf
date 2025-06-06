@@ -12,6 +12,7 @@ module space.arim.dazzleconf {
 	exports space.arim.dazzleconf2.backend;
 	exports space.arim.dazzleconf2.engine;
 	exports space.arim.dazzleconf2.engine.liaison;
+	exports space.arim.dazzleconf2.internals.lang to space.arim.dazzleconf.backend.yaml;
 	exports space.arim.dazzleconf2.migration;
 	exports space.arim.dazzleconf2.reflect;
 }

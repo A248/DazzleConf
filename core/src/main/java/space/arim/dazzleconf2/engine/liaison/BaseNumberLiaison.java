@@ -24,7 +24,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.DefaultValues;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
+import space.arim.dazzleconf2.engine.TypeLiaison;
+import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
@@ -83,6 +88,7 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
         }
 
         @Override
+        @SideEffectFree
         public @Nullable DefaultValues<TYPE> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             DEF_ANNOTE defaultAnnotation = defaultInit.methodAnnotations().getAnnotation(defaultAnnotation());
             if (defaultAnnotation != null) {
@@ -104,33 +110,38 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
         }
 
         @Override
+        @SideEffectFree
         public @NonNull SerializeDeserialize<TYPE> makeSerializer() {
             return new SerializeDeserialize<TYPE>() {
-
-                public @Nullable TYPE deserIfPossible(@NonNull DeserializeInput deser) {
-                    Object object = deser.object();
-                    TYPE castNumbers = castNumbers(object);
-                    if (castNumbers != null) {
-                        return castNumbers;
-                    }
-                    if (object instanceof String) {
-                        String string = (String) object;
-                        TYPE fromString = parseFrom(string);
-                        if (fromString != null) {
-                            deser.flagUpdate(KeyPath.empty(), UpdateReason.UPDATED);
-                            return fromString;
-                        }
-                    }
-                    return null;
-                }
-
                 @Override
                 public @NonNull LoadResult<@NonNull TYPE> deserialize(@NonNull DeserializeInput deser) {
-                    TYPE value = deserIfPossible(deser);
-                    if (value == null ) {
+                    // Three steps: deserialize, validation, success
+
+                    // 1. Deserialization
+                    TYPE value;
+                    boolean wasFromString;
+                    deserRoot:
+                    {
+                        Object object = deser.object();
+                        TYPE castNumbers = castNumbers(object);
+                        if (castNumbers != null) {
+                            value = castNumbers;
+                            wasFromString = false;
+                            break deserRoot;
+                        }
+                        if (object instanceof String) {
+                            String string = (String) object;
+                            TYPE parseFrom = parseFrom(string);
+                            if (parseFrom != null) {
+                                value = parseFrom;
+                                wasFromString = true;
+                                break deserRoot;
+                            }
+                        }
                         LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
-                        return deser.throwError(libraryLang.wrongTypeForValue(deser.object(), boxedType()));
+                        return deser.throwError(libraryLang.wrongTypeForValue(object, boxedType()));
                     }
+                    // 2. Validation
                     if (isNaN(value)) {
                         LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
                         return deser.throwError(libraryLang.notANumber(value));
@@ -142,6 +153,12 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
                             LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
                             return deser.throwError(libraryLang.outOfRange(value, min, max));
                         }
+                    }
+                    // 3. Success
+                    if (wasFromString) {
+                        // We only notify updates if parsed from string. Backends often collapse numeric types into just
+                        // integer/double, so calling #flagUpdate after casting would cause perpetual notifications
+                        deser.flagUpdate(KeyPath.empty(), UpdateReason.UPDATED);
                     }
                     return LoadResult.of(value);
                 }

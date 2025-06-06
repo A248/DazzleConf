@@ -22,6 +22,7 @@ package space.arim.dazzleconf2.backend;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.engine.CommentLocation;
@@ -54,19 +55,7 @@ import java.io.UncheckedIOException;
 public interface Backend {
 
     /**
-     * Reads data.
-     * <p>
-     * <b>Success values and streaming</b>
-     * <p>
-     * Upon success, the backend returns streamable data. It is recommended for the backend to implement
-     * {@link DataStreamable#getAsStream()} in an efficient manner.
-     * <p>
-     * Streams cannot communicate errors, however, meaning that any errors need to be returned from this method itself.
-     * Thus, this method cannot provide "pure" streaming, and some kind of intermediate buffer (like format-specific
-     * data) will need to be loaded into memory before this method can return.
-     * <p>
-     * However, there is still value in the backend implementing a stream-efficient return value. Some callers might
-     * want to filter keys and values before adding them to a data tree, and other callers may not want a tree at all.
+     * Reads data. Upon full success, the backend returns a nonnull document.
      * <p>
      * <b>Emptiness</b>
      * <p>
@@ -74,45 +63,58 @@ public interface Backend {
      * backend were using a {@link PathRoot} and the file in question did not exist: the implementor of this method
      * would check {@link DataRoot#dataExists()} in this case.
      * <p>
-     * In other cases, data might exist, but it will be blank. For example, a blank file is a valid document in YAML,
-     * and the implementor of this method would thus return a non-null {@code DataTree} with no content in it.
+     * In other cases, data might exist but be blank. Here, {@code Backend}s should behave in a manner appropriate
+     * to the validity of blank data in their schema. Either {@code null} or an error should be returned depending on
+     * whether blank data is a syntax exception. For example, a blank file is a valid document in YAML, and the
+     * implementor of this method would return a null document. A blank file is not valid in JSON, so a parse error
+     * might be triggered instead.
      * <p>
      * <b>Syntax errors</b>
      * <p>
-     * If the loading failed because the data exists but was malformatted, an error result should be returned. The
-     * error message can be given as {@link ErrorContext#BACKEND_MESSAGE}.
+     * If the loading failed because the data is malformatted, an error result should be returned. The error message
+     * can be given as {@link ErrorContext#BACKEND_MESSAGE}. Additionally, backends can recommend a syntax linter by
+     * using {@link ErrorContext#SYNTAX_LINTER}.
      * <p>
      * <b>IO errors</b>
      * <p>
-     * A backend is permitted to throw {@code UncheckedIOException} in two places: either this method itself, or in
-     * usage of the {@code Stream} returned by the streamable instance. The latter case is rare but theoretically
-     * possible.
+     * A backend is permitted to throw {@code UncheckedIOException} to handle I/O errors coming from the data root.
      *
+     * @param errorSource a factory for the backend to produce errors
      * @return a load result of the data
      * @throws UncheckedIOException upon I/O failure
      */
-    @NonNull LoadResult<? extends @Nullable DataStreamable> read();
+    @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource);
 
     /**
-     * Writes the provided data to the source.
+     * Writes the provided data tree to the source.
      * <p>
-     * Implementations are encouraged to stream the data (via {@link DataStreamable#getAsStream()}) where possible.
-     * Streaming may be more efficient in some cases.
+     * <b>Comments</b>
      * <p>
-     * If a comment header is provided, some of it may need to be written before the rest of the data, and some of it
+     * If the comment header is non-empty, some of it may need to be written before the rest of the data, and some of it
      * may need to be written after the data. If not supported by this backend, this comment header may be ignored.
+     * <p>
+     * <b>Unsupported Data</b>
+     * <p>
+     * Not all configuration formats follow a data structure that aligns with {@link DataTree}'s key/value model with
+     * nestable trees. For example, <code>.properties</code> files don't provide nested sections, and HOCON supports
+     * only string-valued keys (integer keys are impossible).
+     * <p>
+     * When unsupported data structure is encountered, the implementor should throw {@link DeveloperMistakeException}.
+     * Throwing an exception is the appropriate way to signal an incompatible configuration structure. While this makes
+     * some configuration definitions constricted to compatible formats, such fail-fast behavior follows this library's
+     * culture. If need be, library users can always write migrations to change their configuration definition.
      *
-     * @param topLevelComments the comments applying to the whole document
-     * @param data the streamable data tree
-     * @throws UncheckedIOException upon I/O failure
+     * @param document the document to write
+     * @throws UncheckedIOException      upon I/O failure
+     * @throws DeveloperMistakeException if some aspects of the data structure are not supported by this backend
      */
-    void write(@Nullable CommentData topLevelComments, @NonNull DataStreamable data);
+    void write(@NonNull Document document);
 
     /**
      * Whether comments are supported in the following location.
      * <p>
      * If comments are not supported there, this format backend is free to ignore them during
-     * {@link #write(CommentData, DataStreamable)}.
+     * {@link #write(Document)}.
      * <p>
      * If comments <i>are</i> supported in this location, they <i>must</i> be supported by both <code>write</code>
      * and <code>read</code> methods. That is, comments at this location must correctly round-trip and
@@ -133,4 +135,46 @@ public interface Backend {
      */
     @NonNull KeyMapper recommendKeyMapper();
 
+    /**
+     * A document loaded from, or writable to, a backend.
+     *
+     */
+    interface Document {
+
+        /**
+         * The document-level comments.
+         * <p>
+         * These comments exist at the top-level of the document, and they are not attached to any particular entry.
+         *
+         * @return the document-level comments, or {@code CommentData.empty()} for none
+         */
+        @NonNull CommentData comments();
+
+        /**
+         * The data itself, in the form of a navigable tree
+         *
+         * @return the data
+         */
+        @NonNull DataTree data();
+
+        /**
+         * Returns a document consisting of the following data, without commments
+         *
+         * @param dataTree the data
+         * @return a document containing the data
+         */
+        static @NonNull Document simple(@NonNull DataTree dataTree) {
+            return new Document() {
+                @Override
+                public @NonNull CommentData comments() {
+                    return CommentData.empty();
+                }
+
+                @Override
+                public @NonNull DataTree data() {
+                    return dataTree;
+                }
+            };
+        }
+    }
 }

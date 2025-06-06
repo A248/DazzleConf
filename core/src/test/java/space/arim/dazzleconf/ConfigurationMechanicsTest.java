@@ -109,7 +109,7 @@ public class ConfigurationMechanicsTest {
     public void getTopLevelComments() {
         assertEquals(
                 CommentData.empty().setAt(CommentLocation.ABOVE, "Comment header expected"),
-                configuration.getLayout().getTopLevelComments()
+                configuration.getLayout().getComments()
         );
     }
 

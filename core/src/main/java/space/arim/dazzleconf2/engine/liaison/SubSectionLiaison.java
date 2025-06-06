@@ -27,7 +27,13 @@ import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.DefaultValues;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.LoadListener;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
+import space.arim.dazzleconf2.engine.TypeLiaison;
+import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 /**
@@ -62,6 +68,7 @@ public final class SubSectionLiaison implements TypeLiaison {
         }
 
         @Override
+        @SideEffectFree
         public @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             return new DefaultValues<V>() {
                 @Override
@@ -77,6 +84,7 @@ public final class SubSectionLiaison implements TypeLiaison {
         }
 
         @Override
+        @SideEffectFree
         public @NonNull SerializeDeserialize<V> makeSerializer() {
             return new SerDer();
         }

@@ -20,20 +20,23 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.*;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.util.Arrays;
-import java.util.Locale;
 
-abstract class DeserInput implements DeserializeInput, LibraryLang.Accessor {
+abstract class DeserInput extends LoadError.Factory implements DeserializeInput {
 
     final Source source;
     final Context context;
 
-    int childIdx;
+    private int childIdx;
 
     DeserInput(Source source, Context context) {
         this.source = source;
@@ -67,8 +70,7 @@ abstract class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     @Override
     public abstract @NonNull Object object();
 
-    @Override
-    public abstract @NonNull DeserializeInput makeChild(@NonNull Object value);
+    abstract @NonNull DeserializeInput makeChild(@NonNull Object value, int childIdx);
 
     static class Base extends DeserInput {
 
@@ -87,8 +89,8 @@ abstract class DeserInput implements DeserializeInput, LibraryLang.Accessor {
         }
 
         @Override
-        public @NonNull DeserializeInput makeChild(@NonNull Object value) {
-            return new Child(source, context, value, new int[] {childIdx++});
+        public @NonNull DeserializeInput makeChild(@NonNull Object value, int childIdx) {
+            return new Child(source, context, value, new int[] {childIdx});
         }
     }
 
@@ -119,9 +121,9 @@ abstract class DeserInput implements DeserializeInput, LibraryLang.Accessor {
         }
 
         @Override
-        public @NonNull DeserializeInput makeChild(@NonNull Object value) {
+        public @NonNull DeserializeInput makeChild(@NonNull Object value, int childIdx) {
             int[] newChildIdxPath = Arrays.copyOf(childIdxPath, childIdxPath.length + 1);
-            newChildIdxPath[childIdxPath.length] = childIdx++;
+            newChildIdxPath[childIdxPath.length] = childIdx;
             return new Child(source, context, value, newChildIdxPath);
         }
     }
@@ -129,11 +131,6 @@ abstract class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     @Override
     public @NonNull LibraryLang getLibraryLang() {
         return context.libraryLang;
-    }
-
-    @Override
-    public @NonNull Locale getLocale() {
-        return context.libraryLang.getLocale();
     }
 
     @Override
@@ -174,6 +171,14 @@ abstract class DeserInput implements DeserializeInput, LibraryLang.Accessor {
     }
 
     @Override
+    public @NonNull DeserializeInput makeChild(@NonNull Object value) {
+        if (!DataEntry.validateValue(value)) {
+            throw new IllegalArgumentException("Not a canonical value: " + value);
+        }
+        return makeChild(value, childIdx++);
+    }
+
+    @Override
     public @NonNull ErrorContext buildError(@NonNull Printable message) {
         LoadError loadError = new LoadError(message, context.libraryLang);
         // Add entry path
@@ -184,15 +189,5 @@ abstract class DeserInput implements DeserializeInput, LibraryLang.Accessor {
             loadError.addDetail(ErrorContext.LINE_NUMBER, lineNumber);
         }
         return loadError;
-    }
-
-    @Override
-    public @NonNull <R> LoadResult<R> throwError(@NonNull CharSequence message) {
-        return LoadResult.failure(buildError(Printable.preBuilt(message)));
-    }
-
-    @Override
-    public @NonNull <R> LoadResult<R> throwError(@NonNull Printable message) {
-        return LoadResult.failure(buildError(message));
     }
 }
