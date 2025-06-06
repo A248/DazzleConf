@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -27,7 +29,8 @@ import space.arim.dazzleconf2.Configuration;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.*;
-import space.arim.dazzleconf2.engine.UpdateListener;
+import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf2.ConfigureListener;
 import space.arim.dazzleconf2.engine.UpdateReason;
 
 import java.util.List;
@@ -54,6 +57,31 @@ public class ConfigureTest {
         }
     }
 
+    @BeforeEach
+    public void setup() {
+        lenient().when(backend.meta()).thenReturn(new Backend.Meta() {
+            @Override
+            public boolean supportsComments(boolean documentLevel, boolean reading, @NonNull CommentLocation location) {
+                return true;
+            }
+
+            @Override
+            public boolean preservesOrder(boolean reading) {
+                return true;
+            }
+
+            @Override
+            public boolean writesFloatAsDouble() {
+                return false;
+            }
+
+            @Override
+            public boolean allKeysAreStrings() {
+                return false;
+            }
+        });
+    }
+
     @Test
     public void nullKeyMapper() {
         Configuration<Config> config = Configuration.defaultBuilder(Config.class).build();
@@ -65,82 +93,78 @@ public class ConfigureTest {
     public void erroredOut(@Mock ErrorContext errorContext) {
         Configuration<Config> config = Configuration.defaultBuilder(Config.class).build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
-        when(backend.read()).thenAnswer((i) -> LoadResult.failure(errorContext));
+        when(backend.read(any())).thenReturn(LoadResult.failure(errorContext));
         LoadResult<Config> configureWith = config.configureWith(backend);
         assertTrue(configureWith.isFailure());
         assertEquals(List.of(errorContext), configureWith.getErrorContexts());
     }
 
     @Test
-    public void loadDefaults(@Mock UpdateListener updateListener) {
+    public void loadDefaults(@Mock ConfigureListener configureListener) {
         Configuration<MigrationTest.Destination> config = Configuration
                 .defaultBuilder(MigrationTest.Destination.class)
                 .build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
-        when(backend.read()).thenAnswer((i) -> LoadResult.of(null));
-        MigrationTest.Destination defaultValues = config.configureWith(backend, updateListener).getOrThrow();
+        when(backend.read(any())).thenReturn(LoadResult.of(null));
+        MigrationTest.Destination defaultValues = config.configureWith(backend, configureListener).getOrThrow();
         assertEquals("goodbye", defaultValues.hello());
         assertEquals('y', defaultValues.affirmative());
 
         // Check update listener
-        verify(updateListener).loadedDefaults();
-        verifyNoMoreInteractions(updateListener);
+        verify(configureListener).wroteDefaults();
+        verifyNoMoreInteractions(configureListener);
 
         // Check the data that was written back
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
         expectedWriteBack.set("hello", new DataEntry("goodbye"));
         expectedWriteBack.set("affirmative", new DataEntry('y'));
-        verify(backend).write(eq(CommentData.empty()), argThat(new MatchDataTree(expectedWriteBack)));
+        verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 
     @Test
-    public void loadMissingValue(@Mock UpdateListener updateListener) {
+    public void loadMissingValue(@Mock ConfigureListener configureListener) {
         Configuration<MigrationTest.Destination> config = Configuration
                 .defaultBuilder(MigrationTest.Destination.class)
                 .build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
-        when(backend.read()).thenAnswer((i) -> {
-            return LoadResult.of(new DataTree.Mut());
-        });
-        MigrationTest.Destination withMissing = config.configureWith(backend, updateListener).getOrThrow();
+        when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(new DataTree.Immut())));
+        MigrationTest.Destination withMissing = config.configureWith(backend, configureListener).getOrThrow();
         assertEquals("goodbye-default-if-missing", withMissing.hello());
         assertEquals('y', withMissing.affirmative());
 
         // Check update listener
-        verify(updateListener).updatedPath(eq(new KeyPath.Mut("hello")), eq(UpdateReason.MISSING));
-        verify(updateListener).updatedPath(eq(new KeyPath.Mut("affirmative")), eq(UpdateReason.MISSING));
-        verifyNoMoreInteractions(updateListener);
+        verify(configureListener).notifyUpdate(eq(new KeyPath.Mut("hello")), eq(UpdateReason.MISSING));
+        verify(configureListener).notifyUpdate(eq(new KeyPath.Mut("affirmative")), eq(UpdateReason.MISSING));
+        verifyNoMoreInteractions(configureListener);
 
         // Check the data that was written back
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
         expectedWriteBack.set("hello", new DataEntry("goodbye-default-if-missing"));
         expectedWriteBack.set("affirmative", new DataEntry('y'));
-        verify(backend).write(eq(CommentData.empty()), argThat(new MatchDataTree(expectedWriteBack)));
+        verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 
     @Test
-    public void loadPartialMissingValue(@Mock UpdateListener updateListener) {
+    public void loadPartialMissingValue(@Mock ConfigureListener configureListener) {
         Configuration<MigrationTest.Destination> config = Configuration
                 .defaultBuilder(MigrationTest.Destination.class)
                 .build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
-        when(backend.read()).thenAnswer((i) -> {
-            DataTree.Mut dataTree = new DataTree.Mut();
-            dataTree.set("hello", new DataEntry("present"));
-            return LoadResult.of(dataTree);
-        });
-        MigrationTest.Destination withMissing = config.configureWith(backend, updateListener).getOrThrow();
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set("hello", new DataEntry("present"));
+        when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
+        MigrationTest.Destination withMissing = config.configureWith(backend, configureListener).getOrThrow();
         assertEquals("present", withMissing.hello());
         assertEquals('y', withMissing.affirmative());
 
         // Check update listener
-        verify(updateListener).updatedPath(eq(new KeyPath.Mut("affirmative")), eq(UpdateReason.MISSING));
-        verifyNoMoreInteractions(updateListener);
+        verify(configureListener).notifyUpdate(eq(new KeyPath.Mut("affirmative")), eq(UpdateReason.MISSING));
+        verifyNoMoreInteractions(configureListener);
 
         // Check the data that was written back
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
         expectedWriteBack.set("hello", new DataEntry("present"));
         expectedWriteBack.set("affirmative", new DataEntry('y'));
-        verify(backend).write(eq(CommentData.empty()), argThat(new MatchDataTree(expectedWriteBack)));
+        verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 }

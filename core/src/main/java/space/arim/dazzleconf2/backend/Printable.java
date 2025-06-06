@@ -147,6 +147,11 @@ public interface Printable {
      */
     abstract class Abstract implements Printable {
 
+        /**
+         * Creates
+         */
+        public Abstract() {}
+
         @Override
         public final @NonNull String printString() {
             StringBuilder builder = new StringBuilder();
@@ -158,8 +163,8 @@ public interface Printable {
         public final void printTo(@NonNull StringBuilder output) {
             try {
                 printTo((Appendable) output);
-            } catch (IOException e) {
-                throw new AssertionError("StringBuilder does not throw IOException", e);
+            } catch (IOException ex) {
+                throw new AssertionError("StringBuilder does not throw IOException", ex);
             }
         }
 

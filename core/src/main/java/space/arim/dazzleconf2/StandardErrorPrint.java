@@ -20,11 +20,12 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.List;
 import java.util.Objects;
 
@@ -73,14 +74,18 @@ public final class StandardErrorPrint implements ErrorPrint {
                     // 1. Entry path
                     boolean pathOrLineNumber = false;
                     KeyPath path = currentError.query(ErrorContext.ENTRY_PATH);
-                    if (path != null) {
+                    if (path != null && !path.isEmpty()) {
                         path.printTo(output);
                         pathOrLineNumber = true;
                     }
                     // 2. Line number
                     Integer lineNumber = currentError.query(ErrorContext.LINE_NUMBER);
                     if (lineNumber != null) {
-                        if (pathOrLineNumber) output.append(' ');
+                        if (pathOrLineNumber) {
+                            output.append(' ');
+                            output.append('@');
+                            output.append(' ');
+                        }
                         output.append(lang.line());
                         output.append(' ');
                         output.append(Integer.toString(lineNumber));
@@ -98,13 +103,22 @@ public final class StandardErrorPrint implements ErrorPrint {
                         output.append(':');
                         output.append(' ');
                         backendMessage.printTo(output);
+                        // 5. Syntax linter
+                        URL syntaxLinter = currentError.query(ErrorContext.SYNTAX_LINTER);
+                        if (syntaxLinter != null) {
+                            output.append("\n  ");
+                            output.append(lang.syntaxInvalidPleaseTryAt(syntaxLinter));
+                        }
                     }
                 }
                 if (cap != errorCount) {
+                    output.append("\n  ");
+                    output.append('(');
                     output.append('+');
-                    output.append(' ');
                     output.append(lang.more(errorCount - cap));
+                    output.append(')');
                 }
+                output.append('\n');
             }
         });
     }

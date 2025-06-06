@@ -21,10 +21,15 @@ package space.arim.dazzleconf2.reflect;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.internals.MethodUtil;
 import space.arim.dazzleconf2.DeveloperMistakeException;
+import space.arim.dazzleconf2.internals.MethodUtil;
 
-import java.lang.reflect.*;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
@@ -137,15 +142,15 @@ public final class DefaultMethodMirror implements MethodMirror {
             if (proxyHandler != null) {
                 try {
                     return proxyHandler.implInvoke(method, arguments);
-                } catch (Throwable e) {
-                    throw new InvocationTargetException(e);
+                } catch (Throwable ex) {
+                    throw new InvocationTargetException(ex);
                 }
             }
             // Use standard reflection
             try {
                 return method.invoke(receiver, arguments);
-            } catch (IllegalAccessException e) {
-                throw new DeveloperMistakeException("Configuration method inaccessible", e);
+            } catch (IllegalAccessException ex) {
+                throw new DeveloperMistakeException("Configuration method inaccessible", ex);
             }
         }
     }

@@ -50,6 +50,7 @@ public class KeyPathTest {
         assertEquals("", new KeyPath.Mut().toString());
         assertArrayEquals(new String[0], new KeyPath.Mut().intoParts());
         assertTrue(new KeyPath.Mut().isEmpty());
+        assertEquals(0, new KeyPath.Mut().size());
     }
 
     @Test
@@ -60,6 +61,7 @@ public class KeyPathTest {
         assertEquals(target, new KeyPath.Mut(parts).toString());
         assertArrayEquals(parts, new KeyPath.Mut(parts).intoParts());
         assertFalse(new KeyPath.Mut(parts).isEmpty());
+        assertEquals(3, new KeyPath.Mut(parts).size());
     }
 
     @Test

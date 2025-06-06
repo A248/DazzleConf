@@ -23,6 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.Printable;
 
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Locale;
 
@@ -60,13 +61,23 @@ public final class LibraryLangEn extends LibraryLang.Base {
     }
 
     @Override
+    public @NonNull String syntaxLinter() {
+        return "syntax linter";
+    }
+
+    @Override
+    public @NonNull String failed() {
+        return "Failed";
+    }
+
+    @Override
     public @NonNull String missingValue() {
-        return "No value is configured here. However, a value is required.";
+        return "No value is configured here but it is required.";
     }
 
     @Override
     public @NonNull Printable wrongTypeForValue(Object value, String expectedType, String actualType) {
-        return preBuilt("The value < " + value + " > is a " + expectedType + ", but it should be a " + actualType + '.');
+        return preBuilt("The value < " + value + " > is of type " + actualType + ", but it should be " + expectedType + '.');
     }
 
     @Override
@@ -91,7 +102,7 @@ public final class LibraryLangEn extends LibraryLang.Base {
 
     @Override
     public @NonNull String errorIntro() {
-        return "We found problems loading the configuration.";
+        return "We found problems loading the configuration file.";
     }
 
     @Override
@@ -142,6 +153,17 @@ public final class LibraryLangEn extends LibraryLang.Base {
     @Override
     public @NonNull String configurationSection() {
         return "configuration section";
+    }
+
+    @Override
+    public @NonNull String syntaxInvalidPleaseTryAt(@NonNull URL url) {
+        return "The syntax in your configuration file is invalid. Please use a validator such as " + url + ". " +
+                "Paste your configuration file there and use it to work through errors.";
+    }
+
+    @Override
+    public @NonNull String yamlNotAMap() {
+        return "The YAML file must be a map, not another YAML type.";
     }
 
 }

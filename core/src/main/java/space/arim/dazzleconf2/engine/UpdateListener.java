@@ -20,32 +20,22 @@
 package space.arim.dazzleconf2.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.migration.Migration;
-
-import java.util.List;
+import space.arim.dazzleconf2.backend.KeyPath;
 
 /**
- * Listener that lets the implementor know about various configuration events
+ * Listener that lets the implementor know when paths were updated.
+ * <p>
+ * This interface is extended in different parts of the library depending on context. Its sole method,
+ * <code>notifyUpdate</code> is often overidden to provide additional documentation.
  */
-public interface UpdateListener extends LoadListener {
+public interface UpdateListener {
 
     /**
-     * Signals that the configuration didn't exist, so the whole thing was freshly written from default values
+     * Called when a path is updated, or could be updated.
+     *
+     * @param entryPath the path of the entry
+     * @param updateReason the update reason
      */
-    void loadedDefaults();
-
-    /**
-     * Notifies that a migration from a previous version was successful
-     * @param migration the migration
-     */
-    void migratedFrom(@NonNull Migration<?, ?> migration);
-
-    /**
-     * Notifies that a migration was attempted from a previous version, unsuccessfully
-     * @param migration the migration
-     * @param errorContexts the failure contexts
-     */
-    void migrationSkip(@NonNull Migration<?, ?> migration, @NonNull List<@NonNull ErrorContext> errorContexts);
+    void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason);
 
 }

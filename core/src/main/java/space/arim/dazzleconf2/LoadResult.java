@@ -19,8 +19,6 @@
 
 package space.arim.dazzleconf2;
 
-import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
-import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.internals.ImmutableCollections;
@@ -129,16 +127,13 @@ public final class LoadResult<R> {
     }
 
     /**
-     * Gets the error contexts.
-     * <p>
-     * Note that this list may be empty if either the load result was a success, or an empty list of error contexts
-     * were passed.
+     * Gets the error contexts. Fails if this load result is not an error.
      *
      * @return the error contexts, immutable
      */
     public @NonNull List<@NonNull ErrorContext> getErrorContexts() {
         if (success) {
-            return ImmutableCollections.emptyList();
+            throw new NoSuchElementException("Error contexts not present (due to success)");
         }
         @SuppressWarnings("unchecked")
         List<ErrorContext> contexts = (List<ErrorContext>) value;
@@ -198,16 +193,29 @@ public final class LoadResult<R> {
     }
 
     /**
-     * Unwraps the success value or throws an exception
+     * Unwraps the success value or throws an exception.
+     * <p>
+     * If failed, the exception message will include some details about the errors. The format of this message is not
+     * specified, nor is the level of verbosity it provides.
      *
      * @return the success value
      * @throws NoSuchElementException if the success value is not present
      */
     public R getOrThrow() {
-        if (!success) {
-            throw new NoSuchElementException("Success value not present. Error contexts: " + getErrorContexts());
+        if (success) {
+            return getValue();
         }
-        return getValue();
+        // Not present, so throw exception
+        StringBuilder exMsg = new StringBuilder("Success value not present");
+        if (getErrorContexts().isEmpty()) {
+            exMsg.append(" (empty error contexts)");
+        } else {
+            for (ErrorContext errorContext : getErrorContexts()) {
+                exMsg.append('\n');
+                errorContext.display().printTo(exMsg);
+            }
+        }
+        throw new NoSuchElementException(exMsg.toString());
     }
 
     @Override

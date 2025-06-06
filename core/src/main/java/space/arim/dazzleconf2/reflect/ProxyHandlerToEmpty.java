@@ -19,8 +19,8 @@
 
 package space.arim.dazzleconf2.reflect;
 
-import space.arim.dazzleconf2.internals.MethodUtil;
 import space.arim.dazzleconf2.DeveloperMistakeException;
+import space.arim.dazzleconf2.internals.MethodUtil;
 
 import java.lang.reflect.Method;
 

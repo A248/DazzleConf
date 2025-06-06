@@ -24,7 +24,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.internals.ImmutableCollections;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * The comments on a data entry or configuration class.

@@ -706,8 +706,8 @@ public abstract class InstantiatorTest {
             assertFalse(checkReflectionOutcome.get(), "Test setup: Not called with reflection");
             try {
                 this.checkReflection.getMethod(Base.class).invoke(generatedBase, checkReflection);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                throw new AssertionError("Calling problem", e);
+            } catch (IllegalAccessException | InvocationTargetException ex) {
+                throw new AssertionError("Calling problem", ex);
             }
             assertTrue(checkReflectionOutcome.get(), "Test setup: Called with reflection");
             // Then call this method using the invoker

@@ -23,7 +23,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
@@ -83,7 +86,7 @@ public abstract class KeyPath implements Printable {
             this.parts = new ArrayDeque<>(other.parts);
         } else {
             ArrayDeque<CharSequence> parts = new ArrayDeque<>(other.parts.size());
-            other.parts.forEach(part -> parts.addLast(other.keyMapper.labelToKey(part.toString())));
+            other.parts.forEach(part -> parts.addLast(other.keyMapper.labelToKey(part)));
             this.parts = parts;
         }
     }
@@ -105,12 +108,21 @@ public abstract class KeyPath implements Printable {
     }
 
     /**
-     * Gets whether this key path is empty
+     * Whether this key path is empty
      *
      * @return true if empty
      */
     public boolean isEmpty() {
         return parts.isEmpty();
+    }
+
+    /**
+     * Gets the number of key parts in the sequence
+     *
+     * @return the number of parts in this key path
+     */
+    public int size() {
+        return parts.size();
     }
 
     /**
@@ -154,7 +166,7 @@ public abstract class KeyPath implements Printable {
         }
         String unmapped = edgeValue.toString();
         KeyMapper keyMapper = this.keyMapper;
-        return keyMapper == null ? unmapped : keyMapper.labelToKey(unmapped).toString();
+        return keyMapper == null ? unmapped : keyMapper.labelToKey(unmapped);
     }
 
     /**
@@ -221,7 +233,7 @@ public abstract class KeyPath implements Printable {
         KeyMapper keyMapper = this.keyMapper;
         if (keyMapper != null) {
             for (int n = 0; n < intoParts.length; n++) {
-                intoParts[n] = keyMapper.labelToKey(intoParts[n].toString());
+                intoParts[n] = keyMapper.labelToKey(intoParts[n]);
             }
         }
         return intoParts;
@@ -280,9 +292,7 @@ public abstract class KeyPath implements Printable {
             if (n != 0) {
                 output.append('.');
             }
-            output.append(keyMapper == null ?
-                    parts[n] : keyMapper.labelToKey(parts[n].toString())
-            );
+            output.append(keyMapper == null ? parts[n] : keyMapper.labelToKey(parts[n]));
         }
     }
 
@@ -290,8 +300,8 @@ public abstract class KeyPath implements Printable {
     public void printTo(@NonNull StringBuilder output) {
         try {
             printTo((Appendable) output);
-        } catch (IOException e) {
-            throw new AssertionError("StringBuilder does not throw IOException", e);
+        } catch (IOException ex) {
+            throw new AssertionError("StringBuilder does not throw IOException", ex);
         }
     }
 
@@ -402,7 +412,7 @@ public abstract class KeyPath implements Printable {
                 if (!parts.isEmpty()) {
                     ArrayDeque<CharSequence> mappedParts = new ArrayDeque<>(this.parts.size() + 8);
                     for (CharSequence part : this.parts) {
-                        mappedParts.add(keyMapper.labelToKey(part.toString()));
+                        mappedParts.add(keyMapper.labelToKey(part));
                     }
                     this.parts = mappedParts;
                     dataFrozen = false;
@@ -414,7 +424,7 @@ public abstract class KeyPath implements Printable {
         private void ensureMutable() {
             flushKeyMapper();
             if (dataFrozen) {
-                parts = new ArrayDeque<>(parts);
+                parts = parts.isEmpty() ? new ArrayDeque<>() : new ArrayDeque<>(parts);
                 dataFrozen = false;
             }
         }

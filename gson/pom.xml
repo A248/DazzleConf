@@ -8,7 +8,39 @@
 	</parent>
 
 	<artifactId>dazzleconf-ext-gson</artifactId>
-	
+	<name>DazzleConf (Ext Gson)</name>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>default-compile</id>
+						<!-- Compile everything + module descriptor with Java 11 -->
+						<configuration>
+							<release>11</release>
+						</configuration>
+					</execution>
+					<execution>
+						<!-- Recompilation of almost everything for Java 8 -->
+						<id>base-compile</id>
+						<goals>
+							<goal>compile</goal>
+						</goals>
+						<configuration>
+							<release>8</release>
+							<excludes>
+								<exclude>module-info.java</exclude>
+							</excludes>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
 	<dependencies>
 		<dependency>
 			<groupId>space.arim.dazzleconf</groupId>

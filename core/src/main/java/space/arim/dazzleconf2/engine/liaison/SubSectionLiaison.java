@@ -27,7 +27,13 @@ import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf2.engine.DefaultValues;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
+import space.arim.dazzleconf2.engine.TypeLiaison;
+import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 /**
@@ -62,6 +68,7 @@ public final class SubSectionLiaison implements TypeLiaison {
         }
 
         @Override
+        @SideEffectFree
         public @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             return new DefaultValues<V>() {
                 @Override
@@ -77,6 +84,7 @@ public final class SubSectionLiaison implements TypeLiaison {
         }
 
         @Override
+        @SideEffectFree
         public @NonNull SerializeDeserialize<V> makeSerializer() {
             return new SerDer();
         }
@@ -91,52 +99,53 @@ public final class SubSectionLiaison implements TypeLiaison {
                     return LoadResult.failure(dataTreeResult.getErrorContexts());
                 }
                 DataTree dataTree = dataTreeResult.getOrThrow();
-                return configuration.readFrom(dataTree, new ConfigurationDefinition.ReadOptions() {
-                    @Override
-                    public @NonNull LoadListener loadListener() {
-                        return deser::flagUpdate;
-                    }
-
-                    @Override
-                    public @NonNull KeyMapper keyMapper() {
-                        return deser.keyMapper();
-                    }
-                });
+                return configuration.readFrom(dataTree, deser /* implements ReadOptions */);
             }
 
             @Override
             public @NonNull LoadResult<@NonNull V> deserializeUpdate(@NonNull DeserializeInput deser,
                                                                      @NonNull SerializeOutput updateTo) {
-                class RecordUpdates implements LoadListener {
 
-                    private boolean updated;
-
-                    @Override
-                    public void updatedPath(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
-                        updated = true;
-                        deser.flagUpdate(entryPath, updateReason);
-                    }
-                }
                 LoadResult<DataTree> requireDataTree = deser.requireDataTree();
                 if (requireDataTree.isFailure()) {
                     return LoadResult.failure(requireDataTree.getErrorContexts());
                 }
                 DataTree.Mut updatableTree = requireDataTree.getOrThrow().intoMut();
+
+                class RecordUpdates {
+                    private boolean updated;
+                }
                 RecordUpdates recordUpdates = new RecordUpdates();
 
-                LoadResult<V> result = configuration.readWithUpdate(updatableTree, new ConfigurationDefinition.ReadOptions() {
+                LoadResult<V> result = configuration.readWithUpdate(updatableTree, new ConfigurationDefinition.ReadWithUpdateOptions() {
                     @Override
-                    public @NonNull LoadListener loadListener() {
-                        return recordUpdates;
+                    public void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
+                        recordUpdates.updated = true;
+                        deser.notifyUpdate(entryPath, updateReason);
                     }
 
                     @Override
                     public @NonNull KeyMapper keyMapper() {
                         return deser.keyMapper();
                     }
+
+                    @Override
+                    public @NonNull KeyPath keyPath() {
+                        return deser.keyPath();
+                    }
+
+                    @Override
+                    public int maximumErrorCollect() {
+                        return deser.maximumErrorCollect();
+                    }
+
+                    @Override
+                    public boolean writeEntryComments(@NonNull CommentLocation location) {
+                        return updateTo.writeEntryComments(location);
+                    }
                 });
                 if (result.isSuccess() && recordUpdates.updated) {
-                    // No need to call deser.flagUpdate(), since it will already have been called for child paths
+                    // No need to call deser.notifyUpdate(), since it will already have been called for child paths
                     updateTo.outDataTree(updatableTree);
                 }
                 return result;
@@ -145,7 +154,19 @@ public final class SubSectionLiaison implements TypeLiaison {
             @Override
             public void serialize(@NonNull V value, @NonNull SerializeOutput ser) {
                 DataTree.Mut dataTreeMut = new DataTree.Mut();
-                configuration.writeTo(value, dataTreeMut, ser::keyMapper);
+                configuration.writeTo(value, dataTreeMut, new ConfigurationDefinition.WriteOptions() {
+
+                    @Override
+                    public @NonNull KeyMapper keyMapper() {
+                        return ser.keyMapper();
+                    }
+
+                    @Override
+                    public boolean writeEntryComments(@NonNull CommentLocation location) {
+                        // TODO: Improve this API: return an object instead of having this function here
+                        return ser.writeEntryComments(location);
+                    }
+                });
                 ser.outDataTree(dataTreeMut);
             }
         }

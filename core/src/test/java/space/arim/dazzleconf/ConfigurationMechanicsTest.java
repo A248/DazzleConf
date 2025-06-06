@@ -33,17 +33,14 @@ import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.Comments;
-import space.arim.dazzleconf2.engine.LoadListener;
+import space.arim.dazzleconf2.engine.UpdateListener;
 import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.engine.liaison.SubSection;
 
 import java.lang.reflect.AccessFlag;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -60,11 +57,11 @@ import static org.mockito.Mockito.*;
 public class ConfigurationMechanicsTest {
 
     private Configuration<Config> configuration;
-    private final LoadListener loadListener;
+    private final UpdateListener updateListener;
     private final KeyMapper keyMapper = new SnakeCaseKeyMapper();
 
-    public ConfigurationMechanicsTest(@Mock LoadListener loadListener) {
-        this.loadListener = loadListener;
+    public ConfigurationMechanicsTest(@Mock UpdateListener updateListener) {
+        this.updateListener = updateListener;
     }
 
     @Comments("Inherited comment should not be passed down")
@@ -85,8 +82,10 @@ public class ConfigurationMechanicsTest {
 
         StandardCopyOption smallEnum();
 
+        @Comments(value = "Comments placed on subsection key", location = CommentLocation.INLINE)
         @SubSection Section subSection();
 
+        // Should be ignored because not the top level
         @Comments(value = "Comments placed on subsection declaration", location = CommentLocation.INLINE)
         interface Section {
 
@@ -109,23 +108,7 @@ public class ConfigurationMechanicsTest {
     public void getTopLevelComments() {
         assertEquals(
                 CommentData.empty().setAt(CommentLocation.ABOVE, "Comment header expected"),
-                configuration.getLayout().getTopLevelComments()
-        );
-    }
-
-    @Test
-    public void getLabels() {
-        assertEquals(
-                Set.of("inherited", "keyPress", "matrix", "floats", "smallEnum", "subSection"),
-                new HashSet<>(configuration.getLayout().getLabels())
-        );
-    }
-
-    @Test
-    public void getLabelsAsStream() {
-        assertEquals(
-                Set.of("inherited", "keyPress", "matrix", "floats", "smallEnum", "subSection"),
-                configuration.getLayout().getLabelsAsStream().collect(Collectors.toSet())
+                configuration.getLayout().getComments()
         );
     }
 
@@ -134,9 +117,9 @@ public class ConfigurationMechanicsTest {
     public void readKeyMapped(boolean updatableValues) {
         String inherited = "inheritance";
         char keyPress = 'k';
-        List<List<List<String>>> matrix = List.of(
-                List.of(List.of("beside")), List.of(List.of("hello", "there"), List.of("crazy"))
-        );
+        List<List<List<String>>> matrix = List.of(List.of(
+                List.of("beside"), List.of(), List.of("hello", "crazy")
+        ));
         Set<Float> floats = Set.of(1.4f);
         StandardCopyOption smallEnum = StandardCopyOption.COPY_ATTRIBUTES;
         boolean enabled = true;
@@ -146,8 +129,11 @@ public class ConfigurationMechanicsTest {
         DataTree.Mut dataTree = new DataTree.Mut();
         dataTree.set("inherited", new DataEntry(inherited));
         dataTree.set("key-press", new DataEntry(updatableValues ? String.valueOf(keyPress) : keyPress));
-        dataTree.set("matrix", new DataEntry(matrix));
-        dataTree.set("floats", new DataEntry(new ArrayList<>(floats)));
+        dataTree.set("matrix",  new DataEntry(List.of(new DataEntry(List.of(
+                new DataEntry(List.of(new DataEntry("beside"))), new DataEntry(List.of()),
+                new DataEntry(List.of(new DataEntry("hello"), new DataEntry("crazy")))
+        )))));
+        dataTree.set("floats", new DataEntry(List.of(new DataEntry(floats.iterator().next()))));
         dataTree.set("small-enum", new DataEntry(smallEnum.name()));
         DataTree.Mut subTree = new DataTree.Mut();
         dataTree.set("sub-section", new DataEntry(subTree));
@@ -157,21 +143,26 @@ public class ConfigurationMechanicsTest {
 
         LoadResult<Config> loadResult = configuration.readFrom(dataTree, new ConfigurationDefinition.ReadOptions() {
             @Override
-            public @NonNull LoadListener loadListener() {
-                return loadListener;
+            public void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
+                updateListener.notifyUpdate(entryPath, updateReason);
             }
 
             @Override
             public @NonNull KeyMapper keyMapper() {
                 return keyMapper;
             }
+
+            @Override
+            public @NonNull KeyPath keyPath() {
+                return new KeyPath.Immut();
+            }
         });
         assertTrue(loadResult.isSuccess());
         if (updatableValues) {
-            verify(loadListener).updatedPath(new KeyPath.Immut("sub-section", "enabled"), UpdateReason.UPDATED);
-            verifyNoMoreInteractions(loadListener);
+            verify(updateListener).notifyUpdate(new KeyPath.Immut("sub-section", "enabled"), UpdateReason.UPDATED);
+            verifyNoMoreInteractions(updateListener);
         } else {
-            verifyNoInteractions(loadListener);
+            verifyNoInteractions(updateListener);
         }
         Config loaded = loadResult.getOrThrow();
 
@@ -190,9 +181,9 @@ public class ConfigurationMechanicsTest {
     public void writeKeyMapped() {
         String inherited = "inheritance";
         char keyPress = 'k';
-        List<List<List<String>>> matrix = List.of(
-                List.of(List.of("beside")), List.of(List.of("hello", "there"), List.of("crazy"))
-        );
+        List<List<List<String>>> matrix = List.of(List.of(
+                List.of("beside"), List.of(), List.of("hello", "crazy")
+        ));
         Set<Float> floats = Set.of(1.4f);
         StandardCopyOption smallEnum = StandardCopyOption.COPY_ATTRIBUTES;
         boolean enabled = true;
@@ -256,14 +247,17 @@ public class ConfigurationMechanicsTest {
             assertEquals(keyPress, keyPressEntry.getValue());
             assertEquals(CommentData.empty().setAt(CommentLocation.ABOVE, "Game control key"), keyPressEntry.getComments());
         }
-        assertEquals(new DataEntry(matrix), dataTree.get("matrix"));
-        assertNotNull(dataTree.get("floats"));
+        assertEquals(new DataEntry(List.of(new DataEntry(List.of(
+                new DataEntry(List.of(new DataEntry("beside"))), new DataEntry(List.of()),
+                new DataEntry(List.of(new DataEntry("hello"), new DataEntry("crazy")))
+        )))), dataTree.get("matrix"));
+        assertEquals(new DataEntry(List.of(new DataEntry(floats.iterator().next()))), dataTree.get("floats"));
         assertEquals(new DataEntry(smallEnum.name()), dataTree.get("small-enum"));
 
         DataEntry subEntry = dataTree.get("sub-section");
         assertNotNull(subEntry);
         assertEquals(
-                CommentData.empty().setAt(CommentLocation.INLINE, "Comments placed on subsection declaration"),
+                CommentData.empty().setAt(CommentLocation.INLINE, "Comments placed on subsection key"),
                 subEntry.getComments()
         );
         DataTree.Mut subTree = assertInstanceOf(DataTree.class, subEntry.getValue()).intoMut();
@@ -283,9 +277,9 @@ public class ConfigurationMechanicsTest {
     public void readWithUpdateKeyMapped(boolean updatableValues) {
         String inherited = "inheritance";
         char keyPress = 'k';
-        List<List<List<String>>> matrix = List.of(
-                List.of(List.of("beside")), List.of(List.of("hello", "there"), List.of("crazy"))
-        );
+        List<List<List<String>>> matrix = List.of(List.of(
+                List.of("beside"), List.of(), List.of("hello", "crazy")
+        ));
         Set<Float> floats = Set.of(1.4f);
         StandardCopyOption smallEnum = StandardCopyOption.COPY_ATTRIBUTES;
         boolean enabled = true;
@@ -296,8 +290,11 @@ public class ConfigurationMechanicsTest {
         dataTree.set("inherited", new DataEntry(inherited));
         dataTree.set("key-press", new DataEntry(updatableValues ? String.valueOf(keyPress) : keyPress)
                 .withComments(CommentLocation.ABOVE, List.of("Game control key (edited)")));
-        dataTree.set("matrix", new DataEntry(matrix));
-        dataTree.set("floats", new DataEntry(new ArrayList<>(floats)));
+        dataTree.set("matrix", new DataEntry(List.of(new DataEntry(List.of(
+                new DataEntry(List.of(new DataEntry("beside"))), new DataEntry(List.of()),
+                new DataEntry(List.of(new DataEntry("hello"), new DataEntry("crazy")))
+        )))));
+        dataTree.set("floats", new DataEntry(List.of(new DataEntry(floats.iterator().next()))));
         dataTree.set("small-enum", new DataEntry(smallEnum.name()));
         DataTree.Mut subTree = new DataTree.Mut();
         dataTree.set("sub-section", new DataEntry(subTree)
@@ -306,23 +303,33 @@ public class ConfigurationMechanicsTest {
         subTree.set("message", new DataEntry(message));
         subTree.set("big-enum", new DataEntry(bigEnum.name()));
 
-        LoadResult<Config> loadResult = configuration.readWithUpdate(dataTree, new ConfigurationDefinition.ReadOptions() {
+        LoadResult<Config> loadResult = configuration.readWithUpdate(dataTree, new ConfigurationDefinition.ReadWithUpdateOptions() {
             @Override
-            public @NonNull LoadListener loadListener() {
-                return loadListener;
+            public void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
+                updateListener.notifyUpdate(entryPath, updateReason);
             }
 
             @Override
             public @NonNull KeyMapper keyMapper() {
                 return keyMapper;
             }
+
+            @Override
+            public @NonNull KeyPath keyPath() {
+                return new KeyPath.Immut();
+            }
+
+            @Override
+            public boolean writeEntryComments(@NonNull CommentLocation location) {
+                return false;
+            }
         });
         assertTrue(loadResult.isSuccess());
         if (updatableValues) {
-            verify(loadListener).updatedPath(new KeyPath.Mut("sub-section", "enabled"), UpdateReason.UPDATED);
-            verifyNoMoreInteractions(loadListener);
+            verify(updateListener).notifyUpdate(new KeyPath.Mut("sub-section", "enabled"), UpdateReason.UPDATED);
+            verifyNoMoreInteractions(updateListener);
         } else {
-            verifyNoInteractions(loadListener);
+            verifyNoInteractions(updateListener);
         }
 
         assertEquals(new DataEntry(inherited), dataTree.get("inherited"));
@@ -333,8 +340,11 @@ public class ConfigurationMechanicsTest {
             assertEquals(new DataEntry(keyPress), keyPressEntry);
             assertEquals(CommentData.empty().setAt(CommentLocation.ABOVE, "Game control key (edited)"), keyPressEntry.getComments());
         }
-        assertEquals(new DataEntry(matrix), dataTree.get("matrix"));
-        assertNotNull(dataTree.get("floats"));
+        assertEquals(new DataEntry(List.of(new DataEntry(List.of(
+                new DataEntry(List.of(new DataEntry("beside"))), new DataEntry(List.of()),
+                new DataEntry(List.of(new DataEntry("hello"), new DataEntry("crazy")))
+        )))), dataTree.get("matrix"));
+        assertEquals(new DataEntry(List.of(new DataEntry(floats.iterator().next()))), dataTree.get("floats"));
         assertEquals(new DataEntry(smallEnum.name()), dataTree.get("small-enum"));
 
         DataEntry subEntry = dataTree.get("sub-section");

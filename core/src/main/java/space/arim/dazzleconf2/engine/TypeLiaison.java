@@ -78,6 +78,7 @@ public interface TypeLiaison {
          * @return the default values, or null if no defaults are available
          * @throws DeveloperMistakeException optionally, if a library usage failure happened
          */
+        @SideEffectFree
         @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit defaultInit);
 
         /**
@@ -86,6 +87,7 @@ public interface TypeLiaison {
          *
          * @return the serializer
          */
+        @SideEffectFree
         @NonNull SerializeDeserialize<V> makeSerializer();
 
         /**
@@ -105,6 +107,7 @@ public interface TypeLiaison {
          * @param <R> the raw type to look for
          */
         @SuppressWarnings("unchecked")
+        @SideEffectFree
         static <V, R> @Nullable Agent<R> matchOnToken(@NonNull TypeToken<R> token, @NonNull Class<V> matchWith,
                                                       @NonNull Supplier<@NonNull Agent<V>> factory) {
             if (token.getRawType().equals(matchWith)) {
@@ -120,6 +123,20 @@ public interface TypeLiaison {
      *
      */
     interface DefaultInit {
+
+        /**
+         * The interface type where the method is located
+         *
+         * @return the interface type
+         */
+        @NonNull TypeToken<?> enclosingType();
+
+        /**
+         * The label for the entry, typically the method name
+         *
+         * @return the label
+         */
+        @NonNull String label();
 
         /**
          * Gets method level annotations for the entry being initialized
@@ -145,16 +162,20 @@ public interface TypeLiaison {
          * @throws DeveloperMistakeException if no liaison handles the requested type
          * @throws IllegalStateException if a cyclic loop is detected with the other liaison
          */
+        @SideEffectFree
         <U> @NonNull SerializeDeserialize<U> getOtherSerializer(@NonNull TypeToken<U> other);
 
         /**
          * Gets another configuration. This function will use the settings from the parent configuration
          * for purposes of defining, deserializing/serializing, and instantiating the child.
          *
+         * @param other the type whose definition is requested
          * @return a configuration which can be read or written
+         * @param <U> the type requested
          * @throws DeveloperMistakeException if the type requested is improperly declared or has broken settings
          * @throws IllegalStateException if a cyclic loop is detected with the requested type
          */
+        @SideEffectFree
         <U> @NonNull ConfigurationDefinition<U> getConfiguration(@NonNull TypeToken<U> other);
 
     }

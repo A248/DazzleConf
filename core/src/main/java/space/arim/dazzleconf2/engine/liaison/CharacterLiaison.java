@@ -21,8 +21,13 @@ package space.arim.dazzleconf2.engine.liaison;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.DefaultValues;
+import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
+import space.arim.dazzleconf2.engine.TypeLiaison;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
@@ -42,6 +47,7 @@ public final class CharacterLiaison implements TypeLiaison {
     public CharacterLiaison() {}
 
     @Override
+    @SideEffectFree
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
         Class<V> rawType = typeToken.getRawType();
         if (rawType.equals(char.class) || rawType.equals(Character.class)) {
@@ -55,11 +61,13 @@ public final class CharacterLiaison implements TypeLiaison {
     private static final class AgentImpl implements Agent<Character> {
 
         @Override
+        @SideEffectFree
         public @Nullable DefaultValues<Character> loadDefaultValues(@NonNull DefaultInit defaultInit) {
             return null;
         }
 
         @Override
+        @SideEffectFree
         public @NonNull SerializeDeserialize<Character> makeSerializer() {
             return new SerializeDeserialize<Character>() {
                 @Override

@@ -23,6 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.Printable;
 
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Locale;
 
@@ -60,6 +61,16 @@ public final class LibraryLangAr extends LibraryLang.Base {
     }
 
     @Override
+    public @NonNull String syntaxLinter() {
+        return "توثيق التنسيق";
+    }
+
+    @Override
+    public @NonNull String failed() {
+        return "فشل";
+    }
+
+    @Override
     public @NonNull String missingValue() {
         return "لا يوجد إختيار هنا ولكنه مفروض.";
     }
@@ -91,7 +102,7 @@ public final class LibraryLangAr extends LibraryLang.Base {
 
     @Override
     public @NonNull String errorIntro() {
-        return "لقينا عقبات تمنع تحميل الإادادات";
+        return "لقينا اشكاليات في تحميل ملف التكوين";
     }
 
     @Override
@@ -141,6 +152,17 @@ public final class LibraryLangAr extends LibraryLang.Base {
 
     @Override
     public @NonNull String configurationSection() {
-        return "مجموعة إلاعدادات";
+        return "قسم التكوين";
+    }
+
+    @Override
+    public @NonNull String syntaxInvalidPleaseTryAt(@NonNull URL url) {
+        return "التنسيق في ملف التكوين لك غير صحيح. ارجوك ان تستخدم توثيق التنسيق في " + url +
+                ". نسخ ملف التكوين ولصقه هناك كي تحلل الاشكاليات.";
+    }
+
+    @Override
+    public @NonNull String yamlNotAMap() {
+        return "الملف الYAML لزاما يكون مجموعة إعدادات وليس نوعاً اخراً في تنسيق YAML";
     }
 }

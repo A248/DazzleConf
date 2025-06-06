@@ -24,7 +24,11 @@ import space.arim.dazzleconf2.ReloadShell;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Default implementation of {@link Instantiator} using standard proxy reflection
@@ -79,10 +83,10 @@ public final class DefaultInstantiator implements Instantiator {
                 }
             }
         }
-        ProxyHandlerToValues proyHandler = new ProxyHandlerToValues(targets, fastValues);
-        Object proxy = Proxy.newProxyInstance(classLoader, targets, proyHandler);
+        ProxyHandlerToValues proxyHandler = new ProxyHandlerToValues(targets, fastValues);
+        Object proxy = Proxy.newProxyInstance(classLoader, targets, proxyHandler);
         if (defaultMethods != null) {
-            proyHandler.initDefaultMethods(proxy, defaultMethods);
+            proxyHandler.initDefaultMethods(proxy, defaultMethods);
         }
         return proxy;
     }
@@ -97,7 +101,7 @@ public final class DefaultInstantiator implements Instantiator {
     @Override
     public <I> @NonNull I generateEmpty(@NonNull Class<I> iface) {
         ProxyHandlerToEmpty<I> proxyHandler = new ProxyHandlerToEmpty<>(iface);
-        I proxy = iface.cast(Proxy.newProxyInstance(classLoader, new Class[]{iface}, proxyHandler));
+        I proxy = iface.cast(Proxy.newProxyInstance(classLoader, new Class[] {iface}, proxyHandler));
         proxyHandler.initProxy(proxy);
         return proxy;
     }

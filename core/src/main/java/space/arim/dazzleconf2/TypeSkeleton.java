@@ -19,15 +19,21 @@
 
 package space.arim.dazzleconf2;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.engine.*;
+import space.arim.dazzleconf2.engine.DefaultValues;
+import space.arim.dazzleconf2.engine.SerializeDeserialize;
+import space.arim.dazzleconf2.engine.SerializeOutput;
 import space.arim.dazzleconf2.reflect.MethodId;
 import space.arim.dazzleconf2.reflect.MethodMirror;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Defines a single interface supertype which has not yet been instantiated
@@ -98,16 +104,17 @@ final class TypeSkeleton {
         }
 
         /**
-         * Makes the return value for this method, representing the "missing value"
+         * Makes the return value for this method, representing the "missing value".
+         * <p>
+         * Should not be used if this method node is optional.
          *
          * @param inType the type enclosing this method
          * @return the missing value, or null if no missing value can be made
          * @throws DeveloperMistakeException if {@link DefaultValues#ifMissing()} is wrongly implemented
          */
-        Object makeMissingValue(Class<?> inType) {
-            if (optional) {
-                return Optional.empty();
-            }
+        V makeMissingValue(Class<?> inType) {
+            assert !optional : "handled elsewhere";
+
             if (defaultValues == null) {
                 return null;
             }
@@ -124,8 +131,8 @@ final class TypeSkeleton {
             Object value;
             try {
                 value = invoker.invokeMethod(methodId);
-            } catch (InvocationTargetException e) {
-                throw new DeveloperMistakeException("Configuration methods must not throw exceptions", e);
+            } catch (InvocationTargetException ex) {
+                throw new DeveloperMistakeException("Configuration methods must not throw exceptions", ex);
             }
             if (value == null) {
                 throw new DeveloperMistakeException(
@@ -137,7 +144,11 @@ final class TypeSkeleton {
             }
             @SuppressWarnings("unchecked")
             V castValue = (V) value;
-            serializer.serialize(castValue, ser);
+            return serialize(castValue, ser);
+        }
+
+        @NonNull DataEntry serialize(V value, SerializeOutput ser) {
+            serializer.serialize(value, ser);
 
             Object output = ser.getAndClearLastOutput();
             if (output == null) {
@@ -145,7 +156,7 @@ final class TypeSkeleton {
                         "Serializer " + serializer + " did not produce any output for " + value
                 );
             }
-            return new DataEntry(output).withComments(comments);
+            return new DataEntry(output);
         }
     }
 }

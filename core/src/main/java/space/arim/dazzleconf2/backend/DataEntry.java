@@ -23,19 +23,20 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
-import java.util.*;
+import java.util.List;
 
 /**
  * A data value, with associated metadata as interoperable with backend formats.
  * <p>
- * Values must conform to the canonical requirements. That means String, primitives, lists of these types, or
+ * Values must conform to the canonical requirements. That means String, primitives, {@code List<DataEntry>}, or
  * another {@link DataTree} for nesting. Although a {@code DataEntry} itself is immutable, its contents may not be,
  * and mutable lists and mutable data trees are permitted to be the value.
  * <p>
  * Equality is defined for an entry based on its value. Comments and line numbers are <b>not</b> counted in
- * equality comparisons and hash code.
+ * equality comparisons and hash code. Note that because of the equality properties of {@code float} and {@code double},
+ * code which checks for equality may not function as expected after data is written and read from an external source.
  */
-public final class DataEntry implements DataStreamable.Entry {
+public final class DataEntry {
 
     private final @NonNull Object value;
     private final Integer lineNumber;
@@ -44,9 +45,8 @@ public final class DataEntry implements DataStreamable.Entry {
     /**
      * Creates from a nonnull value.
      * <p>
-     * The value must conform to {@link #validateValue(Object)}
-     * I.e., it must be one of primitive, <code>String</code>, <code>List</code> with valid elements, or
-     * <code>DataTree</code>. Null values are not valid.
+     * The value must conform to {@link #validateValue(Object)}. I.e., it must be of a primitive type,
+     * <code>String</code>, {@code List<DataEntry>}, or <code>DataTree</code>. Null values are not valid.
      *
      * @param value the value
      * @throws IllegalArgumentException if the value is not of the canonical types
@@ -65,7 +65,7 @@ public final class DataEntry implements DataStreamable.Entry {
     }
 
     /**
-     * Gets the value. Guaranteed to be one of the canonical types (see {@link DataTree})
+     * Gets the value. Guaranteed to be one of the canonical types (see {@link #validateValue(Object)})
      *
      * @return the config value
      */
@@ -178,7 +178,7 @@ public final class DataEntry implements DataStreamable.Entry {
     /**
      * Checks whether the given object is valid as a value.
      * <p>
-     * Values must be one of primitive, <code>String</code>, <code>List</code> with valid elements,
+     * Values must be one of primitive, <code>String</code>, <code>List</code> with elements of <code>DataEntry</code>,
      * or <code>DataTree</code>. Null values are not valid.
      *
      * @param value the value
@@ -186,31 +186,15 @@ public final class DataEntry implements DataStreamable.Entry {
      */
     public static boolean validateValue(@Nullable Object value) {
         if (value instanceof List) {
+            // Yes, it's technically possible for someone to TOCTOU this per-element check
+            // Does it matter? No. Anyone who is doing that WANTS to break the library.
             for (Object elem : (List<?>) value) {
-                if (!validateValue(elem)) {
+                if (!(elem instanceof DataEntry)) {
                     return false;
                 }
             }
             return true;
         }
         return value instanceof DataTree || DataTree.validateKey(value);
-    }
-
-    @Override
-    public boolean isTreeLike() {
-        return value instanceof DataTree;
-    }
-
-    @Override
-    public @NonNull DataEntry getAsDataEntry() {
-        return this;
-    }
-
-    @Override
-    public @NonNull DataStreamable getAsDataStreamable() {
-        if (!(value instanceof DataTree)) {
-            throw new IllegalStateException("Not a data tree");
-        }
-        return (DataTree) value;
     }
 }

@@ -37,7 +37,7 @@ public final class SnakeCaseKeyMapper implements KeyMapper {
     public SnakeCaseKeyMapper() {}
 
     @Override
-    public @NonNull CharSequence labelToKey(@NonNull String label) {
+    public @NonNull CharSequence labelToKey(@NonNull CharSequence label) {
 
         StringBuilder builder = new StringBuilder();
         int startAppend = 0;
@@ -56,15 +56,5 @@ public final class SnakeCaseKeyMapper implements KeyMapper {
         }
         builder.append(label, startAppend, label.length());
         return builder.toString();
-    }
-
-    @Override
-    public int hashCode() {
-        return SnakeCaseKeyMapper.class.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof SnakeCaseKeyMapper;
     }
 }

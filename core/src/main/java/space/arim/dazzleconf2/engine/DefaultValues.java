@@ -53,7 +53,7 @@ public interface DefaultValues<V> {
      * @return a default values implementation
      * @param <V> the type being provided
      */
-    static <V> DefaultValues<V> simple(@NonNull V defaultValue) {
+    static <V> @NonNull DefaultValues<V> simple(@NonNull V defaultValue) {
         class Simple implements DefaultValues<V> {
 
             @Override

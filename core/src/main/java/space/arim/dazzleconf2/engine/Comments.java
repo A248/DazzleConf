@@ -22,14 +22,20 @@ package space.arim.dazzleconf2.engine;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.DataEntry;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.util.List;
+
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * Adds comments to a configuration entry or type.
  * <p>
- * This annotation can be repeated multiple times to specify comments in different locations. Please note that
- * writing this annotation multiple times for the same location will simply result in that location being overidden.
+ * This annotation can be repeated multiple times to specify comments in different locations. Writing this annotation
+ * multiple times for the same location will append additional comments at that location.
  * <p>
  * <b>Usage on a method</b>
  * <p>
@@ -39,16 +45,12 @@ import java.util.List;
  * <p>
  * <b>Usage on a class</b>
  * <p>
- * This annotation can also be applied to a class. If so, the comments will be associated with that class, and they
- * will be added wherever a configuration method declares that class as its return type. If both the method-level
- * annotation and class-level annotation exist, the method-level annotation will take precedence.
- * <p>
- * Additionally, if the annotated class is a configuration interface itself, the comments specified will become
- * top-level comments in the configuration definition. Such top-level comments are passed directly to the backend.
+ * This annotation can also be applied to a class. If the annotated class is used as a configuration interface, the
+ * comments specified will become top-level comments in the configuration definition (e.g., header and footer).
  */
 @Repeatable(Comments.Container.class)
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD, ElementType.TYPE})
+@Retention(RUNTIME)
+@Target({METHOD, TYPE})
 public @interface Comments {
 
     /**
@@ -65,11 +67,11 @@ public @interface Comments {
      * {@link DataEntry#withComments(CommentLocation, List)} using the given location, merging with existing comments
      * at that location as necessary.
      * <p>
-     * If no location is specified, the default is {@link CommentLocation#ABOVE}.
+     * If no location is specified, the default is {@code ABOVE}.
      *
      * @return where to place the comments
      */
-    CommentLocation location() default CommentLocation.ABOVE;
+    @NonNull CommentLocation location() default CommentLocation.ABOVE;
 
     /**
      * The repeatable annotations container for adding multiple comments.
@@ -77,8 +79,8 @@ public @interface Comments {
      * Users do not need this directly and relying on the repeatability of {@link Comments} is far more ergonomic.
      *
      */
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RUNTIME)
+    @Target({METHOD, TYPE})
     @interface Container {
 
         /**

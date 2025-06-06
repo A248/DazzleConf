@@ -18,13 +18,13 @@
  */
 package space.arim.dazzleconf2.internals;
 
+import space.arim.dazzleconf2.internals.jdk11.Java11DefaultMethodProvider;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
-import space.arim.dazzleconf2.internals.jdk11.Java11DefaultMethodProvider;
 
 public final class MethodUtil {
 

@@ -73,7 +73,7 @@ public class ConfigurationTest {
 
         List<String> testList = List.of("hi", "nope", "yes");
         DataTree.Mut sourceTree = new DataTree.Mut();
-        sourceTree.set("testList", new DataEntry(testList));
+        sourceTree.set("testList", new DataEntry(List.of(new DataEntry("hi"), new DataEntry("nope"), new DataEntry("yes"))));
         GenericWorld<String> loadedFromSource = config.readFrom(sourceTree).getOrThrow();
         assertEquals(testList, loadedFromSource.testList());
         {
@@ -82,7 +82,7 @@ public class ConfigurationTest {
             assertEquals(sourceTree, writeBack);
         }
         DataTree.Mut writeCustom = new DataTree.Mut();
-        writeCustom.set("testList", new DataEntry(List.of("1", "2")));
+        writeCustom.set("testList", new DataEntry(List.of(new DataEntry("1"), new DataEntry("2"))));
         DataTree.Mut output = new DataTree.Mut();
         config.writeTo(new GenericWorld<>() {
             @Override
@@ -109,7 +109,7 @@ public class ConfigurationTest {
         List<Integer> testList = List.of(1, 3);
         DataTree.Mut sourceTree = new DataTree.Mut();
         sourceTree.set("helloThere", new DataEntry("goodbye"));
-        sourceTree.set("testList", new DataEntry(testList));
+        sourceTree.set("testList", new DataEntry(List.of(new DataEntry(1), new DataEntry(3))));
         InheritedWorld loadedFromSource = config.readFrom(sourceTree).getOrThrow();
         assertEquals("goodbye", loadedFromSource.helloThere());
         assertEquals(testList, loadedFromSource.testList());
@@ -120,7 +120,7 @@ public class ConfigurationTest {
         }
         DataTree.Mut writeCustom = new DataTree.Mut();
         writeCustom.set("helloThere", new DataEntry("bye"));
-        writeCustom.set("testList", new DataEntry(List.of(4, 5)));
+        writeCustom.set("testList", new DataEntry(List.of(new DataEntry(4), new DataEntry(5))));
         DataTree.Mut output = new DataTree.Mut();
         config.writeTo(new InheritedWorld() {
             @Override
