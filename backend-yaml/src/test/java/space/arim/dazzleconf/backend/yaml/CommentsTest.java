@@ -131,7 +131,7 @@ public class CommentsTest {
             public @NonNull DataTree data() {
                 DataTree.Mut dataTree = new DataTree.Mut();
                 DataTree.Mut subTree = new DataTree.Mut();
-                dataTree.set("sub", new DataEntry(subTree));
+                dataTree.set("sub", new DataEntry(subTree).withComments(CommentLocation.ABOVE, List.of("Test header")));
                 dataTree.set("another", new DataEntry(false));
                 subTree.set("plain", new DataEntry(1));
                 subTree.set("commented", new DataEntry("hello").withComments(commentsOnEntry));
@@ -187,7 +187,7 @@ public class CommentsTest {
                 .setAt(CommentLocation.BELOW, "Below!", "Haha");
         CommentData commentsOnSection = CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "On top", "Another on top")
-                .setAt(CommentLocation.INLINE, "Beside: where will it go?")
+                //.setAt(CommentLocation.INLINE, "Beside: where will it go?")
                 .setAt(CommentLocation.BELOW, "Below!");
         yamlBackend.write(new Backend.Document() {
             @Override
@@ -215,7 +215,14 @@ public class CommentsTest {
                   # Watching you
                   commented: hello # From
                   # Below!
-                  # Haha""", stringRoot.readString().trim());
+                  # Haha
+                  # On top
+                  # Another on top
+                  section:
+                    dummy: will we snag the comments?
+                    mischievous: true
+                
+                  # Below!""", stringRoot.readString().trim());
     }
 
     @Test

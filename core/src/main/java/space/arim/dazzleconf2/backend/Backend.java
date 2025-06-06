@@ -39,8 +39,8 @@ import java.io.UncheckedIOException;
  * commenting workarounds, or accept escape sequences. Backends can provide such options through constructor
  * parameters.
  * <p>
- * Some configuration formats define null values. If a backend discovers a null value, it should treat the key/value
- * pair as non-existent.
+ * Some configuration formats define null values. If a backend discovers a null value, it is recommended that the
+ * backend act in a user-friendly manner by treating the null value as the literal string "null" instead.
  * <p>
  * Backends are not required to support comments, but it is strongly preferred if they do. If comments <i>are</i>
  * supported, the backend <b>must</b> round-trip those comments between successive calls to <code>read</code> and

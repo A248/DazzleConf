@@ -21,24 +21,24 @@ package space.arim.dazzleconf.backend.yaml;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.snakeyaml.engine.v2.api.Dump;
 import org.snakeyaml.engine.v2.api.DumpSettings;
-import org.snakeyaml.engine.v2.api.Load;
 import org.snakeyaml.engine.v2.api.LoadSettings;
+import org.snakeyaml.engine.v2.api.StreamDataWriter;
 import org.snakeyaml.engine.v2.api.lowlevel.Compose;
-import org.snakeyaml.engine.v2.comments.CommentLine;
 import org.snakeyaml.engine.v2.common.FlowStyle;
+import org.snakeyaml.engine.v2.constructor.StandardConstructor;
 import org.snakeyaml.engine.v2.exceptions.YamlEngineException;
 import org.snakeyaml.engine.v2.nodes.MappingNode;
 import org.snakeyaml.engine.v2.nodes.Node;
 import org.snakeyaml.engine.v2.nodes.Tag;
+import org.snakeyaml.engine.v2.representer.StandardRepresenter;
 import org.snakeyaml.engine.v2.schema.JsonSchema;
-import org.snakeyaml.engine.v2.schema.Schema;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.backend.ReadableRoot;
@@ -52,14 +52,9 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.Predicate;
 
 /**
  * A backend for YAML.
@@ -96,6 +91,8 @@ public final class YamlBackend implements Backend {
                 .setSchema(jsonSchema)
                 .setAllowDuplicateKeys(false)
                 .setAllowRecursiveKeys(false)
+                // TODO: By making SnakeYaml-Engine handle buffering, we can avoid redundant buffering in PathRoot
+                //.setBufferSize(8192)
                 .setLabel(YamlBackend.class.getSimpleName())
                 .build();
         dumpSettings = DumpSettings.builder()
@@ -166,93 +163,56 @@ public final class YamlBackend implements Backend {
         if (node == null) {
             return LoadResult.of(null);
         }
-        CommentMarshall commentMarshall = new CommentMarshall();
-        Tag rootTag = node.getTag();
-        if (rootTag == Tag.COMMENT) {
-            // Return an empty document, with just comments
-            return LoadResult.of(new Document() {
-                @Override
-                public @NonNull CommentData comments() {
-                    Predicate<CommentLine> alwaysTrue = (c) -> true;
-                    return CommentData.empty()
-                            .setAt(CommentLocation.ABOVE, commentMarshall.getComments1to1(node.getBlockComments(), alwaysTrue))
-                            .setAt(CommentLocation.INLINE, commentMarshall.getComments1to1(node.getInLineComments(), alwaysTrue))
-                            .setAt(CommentLocation.BELOW, commentMarshall.getComments1to1(node.getEndComments(), alwaysTrue));
-                }
-
-                @Override
-                public @NonNull DataTree data() {
-                    return new DataTree.Immut();
-                }
-            });
-        }
-        if (!(node instanceof MappingNode)) {
+        MappingNode mappingNode;
+        if (node instanceof MappingNode) {
+            mappingNode = (MappingNode) node;
+        } else if (node.getTag() == Tag.COMMENT) {
+            // This can happen if there was an empty document
+            // In that case, we can artificially construct a MappingNode and use it anyway
+            MappingNode construct = new MappingNode(Tag.MAP, Collections.emptyList(), FlowStyle.AUTO);
+            construct.setBlockComments(node.getBlockComments());
+            construct.setEndComments(node.getEndComments());
+            mappingNode = construct;
+        } else {
             LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
             return errorSource.throwError(libraryLang.yamlNotAMap());
         }
-        MappingNode mappingNode = (MappingNode) node;
-        ReadYaml readYaml = new ReadYaml();
-        LoadResult<DataTree> data = readYaml.mappingNodeToTree(mappingNode);
-        if (data.isFailure()) {
-            return LoadResult.failure(data.getErrorContexts());
-        }
-        /*
-        // Scan for header and footer
-        for (NodeTuple nodeTuple : mappingNode.getValue()) {
-            System.out.println("Found block comments on key " + nodeTuple.getKeyNode().getBlockComments());
-            System.out.println("Found end comments on key " + nodeTuple.getKeyNode().getEndComments());
-            System.out.println("Found block comments on value " + nodeTuple.getValueNode().getBlockComments());
-            System.out.println("Found end comments on value " + nodeTuple.getValueNode().getEndComments());
-        }
-         */
-        CommentData comments = readYaml.getComments(node, node);
-        return LoadResult.of(new Document() {
-            @Override
-            public @NonNull CommentData comments() {
-                return comments;
-            }
-
-            @Override
-            public @NonNull DataTree data() {
-                return data.getOrThrow();
-            }
-        });
+        return new ReadYaml(errorSource, new StandardConstructor(loadSettings)).runForMapping(mappingNode);
     }
 
     @Override
     public void write(@NonNull Document document) {
-        WriteYaml writeYaml = new WriteYaml();
-        Node node = writeYaml.dataTreeToNode(document.data());
+        CommentData comments = document.comments();
+        Node node;
+        Dump dump;
         {
-            // Inline comments cannot be written at the document level
-            // Block and end comments can be written, but we need to distinguish them from any mappings
-            CommentData comments = document.comments();
-            List<String> header = comments.getAt(CommentLocation.ABOVE);
-            List<String> footer = comments.getAt(CommentLocation.BELOW);
-            writeYaml.setComments1to1(node, header, Node::setBlockComments);
-            writeYaml.setComments1to1(node, footer, Node::setEndComments);
-            // Write these border values to separate the header and the footer, so we can recognize them later
-            /*if (!header.isEmpty()) {
-                node.getBlockComments().add(new CommentLine(null, null, HEADER_FOOTER_DEMARCATOR, CommentType.BLOCK));
-                node.getBlockComments().add(blankLine());
-            }
-            if (!footer.isEmpty()) {
-                node.getEndComments().add(blankLine());
-                node.getEndComments().add(new CommentLine(null, null, HEADER_FOOTER_DEMARCATOR, CommentType.BLOCK));
-            }*/
+            StandardRepresenter representer = new StandardRepresenter(dumpSettings);
+            node = new WriteYaml(representer).dataTreeToNode(document.data());
+            dump = new Dump(dumpSettings, representer);
         }
+        // TODO 1. Write the comment header and footer
+        // TODO 2. Integrate with writing more closely, to add indents to comments on entries
         try {
             dataRoot.openWriter(writer -> {
-                try {
-                    writeYaml.yaml.serialize(node, writer);
-                } catch (YAMLException yamlEx) {
-                    Throwable cause = yamlEx.getCause();
-                    if (cause instanceof IOException) {
-                        throw (IOException) cause;
-                    } else {
-                        throw new IOException("Unexpected YAMLException while writing to stream", yamlEx);
+                dump.dumpNode(node, new StreamDataWriter() {
+                    @Override
+                    public void write(String str) {
+                        try {
+                            writer.write(str);
+                        } catch (IOException ex) {
+                            throw new UncheckedIOException(ex);
+                        }
                     }
-                }
+
+                    @Override
+                    public void write(String str, int off, int len) {
+                        try {
+                            writer.write(str, off, len);
+                        } catch (IOException ex) {
+                            throw new UncheckedIOException(ex);
+                        }
+                    }
+                });
                 return null;
             });
         } catch (IOException ex) {
@@ -260,31 +220,6 @@ public final class YamlBackend implements Backend {
         }
     }
 
-    private static class ReadYaml {
-
-        
-    }
-    private static class CommentMarshall {
-
-        private List<String> getComments1to1(List<CommentLine> engineComments, Predicate<CommentLine> filter) {
-            if (engineComments == null) {
-                return Collections.emptyList();
-            }
-            List<String> comments = new ArrayList<>(engineComments.size());
-            for (CommentLine engineComment : engineComments) {
-                if (filter.test(engineComment)) {
-                    comments.add(extractComment(engineComment));
-                }
-            }
-            return comments;
-        }
-
-        private String extractComment(CommentLine engineComment) {
-            String value = engineComment.getValue();
-            return value.startsWith(" ") ? value.substring(1) : value;
-        }
-
-    }
     @Override
     public boolean supportsComments(@NonNull CommentLocation location) {
         return true;
