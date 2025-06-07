@@ -172,7 +172,7 @@ final class ReadYaml {
                 target.attachAttractedComments(!sendingDownward, contents);
             }
 
-            CommentSink computeWhereToSend(List<String> contents, boolean prioritizeUpward) {
+            CommentSink computeWhereToSend(List<String> contents) {
                 int clusterLength = contents.size();
                 int indentScoreBelow = newSinkBelow.indentLevel() * clusterLength;
                 // Fast path
@@ -181,19 +181,13 @@ final class ReadYaml {
                 }
                 int closestScore = indentScoreBelow;
                 CommentSink closestSink = newSinkBelow;
-                // If any of the values here are less than indentScoreBelow, ignore them
-                int[] indentScoresAbove = new int[visibleSinksAbove.size()];
                 for (int n = visibleSinksAbove.size() - 1; n >= 0; n--) {
                     CommentSink currentSinkAbove = visibleSinksAbove.get(n);
                     int indentScoreAbove = currentSinkAbove.indentLevel() * clusterLength;
                     if (indentScoreAbove < indentScoreBelow) {
-                        // We stop computing here, because it's not possible to comment below keys
                         break; // No reason to keep computing, as this number will only decrease
                     }
-                    boolean closerScore = prioritizeUpward ?
-                            isFirstCloser(indentScoreAbove, closestScore, indentScore) :
-                            !isFirstCloser(closestScore, indentScoreAbove, indentScore);
-                    if (closerScore) {
+                    if (isFirstCloser(indentScoreAbove, closestScore, indentScore)) {
                         closestScore = indentScoreAbove;
                         closestSink = currentSinkAbove;
                     }
@@ -203,8 +197,8 @@ final class ReadYaml {
         }
 
         Cluster currentCluster = null;
-        // If we've never seen any blank lines, and we're on the first cluster, send it upward upon a tie
-        boolean sendAboveIfTied = true;
+        // If the first cluster has no blank lines before it but blank lines after it, send it upward
+        boolean sendFirstUpward = true;
         boolean sendAllDownward = false;
         {
             for (CommentLine commentLine : commentBuffer) {
@@ -212,25 +206,27 @@ final class ReadYaml {
                 if (commentValue != null) {
                     if (currentCluster == null) {
                         currentCluster = new Cluster();
+                        currentCluster.startIndex = gathered.size();
                     }
                     currentCluster.indentScore += getIndent(commentLine);
                     gathered.add(commentValue);
                     continue;
                 }
-                sendAboveIfTied = false;
-                if (currentCluster == null) {
-                    // Just browsing opening blank lines...
-                    continue;
+                if (currentCluster != null) {
+                    List<String> clusterContents = currentCluster.finish(gathered.size());
+                    CommentSink whereToSend;
+                    if (sendFirstUpward){
+                        whereToSend = visibleSinksAbove.get(visibleSinksAbove.size() - 1);
+                    } else if (sendAllDownward) {
+                        whereToSend = newSinkBelow;
+                    } else {
+                        whereToSend = currentCluster.computeWhereToSend(clusterContents);
+                        sendAllDownward = whereToSend == newSinkBelow;
+                    }
+                    currentCluster.sendWhere(clusterContents, whereToSend);
+                    currentCluster = null;
                 }
-                List<String> clusterContents = currentCluster.finish(gathered.size());
-                CommentSink whereToSend;
-                if (sendAllDownward) {
-                    whereToSend = newSinkBelow;
-                } else {
-                    whereToSend = currentCluster.computeWhereToSend(clusterContents, false);
-                    sendAllDownward = whereToSend == newSinkBelow;
-                }
-                currentCluster.sendWhere(clusterContents, whereToSend);
+                sendFirstUpward = false;
             }
             if (currentCluster != null) {
                 List<String> clusterContents = currentCluster.finish(gathered.size());
@@ -238,7 +234,7 @@ final class ReadYaml {
                 if (sendAllDownward) {
                     whereToSend = newSinkBelow;
                 } else {
-                    whereToSend = currentCluster.computeWhereToSend(clusterContents, sendAboveIfTied);
+                    whereToSend = currentCluster.computeWhereToSend(clusterContents);
                 }
                 currentCluster.sendWhere(clusterContents, whereToSend);
             }
@@ -375,7 +371,6 @@ final class ReadYaml {
             this.indentLevel = indentLevel;
             this.key = key;
             this.value = value;
-            System.out.println("Using indent level " + indentLevel + " for key " + key);
         }
 
         @Override
@@ -491,6 +486,7 @@ final class ReadYaml {
             if (sinkAbove.indentLevel() >= newCommentSink.indentLevel()) {
                 // The new sink will obscure it - so remove this sink
                 sinkAbove.finish();
+                visibleSinksAbove.remove(idx);
             }
         }
         visibleSinksAbove.add(newCommentSink);

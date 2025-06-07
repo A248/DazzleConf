@@ -46,7 +46,6 @@ public class CommentsTest {
     private final YamlBackend yamlBackend = new YamlBackend(stringRoot);
 
     @Test
-    @Disabled
     public void writeSimpleHeader() {
         CommentData header = CommentData.empty().setAt(CommentLocation.ABOVE, "Hello");
         yamlBackend.write(new Backend.Document() {
@@ -62,11 +61,10 @@ public class CommentsTest {
                 return dataTree;
             }
         });
-        assertEquals("# Hello\noption: value", stringRoot.readString().trim());
+        assertEquals("# Hello\n\noption: value", stringRoot.readString().trim());
     }
 
     @Test
-    @Disabled
     public void writeAdvancedHeader() {
         CommentData header = CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "Hello", "There", "World")
@@ -85,11 +83,10 @@ public class CommentsTest {
                 return dataTree;
             }
         });
-        assertEquals("# Hello\n# There\n# World\noption: value\n# Below", stringRoot.readString().trim());
+        assertEquals("# Hello\n# There\n# World\n\noption: value\n\n# Below", stringRoot.readString().trim());
     }
 
     @Test
-    @Disabled
     public void roundTripHeader(@Mock ErrorContext.Source errorSource) {
         CommentData header = CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "Hello", "There", "World")
@@ -107,7 +104,7 @@ public class CommentsTest {
                 return dataTree;
             }
         });
-        assertEquals("# Hello\n# There\n# World\noption: value\n# Below", stringRoot.readString().trim());
+        assertEquals("# Hello\n# There\n# World\n\noption: value\n\n# Below", stringRoot.readString().trim());
         assertEquals(
                 LoadResult.of(header),
                 yamlBackend.read(errorSource).map(document -> document != null ? document.comments() : null),
@@ -189,7 +186,7 @@ public class CommentsTest {
                 .setAt(CommentLocation.BELOW, "Below!", "Haha");
         CommentData commentsOnSection = CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "On top", "Another on top")
-                //.setAt(CommentLocation.INLINE, "Beside: where will it go?")
+                .setAt(CommentLocation.INLINE, "Beside: where will it go?")
                 .setAt(CommentLocation.BELOW, "Below!");
         yamlBackend.write(new Backend.Document() {
             @Override
@@ -221,11 +218,11 @@ public class CommentsTest {
                 
                   # On top
                   # Another on top
-                  section:
+                  section: # Beside: where will it go?
+                    # Below!
+
                     dummy: will we snag the comments?
-                    mischievous: true
-                 \s
-                  # Below!""", stringRoot.readString().trim());
+                    mischievous: true""", stringRoot.readString().trim());
     }
 
     @Test
@@ -240,11 +237,11 @@ public class CommentsTest {
                 
                   # On top
                   # Another on top
-                  section:
+                  section: # Beside: where will it go?
+                    # Below!
+
                     dummy: will we snag the comments?
-                    mischievous: true
-                
-                  # Below!""");
+                    mischievous: true""");
         CommentData commentsOnEntry;
         CommentData commentsOnSection;
         {
@@ -271,6 +268,7 @@ public class CommentsTest {
         assertEquals(
                 CommentData.empty()
                         .setAt(CommentLocation.ABOVE, "On top", "Another on top")
+                        .setAt(CommentLocation.INLINE, "Beside: where will it go?")
                         .setAt(CommentLocation.BELOW, "Below!"),
                 commentsOnSection
         );

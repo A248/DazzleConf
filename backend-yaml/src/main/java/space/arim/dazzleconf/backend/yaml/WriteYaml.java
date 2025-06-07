@@ -86,47 +86,18 @@ final class WriteYaml {
             throw YamlBackend.doesNotSupport("more than one inline comment");
         }
         // If the entry is a list or a map, we place inline and below comments on the key
-        // If the entry is a scalar, inline and below comments need to be merged as "inline" on the value
-        if (valueNode instanceof CollectionNode) {
-            if (!commentsInline.isEmpty()) {
-                keyNode.setInLineComments(Collections.singletonList(new CommentLine(
-                        Optional.empty(), Optional.empty(), " " + commentsInline.get(0), CommentType.IN_LINE
-                )));
-            }
-            if (!commentsBelow.isEmpty()) {
-                setAndMapBlockComments(keyNode, commentsBelow, 1 + commentsBelow.size(), Node::setEndComments);
-                // Add a blank line: This line helps differentiate us from later comments (e.g. ABOVE on other entries)
-                keyNode.getEndComments().add(new CommentLine(
-                        Optional.empty(), Optional.empty(), "", CommentType.BLANK_LINE
-                ));
-            }
-        } else {
-            List<CommentLine> combinedInline = new ArrayList<>(2 + commentsBelow.size());
-            // Even if it's just an empty line, we need at least 1 inline comment, behind which we place below comments
-            CommentLine inlineComment;
-            if (commentsInline.isEmpty()) {
-                // Add a blank line, so that the rest of the engine inline comments are treated as below comments
-                inlineComment = new CommentLine(
-                        Optional.empty(), Optional.empty(), "", CommentType.BLANK_LINE
-                );
-            } else {
-                inlineComment = new CommentLine(
-                        Optional.empty(), Optional.empty(), " " + commentsInline.get(0), CommentType.IN_LINE
-                );
-            }
-            combinedInline.add(inlineComment);
-            if (!commentsBelow.isEmpty()) {
-                for (String commentBelow : commentsBelow) {
-                    combinedInline.add(new CommentLine(
-                            Optional.empty(), Optional.empty(), " " + commentBelow, CommentType.IN_LINE
-                    ));
-                }
-                // Add a blank line to help differentiate us from later comments
-                combinedInline.add(new CommentLine(
-                        Optional.empty(), Optional.empty(), "", CommentType.BLANK_LINE
-                ));
-            }
-            valueNode.setInLineComments(combinedInline);
+        Node whereToPlace = valueNode instanceof CollectionNode ? keyNode : valueNode;
+        if (!commentsInline.isEmpty()) {
+            whereToPlace.setInLineComments(Collections.singletonList(new CommentLine(
+                    Optional.empty(), Optional.empty(), " " + commentsInline.get(0), CommentType.IN_LINE
+            )));
+        }
+        if (!commentsBelow.isEmpty()) {
+            setAndMapBlockComments(whereToPlace, commentsBelow, 1 + commentsBelow.size(), Node::setEndComments);
+            // Add a blank line: This line helps differentiate us from later comments (e.g. ABOVE on other entries)
+            whereToPlace.getEndComments().add(new CommentLine(
+                    Optional.empty(), Optional.empty(), "", CommentType.BLANK_LINE
+            ));
         }
     }
 

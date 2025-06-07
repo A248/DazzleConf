@@ -197,7 +197,6 @@ public final class YamlBackend implements Backend {
             node = new WriteYaml(representer).dataTreeToNode(document.data());
             dump = new Dump(dumpSettings, representer);
         }
-        // TODO Write the comment header and footer
         try {
             dataRoot.openWriter(writer -> {
                 writeHeaderFooter(writer, header);
