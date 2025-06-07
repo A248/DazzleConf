@@ -98,9 +98,8 @@ final class ReadYaml {
 
     // Entry-level and visiting state
 
-    private final ArrayDeque<Object> keyPathStack = new ArrayDeque<>(); // DEBUG
-
-    private CommentSink lastCommentSink;
+    private final ArrayDeque<Object> keyPathStack = new ArrayDeque<>(); // Debug
+    private final List<CommentSink> visibleSinksAbove = new ArrayList<>();
     private final List<CommentLine> commentBuffer = new ArrayList<>();
 
     // Error handling
@@ -129,7 +128,7 @@ final class ReadYaml {
     // Kick-starts the whole operation
     LoadResult<Backend.@NonNull Document> runForMapping(MappingNode mappingNode) {
         Product product = new Product();
-        this.lastCommentSink = new SetHeaderOrFooter(product);
+        visibleSinksAbove.add(new SetHeaderOrFooter(product));
         try {
             visitMap(mappingNode, product.dataTree);
             visitCommentSink(new SetHeaderOrFooter(product));
@@ -150,12 +149,102 @@ final class ReadYaml {
         void finish();
     }
 
-    private void divideBufferAmongNearest(CommentSink sinkAbove, CommentSink sinkBelow, boolean preferAbove) {
-        // Goal: divide the comments cleanly, dividing at the greatest number of blank lines
-        // If there are no blank lines, or when the blank line count ties, we give preference based on 'preferAbove'
+    private void divideBufferAmongAboveAndBelow(CommentSink newSinkBelow) {
+        // Goal: divide the comments cleanly, dividing whenever we encounter blank lines
+        // Group clusters of comments based on their average indent, and find where the cross-over happens
 
-        // Track the values we've gathered so far. If applicable, we use subList to break it apart
+        // We will score every cluster based on average of indentation amount
+        // Instead of performing division and having to handle decimals, we'll scale values upwrd
+
+        // Track the values we've gathered so far. As we go, we use subList to break it apart
         List<String> gathered = new ArrayList<>(commentBuffer.size());
+
+        class Cluster {
+            int startIndex;
+            int indentScore;
+
+            List<String> finish(int endIndex) {
+                return gathered.subList(startIndex, endIndex);
+            }
+
+            void sendWhere(List<String> contents, CommentSink target) {
+                boolean sendingDownward = newSinkBelow == target;
+                target.attachAttractedComments(!sendingDownward, contents);
+            }
+
+            CommentSink computeWhereToSend(List<String> contents, boolean prioritizeUpward) {
+                int clusterLength = contents.size();
+                int indentScoreBelow = newSinkBelow.indentLevel() * clusterLength;
+                // Fast path
+                if (indentScoreBelow == indentScore) {
+                    return newSinkBelow;
+                }
+                int closestScore = indentScoreBelow;
+                CommentSink closestSink = newSinkBelow;
+                // If any of the values here are less than indentScoreBelow, ignore them
+                int[] indentScoresAbove = new int[visibleSinksAbove.size()];
+                for (int n = visibleSinksAbove.size() - 1; n >= 0; n--) {
+                    CommentSink currentSinkAbove = visibleSinksAbove.get(n);
+                    int indentScoreAbove = currentSinkAbove.indentLevel() * clusterLength;
+                    if (indentScoreAbove < indentScoreBelow) {
+                        // We stop computing here, because it's not possible to comment below keys
+                        break; // No reason to keep computing, as this number will only decrease
+                    }
+                    boolean closerScore = prioritizeUpward ?
+                            isFirstCloser(indentScoreAbove, closestScore, indentScore) :
+                            !isFirstCloser(closestScore, indentScoreAbove, indentScore);
+                    if (closerScore) {
+                        closestScore = indentScoreAbove;
+                        closestSink = currentSinkAbove;
+                    }
+                }
+                return closestSink;
+            }
+        }
+
+        Cluster currentCluster = null;
+        // If we've never seen any blank lines, and we're on the first cluster, send it upward upon a tie
+        boolean sendAboveIfTied = true;
+        boolean sendAllDownward = false;
+        {
+            for (CommentLine commentLine : commentBuffer) {
+                String commentValue = extractComment(commentLine, CommentType.BLOCK);
+                if (commentValue != null) {
+                    if (currentCluster == null) {
+                        currentCluster = new Cluster();
+                    }
+                    currentCluster.indentScore += getIndent(commentLine);
+                    gathered.add(commentValue);
+                    continue;
+                }
+                sendAboveIfTied = false;
+                if (currentCluster == null) {
+                    // Just browsing opening blank lines...
+                    continue;
+                }
+                List<String> clusterContents = currentCluster.finish(gathered.size());
+                CommentSink whereToSend;
+                if (sendAllDownward) {
+                    whereToSend = newSinkBelow;
+                } else {
+                    whereToSend = currentCluster.computeWhereToSend(clusterContents, false);
+                    sendAllDownward = whereToSend == newSinkBelow;
+                }
+                currentCluster.sendWhere(clusterContents, whereToSend);
+            }
+            if (currentCluster != null) {
+                List<String> clusterContents = currentCluster.finish(gathered.size());
+                CommentSink whereToSend;
+                if (sendAllDownward) {
+                    whereToSend = newSinkBelow;
+                } else {
+                    whereToSend = currentCluster.computeWhereToSend(clusterContents, sendAboveIfTied);
+                }
+                currentCluster.sendWhere(clusterContents, whereToSend);
+            }
+        }
+        /*
+        // If there are no blank lines, or when the blank line count ties, we give preference based on 'preferAbove'
         int divideAt = -1, blankLineRecord = 0;
         int currentBlankLineCount = 0;
         int indentSum = 0; // If we never found a blank line, use this to calculate an average indent later
@@ -182,10 +271,8 @@ final class ReadYaml {
         }
         if (divideAt == -1) {
             // No blank lines separate the comments. So, switch to an alternative algorithm using the average indent
-            // Instead of performing division and having to handle decimals, we just scale the indent levels upward
-            int scaleTo = commentBuffer.size();
-            int indentScoreAbove = sinkAbove.indentLevel() * scaleTo;
-            int indentScoreBelow = sinkBelow.indentLevel() * scaleTo;
+            int indentScoreAbove = sinkAbove.indentLevel();
+            int indentScoreBelow = sinkBelow.indentLevel();
             if (isFirstCloser(indentScoreAbove, indentScoreBelow, indentSum)) {
                 sinkAbove.attachAttractedComments(true, gathered);
             } else {
@@ -196,6 +283,8 @@ final class ReadYaml {
             sinkAbove.attachAttractedComments(true, gathered.subList(0, divideAt));
             sinkBelow.attachAttractedComments(false, gathered.subList(divideAt, gathered.size()));
         }
+        */
+
         /*
         List<String> giveToAboveSpecifically = null; // Null if we never found a blank line
         List<String> giveToBelowSpecifically = null; // Null if we never found a blank line
@@ -233,7 +322,7 @@ final class ReadYaml {
     }
 
     // If there is a tie, gives priority to the higher-ranked competitor
-    // If there is a tie and the competitors are ranked the same, gives priority to the later argument
+    // If there is a tie and the competitors are ranked the same, gives priority to the first argument
     private static boolean isFirstCloser(int competitor1, int competitor2, int competeOver) {
         int distanceTo1 = Math.abs(competitor1 - competeOver);
         int distanceTo2 = Math.abs(competitor2 - competeOver);
@@ -244,7 +333,7 @@ final class ReadYaml {
             return false;
         }
         // Tie! Need to break the tie
-        return competitor1 > competitor2;
+        return competitor1 >= competitor2;
     }
 
     private static final class SetHeaderOrFooter implements CommentSink {
@@ -382,15 +471,29 @@ final class ReadYaml {
     }
 
     private void visitCommentSink(CommentSink newCommentSink) {
-        // Check last item and compare
-        CommentSink lastEntry = this.lastCommentSink;
+        // Check previous comment sinks, and compare
         // Look at all comments, and have the last and current entry compete over them
-        divideBufferAmongNearest(lastEntry, newCommentSink, false);
-        lastEntry.finish();
+        divideBufferAmongAboveAndBelow(newCommentSink);
         // Clear the buffer, so we can start looking for more
         commentBuffer.clear();
         // Prepare to see the next item
-        this.lastCommentSink = newCommentSink;
+        // Push the current sink in front of any previous ones, according to what should be visible and comment-worthy
+        // E.g., consider:
+        //
+        // section:
+        //   mykey: 'hi'
+        //   enabled: true
+        // other-option: "replaces all the way to section"
+        //
+        // my-key should not obscure section. But enabled will replace mykey, and other-option replaces both of them
+        for (int idx = visibleSinksAbove.size() - 1; idx >= 0; idx--) {
+            CommentSink sinkAbove = visibleSinksAbove.get(idx);
+            if (sinkAbove.indentLevel() >= newCommentSink.indentLevel()) {
+                // The new sink will obscure it - so remove this sink
+                sinkAbove.finish();
+            }
+        }
+        visibleSinksAbove.add(newCommentSink);
     }
 
     private void visitBlockComments(List<CommentLine> snakeComments) {

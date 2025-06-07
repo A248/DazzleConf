@@ -22,6 +22,7 @@ package space.arim.dazzleconf.backend.yaml;
 import org.snakeyaml.engine.v2.comments.CommentLine;
 import org.snakeyaml.engine.v2.comments.CommentType;
 import org.snakeyaml.engine.v2.common.FlowStyle;
+import org.snakeyaml.engine.v2.nodes.CollectionNode;
 import org.snakeyaml.engine.v2.nodes.MappingNode;
 import org.snakeyaml.engine.v2.nodes.Node;
 import org.snakeyaml.engine.v2.nodes.NodeTuple;
@@ -33,6 +34,7 @@ import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -51,11 +53,7 @@ final class WriteYaml {
             Node keyNode = standardRepresenter.represent(key);
             Node valueNode = entryToNode(entry);
 
-            CommentData comments = entry.getComments();
-            // Block comments can be converted easily, 1:1
-            setComments1to1(keyNode, comments.getAt(CommentLocation.ABOVE), Node::setBlockComments);
-            setInlineAndBelowCommentsMerged(valueNode, comments);
-
+            setAllComments(keyNode, valueNode, entry.getComments());
             keyValuePairs.add(new NodeTuple(keyNode, valueNode));
         });
         return new MappingNode(Tag.MAP, keyValuePairs, FlowStyle.AUTO);
@@ -69,11 +67,72 @@ final class WriteYaml {
         return standardRepresenter.represent(value);
     }
 
-    // Please see the snake yaml javadocs to understand what we're doing
-    // Block comments, for example, can be converted easily, 1:1
+    private static void setAllComments(Node keyNode, Node valueNode, CommentData commentData) {
+        {
+            List<String> commentsAbove = commentData.getAt(CommentLocation.ABOVE);
+            if (!commentsAbove.isEmpty()) {
+                setAndMapBlockComments(
+                        keyNode, commentsAbove, commentsAbove.size(), Node::setBlockComments
+                );
+            }
+        }
+        List<String> commentsInline = commentData.getAt(CommentLocation.INLINE);
+        List<String> commentsBelow = commentData.getAt(CommentLocation.BELOW);
+        if (commentsInline.isEmpty() && commentsBelow.isEmpty()) {
+            // Fast path
+            return;
+        }
+        if (commentsInline.size() > 1) {
+            throw YamlBackend.doesNotSupport("more than one inline comment");
+        }
+        // If the entry is a list or a map, we place inline and below comments on the key
+        // If the entry is a scalar, inline and below comments need to be merged as "inline" on the value
+        if (valueNode instanceof CollectionNode) {
+            if (!commentsInline.isEmpty()) {
+                keyNode.setInLineComments(Collections.singletonList(new CommentLine(
+                        Optional.empty(), Optional.empty(), " " + commentsInline.get(0), CommentType.IN_LINE
+                )));
+            }
+            if (!commentsBelow.isEmpty()) {
+                setAndMapBlockComments(keyNode, commentsBelow, 1 + commentsBelow.size(), Node::setEndComments);
+                // Add a blank line: This line helps differentiate us from later comments (e.g. ABOVE on other entries)
+                keyNode.getEndComments().add(new CommentLine(
+                        Optional.empty(), Optional.empty(), "", CommentType.BLANK_LINE
+                ));
+            }
+        } else {
+            List<CommentLine> combinedInline = new ArrayList<>(2 + commentsBelow.size());
+            // Even if it's just an empty line, we need at least 1 inline comment, behind which we place below comments
+            CommentLine inlineComment;
+            if (commentsInline.isEmpty()) {
+                // Add a blank line, so that the rest of the engine inline comments are treated as below comments
+                inlineComment = new CommentLine(
+                        Optional.empty(), Optional.empty(), "", CommentType.BLANK_LINE
+                );
+            } else {
+                inlineComment = new CommentLine(
+                        Optional.empty(), Optional.empty(), " " + commentsInline.get(0), CommentType.IN_LINE
+                );
+            }
+            combinedInline.add(inlineComment);
+            if (!commentsBelow.isEmpty()) {
+                for (String commentBelow : commentsBelow) {
+                    combinedInline.add(new CommentLine(
+                            Optional.empty(), Optional.empty(), " " + commentBelow, CommentType.IN_LINE
+                    ));
+                }
+                // Add a blank line to help differentiate us from later comments
+                combinedInline.add(new CommentLine(
+                        Optional.empty(), Optional.empty(), "", CommentType.BLANK_LINE
+                ));
+            }
+            valueNode.setInLineComments(combinedInline);
+        }
+    }
 
-    private void setComments1to1(Node node, List<String> comments, BiConsumer<Node, List<CommentLine>> setter) {
-        List<CommentLine> snakeBlockComments = new ArrayList<>(comments.size());
+    private static void setAndMapBlockComments(Node node, List<String> comments, int sizeHint,
+                                               BiConsumer<Node, List<CommentLine>> setter) {
+        List<CommentLine> snakeBlockComments = new ArrayList<>(sizeHint);
         for (String comment : comments) {
             snakeBlockComments.add(new CommentLine(
                     Optional.empty(), Optional.empty(), " " + comment, CommentType.BLOCK
@@ -82,42 +141,4 @@ final class WriteYaml {
         setter.accept(node, snakeBlockComments);
     }
 
-    private void setInlineAndBelowCommentsMerged(Node node, CommentData commentData) {
-        // SnakeYAML (following YAML spec) considers comments below the current entry as "inline"
-        // So, we need to combine our inline/below comments to build YAML's inline comments list
-
-        List<String> commentsInline = commentData.getAt(CommentLocation.INLINE);
-        List<String> commentsBelow = commentData.getAt(CommentLocation.BELOW);
-
-        List<CommentLine> snakeInlineComments = new ArrayList<>(1 + commentsBelow.size());
-        switch (commentsInline.size()) {
-            case 0:
-                if (commentsBelow.isEmpty()) {
-                    return; // All finished!
-                }
-                // Fill in an empty inline comment, so we can add comments below
-                snakeInlineComments.add(new CommentLine(
-                        Optional.empty(), Optional.empty(), " ", CommentType.BLANK_LINE
-                ));
-                break;
-            case 1:
-                String inline = commentsInline.get(0);
-                snakeInlineComments.add(new CommentLine(
-                        Optional.empty(), Optional.empty(), " " + inline, CommentType.IN_LINE
-                ));
-                break;
-            default:
-                throw YamlBackend.doesNotSupport("more than one inline comment");
-        }
-        for (String below : commentsBelow) {
-            snakeInlineComments.add(new CommentLine(
-                    Optional.empty(), Optional.empty(), " " + below, CommentType.BLOCK
-            ));
-        }
-        // Add a blank line: This line helps differentiate us from later block comments (e.g. ABOVE on other entries)
-        snakeInlineComments.add(new CommentLine(
-                Optional.empty(), Optional.empty(), "", CommentType.BLANK_LINE
-        ));
-        node.setInLineComments(snakeInlineComments);
-    }
 }
