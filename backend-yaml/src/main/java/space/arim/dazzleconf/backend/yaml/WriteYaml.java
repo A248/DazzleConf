@@ -114,6 +114,10 @@ final class WriteYaml {
                     Optional.empty(), Optional.empty(), " " + below, CommentType.BLOCK
             ));
         }
+        // Add a blank line: This line helps differentiate us from later block comments (e.g. ABOVE on other entries)
+        snakeInlineComments.add(new CommentLine(
+                Optional.empty(), Optional.empty(), "", CommentType.BLANK_LINE
+        ));
         node.setInLineComments(snakeInlineComments);
     }
 }

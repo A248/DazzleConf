@@ -131,7 +131,7 @@ public class CommentsTest {
             public @NonNull DataTree data() {
                 DataTree.Mut dataTree = new DataTree.Mut();
                 DataTree.Mut subTree = new DataTree.Mut();
-                dataTree.set("sub", new DataEntry(subTree).withComments(CommentLocation.ABOVE, List.of("Test header")));
+                dataTree.set("sub", new DataEntry(subTree));
                 dataTree.set("another", new DataEntry(false));
                 subTree.set("plain", new DataEntry(1));
                 subTree.set("commented", new DataEntry("hello").withComments(commentsOnEntry));
@@ -145,6 +145,8 @@ public class CommentsTest {
                   commented: hello # From
                   # Below!
                   # Haha
+                
+                 \s
                 another: false""", stringRoot.readString().trim());
     }
 
@@ -216,12 +218,13 @@ public class CommentsTest {
                   commented: hello # From
                   # Below!
                   # Haha
+                
                   # On top
                   # Another on top
                   section:
                     dummy: will we snag the comments?
                     mischievous: true
-                
+                 \s
                   # Below!""", stringRoot.readString().trim());
     }
 
@@ -233,7 +236,15 @@ public class CommentsTest {
                   # Watching you
                   commented: hello # From
                   # Below!
-                  # Haha""");
+                  # Haha
+                
+                  # On top
+                  # Another on top
+                  section:
+                    dummy: will we snag the comments?
+                    mischievous: true
+                
+                  # Below!""");
         CommentData commentsOnEntry;
         CommentData commentsOnSection;
         {
@@ -256,6 +267,12 @@ public class CommentsTest {
                         .setAt(CommentLocation.INLINE, "From")
                         .setAt(CommentLocation.BELOW, "Below!", "Haha"),
                 commentsOnEntry
+        );
+        assertEquals(
+                CommentData.empty()
+                        .setAt(CommentLocation.ABOVE, "On top", "Another on top")
+                        .setAt(CommentLocation.BELOW, "Below!"),
+                commentsOnSection
         );
     }
 }

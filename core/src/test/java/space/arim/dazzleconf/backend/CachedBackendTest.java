@@ -93,10 +93,11 @@ public class CachedBackendTest {
 
     @Test
     public void supportsComments(@Mock Backend delegate) {
-        when(delegate.supportsComments(CommentLocation.BELOW)).thenReturn(true);
+        when(delegate.supportsComments(false, CommentLocation.BELOW)).thenReturn(true);
         CachedBackend backend = new CachedBackend(delegate);
-        assertTrue(backend.supportsComments(CommentLocation.BELOW));
-        assertFalse(backend.supportsComments(CommentLocation.INLINE));
+        assertTrue(backend.supportsComments(false, CommentLocation.BELOW));
+        assertFalse(backend.supportsComments(false, CommentLocation.INLINE));
+        assertFalse(backend.supportsComments(true, CommentLocation.BELOW));
     }
 
     @Test

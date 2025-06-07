@@ -73,18 +73,21 @@ final class ReadYaml {
 
     // Document-level state
 
-    private Product product;
-
     private static class Product implements Backend.Document {
         private final DataTree.Mut dataTree = new DataTree.Mut();
-        private final List<String> header = new ArrayList<>();
-        private final List<String> footer = new ArrayList<>();
+        private List<String> header;
+        private List<String> footer;
 
         @Override
         public @NonNull CommentData comments() {
-            return CommentData.empty()
-                    .setAt(CommentLocation.ABOVE, header)
-                    .setAt(CommentLocation.BELOW, footer);
+            CommentData commentData = CommentData.empty();
+            if (header != null) {
+                commentData = commentData.setAt(CommentLocation.ABOVE, header);
+            }
+            if (footer != null) {
+                commentData = commentData.setAt(CommentLocation.BELOW, footer);
+            }
+            return commentData;
         }
 
         @Override
@@ -95,23 +98,30 @@ final class ReadYaml {
 
     // Entry-level and visiting state
 
-    private final ArrayDeque<Object> keyPathStack = new ArrayDeque<>();
+    private final ArrayDeque<Object> keyPathStack = new ArrayDeque<>(); // DEBUG
 
-    private Entry lastEntry;
+    private CommentSink lastCommentSink;
     private final List<CommentLine> commentBuffer = new ArrayList<>();
 
     // Error handling
 
     private ErrorContext thrownError;
-    private static final IllegalStateException THROW_SIGNAL_ERROR = new IllegalStateException();
+    private static final IllegalStateException THROW_SIGNAL_ERROR;
+    static {
+        THROW_SIGNAL_ERROR = new IllegalStateException();
+        THROW_SIGNAL_ERROR.setStackTrace(new StackTraceElement[0]);
+    }
 
-    private IllegalStateException throwError(ErrorContext error) {
+    private IllegalStateException throwError(ErrorContext error, Integer lineNumber) {
         String[] keyPathString = new String[keyPathStack.size()];
         int n = 0;
         for (Object keyPathElement : keyPathStack) {
             keyPathString[n++] = keyPathElement.toString();
         }
         error.addDetail(ErrorContext.ENTRY_PATH, new KeyPath.Immut(keyPathString));
+        if (lineNumber != null) {
+            error.addDetail(ErrorContext.LINE_NUMBER, lineNumber);
+        }
         this.thrownError = error;
         throw THROW_SIGNAL_ERROR;
     }
@@ -119,21 +129,10 @@ final class ReadYaml {
     // Kick-starts the whole operation
     LoadResult<Backend.@NonNull Document> runForMapping(MappingNode mappingNode) {
         Product product = new Product();
-        this.product = product;
+        this.lastCommentSink = new SetHeaderOrFooter(product);
         try {
             visitMap(mappingNode, product.dataTree);
-            if (this.lastEntry != null) {
-                this.lastEntry.competeWithHeaderOrFooterForBuffer(product.footer, CommentLocation.BELOW);
-                this.lastEntry.finish();
-            } else {
-                // Empty - add everything to header
-                for (CommentLine commentLine : commentBuffer) {
-                    String commentValue = extractComment(commentLine, CommentType.BLOCK);
-                    if (commentValue != null) {
-                        product.header.add(commentValue);
-                    }
-                }
-            }
+            visitCommentSink(new SetHeaderOrFooter(product));
             return LoadResult.of(product);
         } catch (IllegalStateException checkForError) {
             if (checkForError == THROW_SIGNAL_ERROR) {
@@ -143,131 +142,94 @@ final class ReadYaml {
         }
     }
 
-    private final class Entry {
+    interface CommentSink {
+        int indentLevel();
 
-        private final DataTree.Mut container;
-        private final int indentLevel;
-        private final Object key;
-        private final Object value;
-        private CommentData commentData = CommentData.empty();
+        void attachAttractedComments(boolean comingFromBelow, List<String> comments);
 
-        private Entry(DataTree.Mut container, int indentLevel, Object key, Object value) {
-            this.container = container;
-            this.indentLevel = indentLevel;
-            this.key = key;
-            this.value = value;
-        }
-
-        void competeWithHeaderOrFooterForBuffer(List<String> headerOrFooter, CommentLocation locationIfOurs) {
-            List<String> commentsForUs = new ArrayList<>();
-            for (CommentLine commentLine : commentBuffer) {
-                String commentValue = extractComment(commentLine, CommentType.BLOCK);
-                if (commentValue != null) {
-                    if (getCommentStart(commentLine) == 0) {
-                        headerOrFooter.add(commentValue);
-                    } else {
-                        commentsForUs.add(commentValue);
-                    }
-                }
-            }
-            commentData = commentData.setAt(locationIfOurs, commentsForUs);
-        }
-
-        void competeWithNewEntryForBuffer(Entry newEntry) {
-            List<String> belowCommentsForUs = new ArrayList<>();
-            List<String> aboveCommentsForThem = new ArrayList<>();
-
-            for (CommentLine commentLine : commentBuffer) {
-                String commentValue = extractComment(commentLine, CommentType.BLOCK);
-                if (commentValue != null) {
-                    if (isFirstCloser(indentLevel, newEntry.indentLevel, getCommentStart(commentLine))) {
-                        belowCommentsForUs.add(commentValue);
-                    } else {
-                        aboveCommentsForThem.add(commentValue);
-                    }
-                }
-            }
-            commentData = commentData.setAt(CommentLocation.BELOW, belowCommentsForUs);
-            newEntry.commentData = newEntry.commentData.setAt(CommentLocation.ABOVE, aboveCommentsForThem);
-        }
-
-        void finish() {
-            container.set(key, new DataEntry(value).withComments(commentData));
-        }
+        void finish();
     }
 
-    private void visitMap(MappingNode mappingNode, DataTree.Mut container) {
-        visitBlockComments(mappingNode.getBlockComments());
-        for (NodeTuple nodeTuple : mappingNode.getValue()) {
-            Node keyNode = nodeTuple.getKeyNode();
-            Node valueNode = nodeTuple.getValueNode();
+    private void divideBufferAmongNearest(CommentSink sinkAbove, CommentSink sinkBelow, boolean preferAbove) {
+        // Goal: divide the comments cleanly, dividing at the greatest number of blank lines
+        // If there are no blank lines, or when the blank line count ties, we give preference based on 'preferAbove'
 
-            visitEntry(keyNode, valueNode, container);
-        }
-        visitBlockComments(mappingNode.getEndComments());
-    }
+        // Track the values we've gathered so far. If applicable, we use subList to break it apart
+        List<String> gathered = new ArrayList<>(commentBuffer.size());
+        int divideAt = -1, blankLineRecord = 0;
+        int currentBlankLineCount = 0;
+        int indentSum = 0; // If we never found a blank line, use this to calculate an average indent later
 
-    private void visitEntry(Node keyNode, Node valueNode, DataTree.Mut container) {
-        // FIRST
-        // Gather the value as a mutable container. This is kind of like look-ahead, but object-based
-        Object value;
-        // We'll add inline comments from either keyNode and valueNode, depending on what the value is
-        List<String> inlineComments = new ArrayList<>();
-        Consumer<Node> addInlineCommentsFrom = (chosenNode) -> {
-            List<CommentLine> snakeInlineComments = chosenNode.getInLineComments();
-            if (snakeInlineComments != null) {
-                for (CommentLine commentLine : snakeInlineComments) {
-                    String commentValue = extractComment(commentLine, CommentType.IN_LINE);
-                    if (commentValue != null) {
-                        inlineComments.add(commentValue);
-                    }
+        for (CommentLine commentLine : commentBuffer) {
+            String commentValue = extractComment(commentLine, CommentType.BLOCK);
+            if (commentValue == null) {
+                // Found a blank line!
+                currentBlankLineCount++;
+                continue;
+            }
+            if (currentBlankLineCount != 0) {
+                boolean brokeRecord = preferAbove ?
+                        currentBlankLineCount >= blankLineRecord : currentBlankLineCount > blankLineRecord;
+                if (brokeRecord) {
+                    blankLineRecord = currentBlankLineCount;
+                    divideAt = gathered.size();
                 }
+                currentBlankLineCount = 0;
             }
-        };
-        // Prepare also for next round, but don't do it yet. Postpone continuations of the algorithm until later
-        List<Consumer<ReadYaml>> continuations = new ArrayList<>();
-        value = visitEntryContent(valueNode, keyNode, addInlineCommentsFrom, continuations);
-        // Make new entry
-        Entry thisEntry;
-        {
-            Mark keyStartMark = keyNode.getStartMark().orElse(null);
-            if (keyStartMark == null) {
-                throw throwError(errorSource.buildError(preBuilt("Start mark not present on key " + keyNode)));
-            }
-            thisEntry = new Entry(container, keyStartMark.getColumn(), getKeyValue(keyNode), value);
-            thisEntry.commentData = thisEntry.commentData.setAt(CommentLocation.INLINE, inlineComments);
+            gathered.add(commentValue);
+            indentSum += getIndent(commentLine);
+            System.out.println("Indentation for comment is " + getIndent(commentLine));
         }
-        // Check last item and compare
-        Entry lastEntry = this.lastEntry;
-        if (lastEntry == null) {
-            // No prior items: that means we're the first item
-            // So, either add comments to first item, or add to header
-            thisEntry.competeWithHeaderOrFooterForBuffer(product.header, CommentLocation.ABOVE);
+        if (divideAt == -1) {
+            // No blank lines separate the comments. So, switch to an alternative algorithm using the average indent
+            // Instead of performing division and having to handle decimals, we just scale the indent levels upward
+            int scaleTo = commentBuffer.size();
+            int indentScoreAbove = sinkAbove.indentLevel() * scaleTo;
+            int indentScoreBelow = sinkBelow.indentLevel() * scaleTo;
+            if (isFirstCloser(indentScoreAbove, indentScoreBelow, indentSum)) {
+                sinkAbove.attachAttractedComments(true, gathered);
+            } else {
+                sinkBelow.attachAttractedComments(false, gathered);
+            }
         } else {
-            // We just finished traversing in between items, and arrived at another one
-            // So, look at all comments, and have the last and current item compete over them
-            lastEntry.competeWithNewEntryForBuffer(thisEntry);
-            lastEntry.finish();
+            // Divide up all the comments we gathered, as promised
+            sinkAbove.attachAttractedComments(true, gathered.subList(0, divideAt));
+            sinkBelow.attachAttractedComments(false, gathered.subList(divideAt, gathered.size()));
         }
-        // NEXT ROUND
-        // Clear the buffer, so we can start looking for more
-        commentBuffer.clear();
-        // Prepare to see the next item
-        this.lastEntry = thisEntry;
-        // GO
-        // Either return here, or recurse to find more values
-        if (!continuations.isEmpty()) {
-            // Looks like we're recursing first
-            keyPathStack.addLast(thisEntry.key);
-            try {
-                for (Consumer<ReadYaml> continuation : continuations) {
-                    continuation.accept(this);
+        /*
+        List<String> giveToAboveSpecifically = null; // Null if we never found a blank line
+        List<String> giveToBelowSpecifically = null; // Null if we never found a blank line
+
+        for (CommentLine commentLine : commentBuffer) {
+            String commentValue = extractComment(commentLine, CommentType.BLOCK);
+            if (commentValue == null) {
+                // Found a blank line!
+                if (divideAt == -1) {
+                    // Transition states: start dividing between centerAbove and centerBelow
+                    giveToAboveSpecifically = gathered;
+                    giveToBelowSpecifically = new ArrayList<>();
                 }
-            } finally {
-                keyPathStack.pollLast();
+            } else if (giveToBelowSpecifically != null) {
+                giveToBelowSpecifically.add(commentValue);
+            } else {
+                gathered.add(commentValue);
+                indentSum += getCommentStart(commentLine);
             }
         }
-
+        if (giveToBelowSpecifically == null) {
+            // Instead of performing division and having to handle decimals, we just scale the indent levels upward
+            int scaleTo = commentBuffer.length;
+            int indentScoreAbove = sinkAbove.indentLevel() * scaleTo;
+            int indentScoreBelow = sinkBelow.indentLevel() * scaleTo;
+            if (isFirstCloser(indentScoreAbove, indentScoreBelow, indentSum)) {
+                sinkAbove.attachAttractedComments(true, gathered);
+            } else {
+                sinkBelow.attachAttractedComments(false, gathered);
+            }
+        } else {
+            sinkAbove.attachAttractedComments(true, giveToAboveSpecifically);
+            sinkBelow.attachAttractedComments(false, giveToBelowSpecifically);
+        }*/
     }
 
     // If there is a tie, gives priority to the higher-ranked competitor
@@ -285,21 +247,159 @@ final class ReadYaml {
         return competitor1 > competitor2;
     }
 
+    private static final class SetHeaderOrFooter implements CommentSink {
+
+        private final Product product;
+
+        private SetHeaderOrFooter(Product product) {
+            this.product = product;
+        }
+
+        @Override
+        public int indentLevel() {
+            return 0;
+        }
+
+        @Override
+        public void attachAttractedComments(boolean comingFromBelow, List<String> comments) {
+            if (comingFromBelow) {
+                product.header = comments;
+            } else {
+                product.footer = comments;
+            }
+        }
+
+        @Override
+        public void finish() {}
+    }
+
+    private static final class MapEntry implements CommentSink {
+
+        private final DataTree.Mut container;
+        private final int indentLevel;
+        private final Object key;
+        private final Object value;
+        private CommentData commentData = CommentData.empty();
+
+        private MapEntry(DataTree.Mut container, int indentLevel, Object key, Object value) {
+            this.container = container;
+            this.indentLevel = indentLevel;
+            this.key = key;
+            this.value = value;
+            System.out.println("Using indent level " + indentLevel + " for key " + key);
+        }
+
+        @Override
+        public int indentLevel() {
+            return indentLevel;
+        }
+
+        @Override
+        public void attachAttractedComments(boolean comingFromBelow, List<String> comments) {
+            if (comingFromBelow) {
+                commentData = commentData.setAt(CommentLocation.BELOW, comments);
+            } else {
+                commentData = commentData.setAt(CommentLocation.ABOVE, comments);
+            }
+        }
+
+        @Override
+        public void finish() {
+            container.set(key, new DataEntry(value).withComments(commentData));
+        }
+    }
+
+    private static final class BlackHoleCommentSink implements CommentSink {
+
+        private final int indentLevel;
+
+        private BlackHoleCommentSink(int indentLevel) {
+            this.indentLevel = indentLevel;
+        }
+
+        @Override
+        public int indentLevel() {
+            return indentLevel;
+        }
+
+        @Override
+        public void attachAttractedComments(boolean comingFromBelow, List<String> comments) {}
+
+        @Override
+        public void finish() {}
+    }
+
+    private void visitMap(MappingNode mappingNode, DataTree.Mut container) {
+        visitBlockComments(mappingNode.getBlockComments());
+        for (NodeTuple nodeTuple : mappingNode.getValue()) {
+            Node keyNode = nodeTuple.getKeyNode();
+            Node valueNode = nodeTuple.getValueNode();
+
+            visitMapEntry(keyNode, valueNode, container);
+        }
+        visitBlockComments(mappingNode.getEndComments());
+    }
+
+    private void visitMapEntry(Node keyNode, Node valueNode, DataTree.Mut container) {
+        // FIRST
+        // Gather the value as a mutable container. This is kind of like look-ahead, but object-based
+        Object value;
+        // We'll add inline comments from either keyNode and valueNode, depending on what the value is
+        List<String> inlineComments = new ArrayList<>();
+        Consumer<Node> addInlineCommentsFrom = (chosenNode) -> {
+            List<CommentLine> snakeInlineComments = chosenNode.getInLineComments();
+            if (snakeInlineComments != null) {
+                for (CommentLine commentLine : snakeInlineComments) {
+                    String commentValue = extractComment(commentLine, CommentType.IN_LINE);
+                    if (commentValue != null) {
+                        inlineComments.add(commentValue);
+                    }
+                }
+            }
+        };
+        // Prepare also for next round, but don't do it yet. Postpone continuations until later
+        List<Consumer<ReadYaml>> continuations = new ArrayList<>();
+        value = visitEntryContent(valueNode, keyNode, addInlineCommentsFrom, continuations);
+        // Make new entry
+        MapEntry mapEntry = new MapEntry(container, getIndent(keyNode), getKeyValue(keyNode), value);
+        mapEntry.commentData = mapEntry.commentData.setAt(CommentLocation.INLINE, inlineComments);
+        // Collect comments between this entry and the last one
+        visitBlockComments(keyNode.getBlockComments());
+        visitCommentSink(mapEntry);
+        visitBlockComments(keyNode.getEndComments());
+        // GO
+        // Either return here, or recurse to find more values
+        if (!continuations.isEmpty()) {
+            keyPathStack.addLast(mapEntry.key);
+            try {
+                for (Consumer<ReadYaml> continuation : continuations) {
+                    continuation.accept(this);
+                }
+            } finally {
+                keyPathStack.pollLast();
+            }
+        }
+    }
+
+    private void visitCommentSink(CommentSink newCommentSink) {
+        // Check last item and compare
+        CommentSink lastEntry = this.lastCommentSink;
+        // Look at all comments, and have the last and current entry compete over them
+        divideBufferAmongNearest(lastEntry, newCommentSink, false);
+        lastEntry.finish();
+        // Clear the buffer, so we can start looking for more
+        commentBuffer.clear();
+        // Prepare to see the next item
+        this.lastCommentSink = newCommentSink;
+    }
+
     private void visitBlockComments(List<CommentLine> snakeComments) {
         if (snakeComments != null) {
             this.commentBuffer.addAll(snakeComments);
         }
     }
 
-    private int getCommentStart(CommentLine commentLine) {
-        Mark commentStartMark = commentLine.getStartMark().orElse(null);
-        if (commentStartMark == null) {
-            throw throwError(errorSource.buildError(preBuilt("Start mark not present on comment " + commentLine)));
-        }
-        return commentStartMark.getColumn() - 2;
-    }
-
-    // Produces ErrorContext if a map or sequence was used as a key
+    // Throws error if a map or sequence was used as a key
     private Object getKeyValue(Node keyNode) {
         if (keyNode instanceof AnchorNode) {
             return getKeyValue(((AnchorNode) keyNode).getRealNode());
@@ -310,20 +410,18 @@ final class ReadYaml {
         }
         // TODO: Write a test for the error message
         LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
-        ErrorContext error = errorSource.buildError(libraryLang.wrongTypeForValue(
+        throw throwError(errorSource.buildError(libraryLang.wrongTypeForValue(
                 keyNode, "key type", keyNode.getClass().getSimpleName()
-        ));
-        keyNode.getStartMark().ifPresent(mark -> {
-            error.addDetail(ErrorContext.LINE_NUMBER, mark.getLine());
-        });
-        throw throwError(error);
+        )), keyNode.getStartMark().map(Mark::getLine).orElse(null));
     }
 
     private @NonNull Object visitEntryContent(Node valueNode, Node keyNodeIfNeeded,
-                                     Consumer<Node> addInlineCommentsFrom,
-                                     List<Consumer<ReadYaml>> continueVisiting) {
+                                              Consumer<Node> addInlineCommentsFrom,
+                                              List<Consumer<ReadYaml>> continueVisiting) {
         if (valueNode instanceof AnchorNode) {
-            return visitEntryContent(((AnchorNode) valueNode).getRealNode(), keyNodeIfNeeded, addInlineCommentsFrom, continueVisiting);
+            return visitEntryContent(
+                    ((AnchorNode) valueNode).getRealNode(), keyNodeIfNeeded, addInlineCommentsFrom, continueVisiting
+            );
         }
         if (valueNode instanceof ScalarNode) {
             addInlineCommentsFrom.accept(valueNode);
@@ -344,6 +442,12 @@ final class ReadYaml {
 
             continueVisiting.add(read -> read.visitBlockComments(valueNode.getBlockComments()));
             for (Node elemNode : nodeList) {
+                // For scalar nodes: non-tree list items do not store comments in our library's API
+                // For nested lists: the requirement of flow style FLOW will prevent attaching comments
+                if (!(elemNode instanceof MappingNode)) {
+                    CommentSink noCommentsHere = new BlackHoleCommentSink(getIndent(elemNode));
+                    continueVisiting.add(read -> read.visitCommentSink(noCommentsHere));
+                }
                 elements.add(visitEntryContent(elemNode, null, (ignore) -> {}, continueVisiting));
             }
             continueVisiting.add(read -> read.visitBlockComments(valueNode.getEndComments()));
@@ -352,17 +456,44 @@ final class ReadYaml {
         throw new IllegalStateException("Unknown Node subclass: " + valueNode);
     }
 
-    private @Nullable String extractComment(CommentLine engineComment, CommentType expectIfNotBlank) {
-        CommentType engineCommentType = engineComment.getCommentType();
+    /**
+     * Gets the value out of a comment line, or returns {@code null} if we're looking at a blank line.
+     * <p>
+     * If the line is not blank but the comment type does not match {@code expectIfNotBlank}, throws an error.
+     *
+     * @param snakeComment the source {@code CommentLine} from SnakeYaml-Engine
+     * @param expectIfNotBlank the comment type we're looking for
+     * @return the value of the comment if it matched the type, or {@code null} if it's a blank line
+     */
+    private @Nullable String extractComment(CommentLine snakeComment, CommentType expectIfNotBlank) {
+        CommentType engineCommentType = snakeComment.getCommentType();
         if (engineCommentType == CommentType.BLANK_LINE) {
             return null;
         }
         if (engineCommentType != expectIfNotBlank) {
             throw throwError(errorSource.buildError(preBuilt(
                     "Unexpected comment type " + engineCommentType + "; expected " + expectIfNotBlank
-            )));
+            )), snakeComment.getStartMark().map(Mark::getLine).orElse(null));
         }
-        String value = engineComment.getValue();
+        String value = snakeComment.getValue();
         return value.startsWith(" ") ? value.substring(1) : value;
+    }
+
+    private int getIndent(Node node) {
+        Mark startMark = node.getStartMark().orElse(null);
+        if (startMark == null) {
+            throw throwError(errorSource.buildError(preBuilt("Start mark not present on node " + node)), null);
+        }
+        return startMark.getColumn();
+    }
+
+    private int getIndent(CommentLine commentLine) {
+        Mark commentStartMark = commentLine.getStartMark().orElse(null);
+        if (commentStartMark == null) {
+            throw throwError(errorSource.buildError(preBuilt(
+                    "Start mark not present on comment " + commentLine
+            )), null);
+        }
+        return commentStartMark.getColumn();
     }
 }

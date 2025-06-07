@@ -48,11 +48,13 @@ import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -182,7 +184,12 @@ public final class YamlBackend implements Backend {
 
     @Override
     public void write(@NonNull Document document) {
-        CommentData comments = document.comments();
+        List<String> header, footer;
+        {
+            CommentData headerFooter = document.comments();
+            header = headerFooter.getAt(CommentLocation.ABOVE);
+            footer = headerFooter.getAt(CommentLocation.BELOW);
+        }
         Node node;
         Dump dump;
         {
@@ -190,10 +197,12 @@ public final class YamlBackend implements Backend {
             node = new WriteYaml(representer).dataTreeToNode(document.data());
             dump = new Dump(dumpSettings, representer);
         }
-        // TODO 1. Write the comment header and footer
-        // TODO 2. Integrate with writing more closely, to add indents to comments on entries
+        // TODO Write the comment header and footer
         try {
             dataRoot.openWriter(writer -> {
+                writeHeaderFooter(writer, header);
+                writer.write('\n');
+
                 dump.dumpNode(node, new StreamDataWriter() {
                     @Override
                     public void write(String str) {
@@ -213,6 +222,9 @@ public final class YamlBackend implements Backend {
                         }
                     }
                 });
+
+                writer.write('\n');
+                writeHeaderFooter(writer, footer);
                 return null;
             });
         } catch (IOException ex) {
@@ -220,8 +232,19 @@ public final class YamlBackend implements Backend {
         }
     }
 
+    private static void writeHeaderFooter(Writer writer, List<String> lines) throws IOException {
+        if (lines.isEmpty()) {
+            return;
+        }
+        for (String line : lines) {
+            writer.write("# ");
+            writer.write(line);
+            writer.write('\n');
+        }
+    }
+
     @Override
-    public boolean supportsComments(@NonNull CommentLocation location) {
+    public boolean supportsComments(boolean documentLevel, @NonNull CommentLocation location) {
         return true;
     }
 

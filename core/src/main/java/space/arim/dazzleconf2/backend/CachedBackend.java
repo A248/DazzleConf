@@ -70,8 +70,8 @@ public final class CachedBackend implements Backend {
     }
 
     @Override
-    public boolean supportsComments(@NonNull CommentLocation location) {
-        return delegate.supportsComments(location);
+    public boolean supportsComments(boolean documentLevel, @NonNull CommentLocation location) {
+        return delegate.supportsComments(documentLevel, location);
     }
 
     @Override

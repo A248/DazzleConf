@@ -111,19 +111,26 @@ public interface Backend {
     void write(@NonNull Document document);
 
     /**
-     * Whether comments are supported in the following location.
+     * Whether comments are supported in the following context.
      * <p>
-     * If comments are not supported there, this format backend is free to ignore them during
+     * The context is defined by whether the comments are placed on the document level or on specific entries, and
+     * where the comments are located in that regard. For example, {@code documentLevel = true} and {@code ABOVE}
+     * specifies the document-level header, and {@code documentLevel = false} and {@code INLINE} specify inline
+     * comments on entries.
+     * <p>
+     * <b>Implications</b>
+     * <p>
+     * If comments are not supported in this context, this format backend is free to ignore them during
      * {@link #write(Document)}.
      * <p>
-     * If comments <i>are</i> supported in this location, they <i>must</i> be supported by both <code>write</code>
-     * and <code>read</code> methods. That is, comments at this location must correctly round-trip and
-     * {@link DataEntry#getComments()} should return the same value after being written and re-read.
+     * If comments <i>are</i> supported in this context, they <i>must</i> be supported by both <code>write</code>
+     * and <code>read</code> methods. That is, comments in this context must correctly round-trip.
      *
-     * @param location where are we talking about
+     * @param documentLevel true for the document level, false for entry-level comments
+     * @param location the location of the comments precisely
      * @return if comments are supported in this location
      */
-    boolean supportsComments(@NonNull CommentLocation location);
+    boolean supportsComments(boolean documentLevel, @NonNull CommentLocation location);
 
     /**
      * Recommends a {@link KeyMapper} appropriate to the backend format.
