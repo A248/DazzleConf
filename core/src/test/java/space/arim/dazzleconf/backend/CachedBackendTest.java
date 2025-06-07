@@ -36,7 +36,7 @@ import static org.mockito.Mockito.*;
 public class CachedBackendTest {
 
     @Test
-    public void readOnce(@Mock Backend delegate, @Mock ErrorContext.Source errorSource) {
+    public void readOnce(@Mock Backend delegate, @Mock Backend.ReadRequest readRequest) {
         DataTree.Immut data;
         {
             DataTree.Mut builder = new DataTree.Mut();
@@ -47,13 +47,13 @@ public class CachedBackendTest {
         }
         when(delegate.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(data)));
         CachedBackend backend = new CachedBackend(delegate);
-        assertEquals(data, backend.read(errorSource).getOrThrow().data());
-        assertEquals(data, backend.read(errorSource).getOrThrow().data());
+        assertEquals(data, backend.read(readRequest).getOrThrow().data());
+        assertEquals(data, backend.read(readRequest).getOrThrow().data());
         verify(delegate, times(1)).read(any());
     }
 
     @Test
-    public void refreshOnWrite(@Mock Backend delegate, @Mock ErrorContext.Source errorSource) {
+    public void refreshOnWrite(@Mock Backend delegate, @Mock Backend.ReadRequest readRequest) {
         DataTree.Immut initialData;
         {
             DataTree.Mut builder = new DataTree.Mut();
@@ -66,11 +66,11 @@ public class CachedBackendTest {
 
         when(delegate.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(initialData)));
         CachedBackend backend = new CachedBackend(delegate);
-        assertEquals(initialData, backend.read(errorSource).getOrThrow().data());
-        assertEquals(initialData, backend.read(errorSource).getOrThrow().data());
+        assertEquals(initialData, backend.read(readRequest).getOrThrow().data());
+        assertEquals(initialData, backend.read(readRequest).getOrThrow().data());
         backend.write(Backend.Document.simple(empty));
-        assertEquals(empty, backend.read(errorSource).getOrThrow().data());
-        assertEquals(empty, backend.read(errorSource).getOrThrow().data());
+        assertEquals(empty, backend.read(readRequest).getOrThrow().data());
+        assertEquals(empty, backend.read(readRequest).getOrThrow().data());
 
         verify(delegate, times(1)).read(any());
     }

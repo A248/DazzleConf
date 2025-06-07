@@ -13,6 +13,21 @@
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>default-compile</id>
+						<configuration>
+							<release>8</release>
+							<excludes>
+								<exclude>module-info.java</exclude>
+							</excludes>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<argLine>-XX:+EnableDynamicAgentLoading -XX:TieredStopAtLevel=1 -XX:-TieredCompilation</argLine>
@@ -22,9 +37,22 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
 				<configuration>
+					<artifactSet>
+						<includes>
+							<include>org.snakeyaml:snakeyaml-engine</include>
+						</includes>
+					</artifactSet>
+					<filters>
+						<filter>
+							<artifact>org.snakeyaml:snakeyaml-engine</artifact>
+							<excludes>
+								<exclude>**/module-info.class</exclude>
+							</excludes>
+						</filter>
+					</filters>
 					<relocations>
 						<relocation>
-							<pattern>org.yaml.snakeyaml</pattern>
+							<pattern>org.snakeyaml.engine</pattern>
 							<shadedPattern>space.arim.dazzleconf.internals.libs.snakeyaml</shadedPattern>
 						</relocation>
 					</relocations>
@@ -34,17 +62,16 @@
 				<groupId>org.moditect</groupId>
 				<artifactId>moditect-maven-plugin</artifactId>
 				<configuration>
-					<modules>
-						<module>
-							<moduleInfoSource>
-								module space.arim.dazzleconf.backend.yaml {
-								    exports space.arim.dazzleconf.backend.yaml;
-								    requires transitive space.arim.dazzleconf;
-								    requires static org.checkerframework.checker.qual;
-								}
-							</moduleInfoSource>
-						</module>
-					</modules>
+					<failOnWarning>true</failOnWarning>
+					<module>
+						<moduleInfoSource>
+							module space.arim.dazzleconf.backend.yaml {
+							exports space.arim.dazzleconf.backend.yaml;
+							requires transitive space.arim.dazzleconf;
+							requires static org.checkerframework.checker.qual;
+							}
+						</moduleInfoSource>
+					</module>
 				</configuration>
 			</plugin>
 		</plugins>

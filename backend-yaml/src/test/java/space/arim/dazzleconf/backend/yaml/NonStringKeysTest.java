@@ -19,5 +19,31 @@
 
 package space.arim.dazzleconf.backend.yaml;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataTree;
+
+@ExtendWith(MockitoExtension.class)
 public class NonStringKeysTest {
+
+    @Test
+    public void integerKeysSupported(@Mock Backend.ReadRequest readRequest) {
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.set(1, new DataEntry("hello"));
+        dataTree.set("option", new DataEntry(false));
+        DataTree.Mut subTree = new DataTree.Mut();
+        dataTree.set(-5, new DataEntry(subTree));
+        subTree.set("hi", new DataEntry("yes"));
+        subTree.set(1, new DataEntry("no"));
+
+    }
+
+    @Test
+    public void butListsAsKeysAreNot() {
+
+    }
 }

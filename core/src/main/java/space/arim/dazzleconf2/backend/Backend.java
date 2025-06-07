@@ -79,11 +79,11 @@ public interface Backend {
      * <p>
      * A backend is permitted to throw {@code UncheckedIOException} to handle I/O errors coming from the data root.
      *
-     * @param errorSource a factory for the backend to produce errors
+     * @param readRequest request parameters, including a factory for the backend to produce errors
      * @return a load result of the data
      * @throws UncheckedIOException upon I/O failure
      */
-    @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource);
+    @NonNull LoadResult<@Nullable Document> read(@NonNull ReadRequest readRequest);
 
     /**
      * Writes the provided data tree to the source.
@@ -141,6 +141,29 @@ public interface Backend {
      * @return the recommended key mapper
      */
     @NonNull KeyMapper recommendKeyMapper();
+
+    /**
+     * Parameters of a request to read data. At this moment, this interface is limited to error production.
+     * <p>
+     * This interface is implemented by the caller and passed to the backend.
+     */
+    interface ReadRequest {
+
+        /**
+         * A factory for the backend to produce errors.
+         * <p>
+         * Errors produced by this source might include contextual information about the request. Unlike other parts
+         * of the library API, this error production is provided as a separate object, and not an extension of the
+         * enclosing interface; this is done to make implementing {@code ReadRequest} easier for library users who call
+         * into the {@code Backend} directly.
+         *
+         * @return an error source for the read request
+         */
+        ErrorContext.@NonNull Source errorSource();
+
+        // TODO: Include a mechanism to request sensitive keys like passwords, to load as char[]
+
+    }
 
     /**
      * A document loaded from, or writable to, a backend.

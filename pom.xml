@@ -182,37 +182,13 @@
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>3.10.1</version>
 					<configuration>
-						<!-- Compile module descriptor with Java 11 -->
-						<release>11</release>
 						<testRelease>21</testRelease>
 					</configuration>
-					<executions>
-						<!-- Compile everything else with Java 8 compatibility -->
-						<execution>
-							<id>base-compile</id>
-							<goals>
-								<goal>compile</goal>
-							</goals>
-							<configuration>
-								<release>8</release>
-								<excludes>
-									<exclude>module-info.java</exclude>
-								</excludes>
-							</configuration>
-						</execution>
-					</executions>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-shade-plugin</artifactId>
 					<version>3.6.0</version>
-					<configuration>
-						<artifactSet>
-							<excludes>
-								<exclude>module-info.class</exclude>
-							</excludes>
-						</artifactSet>
-					</configuration>
 					<executions>
 						<execution>
 							<phase>package</phase>

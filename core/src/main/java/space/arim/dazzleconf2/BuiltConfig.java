@@ -281,7 +281,7 @@ final class BuiltConfig<C> implements Configuration<C> {
             recordUpdates.updated = false;
         }
         // 2. Load configuration
-        LoadResult<Backend.@Nullable Document> read = backend.read(errorSource);
+        LoadResult<Backend.@Nullable Document> read = backend.read(() -> errorSource);
         if (read.isFailure()) {
             return LoadResult.failure(read.getErrorContexts());
         }

@@ -45,9 +45,20 @@
                     Then add multi-release source sets.
                     -->
 					<execution>
+						<id>default-compile</id>
+						<!-- Compile everything + module descriptor with Java 11 -->
+						<configuration>
+							<release>11</release>
+						</configuration>
+					</execution>
+					<execution>
 						<!-- Recompilation of almost everything for Java 8 -->
 						<id>base-compile</id>
+						<goals>
+							<goal>compile</goal>
+						</goals>
 						<configuration>
+							<release>8</release>
 							<excludes>
 								<exclude>module-info.java</exclude>
 								<exclude>space/arim/dazzleconf2/internals/jdk11/**</exclude>
@@ -61,6 +72,7 @@
 							<goal>compile</goal>
 						</goals>
 						<configuration>
+							<release>11</release>
 							<compileSourceRoots>
 								<compileSourceRoot>${project.basedir}/src/main/java11</compileSourceRoot>
 							</compileSourceRoots>

@@ -135,7 +135,7 @@ public final class YamlBackend implements Backend {
     }
 
     @Override
-    public @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource) {
+    public @NonNull LoadResult<@Nullable Document> read(@NonNull ReadRequest readRequest) {
         Node node;
         try {
             if (!dataRoot.dataExists()) {
@@ -156,8 +156,8 @@ public final class YamlBackend implements Backend {
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         } catch (YamlEngineException yamlEx) {
-            LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
-            ErrorContext error = errorSource.buildError(Printable.preBuilt(libraryLang.failed()));
+            LibraryLang libraryLang = LibraryLang.Accessor.access(readRequest, ErrorContext.Source::getLocale);
+            ErrorContext error = readRequest.buildError(Printable.preBuilt(libraryLang.failed()));
             error.addDetail(ErrorContext.BACKEND_MESSAGE, Printable.preBuilt(yamlEx.getMessage()));
             error.addDetail(ErrorContext.SYNTAX_LINTER, syntaxLinter);
             return LoadResult.failure(error);
@@ -176,10 +176,10 @@ public final class YamlBackend implements Backend {
             construct.setEndComments(node.getEndComments());
             mappingNode = construct;
         } else {
-            LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
-            return errorSource.throwError(libraryLang.yamlNotAMap());
+            LibraryLang libraryLang = LibraryLang.Accessor.access(readRequest, ErrorContext.Source::getLocale);
+            return readRequest.throwError(libraryLang.yamlNotAMap());
         }
-        return new ReadYaml(errorSource, new StandardConstructor(loadSettings)).runForMapping(mappingNode);
+        return new ReadYaml(readRequest, new StandardConstructor(loadSettings)).runForMapping(mappingNode);
     }
 
     @Override

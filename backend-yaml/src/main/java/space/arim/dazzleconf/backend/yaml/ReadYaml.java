@@ -239,82 +239,6 @@ final class ReadYaml {
                 currentCluster.sendWhere(clusterContents, whereToSend);
             }
         }
-        /*
-        // If there are no blank lines, or when the blank line count ties, we give preference based on 'preferAbove'
-        int divideAt = -1, blankLineRecord = 0;
-        int currentBlankLineCount = 0;
-        int indentSum = 0; // If we never found a blank line, use this to calculate an average indent later
-
-        for (CommentLine commentLine : commentBuffer) {
-            String commentValue = extractComment(commentLine, CommentType.BLOCK);
-            if (commentValue == null) {
-                // Found a blank line!
-                currentBlankLineCount++;
-                continue;
-            }
-            if (currentBlankLineCount != 0) {
-                boolean brokeRecord = preferAbove ?
-                        currentBlankLineCount >= blankLineRecord : currentBlankLineCount > blankLineRecord;
-                if (brokeRecord) {
-                    blankLineRecord = currentBlankLineCount;
-                    divideAt = gathered.size();
-                }
-                currentBlankLineCount = 0;
-            }
-            gathered.add(commentValue);
-            indentSum += getIndent(commentLine);
-            System.out.println("Indentation for comment is " + getIndent(commentLine));
-        }
-        if (divideAt == -1) {
-            // No blank lines separate the comments. So, switch to an alternative algorithm using the average indent
-            int indentScoreAbove = sinkAbove.indentLevel();
-            int indentScoreBelow = sinkBelow.indentLevel();
-            if (isFirstCloser(indentScoreAbove, indentScoreBelow, indentSum)) {
-                sinkAbove.attachAttractedComments(true, gathered);
-            } else {
-                sinkBelow.attachAttractedComments(false, gathered);
-            }
-        } else {
-            // Divide up all the comments we gathered, as promised
-            sinkAbove.attachAttractedComments(true, gathered.subList(0, divideAt));
-            sinkBelow.attachAttractedComments(false, gathered.subList(divideAt, gathered.size()));
-        }
-        */
-
-        /*
-        List<String> giveToAboveSpecifically = null; // Null if we never found a blank line
-        List<String> giveToBelowSpecifically = null; // Null if we never found a blank line
-
-        for (CommentLine commentLine : commentBuffer) {
-            String commentValue = extractComment(commentLine, CommentType.BLOCK);
-            if (commentValue == null) {
-                // Found a blank line!
-                if (divideAt == -1) {
-                    // Transition states: start dividing between centerAbove and centerBelow
-                    giveToAboveSpecifically = gathered;
-                    giveToBelowSpecifically = new ArrayList<>();
-                }
-            } else if (giveToBelowSpecifically != null) {
-                giveToBelowSpecifically.add(commentValue);
-            } else {
-                gathered.add(commentValue);
-                indentSum += getCommentStart(commentLine);
-            }
-        }
-        if (giveToBelowSpecifically == null) {
-            // Instead of performing division and having to handle decimals, we just scale the indent levels upward
-            int scaleTo = commentBuffer.length;
-            int indentScoreAbove = sinkAbove.indentLevel() * scaleTo;
-            int indentScoreBelow = sinkBelow.indentLevel() * scaleTo;
-            if (isFirstCloser(indentScoreAbove, indentScoreBelow, indentSum)) {
-                sinkAbove.attachAttractedComments(true, gathered);
-            } else {
-                sinkBelow.attachAttractedComments(false, gathered);
-            }
-        } else {
-            sinkAbove.attachAttractedComments(true, giveToAboveSpecifically);
-            sinkBelow.attachAttractedComments(false, giveToBelowSpecifically);
-        }*/
     }
 
     // If there is a tie, gives priority to the higher-ranked competitor
@@ -507,7 +431,6 @@ final class ReadYaml {
             Object scalarKey = standardConstructor.constructSingleDocument(Optional.of(keyNode));
             return scalarKey == null ? "null" : scalarKey;
         }
-        // TODO: Write a test for the error message
         LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
         throw throwError(errorSource.buildError(libraryLang.wrongTypeForValue(
                 keyNode, "key type", keyNode.getClass().getSimpleName()
@@ -542,7 +465,7 @@ final class ReadYaml {
             continueVisiting.add(read -> read.visitBlockComments(valueNode.getBlockComments()));
             for (Node elemNode : nodeList) {
                 // For scalar nodes: non-tree list items do not store comments in our library's API
-                // For nested lists: the requirement of flow style FLOW will prevent attaching comments
+                // For nested lists, we don't allow maps within them to store comments on top or bottom
                 if (!(elemNode instanceof MappingNode)) {
                     CommentSink noCommentsHere = new BlackHoleCommentSink(getIndent(elemNode));
                     continueVisiting.add(read -> read.visitCommentSink(noCommentsHere));

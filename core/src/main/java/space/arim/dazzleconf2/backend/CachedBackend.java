@@ -21,7 +21,6 @@ package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
@@ -50,11 +49,11 @@ public final class CachedBackend implements Backend {
     }
 
     @Override
-    public @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource) {
+    public @NonNull LoadResult<@Nullable Document> read(@NonNull ReadRequest readRequest) {
         if (currentDocument != null) {
             return LoadResult.of(currentDocument);
         }
-        LoadResult<Document> read = delegate.read(errorSource);
+        LoadResult<Document> read = delegate.read(readRequest);
         if (read.isSuccess()) {
             currentDocument = read.getOrThrow();
         }

@@ -20,12 +20,10 @@
 package space.arim.dazzleconf.backend.yaml;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
@@ -33,8 +31,6 @@ import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.StringRoot;
 import space.arim.dazzleconf2.engine.CommentLocation;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -87,7 +83,7 @@ public class CommentsTest {
     }
 
     @Test
-    public void roundTripHeader(@Mock ErrorContext.Source errorSource) {
+    public void roundTripHeader(@Mock Backend.ReadRequest readRequest) {
         CommentData header = CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "Hello", "There", "World")
                 .setAt(CommentLocation.BELOW, "Below");
@@ -107,7 +103,7 @@ public class CommentsTest {
         assertEquals("# Hello\n# There\n# World\n\noption: value\n\n# Below", stringRoot.readString().trim());
         assertEquals(
                 LoadResult.of(header),
-                yamlBackend.read(errorSource).map(document -> document != null ? document.comments() : null),
+                yamlBackend.read(readRequest).map(document -> document != null ? document.comments() : null),
                 "Actual document: " + stringRoot.readString().trim()
         );
     }
@@ -148,7 +144,7 @@ public class CommentsTest {
     }
 
     @Test
-    public void readEntryComments(@Mock ErrorContext.Source errorSource) {
+    public void readEntryComments(@Mock Backend.ReadRequest readRequest) {
         stringRoot.writeString("""
                 sub:
                   plain: 1
@@ -159,7 +155,7 @@ public class CommentsTest {
                 another: false""");
         CommentData commentsOnEntry;
         {
-            Backend.Document document = yamlBackend.read(errorSource).getOrThrow();
+            Backend.Document document = yamlBackend.read(readRequest).getOrThrow();
             assertNotNull(document);
             DataTree dataTree = document.data();
             DataEntry subEntry = dataTree.get("sub");
@@ -226,7 +222,7 @@ public class CommentsTest {
     }
 
     @Test
-    public void readDistinguishSubSectionFromEntryComments(@Mock ErrorContext.Source errorSource) {
+    public void readDistinguishSubSectionFromEntryComments(@Mock Backend.ReadRequest readRequest) {
         stringRoot.writeString("""
                 sub:
                   plain: 1
@@ -245,7 +241,7 @@ public class CommentsTest {
         CommentData commentsOnEntry;
         CommentData commentsOnSection;
         {
-            Backend.Document document = yamlBackend.read(errorSource).getOrThrow();
+            Backend.Document document = yamlBackend.read(readRequest).getOrThrow();
             assertNotNull(document);
             DataTree dataTree = document.data();
             DataEntry subEntry = dataTree.get("sub");
