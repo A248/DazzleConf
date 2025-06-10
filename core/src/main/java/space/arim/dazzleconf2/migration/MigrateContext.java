@@ -21,19 +21,15 @@ package space.arim.dazzleconf2.migration;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.engine.LoadListener;
-
-import java.util.Locale;
 
 /**
  * Contextual resources to be used by migrations.
  * <p>
  * This interface is implemented by the caller when passed to migrations.
  */
-public interface MigrateContext extends ErrorContext.Source {
+public interface MigrateContext {
 
     /**
      * The backend being used to load the main configuration.
@@ -56,6 +52,17 @@ public interface MigrateContext extends ErrorContext.Source {
     @NonNull LoadListener loadListener();
 
     /**
+     * A factory allowing migrations to produce errors.
+     * <p>
+     * Unlike other parts of the API, the error source is provided as a getter, and not as an extended interface.
+     * This reflects the want to make implementing {@code MigrateContext} convenient, if library users wish to call
+     * migrations using their own approach.
+     *
+     * @return a factory for error production
+     */
+    ErrorContext.@NonNull Source errorSource();
+
+    /**
      * Creates a new migration context that delegates to this one, but uses the specified load listener.
      *
      * @param loadListener the load listener to use
@@ -74,23 +81,8 @@ public interface MigrateContext extends ErrorContext.Source {
             }
 
             @Override
-            public @NonNull Locale getLocale() {
-                return MigrateContext.this.getLocale();
-            }
-
-            @Override
-            public @NonNull ErrorContext buildError(@NonNull Printable message) {
-                return MigrateContext.this.buildError(message);
-            }
-
-            @Override
-            public @NonNull <R> LoadResult<R> throwError(@NonNull CharSequence message) {
-                return MigrateContext.this.throwError(message);
-            }
-
-            @Override
-            public @NonNull <R> LoadResult<R> throwError(@NonNull Printable message) {
-                return MigrateContext.this.throwError(message);
+            public ErrorContext.@NonNull Source errorSource() {
+                return MigrateContext.this.errorSource();
             }
         };
     }

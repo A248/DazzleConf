@@ -67,13 +67,14 @@ public class MigrateFromConfigurationTest {
     }
 
     @BeforeEach
-    public void setup(@Mock ErrorContext dummyError) {
+    public void setup(@Mock ErrorContext.Source errorSource, @Mock ErrorContext dummyError) {
         configuration = new ConfigurationBuilder<>(new TypeToken<Config>() {})
                 .addTypeLiaisons(new StringLiaison())
                 .build();
         lenient().when(mainBackend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
         lenient().when(migrateContext.loadListener()).thenReturn(loadListener);
-        lenient().when(migrateContext.throwError((CharSequence) any())).thenReturn(LoadResult.failure(dummyError));
+        lenient().when(migrateContext.errorSource()).thenReturn(errorSource);
+        lenient().when(errorSource.throwError((CharSequence) any())).thenReturn(LoadResult.failure(dummyError));
     }
 
     @Test

@@ -36,7 +36,7 @@ import static org.mockito.Mockito.*;
 public class CachedBackendTest {
 
     @Test
-    public void readOnce(@Mock Backend delegate, @Mock Backend.ReadRequest readRequest) {
+    public void readOnce(@Mock Backend delegate, @Mock ErrorContext.Source errorSource) {
         DataTree.Immut data;
         {
             DataTree.Mut builder = new DataTree.Mut();
@@ -47,13 +47,13 @@ public class CachedBackendTest {
         }
         when(delegate.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(data)));
         CachedBackend backend = new CachedBackend(delegate);
-        assertEquals(data, backend.read(readRequest).getOrThrow().data());
-        assertEquals(data, backend.read(readRequest).getOrThrow().data());
+        assertEquals(data, backend.read(errorSource).getOrThrow().data());
+        assertEquals(data, backend.read(errorSource).getOrThrow().data());
         verify(delegate, times(1)).read(any());
     }
 
     @Test
-    public void refreshOnWrite(@Mock Backend delegate, @Mock Backend.ReadRequest readRequest) {
+    public void refreshOnWrite(@Mock Backend delegate, @Mock ErrorContext.Source errorSource) {
         DataTree.Immut initialData;
         {
             DataTree.Mut builder = new DataTree.Mut();
@@ -66,11 +66,11 @@ public class CachedBackendTest {
 
         when(delegate.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(initialData)));
         CachedBackend backend = new CachedBackend(delegate);
-        assertEquals(initialData, backend.read(readRequest).getOrThrow().data());
-        assertEquals(initialData, backend.read(readRequest).getOrThrow().data());
+        assertEquals(initialData, backend.read(errorSource).getOrThrow().data());
+        assertEquals(initialData, backend.read(errorSource).getOrThrow().data());
         backend.write(Backend.Document.simple(empty));
-        assertEquals(empty, backend.read(readRequest).getOrThrow().data());
-        assertEquals(empty, backend.read(readRequest).getOrThrow().data());
+        assertEquals(empty, backend.read(errorSource).getOrThrow().data());
+        assertEquals(empty, backend.read(errorSource).getOrThrow().data());
 
         verify(delegate, times(1)).read(any());
     }
@@ -92,12 +92,15 @@ public class CachedBackendTest {
     }
 
     @Test
-    public void supportsComments(@Mock Backend delegate) {
-        when(delegate.supportsComments(false, CommentLocation.BELOW)).thenReturn(true);
+    public void metaPassthrough(@Mock Backend delegate, @Mock Backend.Meta delegateMeta) {
+        when(delegate.meta()).thenReturn(delegateMeta);
+        when(delegateMeta.supportsComments(false, false, CommentLocation.BELOW)).thenReturn(true);
         CachedBackend backend = new CachedBackend(delegate);
-        assertTrue(backend.supportsComments(false, CommentLocation.BELOW));
-        assertFalse(backend.supportsComments(false, CommentLocation.INLINE));
-        assertFalse(backend.supportsComments(true, CommentLocation.BELOW));
+        Backend.Meta backendMeta = backend.meta();
+        assertTrue(backendMeta.supportsComments(false, false, CommentLocation.BELOW));
+        assertFalse(backendMeta.supportsComments(true, false, CommentLocation.BELOW));
+        assertFalse(backendMeta.supportsComments(false, true, CommentLocation.BELOW));
+        assertFalse(backendMeta.supportsComments(false, false, CommentLocation.INLINE));
     }
 
     @Test

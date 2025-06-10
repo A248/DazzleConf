@@ -31,6 +31,9 @@ import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.StringRoot;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -42,14 +45,20 @@ public class EmptyDataTest {
 
     @Test
     public void readEmpty(@Mock ErrorContext.Source errorSource) {
-        assertEquals(LoadResult.of(null), new YamlBackend(stringRoot).read(errorSource));
-        verifyNoInteractions(errorSource);
+        AtomicInteger index = new AtomicInteger();
+        for (String emptyDocument : List.of("", "    ", " \n ")) {
+            stringRoot.writeString(emptyDocument);
+            LoadResult<Backend.Document> loadResult = new YamlBackend(stringRoot).read(errorSource);
+            int idx = index.getAndIncrement();
+            assertEquals(LoadResult.of(null), loadResult, () -> "For source " + idx + ", got " + loadResult.getOrThrow().data());
+            verifyNoInteractions(errorSource);
+        }
     }
 
     @Test
     public void writeEmpty() {
         Backend backend = new YamlBackend(stringRoot);
-        Backend.Document document = new Backend.Document() {
+        Backend.Document emptyDocument = new Backend.Document() {
             @Override
             public @NonNull CommentData comments() {
                 return CommentData.empty();
@@ -60,6 +69,6 @@ public class EmptyDataTest {
                 return new DataTree.Immut();
             }
         };
-        assertDoesNotThrow(() -> backend.write(document));
+        assertDoesNotThrow(() -> backend.write(emptyDocument));
     }
 }

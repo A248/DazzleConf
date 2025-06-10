@@ -24,6 +24,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.LoadResult;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.DefaultValues;
 import space.arim.dazzleconf2.engine.DeserializeInput;
@@ -133,67 +134,66 @@ public final class CollectionLiaison implements TypeLiaison {
 
         abstract @NonNull COLL buildThenCast(@NonNull BUILD_COLL output);
 
-        private <UPD> @NonNull LoadResult<@NonNull COLL> implDeserialize(@NonNull DeserializeInput deser,
-                                                                         @NonNull ImplDeserialize<COLL, E, UPD> impl) {
+        private @NonNull LoadResult<@NonNull COLL> implDeserialize(@NonNull DeserializeInput deser,
+                                                                   @NonNull ImplDeserialize<COLL, E> impl) {
             Object object = deser.object();
             if (!(object instanceof List)) {
                 LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
                 return deser.throwError(libraryLang.wrongTypeForValue(object, List.class));
             }
-            Object[] input = ((List<?>) object).toArray();
-            // When dealing with updates, this value keeps track of them
-            // It is a lazily initialized array - a copy of input values, with updated elements replaced
-            UPD writeBackUpdates = null;
-            // Output collection, an Object[] for List/Collection or LinkedHashSet for Set
-            BUILD_COLL output = makeMutableOutput(input.length);
+            // We have that `object` is guaranteed to be List<DataEntry>. So, this toArray() call is safe
+            // Also, when dealing with updates, this array performs a double responsibility of storing them
+            @SuppressWarnings("SuspiciousToArrayCall")
+            DataEntry[] updatableInput = ((List<?>) object).toArray(new DataEntry[0]);
 
-            for (int n = 0; n < input.length; n++) {
+            // Output collection, an Object[] for List/Collection or LinkedHashSet for Set
+            BUILD_COLL output = makeMutableOutput(updatableInput.length);
+
+            for (int n = 0; n < updatableInput.length; n++) {
                 // Deserialize element
-                Object elem = input[n];
-                LoadResult<E> elemResult = impl.deserialize(elementSerializer, deser.makeChild(elem));
+                DataEntry inputEntry = updatableInput[n];
+                LoadResult<E> elemResult = impl.deserialize(elementSerializer, deser.makeChild(inputEntry.getValue()));
                 if (elemResult.isFailure()) {
                     return LoadResult.failure(elemResult.getErrorContexts());
                 }
                 // Record update wish if necessary
-                writeBackUpdates = impl.updateIfDesired(input, n, writeBackUpdates);
+                impl.updateIfDesired(updatableInput, n);
 
                 addToMutableOutput(output, n, elemResult.getOrThrow());
             }
             // Construct result
             COLL built = buildThenCast(output);
-            // Finish recording updates - check if size changed for Set, if handle notifications or updates
-            if (built.size() != input.length) {
+            // Finish recording updates - check if size changed for Set, to handle notifications or updates
+            if (built.size() != updatableInput.length) {
                 impl.updateSizeShrunk(elementSerializer, deser, built);
             } else {
-                impl.updateMaybeOtherwise(writeBackUpdates);
+                impl.updateMaybeOtherwise(updatableInput);
             }
             return LoadResult.of(built);
         }
 
-        interface ImplDeserialize<COLL extends Collection<E>, E, U> {
+        interface ImplDeserialize<COLL extends Collection<E>, E> {
 
             LoadResult<E> deserialize(SerializeDeserialize<E> elementSerializer, DeserializeInput deser);
 
-            @Nullable U updateIfDesired(Object[] input, int index, @Nullable U writeBackUpdates);
+            void updateIfDesired(DataEntry[] updatableInput, int index);
 
             void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser, COLL built);
 
-            void updateMaybeOtherwise(@Nullable U writeBackUpdates);
+            void updateMaybeOtherwise(DataEntry[] updatableInput);
 
         }
 
         @Override
         public @NonNull LoadResult<@NonNull COLL> deserialize(@NonNull DeserializeInput deser) {
-            return implDeserialize(deser, new ImplDeserialize<COLL, E, Void>() {
+            return implDeserialize(deser, new ImplDeserialize<COLL, E>() {
                 @Override
                 public LoadResult<E> deserialize(SerializeDeserialize<E> elementSerializer, DeserializeInput deser) {
                     return elementSerializer.deserialize(deser);
                 }
 
                 @Override
-                public @Nullable Void updateIfDesired(Object[] input, int index, Void writeBackUpdates) {
-                    return null;
-                }
+                public void updateIfDesired(DataEntry[] updatableInput, int index) {}
 
                 @Override
                 public void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser,
@@ -202,31 +202,28 @@ public final class CollectionLiaison implements TypeLiaison {
                 }
 
                 @Override
-                public void updateMaybeOtherwise(@Nullable Void writeBackUpdates) {}
+                public void updateMaybeOtherwise(DataEntry[] updatableInput) {}
             });
         }
 
         @Override
         public @NonNull LoadResult<@NonNull COLL> deserializeUpdate(@NonNull DeserializeInput deser,
                                                                     @NonNull SerializeOutput updateTo) {
-            return implDeserialize(deser, new ImplDeserialize<COLL, E, Object[]>() {
+            return implDeserialize(deser, new ImplDeserialize<COLL, E>() {
+                private boolean updated;
+
                 @Override
                 public LoadResult<E> deserialize(SerializeDeserialize<E> elementSerializer, DeserializeInput deser) {
                     return elementSerializer.deserializeUpdate(deser, updateTo);
                 }
 
                 @Override
-                public Object @Nullable [] updateIfDesired(Object[] input, int index, Object[] writeBackUpdates) {
+                public void updateIfDesired(DataEntry[] updatableInput, int index) {
                     Object elemUpdate = updateTo.getAndClearLastOutput();
-                    if (elemUpdate != null && !input[index].equals(elemUpdate)) {
-                        if (writeBackUpdates == null) {
-                            // Init update array: fill in with input by default.
-                            // Values after the current position might very well be overwritten
-                            writeBackUpdates = input.clone();
-                        }
-                        writeBackUpdates[index] = elemUpdate;
+                    if (elemUpdate != null && !updatableInput[index].getValue().equals(elemUpdate)) {
+                        updatableInput[index] = updatableInput[index].withValue(elemUpdate);
+                        updated = true;
                     }
-                    return writeBackUpdates;
                 }
 
                 @Override
@@ -236,11 +233,11 @@ public final class CollectionLiaison implements TypeLiaison {
                 }
 
                 @Override
-                public void updateMaybeOtherwise(Object @Nullable [] writeBackUpdates) {
-                    // If the size didn't shrink, then use our update array if it exists
-                    if (writeBackUpdates != null) {
+                public void updateMaybeOtherwise(DataEntry[] updatableInput) {
+                    // If the size didn't shrink, then perform our update if applicable
+                    if (updated) {
                         deser.flagUpdate(KeyPath.empty(), UpdateReason.UPDATED);
-                        updateTo.outObjectUnchecked(Arrays.asList(writeBackUpdates));
+                        updateTo.outList(Arrays.asList(updatableInput));
                     }
                 }
             });
@@ -248,7 +245,7 @@ public final class CollectionLiaison implements TypeLiaison {
 
         @Override
         public void serialize(@NonNull COLL value, @NonNull SerializeOutput ser) {
-            // Transform E[] into Object[], serializing one by one
+            // Transform E[] into DataEntry[], serializing one by one
             Object[] values = value.toArray();
             for (int n = 0; n < values.length; n++) {
                 @SuppressWarnings("unchecked")
@@ -261,8 +258,9 @@ public final class CollectionLiaison implements TypeLiaison {
                             "Element serializer " + elementSerializer + " did not produce output"
                     );
                 }
-                values[n] = elemOutput;
+                values[n] = new DataEntry(elemOutput);
             }
+            // All of `values` are now DataEntry, so changing into a List is safe
             ser.outObjectUnchecked(Arrays.asList(values));
         }
     }

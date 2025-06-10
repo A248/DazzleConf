@@ -1,4 +1,5 @@
 module space.arim.dazzleconf {
+	requires static org.apiguardian.api;
     requires static org.checkerframework.checker.qual;
 	exports space.arim.dazzleconf;
 	exports space.arim.dazzleconf.annote;

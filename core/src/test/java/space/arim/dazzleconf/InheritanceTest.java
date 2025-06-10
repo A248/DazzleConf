@@ -26,7 +26,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.junit.jupiter.params.support.ParameterDeclaration;
 import org.junit.jupiter.params.support.ParameterDeclarations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.Configuration;
@@ -34,6 +33,7 @@ import space.arim.dazzleconf2.ConfigurationDefinition;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.backend.*;
 import space.arim.dazzleconf2.engine.CallableFn;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.LoadListener;
 import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.engine.liaison.IntegerDefault;
@@ -181,7 +181,7 @@ public class InheritanceTest {
         // This ensures that setWhenOveridden() is using the set liaison
         DataTree.Mut dataTree = new DataTree.Mut();
         dataTree.set("usable", new DataEntry("msg"));
-        dataTree.set("setWhenOveridden", new DataEntry(List.of("hi", "hi", "hi")));
+        dataTree.set("setWhenOveridden", new DataEntry(List.of(new DataEntry("hi"), new DataEntry("hi"), new DataEntry("hi"))));
 
         C readFrom = configuration.readFrom(dataTree.intoImmut()).getOrThrow();
         assertEquals("usable", readFrom.usableWhenOveridden());
@@ -189,7 +189,8 @@ public class InheritanceTest {
         assertEquals(2, readFrom.reabstractMe());
 
         LoadListener loadListener = mock(LoadListener.class);
-        C readWithUpdate = configuration.readWithUpdate(dataTree, new ConfigurationDefinition.ReadOptions() {
+        C readWithUpdate = configuration.readWithUpdate(dataTree, new ConfigurationDefinition.ReadWithUpdateOptions() {
+
             @Override
             public @NonNull LoadListener loadListener() {
                 return loadListener;
@@ -199,10 +200,15 @@ public class InheritanceTest {
             public @NonNull KeyMapper keyMapper() {
                 return new DefaultKeyMapper();
             }
+
+            @Override
+            public boolean writeEntryComments(@NonNull CommentLocation location) {
+                return true;
+            }
         }).getOrThrow();
         assertEquals("usable", readFrom.usableWhenOveridden());
         assertEquals(Set.of("hi"), readFrom.setWhenOveridden());
-        assertEquals(new DataEntry(List.of("hi")), dataTree.get("setWhenOveridden"));
+        assertEquals(new DataEntry(List.of(new DataEntry("hi"))), dataTree.get("setWhenOveridden"));
         assertEquals(new DataEntry(2), dataTree.get("reabstractMe"));
         verify(loadListener).updatedPath(new KeyPath.Mut("setWhenOveridden"), UpdateReason.OTHER);
     }

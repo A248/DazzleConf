@@ -31,20 +31,25 @@ import java.util.List;
 public interface UpdateListener extends LoadListener {
 
     /**
-     * Signals that the configuration didn't exist, so the whole thing was freshly written from default values
+     * Signals that the configuration didn't exist, so the whole thing was freshly written from default values.
      */
-    void loadedDefaults();
+    void wroteDefaults();
 
     /**
-     * Notifies that a migration from a previous version was successful
+     * Notifies that a migration was successful. This is called after the migration has taken place.
+     *
      * @param migration the migration
      */
     void migratedFrom(@NonNull Migration<?, ?> migration);
 
     /**
-     * Notifies that a migration was attempted from a previous version, unsuccessfully
+     * Notifies that a migration was attempted, but it failed (for any reason).
+     * <p>
+     * The error contexts relating to that failure are provided here. Note that this list may be empty if the migration
+     * produced an empty error list.
+     *
      * @param migration the migration
-     * @param errorContexts the failure contexts
+     * @param errorContexts the failure contexts, may be empty
      */
     void migrationSkip(@NonNull Migration<?, ?> migration, @NonNull List<@NonNull ErrorContext> errorContexts);
 

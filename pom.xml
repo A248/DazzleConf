@@ -34,6 +34,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<checkerqual.version>3.49.2</checkerqual.version>
+		<apiguardian.version>1.1.2</apiguardian.version>
 		<junit.version>5.13.0</junit.version>
 		<mockito.version>5.1.1</mockito.version>
 		<equalsverifier.version>3.19.2</equalsverifier.version>
@@ -101,7 +102,6 @@
 				<version>3.5.0</version>
 				<configuration>
 					<source>8</source>
-					<excludePackageNames>space.arim.dazzleconf.internal:space.arim.dazzleconf.internal.*</excludePackageNames>
 				</configuration>
 				<executions>
 					<execution>
@@ -187,6 +187,11 @@
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>3.4.2</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-shade-plugin</artifactId>
 					<version>3.6.0</version>
 					<executions>
@@ -209,6 +214,9 @@
 							<goals>
 								<goal>add-module-info</goal>
 							</goals>
+							<configuration>
+								<overwriteExistingFiles>true</overwriteExistingFiles>
+							</configuration>
 						</execution>
 					</executions>
 				</plugin>
@@ -259,6 +267,8 @@
 	<modules>
 		<module>core</module>
 		<!-- Version 2 format-specific "backends" -->
+		<module>backend-hocon</module>
+		<!-- <module>backend-toml</module> -->
 		<module>backend-yaml</module>
 		<!-- Version 1 format-specific "extensions" -->
 		<module>gson</module>
@@ -266,21 +276,24 @@
         <module>hocon</module>
     </modules>
 
-	<dependencies>
-		<dependency>
-			<groupId>org.checkerframework</groupId>
-			<artifactId>checker-qual</artifactId>
-			<version>${checkerqual.version}</version>
-			<optional>true</optional>
-		</dependency>
-	</dependencies>
-
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
 				<groupId>space.arim.dazzleconf</groupId>
 				<artifactId>dazzleconf-core</artifactId>
 				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.checkerframework</groupId>
+				<artifactId>checker-qual</artifactId>
+				<version>${checkerqual.version}</version>
+				<optional>true</optional>
+			</dependency>
+			<dependency>
+				<groupId>org.apiguardian</groupId>
+				<artifactId>apiguardian-api</artifactId>
+				<version>${apiguardian.version}</version>
+				<optional>true</optional>
 			</dependency>
 			<dependency>
 				<groupId>org.junit.jupiter</groupId>

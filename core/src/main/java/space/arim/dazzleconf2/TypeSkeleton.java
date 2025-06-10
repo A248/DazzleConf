@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
@@ -111,7 +112,7 @@ final class TypeSkeleton {
          * @return the missing value, or null if no missing value can be made
          * @throws DeveloperMistakeException if {@link DefaultValues#ifMissing()} is wrongly implemented
          */
-        Object makeMissingValue(Class<?> inType) {
+        V makeMissingValue(Class<?> inType) {
             assert !optional : "handled elsewhere";
 
             if (defaultValues == null) {
@@ -143,7 +144,11 @@ final class TypeSkeleton {
             }
             @SuppressWarnings("unchecked")
             V castValue = (V) value;
-            serializer.serialize(castValue, ser);
+            return serialize(castValue, ser);
+        }
+
+        @NonNull DataEntry serialize(V value, SerializeOutput ser) {
+            serializer.serialize(value, ser);
 
             Object output = ser.getAndClearLastOutput();
             if (output == null) {
@@ -151,7 +156,7 @@ final class TypeSkeleton {
                         "Serializer " + serializer + " did not produce any output for " + value
                 );
             }
-            return new DataEntry(output).withComments(comments);
+            return new DataEntry(output);
         }
     }
 }

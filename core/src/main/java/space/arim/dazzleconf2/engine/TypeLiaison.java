@@ -155,7 +155,9 @@ public interface TypeLiaison {
          * Gets another configuration. This function will use the settings from the parent configuration
          * for purposes of defining, deserializing/serializing, and instantiating the child.
          *
+         * @param other the type whose definition is requested
          * @return a configuration which can be read or written
+         * @param <U> the type requested
          * @throws DeveloperMistakeException if the type requested is improperly declared or has broken settings
          * @throws IllegalStateException if a cyclic loop is detected with the requested type
          */

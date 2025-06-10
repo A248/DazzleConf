@@ -17,25 +17,20 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2;
+package space.arim.dazzleconf.backend.yaml;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.Printable;
-import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf.backend.BackendTest;
+import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.StringRoot;
 
-import java.util.Locale;
-
-public class ErrorFactory extends LoadError.Factory {
-
-    private final LibraryLang libraryLang = LibraryLang.loadLang(Locale.ENGLISH);
-
+public class YamlBackendTest extends BackendTest {
     @Override
-    public @NonNull ErrorContext buildError(@NonNull Printable message) {
-        return new LoadError(message, libraryLang);
+    protected Backend createBackend() {
+        return new YamlBackend(new StringRoot(""));
     }
 
     @Override
-    public @NonNull LibraryLang getLibraryLang() {
-        return libraryLang;
+    protected boolean nonStringKeys() {
+        return true;
     }
 }

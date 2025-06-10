@@ -48,7 +48,7 @@ public interface DeserializeInput extends ErrorContext.Source {
      * The actual object which is being deserialized.
      * <p>
      * This is guaranteed to be one of the canonical values used in {@link DataTree}, i.e. primitives,
-     * <code>String</code>, or <code>DataTree</code>, or an immutable <code>List</code> of one of those types.
+     * <code>String</code>, or <code>DataTree</code>, or {@code List<DataEntry>}.
      *
      * @return the object
      */

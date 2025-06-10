@@ -24,21 +24,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import space.arim.dazzleconf2.ErrorFactory;
+import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.engine.LoadListener;
 import space.arim.dazzleconf2.migration.MigrateContext;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 @ExtendWith(MockitoExtension.class)
 public class MigrateContextTest {
 
     @Test
-    public void withLoadListener(@Mock Backend backend, @Mock LoadListener originalListener, @Mock LoadListener newListener) {
-        class OriginalCtx extends ErrorFactory implements MigrateContext {
+    public void withLoadListener(@Mock Backend backend, @Mock ErrorContext.Source errorSource,
+                                 @Mock LoadListener originalListener, @Mock LoadListener newListener) {
+        class OriginalCtx implements MigrateContext {
 
             @Override
             public @NonNull Backend mainBackend() {
@@ -49,13 +48,16 @@ public class MigrateContextTest {
             public @NonNull LoadListener loadListener() {
                 return originalListener;
             }
+
+            @Override
+            public ErrorContext.@NonNull Source errorSource() {
+                return errorSource;
+            }
         }
         MigrateContext originalCtx = new OriginalCtx();
         MigrateContext newCtx = originalCtx.withLoadListener(newListener);
         assertSame(newListener, newCtx.loadListener());
         assertSame(backend, newCtx.mainBackend());
-        assertNotNull(newCtx.buildError(Printable.preBuilt("1")));
-        assertNotNull(newCtx.throwError(Printable.preBuilt("2")));
-        assertNotNull(newCtx.throwError("3"));
+        assertSame(errorSource, newCtx.errorSource());
     }
 }

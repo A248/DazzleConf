@@ -70,9 +70,9 @@ public final class MigrateFromConfiguration<C> implements MigrateSource<C> {
 
         // Load the configuration
         Backend mainBackend = migrateContext.mainBackend();
-        return mainBackend.read(migrateContext).flatMap(document -> {
+        return mainBackend.read(migrateContext.errorSource()).flatMap(document -> {
             if (document == null) {
-                return migrateContext.throwError("Main backend produced empty document");
+                return migrateContext.errorSource().throwError("Main backend produced empty document");
             }
             return config.readFrom(document.data(), new ConfigurationDefinition.ReadOptions() {
                 @Override
@@ -90,7 +90,7 @@ public final class MigrateFromConfiguration<C> implements MigrateSource<C> {
             // Apply filters and bail if they test false
             for (Filter<C> filter : filters) {
                 if (!filter.isUsable(loaded)) {
-                    return migrateContext.throwError("Filtered by " + filter);
+                    return migrateContext.errorSource().throwError("Filtered by " + filter);
                 }
             }
             // Dispatch updated key paths to the caller's load listener

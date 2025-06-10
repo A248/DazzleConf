@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,7 @@ import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DefaultKeyMapper;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.UpdateListener;
 
 import java.util.List;
@@ -61,6 +63,17 @@ public class ErrorHandlingTest {
     @BeforeEach
     public void setup() {
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
+        lenient().when(backend.meta()).thenReturn(new Backend.Meta() {
+            @Override
+            public boolean supportsComments(boolean documentLevel, boolean reading, @NonNull CommentLocation location) {
+                return true;
+            }
+
+            @Override
+            public boolean supportsOrder(boolean reading) {
+                return true;
+            }
+        });
     }
 
     @Test
@@ -116,7 +129,7 @@ public class ErrorHandlingTest {
         when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
         Config loaded = configuration.configureOrFallback(backend, updateListener, errorPrint);
         verify(errorPrint).onError(argThat(list -> !list.isEmpty()));
-        verify(updateListener).loadedDefaults();
+        verifyNoInteractions(updateListener);
         assertEquals(-1, loaded.integral(), "fallback to default value");
     }
 }

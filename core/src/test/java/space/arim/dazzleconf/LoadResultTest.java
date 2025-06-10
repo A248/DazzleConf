@@ -26,7 +26,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.Printable;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -34,6 +33,7 @@ import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.lenient;
+import static space.arim.dazzleconf2.backend.Printable.preBuilt;
 
 @ExtendWith(MockitoExtension.class)
 public class LoadResultTest {
@@ -45,7 +45,7 @@ public class LoadResultTest {
         assertFalse(loadResult.isFailure());
         assertEquals("datum", loadResult.getValue());
         assertEquals("datum", loadResult.getOrThrow());
-        assertEquals(List.of(), loadResult.getErrorContexts());
+        assertThrows(NoSuchElementException.class, loadResult::getErrorContexts);
         assertTrue(loadResult.toString().contains("datum"));
 
         LoadResult<Integer> mapped = loadResult.map(String::length);
@@ -65,7 +65,7 @@ public class LoadResultTest {
         assertFalse(loadResult.isFailure());
         assertNull(loadResult.getValue());
         assertNull(loadResult.getOrThrow());
-        assertEquals(List.of(), loadResult.getErrorContexts());
+        assertThrows(NoSuchElementException.class, loadResult::getErrorContexts);
         assertTrue(loadResult.toString().contains("null"));
 
         LoadResult<Boolean> mapped = loadResult.map(Objects::isNull);
@@ -76,16 +76,20 @@ public class LoadResultTest {
 
     @Test
     public void failure(@Mock ErrorContext dummyErrorOne, @Mock ErrorContext dummyErrorTwo) {
-        lenient().when(dummyErrorOne.mainMessage()).thenReturn(Printable.preBuilt("failed for xyz"));
-        lenient().when(dummyErrorOne.toString()).thenReturn("failed for xyz");
+        lenient().when(dummyErrorOne.display()).thenReturn(preBuilt("failed for abc"));
+        lenient().when(dummyErrorTwo.display()).thenReturn(preBuilt("failed for xyz"));
 
         LoadResult<String> loadResult = LoadResult.failure(dummyErrorOne, dummyErrorTwo);
         assertFalse(loadResult.isSuccess());
         assertTrue(loadResult.isFailure());
         assertNull(loadResult.getValue());
-        assertThrows(NoSuchElementException.class, loadResult::getOrThrow);
+
         assertEquals(List.of(dummyErrorOne, dummyErrorTwo), loadResult.getErrorContexts());
         assertTrue(loadResult.toString().contains(dummyErrorOne.toString()));
+
+        NoSuchElementException nse = assertThrows(NoSuchElementException.class, loadResult::getOrThrow);
+        assertTrue(nse.getMessage().contains("abc"));
+        assertTrue(nse.getMessage().contains("xyz"));
 
         LoadResult<Integer> mapped = loadResult.map(String::length);
         assertFalse(mapped.isSuccess());

@@ -22,8 +22,6 @@ package space.arim.dazzleconf.backend;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import space.arim.dazzleconf.ImmutabilityGuard;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
@@ -66,7 +64,7 @@ public class DataTreeTest {
         Object[] validValues = new Object[] {
                 3, (byte) 4, Long.MAX_VALUE, Double.MIN_VALUE, (float) 42.7,
                 false, 'c', "string",
-                List.of(4, true, "list of mixed types"),
+                List.of(new DataEntry(4), new DataEntry(true), new DataEntry("list of mixed types")),
                 dataTree
         };
         // Verify usage
@@ -98,32 +96,8 @@ public class DataTreeTest {
         assertEquals(orderedKeys, List.of("hello", "also", "zed"));
         assertEquals(orderedValues, List.of("goodbye", "yes", true));
 
-        assertEquals(orderedKeys, new ArrayList<>(dataTreeMut.getKeys()));
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    public void deleteKeyWhileIterating(boolean fromImmut) {
-        // This test checks the concurrent modifiability of DataTree#getKeys()
-        DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        dataTreeMut.set("also", new DataEntry("yes"));
-        dataTreeMut.set("zed", new DataEntry(true));
-
-        if (fromImmut) dataTreeMut = dataTreeMut.intoImmut().intoMut();
-        for (Object key : dataTreeMut.getKeys()) {
-            if (key.equals("also")) {
-                dataTreeMut.remove(key);
-            }
-        }
-        List<Object> orderedKeys = new ArrayList<>();
-        List<Object> orderedValues = new ArrayList<>();
-        dataTreeMut.forEach((k, v) -> {
-            orderedKeys.add(k);
-            orderedValues.add(v.getValue());
-        });
-        assertEquals(orderedKeys, List.of("hello", "zed"));
-        assertEquals(orderedValues, List.of("goodbye", true));
+        // If you want getKeys() back, go back to commit 5ebd8571a5ef98e713c9dbbd1227e25f09fd0faf in version2-dev
+        //assertEquals(orderedKeys, new ArrayList<>(dataTreeMut.getKeys()));
     }
 
     @Test
@@ -247,7 +221,6 @@ public class DataTreeTest {
             dataTreeMut.remove("hello");
         }
     }
-
 
     @Test
     public void intoImmutOnMutCannotBeMutatedByClear() {

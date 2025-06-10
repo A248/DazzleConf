@@ -147,6 +147,11 @@ public interface Printable {
      */
     abstract class Abstract implements Printable {
 
+        /**
+         * Creates
+         */
+        public Abstract() {}
+
         @Override
         public final @NonNull String printString() {
             StringBuilder builder = new StringBuilder();

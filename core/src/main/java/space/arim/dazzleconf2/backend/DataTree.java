@@ -24,11 +24,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import java.util.function.BiConsumer;
 
 /**
@@ -47,16 +43,16 @@ import java.util.function.BiConsumer;
  * <p>
  * <b>Keys and values</b>
  * <p>
- * Keys are represented as <code>Object</code> and must be one of the canonical types (excl. lists or nested trees).
- * Values are wrapped by {@link DataEntry}, but are also <code>Object</code> and must be one of the canonical types.
+ * Values are wrapped by {@link DataEntry} and must be one of the canonical types. Keys are represented as
+ * <code>Object</code> and must be one of the canonical types, excluding lists or trees.
  * <p>
  * Canonical types:<ul>
  * <li>String
  * <li>primitives represented by their boxed types
  * <li>DataTree for nesting
- * <li>Lists of the above types. The List implementation must be immutable.
+ * <li>Lists of {@code DataEntry}
  * </ul>
- * Recall that keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime, and they can be
+ * Keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime, and they can be
  * checked using {@link #validateKey(Object)} and {@link DataEntry#validateValue(Object)}.
  * <p>
  * Mutability of this class is <b>not defined</b>. Please use {@link DataTree.Mut} or {@link DataTree.Immut} if you need
@@ -102,16 +98,6 @@ public abstract class DataTree {
     public @Nullable DataEntry get(@NonNull Object key) {
         return data.get(key);
     }
-
-    /**
-     * Gets all the keys used in this tree.
-     * <p>
-     * The returned collection may be a mutable copy, or it may be an immutable snapshot. Importantly, it will not be
-     * affected by concurrent updates to this tree.
-     *
-     * @return the key set, a mutable copy or an immutable snapshot
-     */
-    public abstract @NonNull Collection<@NonNull Object> getKeys();
 
     /**
      * Runs an action for each key/value pair.
@@ -197,11 +183,6 @@ public abstract class DataTree {
         }
 
         @Override
-        public @NonNull Collection<@NonNull Object> getKeys() {
-            return Collections.unmodifiableSet(data.keySet());
-        }
-
-        @Override
         public @NonNull Mut intoMut() {
             Mut mutCopy = new Mut(data);
             mutCopy.dataFrozen = true;
@@ -232,12 +213,6 @@ public abstract class DataTree {
 
         Mut(LinkedHashMap<Object, DataEntry> data) {
             super(data);
-        }
-
-        @Override
-        public @NonNull Collection<@NonNull Object> getKeys() {
-            Set<Object> dataKeySet = data.keySet();
-            return dataFrozen ? Collections.unmodifiableSet(dataKeySet) : new LinkedHashSet<>(dataKeySet);
         }
 
         @Override

@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf.backend.yaml;
 
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.snakeyaml.engine.v2.api.Dump;
@@ -40,7 +41,6 @@ import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.backend.ReadableRoot;
 import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
 import space.arim.dazzleconf2.engine.CommentLocation;
@@ -58,10 +58,51 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import static space.arim.dazzleconf2.backend.Printable.preBuilt;
+
 /**
  * A backend for YAML.
  * <p>
- * Comments are fully supported. The implementation uses a shaded copy of SnakeYAML, which is not exposed.
+ * The implementation uses a shaded copy of SnakeYAML Engine, which is not exposed, with 'block' flow style enabled.
+ * <p>
+ * <b>Environment variables</b>
+ * <p>
+ * This backend supports environment variable substitution as described on the
+ * <a href="https://bitbucket.org/snakeyaml/snakeyaml-engine/wiki/Documentation">SnakeYAML-Engine wiki</a>. For
+ * example, a string value can be set to <code>${DEBUG}</code> (provided it is unquoted) and the "DEBUG" environment
+ * variable will be substituted at load time.
+ * <p>
+ * <b>Null values</b>
+ * <p>
+ * Following the recommended practice of {@link Backend}, null values are substituted with the literal string "null".
+ * <p>
+ * <b>Comment data</b>
+ * <p>
+ * Comments are fully supported, provided they are added through library mechanisms. Note that some comments in YAML
+ * files, if not added by this backend (e.g., added by the user), might not be easily recognized as belonging to a
+ * certain entry. This backend uses line breaks and indentation to sleuth out where comments belong, and comments
+ * are discarded where not supported by the library model (e.g., comments on list entries).
+ * <p>
+ * Because the backend writes the same line breaks and comments in the locations it expects, it can guarantee round
+ * trips for its own comment data. A good way to comply with this backend's expectations is to add an extra line after
+ * comments below an entry, to differentiate them from comments above, e.g.:
+ * <pre>
+ *     {@code
+ *         # A header for the document always has a blank line separating it from the first-entry
+ *
+ *         # Comment on 'first-entry'
+ *         first-entry: "hi"
+ *         # Comment on 'option'
+ *         option: "some comments here"
+ *         # Another comment on 'option'
+ *         # Notice the empty space below
+ *
+ *         # Comment on 'rest-here'
+ *         rest-here: "hooray!" # Inline comment on 'rest-here'
+ *
+ *         # Finally, a footer
+ *     }
+ * </pre>
  *
  */
 public final class YamlBackend implements Backend {
@@ -78,11 +119,12 @@ public final class YamlBackend implements Backend {
      * Creates from a readable data root, and a URL pointing to a syntax linter.
      * <p>
      * The URL, when supplied by this constructor, may be provided to users in the form of error messages. It should
-     * point to a live website where end users can paste and validate their configuration file's YAML syntax.
+     * point to a live website where end users can paste and validate their configuration file's syntax.
      *
      * @param dataRoot the data root from which to read and write
      * @param syntaxLinter a link to an online syntax linter
      */
+    @API(status = API.Status.EXPERIMENTAL)
     public YamlBackend(@NonNull ReadableRoot dataRoot, @NonNull URL syntaxLinter) {
         this.dataRoot = Objects.requireNonNull(dataRoot, "dataRoot");
         this.syntaxLinter = Objects.requireNonNull(syntaxLinter, "syntaxLinter");
@@ -93,8 +135,6 @@ public final class YamlBackend implements Backend {
                 .setSchema(jsonSchema)
                 .setAllowDuplicateKeys(false)
                 .setAllowRecursiveKeys(false)
-                // TODO: By making SnakeYaml-Engine handle buffering, we can avoid redundant buffering in PathRoot
-                //.setBufferSize(8192)
                 .setLabel(YamlBackend.class.getSimpleName())
                 .build();
         dumpSettings = DumpSettings.builder()
@@ -135,7 +175,7 @@ public final class YamlBackend implements Backend {
     }
 
     @Override
-    public @NonNull LoadResult<@Nullable Document> read(@NonNull ReadRequest readRequest) {
+    public @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource) {
         Node node;
         try {
             if (!dataRoot.dataExists()) {
@@ -156,9 +196,9 @@ public final class YamlBackend implements Backend {
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         } catch (YamlEngineException yamlEx) {
-            LibraryLang libraryLang = LibraryLang.Accessor.access(readRequest, ErrorContext.Source::getLocale);
-            ErrorContext error = readRequest.buildError(Printable.preBuilt(libraryLang.failed()));
-            error.addDetail(ErrorContext.BACKEND_MESSAGE, Printable.preBuilt(yamlEx.getMessage()));
+            LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
+            ErrorContext error = errorSource.buildError(preBuilt(libraryLang.failed()));
+            error.addDetail(ErrorContext.BACKEND_MESSAGE, preBuilt(yamlEx.getMessage()));
             error.addDetail(ErrorContext.SYNTAX_LINTER, syntaxLinter);
             return LoadResult.failure(error);
         }
@@ -176,10 +216,10 @@ public final class YamlBackend implements Backend {
             construct.setEndComments(node.getEndComments());
             mappingNode = construct;
         } else {
-            LibraryLang libraryLang = LibraryLang.Accessor.access(readRequest, ErrorContext.Source::getLocale);
-            return readRequest.throwError(libraryLang.yamlNotAMap());
+            LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
+            return errorSource.throwError(libraryLang.yamlNotAMap());
         }
-        return new ReadYaml(readRequest, new StandardConstructor(loadSettings)).runForMapping(mappingNode);
+        return new ReadYaml(errorSource, new StandardConstructor(loadSettings)).runForMapping(mappingNode);
     }
 
     @Override
@@ -200,7 +240,7 @@ public final class YamlBackend implements Backend {
         try {
             dataRoot.openWriter(writer -> {
                 writeHeaderFooter(writer, header);
-                writer.write('\n');
+                writer.write(System.lineSeparator());
 
                 dump.dumpNode(node, new StreamDataWriter() {
                     @Override
@@ -222,7 +262,7 @@ public final class YamlBackend implements Backend {
                     }
                 });
 
-                writer.write('\n');
+                writer.write(System.lineSeparator());
                 writeHeaderFooter(writer, footer);
                 return null;
             });
@@ -238,17 +278,27 @@ public final class YamlBackend implements Backend {
         for (String line : lines) {
             writer.write("# ");
             writer.write(line);
-            writer.write('\n');
+            writer.write(System.lineSeparator());
         }
-    }
-
-    @Override
-    public boolean supportsComments(boolean documentLevel, @NonNull CommentLocation location) {
-        return true;
     }
 
     @Override
     public @NonNull KeyMapper recommendKeyMapper() {
         return new SnakeCaseKeyMapper();
+    }
+
+    @Override
+    public @NonNull Meta meta() {
+        return new Meta() {
+            @Override
+            public boolean supportsComments(boolean documentLevel, boolean reading, @NonNull CommentLocation location) {
+                return true;
+            }
+
+            @Override
+            public boolean supportsOrder(boolean reading) {
+                return true;
+            }
+        };
     }
 }

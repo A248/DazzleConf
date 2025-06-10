@@ -26,6 +26,7 @@ import org.snakeyaml.engine.v2.comments.CommentType;
 import org.snakeyaml.engine.v2.constructor.StandardConstructor;
 import org.snakeyaml.engine.v2.exceptions.Mark;
 import org.snakeyaml.engine.v2.nodes.AnchorNode;
+import org.snakeyaml.engine.v2.nodes.CollectionNode;
 import org.snakeyaml.engine.v2.nodes.MappingNode;
 import org.snakeyaml.engine.v2.nodes.Node;
 import org.snakeyaml.engine.v2.nodes.NodeTuple;
@@ -39,7 +40,6 @@ import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.CommentLocation;
-import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -105,11 +105,7 @@ final class ReadYaml {
     // Error handling
 
     private ErrorContext thrownError;
-    private static final IllegalStateException THROW_SIGNAL_ERROR;
-    static {
-        THROW_SIGNAL_ERROR = new IllegalStateException();
-        THROW_SIGNAL_ERROR.setStackTrace(new StackTraceElement[0]);
-    }
+    private static final IllegalStateException THROW_SIGNAL_ERROR  = new IllegalStateException();
 
     private IllegalStateException throwError(ErrorContext error, Integer lineNumber) {
         String[] keyPathString = new String[keyPathStack.size()];
@@ -126,25 +122,33 @@ final class ReadYaml {
     }
 
     // Kick-starts the whole operation
-    LoadResult<Backend.@NonNull Document> runForMapping(MappingNode mappingNode) {
+    LoadResult<Backend.@Nullable Document> runForMapping(MappingNode mappingNode) {
         Product product = new Product();
         visibleSinksAbove.add(new SetHeaderOrFooter(product));
         try {
             visitMap(mappingNode, product.dataTree);
             visitCommentSink(new SetHeaderOrFooter(product));
-            return LoadResult.of(product);
+
         } catch (IllegalStateException checkForError) {
             if (checkForError == THROW_SIGNAL_ERROR) {
                 return LoadResult.failure(thrownError);
             }
             throw checkForError; // Shouldn't happen
         }
+        // Finish!
+        if (product.dataTree.isEmpty() && product.header == null && product.footer == null) {
+            // Totally empty document... let's not take this seriously
+            return LoadResult.of(null);
+        }
+        return LoadResult.of(product);
     }
 
     interface CommentSink {
         int indentLevel();
 
         void attachAttractedComments(boolean comingFromBelow, List<String> comments);
+
+        default void setInlineComments(List<String> inlineComments) {}
 
         void finish();
     }
@@ -282,19 +286,15 @@ final class ReadYaml {
         public void finish() {}
     }
 
-    private static final class MapEntry implements CommentSink {
+    private static abstract class ContainerEntry<B> implements CommentSink {
 
-        private final DataTree.Mut container;
+        final B bucket;
         private final int indentLevel;
-        private final Object key;
-        private final Object value;
-        private CommentData commentData = CommentData.empty();
+        CommentData commentData = CommentData.empty();
 
-        private MapEntry(DataTree.Mut container, int indentLevel, Object key, Object value) {
-            this.container = container;
+        private ContainerEntry(B bucket, int indentLevel) {
+            this.bucket = bucket;
             this.indentLevel = indentLevel;
-            this.key = key;
-            this.value = value;
         }
 
         @Override
@@ -312,81 +312,121 @@ final class ReadYaml {
         }
 
         @Override
+        public void setInlineComments(List<String> inlineComments) {
+            commentData = commentData.setAt(CommentLocation.INLINE, inlineComments);
+        }
+    }
+
+    private static final class MapEntry extends ContainerEntry<DataTree.Mut> {
+
+        private final Object key;
+        private final Object value;
+
+        private MapEntry(DataTree.Mut bucket, int indentLevel, Object key, Object value) {
+            super(bucket, indentLevel);
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
         public void finish() {
-            container.set(key, new DataEntry(value).withComments(commentData));
+            bucket.set(key, new DataEntry(value).withComments(commentData));
         }
     }
 
-    private static final class BlackHoleCommentSink implements CommentSink {
+    private static final class ScalarListEntry extends ContainerEntry<List<DataEntry>> {
 
-        private final int indentLevel;
+        private final int index;
+        private final Object value;
 
-        private BlackHoleCommentSink(int indentLevel) {
-            this.indentLevel = indentLevel;
+        private ScalarListEntry(List<DataEntry> container, int indentLevel, int index, Object value) {
+            super(container, indentLevel);
+            this.index = index;
+            this.value = value;
         }
 
         @Override
-        public int indentLevel() {
-            return indentLevel;
+        public void finish() {
+            bucket.set(index, new DataEntry(value).withComments(commentData));
         }
-
-        @Override
-        public void attachAttractedComments(boolean comingFromBelow, List<String> comments) {}
-
-        @Override
-        public void finish() {}
     }
 
-    private void visitMap(MappingNode mappingNode, DataTree.Mut container) {
+    private void visitMap(MappingNode mappingNode, DataTree.Mut bucket) {
         visitBlockComments(mappingNode.getBlockComments());
         for (NodeTuple nodeTuple : mappingNode.getValue()) {
             Node keyNode = nodeTuple.getKeyNode();
             Node valueNode = nodeTuple.getValueNode();
 
-            visitMapEntry(keyNode, valueNode, container);
+            visitMapEntry(keyNode, valueNode, bucket);
         }
         visitBlockComments(mappingNode.getEndComments());
     }
 
-    private void visitMapEntry(Node keyNode, Node valueNode, DataTree.Mut container) {
+    private void visitMapEntry(Node keyNode, Node valueNode, DataTree.Mut bucket) {
         // FIRST
         // Gather the value as a mutable container. This is kind of like look-ahead, but object-based
-        Object value;
-        // We'll add inline comments from either keyNode and valueNode, depending on what the value is
-        List<String> inlineComments = new ArrayList<>();
-        Consumer<Node> addInlineCommentsFrom = (chosenNode) -> {
-            List<CommentLine> snakeInlineComments = chosenNode.getInLineComments();
-            if (snakeInlineComments != null) {
-                for (CommentLine commentLine : snakeInlineComments) {
-                    String commentValue = extractComment(commentLine, CommentType.IN_LINE);
-                    if (commentValue != null) {
-                        inlineComments.add(commentValue);
-                    }
-                }
-            }
-        };
-        // Prepare also for next round, but don't do it yet. Postpone continuations until later
-        List<Consumer<ReadYaml>> continuations = new ArrayList<>();
-        value = visitEntryContent(valueNode, keyNode, addInlineCommentsFrom, continuations);
+        InlineCommentStore inlineCommentStore = new InlineCommentStore();
+        Continuation continuation = new Continuation();
+        Object value = visitValue(valueNode, keyNode, inlineCommentStore, continuation);
         // Make new entry
-        MapEntry mapEntry = new MapEntry(container, getIndent(keyNode), getKeyValue(keyNode), value);
-        mapEntry.commentData = mapEntry.commentData.setAt(CommentLocation.INLINE, inlineComments);
+        MapEntry mapEntry = new MapEntry(bucket, getIndent(keyNode), getKeyValue(keyNode), value);
+        inlineCommentStore.moveAccumulatedTo(mapEntry);
         // Collect comments between this entry and the last one
         visitBlockComments(keyNode.getBlockComments());
         visitCommentSink(mapEntry);
         visitBlockComments(keyNode.getEndComments());
         // GO
         // Either return here, or recurse to find more values
-        if (!continuations.isEmpty()) {
+        if (continuation.runner != null) {
             keyPathStack.addLast(mapEntry.key);
             try {
-                for (Consumer<ReadYaml> continuation : continuations) {
-                    continuation.accept(this);
-                }
+                continuation.runner.accept(this);
             } finally {
                 keyPathStack.pollLast();
             }
         }
+    }
+
+    // Used to help pre-fill lists
+    private static final DataEntry DUMMY_ENTRY = new DataEntry(false);
+
+    private void visitList(SequenceNode sequenceNode, List<DataEntry> bucket) {
+        visitBlockComments(sequenceNode.getBlockComments());
+        List<Node> elemNodes = sequenceNode.getValue();
+        // We'll pre-fill the bucket up to the size desired - then add elements at their indexes later
+        for (int n = 0; n < elemNodes.size(); n++) {
+            bucket.add(DUMMY_ENTRY); // Pre-fill up to index n
+            visitListElement(elemNodes.get(n), n, bucket);
+        }
+        visitBlockComments(sequenceNode.getEndComments());
+    }
+
+    private void visitListElement(Node elemNode, int index, List<DataEntry> bucket) {
+        // Following the same procedure - almost - from visitMapEntry.
+        InlineCommentStore inlineCommentStore = new InlineCommentStore();
+        Continuation continuation = new Continuation();
+        Object value = visitValue(elemNode, null, inlineCommentStore, continuation);
+
+        // Start collecting comments
+        visitBlockComments(elemNode.getBlockComments());
+        if (continuation.runner == null) {
+            // Only make an entry if we're looking at a scalar
+            // This ensures that comments gather on map entries and scalar list elements, not the containers themselves
+            ScalarListEntry scalarListEntry = new ScalarListEntry(bucket, getIndent(elemNode), index, value);
+            inlineCommentStore.moveAccumulatedTo(scalarListEntry);
+            visitCommentSink(scalarListEntry);
+        } else {
+            // `value` is itself a container (DataTree or List), so add it right away
+            bucket.set(index, new DataEntry(value));
+            // Run recursion here
+            keyPathStack.addLast("$"); // Marker for an anonymous list entry
+            try {
+                continuation.runner.accept(this);
+            } finally {
+                keyPathStack.pollLast();
+            }
+        }
+        visitBlockComments(elemNode.getEndComments());
     }
 
     private void visitCommentSink(CommentSink newCommentSink) {
@@ -431,51 +471,70 @@ final class ReadYaml {
             Object scalarKey = standardConstructor.constructSingleDocument(Optional.of(keyNode));
             return scalarKey == null ? "null" : scalarKey;
         }
-        LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
-        throw throwError(errorSource.buildError(libraryLang.wrongTypeForValue(
-                keyNode, "key type", keyNode.getClass().getSimpleName()
+        assert keyNode instanceof CollectionNode;
+        throw throwError(errorSource.buildError(preBuilt(
+                "Using YAML lists or maps as keys is not supported"
         )), keyNode.getStartMark().map(Mark::getLine).orElse(null));
     }
 
-    private @NonNull Object visitEntryContent(Node valueNode, Node keyNodeIfNeeded,
-                                              Consumer<Node> addInlineCommentsFrom,
-                                              List<Consumer<ReadYaml>> continueVisiting) {
+    private static final class Continuation {
+        private Consumer<ReadYaml> runner;
+    }
+
+    private @NonNull Object visitValue(Node valueNode, @Nullable Node keyNodeIfFromMap,
+                                       InlineCommentStore inlineCommentStore,
+                                       Continuation continuation) {
         if (valueNode instanceof AnchorNode) {
-            return visitEntryContent(
-                    ((AnchorNode) valueNode).getRealNode(), keyNodeIfNeeded, addInlineCommentsFrom, continueVisiting
+            return visitValue(
+                    ((AnchorNode) valueNode).getRealNode(), keyNodeIfFromMap, inlineCommentStore, continuation
             );
         }
         if (valueNode instanceof ScalarNode) {
-            addInlineCommentsFrom.accept(valueNode);
+            inlineCommentStore.storeFromNode(valueNode);
             Object scalarValue = standardConstructor.constructSingleDocument(Optional.of(valueNode));
             return scalarValue == null ? "null" : scalarValue;
         }
         if (valueNode instanceof MappingNode) {
-            addInlineCommentsFrom.accept(keyNodeIfNeeded);
+            inlineCommentStore.storeFromNode(keyNodeIfFromMap);
             DataTree.Mut dataTree = new DataTree.Mut();
-            continueVisiting.add(read -> read.visitMap((MappingNode) valueNode, dataTree));
+            continuation.runner = read -> read.visitMap((MappingNode) valueNode, dataTree);
             return dataTree;
         }
         if (valueNode instanceof SequenceNode) {
-            addInlineCommentsFrom.accept(keyNodeIfNeeded);
-
-            List<Node> nodeList = ((SequenceNode) valueNode).getValue();
-            List<Object> elements = new ArrayList<>(nodeList.size());
-
-            continueVisiting.add(read -> read.visitBlockComments(valueNode.getBlockComments()));
-            for (Node elemNode : nodeList) {
-                // For scalar nodes: non-tree list items do not store comments in our library's API
-                // For nested lists, we don't allow maps within them to store comments on top or bottom
-                if (!(elemNode instanceof MappingNode)) {
-                    CommentSink noCommentsHere = new BlackHoleCommentSink(getIndent(elemNode));
-                    continueVisiting.add(read -> read.visitCommentSink(noCommentsHere));
-                }
-                elements.add(visitEntryContent(elemNode, null, (ignore) -> {}, continueVisiting));
-            }
-            continueVisiting.add(read -> read.visitBlockComments(valueNode.getEndComments()));
-            return elements;
+            inlineCommentStore.storeFromNode(keyNodeIfFromMap);
+            SequenceNode sequenceNode = (SequenceNode) valueNode;
+            List<DataEntry> list = new ArrayList<>(sequenceNode.getValue().size());
+            continuation.runner = read -> read.visitList((SequenceNode) valueNode, list);
+            return list;
         }
         throw new IllegalStateException("Unknown Node subclass: " + valueNode);
+    }
+
+    private final class InlineCommentStore {
+
+        private List<String> inlineComments;
+
+        void storeFromNode(@Nullable Node node) {
+            List<CommentLine> snakeInlineComments;
+            if (node == null || (snakeInlineComments = node.getInLineComments()) == null) {
+                return;
+            }
+            for (CommentLine commentLine : snakeInlineComments) {
+                String commentValue = extractComment(commentLine, CommentType.IN_LINE);
+                if (commentValue != null) {
+                    if (inlineComments == null) {
+                        inlineComments = new ArrayList<>();
+                    }
+                    inlineComments.add(commentValue);
+                }
+            }
+        }
+
+        private void moveAccumulatedTo(CommentSink commentSink) {
+            if (inlineComments != null) {
+                commentSink.setInlineComments(inlineComments);
+            }
+        }
     }
 
     /**

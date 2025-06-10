@@ -135,6 +135,29 @@
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<excludePackageNames>
+						space.arim.dazzleconf.internal;
+						space.arim.dazzleconf.internal.*;
+						space.arim.dazzleconf2.internals;
+						space.arim.dazzleconf2.internals.*;
+					</excludePackageNames>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>test-jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-invoker-plugin</artifactId>
 				<configuration>
 					<parallelThreads>2</parallelThreads>
@@ -228,6 +251,14 @@
 	</profiles>
 	
 	<dependencies>
+		<dependency>
+			<groupId>org.checkerframework</groupId>
+			<artifactId>checker-qual</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apiguardian</groupId>
+			<artifactId>apiguardian-api</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter</artifactId>

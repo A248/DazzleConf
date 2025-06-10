@@ -19,19 +19,35 @@
 
 package space.arim.dazzleconf.backend.yaml;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.snakeyaml.engine.v2.api.Load;
+import org.snakeyaml.engine.v2.api.LoadSettings;
+import space.arim.dazzleconf2.ErrorContext;
+import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.Printable;
+import space.arim.dazzleconf2.backend.StringRoot;
+
+import java.util.Locale;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 public class NonStringKeysTest {
 
     @Test
-    public void integerKeysSupported(@Mock Backend.ReadRequest readRequest) {
+    public void integerKeysSupported(@Mock ErrorContext.Source errorSource) {
         DataTree.Mut dataTree = new DataTree.Mut();
         dataTree.set(1, new DataEntry("hello"));
         dataTree.set("option", new DataEntry(false));
@@ -40,10 +56,46 @@ public class NonStringKeysTest {
         subTree.set("hi", new DataEntry("yes"));
         subTree.set(1, new DataEntry("no"));
 
+        StringRoot stringRoot = new StringRoot("");
+        new YamlBackend(stringRoot).write(new Backend.Document() {
+            @Override
+            public @NonNull CommentData comments() {
+                return CommentData.empty();
+            }
+
+            @Override
+            public @NonNull DataTree data() {
+                return dataTree.intoImmut();
+            }
+        });
+        assertEquals("""
+                1: hello
+                option: false
+                -5:
+                  hi: yes
+                  1: no""", stringRoot.readString().trim());
+
+        DataTree reloaded = new YamlBackend(stringRoot).read(errorSource).getOrThrow().data();
+        assertEquals(dataTree, reloaded);
     }
 
     @Test
-    public void butListsAsKeysAreNot() {
-
+    public void butListsAsKeysAreNot(@Mock ErrorContext.Source errorSource, @Mock ErrorContext dummyError) {
+        lenient().when(errorSource.getLocale()).thenReturn(Locale.ENGLISH);
+        lenient().when(errorSource.buildError(any())).thenReturn(dummyError);
+        lenient().when(errorSource.throwError((CharSequence) any())).thenReturn(LoadResult.failure(dummyError));
+        lenient().when(errorSource.throwError((Printable) any())).thenReturn(LoadResult.failure(dummyError));
+        // Taken from StackOverflow
+        String source = """
+                mapping:
+                  c_id:
+                    [pak, gb]: '4711'
+                    [pak, ch]: '4712'
+                    [pak]: '4713'
+                """;
+        assertDoesNotThrow(() -> new Load(LoadSettings.builder().build()).loadFromString(source));
+        LoadResult<Backend.Document> loadResult = new YamlBackend(new StringRoot(source)).read(errorSource);
+        assertFalse(loadResult.isSuccess());
+        assertEquals(LoadResult.failure(dummyError), loadResult);
     }
 }

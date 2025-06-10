@@ -214,7 +214,8 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * config back to the backend. Yields the instantiated configuration.
      * <p>
      * This function is similar to {@link #configureWith(Backend)} but with error handling layered on top. That error
-     * handling is simple: upon failure, print the error, return default configuration.
+     * handling is simple: upon failure, print the error and return default configuration. The backend itself is left
+     * unchanged (e.g., an erring file would be left on disk as-is).
      *
      * @param backend the format backend
      * @param errorPrint if an error occured, it will be printed through this argument
@@ -233,7 +234,8 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * config back to the backend. Yields the instantiated configuration.
      * <p>
      * This function is similar to {@link #configureWith(Backend)} but with error handling layered on top. That error
-     * handling is simple: upon failure, print the error, return default configuration.
+     * handling is simple: upon failure, print the error and return default configuration. The backend itself is left
+     * unchanged (e.g., an erring file would be left on disk as-is).
      *
      * @param backend the format backend
      * @param updateListener a listener which informs the caller if certain events happened
@@ -256,5 +258,15 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * @return a reload shell
      */
     @NonNull ReloadShell<C> makeReloadShell(@Nullable C initialValue);
+
+    /**
+     * Creates a convenient error source.
+     * <p>
+     * This error source won't provide any additional contexts to created {@code ErrorContext}s. It is provided so
+     * that callers need not undergo the pain of implementing their own error context infrastructure.
+     *
+     * @return an error source
+     */
+    ErrorContext.@NonNull Source makeErrorSource();
 
 }

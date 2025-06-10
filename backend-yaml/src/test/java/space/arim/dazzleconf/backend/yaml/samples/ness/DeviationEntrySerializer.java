@@ -17,23 +17,23 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2;
+package space.arim.dazzleconf.backend.yaml.samples.ness;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.KeyMapper;
+public class DeviationEntrySerializer extends IntPairSerializer<DeviationEntry> {
 
-import java.util.Objects;
+	@Override
+	DeviationEntry fromInts(int value1, int value2) {
+		return new DeviationEntry(value1, value2);
+	}
 
-final class WriteOpts implements ConfigurationDefinition.WriteOptions {
+	@Override
+	int[] toInts(DeviationEntry value) {
+		return new int[] {value.deviationPercentage(), value.sampleCount()};
+	}
 
-    private final KeyMapper keyMapper;
-
-    WriteOpts(KeyMapper keyMapper) {
-        this.keyMapper = Objects.requireNonNull(keyMapper, "keyMapper");
-    }
-
-    @Override
-    public @NonNull KeyMapper keyMapper() {
-        return keyMapper;
-    }
+	@Override
+	public Class<DeviationEntry> getTargetClass() {
+		return DeviationEntry.class;
+	}
+	
 }

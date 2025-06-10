@@ -204,8 +204,13 @@ public class ErrorPrintingTest {
         DataTree.Mut subSection = new DataTree.Mut();
         subSection.set("integral", new DataEntry(2));
         subSection.set("character", new DataEntry("not a character"));
-        subSection.set("decimal-list", new DataEntry(List.of(0.0, 1.1, -4.9)));
-        subSection.set("super-nested-bools", new DataEntry(List.of(List.of(), List.of("true", "false", "NA", "NOPE"))));
+        subSection.set("decimal-list", new DataEntry(List.of(new DataEntry(0.0), new DataEntry(1.1), new DataEntry(-4.9))));
+        subSection.set("super-nested-bools", new DataEntry(List.of(
+                new DataEntry(List.of()),
+                new DataEntry(List.of(
+                        new DataEntry("true"), new DataEntry("false"), new DataEntry("NA"), new DataEntry("NOPE")
+                ))
+        )));
         DataTree.Mut dataTree = new DataTree.Mut();
         dataTree.set("opening", new DataEntry("hi"));
         dataTree.set("hello", new DataEntry("goodbye"));

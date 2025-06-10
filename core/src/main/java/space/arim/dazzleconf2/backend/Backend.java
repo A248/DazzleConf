@@ -43,8 +43,8 @@ import java.io.UncheckedIOException;
  * backend act in a user-friendly manner by treating the null value as the literal string "null" instead.
  * <p>
  * Backends are not required to support comments, but it is strongly preferred if they do. If comments <i>are</i>
- * supported, the backend <b>must</b> round-trip those comments between successive calls to <code>read</code> and
- * <code>write</code>.
+ * supported, the backend is required to report it in {@link Meta#supportsComments(boolean, boolean, CommentLocation)},
+ * and comments (where supported) must be read and written alongside data.
  * <p>
  * <b>Data roots</b>
  * <p>
@@ -79,11 +79,11 @@ public interface Backend {
      * <p>
      * A backend is permitted to throw {@code UncheckedIOException} to handle I/O errors coming from the data root.
      *
-     * @param readRequest request parameters, including a factory for the backend to produce errors
+     * @param errorSource a factory for the backend to produce errors
      * @return a load result of the data
      * @throws UncheckedIOException upon I/O failure
      */
-    @NonNull LoadResult<@Nullable Document> read(@NonNull ReadRequest readRequest);
+    @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource);
 
     /**
      * Writes the provided data tree to the source.
@@ -111,28 +111,6 @@ public interface Backend {
     void write(@NonNull Document document);
 
     /**
-     * Whether comments are supported in the following context.
-     * <p>
-     * The context is defined by whether the comments are placed on the document level or on specific entries, and
-     * where the comments are located in that regard. For example, {@code documentLevel = true} and {@code ABOVE}
-     * specifies the document-level header, and {@code documentLevel = false} and {@code INLINE} specify inline
-     * comments on entries.
-     * <p>
-     * <b>Implications</b>
-     * <p>
-     * If comments are not supported in this context, this format backend is free to ignore them during
-     * {@link #write(Document)}.
-     * <p>
-     * If comments <i>are</i> supported in this context, they <i>must</i> be supported by both <code>write</code>
-     * and <code>read</code> methods. That is, comments in this context must correctly round-trip.
-     *
-     * @param documentLevel true for the document level, false for entry-level comments
-     * @param location the location of the comments precisely
-     * @return if comments are supported in this location
-     */
-    boolean supportsComments(boolean documentLevel, @NonNull CommentLocation location);
-
-    /**
      * Recommends a {@link KeyMapper} appropriate to the backend format.
      * <p>
      * When loading a config with {@link Configuration#configureWith(Backend)}, the recommended key mapper will be
@@ -141,29 +119,6 @@ public interface Backend {
      * @return the recommended key mapper
      */
     @NonNull KeyMapper recommendKeyMapper();
-
-    /**
-     * Parameters of a request to read data. At this moment, this interface is limited to error production.
-     * <p>
-     * This interface is implemented by the caller and passed to the backend.
-     */
-    interface ReadRequest {
-
-        /**
-         * A factory for the backend to produce errors.
-         * <p>
-         * Errors produced by this source might include contextual information about the request. Unlike other parts
-         * of the library API, this error production is provided as a separate object, and not an extension of the
-         * enclosing interface; this is done to make implementing {@code ReadRequest} easier for library users who call
-         * into the {@code Backend} directly.
-         *
-         * @return an error source for the read request
-         */
-        ErrorContext.@NonNull Source errorSource();
-
-        // TODO: Include a mechanism to request sensitive keys like passwords, to load as char[]
-
-    }
 
     /**
      * A document loaded from, or writable to, a backend.
@@ -206,5 +161,84 @@ public interface Backend {
                 }
             };
         }
+    }
+
+    /**
+     * Gets information about this backend itself.
+     * <p>
+     * The returned meta should behave consistently if invoked on identical backends. It should not be affected by
+     * the state of this {@code Backend} (or data contained in it), but only by its properties and capabilities.
+     *
+     * @return meta information about the backend
+     */
+    @NonNull Meta meta();
+
+    /**
+     * Defines metadata about a backend.
+     * <p>
+     * For callers familiar with the {@code java.sql} module, this type is analogous to JDBC's DatabaseMetaData. It
+     * provides information about the backend implementation itself, such as its supported capabilities.
+     * <p>
+     * New methods may be added to this interface in the future, but they will always be default methods.
+     * Implementors of {@code Backend} are encouraged to keep up-to-date with this interface by checking minor version
+     * release notes.
+     *
+     */
+    interface Meta {
+
+        /**
+         * Whether comments are supported in the following context.
+         * <p>
+         * The context is defined by whether the comments are placed on the document level or on specific entries, if
+         * the comments are being read or written, and where the comments are located with respect to entries. For example,
+         * {@code documentLevel = true}, false, and {@code ABOVE} specifies the writability of the document-level header,
+         * and {@code documentLevel = false}, true, and {@code INLINE} specify the capability to read inline comments on
+         * entries. The return value would then indicate whether comments are handled in this context.
+         * <p>
+         * <b>Implications</b>
+         * <p>
+         * If comments are not supported in this context, this format backend is free to ignore them during
+         * {@link #write(Document)}.
+         * <p>
+         * If this method returns true for <code>reading = true</code> and <code>reading = false</code> with otherwise
+         * identical {@code documentLevel} and {@code location}, that implies that comments in such context will
+         * be correctly read -- and identically reconstituted -- by <code>read</code> provided they were written by
+         * <code>write</code>.
+         * <p>
+         * <b>Ignored comments during reading</b>
+         * <p>
+         * Note that some backends may expose comments in other places, not covered by this library. An example would be
+         * comments on list entries - because the API only supports comments on map entries. These comments are impossible
+         * to return from a call to <code>read</code>, meaning they are necessarily produced by the end user. Such
+         * kind of comments should have no bearing on this method's results.
+         *
+         * @param documentLevel true for the document level, false for entry-level comments
+         * @param reading       true for reading comments, false for writing them
+         * @param location      the location of the comments for whom support is queried
+         * @return if the backend supports comments in this context
+         */
+        boolean supportsComments(boolean documentLevel, boolean reading, @NonNull CommentLocation location);
+
+        /**
+         * Whether this backend supports preservation of data entry order.
+         * <p>
+         * The {@code reading} parameter defines where ordering happens. If ordering is preserved when reading, this
+         * method should return true when {@code reading = true}, and if ordering is preserved when writing, it should
+         * return true when {@code writing = true}.
+         * <p>
+         * <b>Implications</b>
+         * <p>
+         * If order is not supported during reading, entries in a data tree may be read in any order. If not
+         * supported during writing, the serialized format may be written in a different order.
+         * <p>
+         * If order is supported in both contexts, then the backend should preserve a stable iteration order across
+         * multiple calls to {@code read} and {@code write} using the same data. Loading a data tree should produce an
+         * order which remains stable if that same tree is written and re-read at a later point.
+         *
+         * @param reading true for reading data, false for writing it
+         * @return if order is preserved across the reading or writing operation
+         */
+        boolean supportsOrder(boolean reading);
+
     }
 }

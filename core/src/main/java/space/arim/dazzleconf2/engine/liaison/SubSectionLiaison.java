@@ -27,6 +27,7 @@ import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.DefaultValues;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.LoadListener;
@@ -109,6 +110,12 @@ public final class SubSectionLiaison implements TypeLiaison {
                     public @NonNull KeyMapper keyMapper() {
                         return deser.keyMapper();
                     }
+
+                    @Override
+                    public int maximumErrorCollect() {
+                        // TODO: Override this with the same value as the parent context
+                        return ConfigurationDefinition.ReadOptions.super.maximumErrorCollect();
+                    }
                 });
             }
 
@@ -132,7 +139,7 @@ public final class SubSectionLiaison implements TypeLiaison {
                 DataTree.Mut updatableTree = requireDataTree.getOrThrow().intoMut();
                 RecordUpdates recordUpdates = new RecordUpdates();
 
-                LoadResult<V> result = configuration.readWithUpdate(updatableTree, new ConfigurationDefinition.ReadOptions() {
+                LoadResult<V> result = configuration.readWithUpdate(updatableTree, new ConfigurationDefinition.ReadWithUpdateOptions() {
                     @Override
                     public @NonNull LoadListener loadListener() {
                         return recordUpdates;
@@ -141,6 +148,17 @@ public final class SubSectionLiaison implements TypeLiaison {
                     @Override
                     public @NonNull KeyMapper keyMapper() {
                         return deser.keyMapper();
+                    }
+
+                    @Override
+                    public int maximumErrorCollect() {
+                        // TODO: Override this with the same value as the parent context
+                        return ConfigurationDefinition.ReadWithUpdateOptions.super.maximumErrorCollect();
+                    }
+
+                    @Override
+                    public boolean writeEntryComments(@NonNull CommentLocation location) {
+                        return updateTo.writeEntryComments(location);
                     }
                 });
                 if (result.isSuccess() && recordUpdates.updated) {
@@ -153,7 +171,19 @@ public final class SubSectionLiaison implements TypeLiaison {
             @Override
             public void serialize(@NonNull V value, @NonNull SerializeOutput ser) {
                 DataTree.Mut dataTreeMut = new DataTree.Mut();
-                configuration.writeTo(value, dataTreeMut, ser::keyMapper);
+                configuration.writeTo(value, dataTreeMut, new ConfigurationDefinition.WriteOptions() {
+
+                    @Override
+                    public @NonNull KeyMapper keyMapper() {
+                        return ser.keyMapper();
+                    }
+
+                    @Override
+                    public boolean writeEntryComments(@NonNull CommentLocation location) {
+                        // TODO: Improve this API, maybe return an object instead of having this function here
+                        return ser.writeEntryComments(location);
+                    }
+                });
                 ser.outDataTree(dataTreeMut);
             }
         }

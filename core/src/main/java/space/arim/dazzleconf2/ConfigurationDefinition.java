@@ -19,10 +19,13 @@
 
 package space.arim.dazzleconf2;
 
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.LoadListener;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
@@ -108,10 +111,12 @@ public interface ConfigurationDefinition<C> {
      * Loads the default configuration.
      * <p>
      * This will build a configuration object using only the default-providing mechanisms (i.e. annotations and
-     * default methods).
+     * default methods). Therefore, to use this method, every configuration entry is required to have a default value
+     * attached; if an entry lacks a default value, {@code DeveloperMistakeException} will be thrown.
      *
      * @return a configuration using wholly default values
-     * @throws DeveloperMistakeException if one of the default-providing methods threw an exception, or gave null
+     * @throws DeveloperMistakeException if one of the default-providing methods threw an exception, or gave null.
+     * Alternatively, if a configuration entry is lacking a default value set either by default methods or annotations
      */
     @NonNull C loadDefaults();
 
@@ -139,7 +144,7 @@ public interface ConfigurationDefinition<C> {
      * @param readOptions full parameters to customize the operation
      * @return the loaded configuration, or an error if failed
      */
-    @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadOptions readOptions);
+    @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadWithUpdateOptions readOptions);
 
     /**
      * Writes to the given data tree.
@@ -186,8 +191,34 @@ public interface ConfigurationDefinition<C> {
          * @return the maximum number of errors to collect, default 12. Must be greater than 0
          */
         default int maximumErrorCollect() {
-            return ReadOpts.DEFAULT_MAX_ERROR_TO_COLLECT;
+            return 12;
         }
+
+    }
+
+    /**
+     * Parameters for reading a configuration and updating it in-place
+     *
+     */
+    interface ReadWithUpdateOptions extends ReadOptions, WriteOptions {
+
+        /**
+         * Controls whether comments on existing data entries are refreshed.
+         * <p>
+         * Newly-added entries (due to missing values) will always have comments set. This setting controls whether
+         * existing entries in the data tree will have their comments refreshed at the given location: i.e., by setting
+         * the comments anew on the entry.
+         * <p>
+         * This function can be used, for example, to continually write comments on entries, if the backend supports
+         * writing but not reading comments. Use {@link Backend.Meta#supportsComments(boolean, boolean, CommentLocation)}
+         * to check the extent of backend support.
+         *
+         * @param location the location of comments with respect to the entry
+         * @return whether refreshing should take place for entry comments there
+         */
+        @Override
+        @API(status = API.Status.EXPERIMENTAL)
+        boolean writeEntryComments(@NonNull CommentLocation location);
 
     }
 
@@ -200,9 +231,28 @@ public interface ConfigurationDefinition<C> {
         /**
          * The key mapper to use
          *
-         * @return the key mapper, nonnull
+         * @return the key mapper
          */
         @NonNull KeyMapper keyMapper();
+
+        /**
+         * Controls whether comments are written to data entries.
+         * <p>
+         * If enabled (the default), comment data is copied from the configuration definition to entries in the output
+         * data tree. If disabled, written {@code DataEntry}s will be without comments.
+         * <p>
+         * <b>Backend support</b>
+         * <p>
+         * Note that even if this function returns true, the backend is not guaranteed to support writing comments.
+         * Please consult the documentation of the {@link Backend} regarding comment support.
+         *
+         * @param location the location of the entry comments being written
+         * @return whether data entries should be written with comments here, default true
+         */
+        @API(status = API.Status.EXPERIMENTAL)
+        default boolean writeEntryComments(@NonNull CommentLocation location) {
+            return true;
+        }
     }
 
 }

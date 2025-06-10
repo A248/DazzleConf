@@ -21,24 +21,34 @@ package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 
+import java.util.List;
 import java.util.Objects;
 
 final class SerOutput implements SerializeOutput {
 
     private Object output;
     private final KeyMapper keyMapper;
+    private final ModifyComments modifyComments;
 
-    SerOutput(KeyMapper keyMapper) {
+    SerOutput(KeyMapper keyMapper, ModifyComments modifyComments) {
         this.keyMapper = Objects.requireNonNull(keyMapper, "key mapper");
+        this.modifyComments = modifyComments;
     }
 
     @Override
     public @NonNull KeyMapper keyMapper() {
         return keyMapper;
+    }
+
+    @Override
+    public boolean writeEntryComments(@NonNull CommentLocation location) {
+        return modifyComments.writeEntryComments(location);
     }
 
     @Override
@@ -88,6 +98,11 @@ final class SerOutput implements SerializeOutput {
 
     @Override
     public void outDataTree(@NonNull DataTree value) {
+        output = Objects.requireNonNull(value);
+    }
+
+    @Override
+    public void outList(@NonNull List<@NonNull DataEntry> value) {
         output = Objects.requireNonNull(value);
     }
 

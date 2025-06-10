@@ -3,66 +3,90 @@
 
 DazzleConf supports several annotations on configuration entries and a couple on configuration interfaces.
 
-## Entry Attributes
+## Type Annotations
 
-### @ConfKey
-
-Overrides the key of the configuration entry. If unspecified, the key is the method name. The key in @ConfKey may contain '.', the special character denoting a nested path.
-
-### Default annotations
-
-@DefaultBoolean, @DefaultInteger, @DefaultLong, @DefaultDouble, and @DefaultString are self-explanatory. For custom types, or for numeric types other than integer, long, and double, DazzleConf will perform the same best-attempt type conversion as it would for user input.
-
-@DefaultBooleans, @DefaultIntegers, @DefaultLongs, @DefaultDoubles, and @DefaultStrings all specify a collection of elements of the noted type.
-
-Since version 1.2.0, @DefaultObject is used to specify arbitrary default objects, and is usually appropriate for returning custom types which cannot be easily expressed as a String. If you can write your object as a single String value, you can use @DefaultString. @DefaultObject points to a name of a static method returning the default object; if the static method is in another class, it must be referred to by its qualified name, e.g. 'com.mypackage.MyConfigDefaults.staticMethodReturningDefaultObject'.
-
-### @ConfComments and @ConfHeader
-
-@ConfComments adds comments to a configuration entry.
-
-@ConfHeader adds a comment header to a configuration interface.
-
-These annotations do not guarantee comments will be written to the underlying configuration format. JSON has no concept of a comment. YAML has comments but SnakeYAML does not write them ([yet!](https://github.com/A248/DazzleConf/issues/10)). In these cases, DazzleConf has format-specific options, which are disabled by default, to hack comments into the configuration format. Consider using Hocon [once support is added for it](https://github.com/A248/DazzleConf/pull/6) - Hocon fully supports comments.
+These annotations qualify types, especially return types. You can even place them inside generic arguments, like this: `List<@IntegerRange(min = 1, max = 10) Integer>`
 
 ### @SubSection
 
 This annotation is required for nested configuration interfaces. Without it, DazzleConf cannot tell whether the object is supposed to be its own type, contained in a single key and value, or a nested config section.
 
-Since version 1.2.0, @SubSection can also be used for map keys and collection elements
-
-Here is example usage of both applications:
+Example of creating a sub-section:
 
 ```java
 public interface MyConfig {
 
-  @SubSection
-  MySection mySubSection();
-  
-  interface MySection {
-  }
-  
-  @DefaultObject("defaultExtraSections")
-  Map<String, @SubSection MySection> extraSections();
-  
-  static Map<String, @SubSection MySection> defaultExtraSections(MySection defaultMySection /* optional parameter, see @DefaultObject javadoc */) {
-    return Map.of("key", defaultMySection);
-  }
+    @SubSection
+    MySection mySubSection();
+
+    interface MySection {
+        default boolean hello() {
+            return true;
+        }
+    }
 }
 ```
 
-## Other Annotations
+Example using the annotation on a generic parameter:
 
-### @ConfSerialisers and @ConfValidator
+```java
+public interface MyConfig {
 
-Both these annotations take a class or classes as an argument. DazzleConf will instantiate the target classes using either a static `getInstance()` method (if it exists) or the public no-arg constructor.
+    interface MySection {
+        default boolean hello() {
+            return true;
+        }
+    }
 
-*ConfSerialiser* is placed on a configuration interface and specifies classes implementing *ValueSerialiser*. ValueSerialiser is to be used for implementing custom types; it is concerned with deserialisation and serialisation. URLValueSerialiser is one usable implementation serving as a good example. All the ValueSerialisers instantiated by *ConfSerialiser* will apply to the configuration entries in that configuration interface which the annotation is placed on. Note that nested config sections do not "inherit" this annotation.
+    default Map<String, @SubSection MySection> extraSections() {
+        return Map.of("key", new MySection() {
+            @Override
+            public boolean hello() {
+                return false;
+            }
+        });
+    }
+}
+```
 
-*ConfValidator* is placed on a configuration entry and specifies a single class implementing *ValueValidator* applying to the entry. *ValueValidator* is designed to validate a value once it has been deserialised. Usually, you want to design your configuration such that you do not need a ValueValidator, but sometimes it is necessary.
+### @StringDefault
 
-### Range annotations
+A default value-providing annotation. If you prefer, you can use this annotation as an alternative to `default` methods. The annotation also lets you differentiate between defaults-as-defaults and defaults-as-substitutes for missing values.
 
-@CollectionSize limits the size of a collection. Minimum and maximum can be specified.
+### @ByteDefault, @ShortDefault, @IntegerDefault, @LongDefault, @FloatDefault, @DoubleDefault
 
-@IntegerRange and @NumericRange are similar, limiting the range of a numeric type. Both annotations are conceptually the same, and both can be used for any numeric type. The only difference is @IntegerRange specifies the minimum and maximum as a `long`, whereas @NumericRange takes `double`.
+These annotations have a similar function to `StringDefault`. A default annotation exists for primitive numeric type, and currently, you have to use the annotation corresponding to the type you're using. Mixing is not allowed.
+
+### @ByteRange, @ShortRange, @IntegerRange, @LongRange, @FloatRange, @DoubleRange
+
+One range annotation exists for each numeric primitive. Currently, you have to use the range annotation corresponding to the type you're using.
+
+## Method Annotations
+
+### @CallableFn
+
+This annotation tells the library *not* to treat a method as a configuration entry.
+
+Default methods annotated with `@CallableFn` are left as their default implementation (the library won't implement them), and they can call other methods on the interface as usual.
+
+### @Comments
+
+Adds comments to a configuration entry. You can specify the annotation multiple times, either to add multiple comments, or to specify different locations.
+
+```java
+@Comments("I don't know")
+@Comments("What this means")
+@Comments({"What am I doing?", "Writing code..."}) // You can also use brackets to specify multiple lines
+@Comments(value = "This comment is separate and will be placed below", location = CommentLocation.BELOW)
+int numberOfHello();
+```
+
+These annotations do not guarantee comments will be written to the underlying configuration format. For example, HOCON doesn't support `CommentLocation.BELOW`, so if you use it, you won't see the comment appear in the file.
+
+## Class Annotations
+
+### @Comments
+
+This annotation can also be used on the top-level configuration section. If so, it lets you define a comment header (for the whole document) or the footer likewis.
+
+If used on a class other than the top-level configuration interface, `@Comments` will associate the comment data with all uses of that type as a return type.

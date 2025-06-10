@@ -160,7 +160,7 @@ public class MigrationTest {
         assertEquals("goodbye", defaultValues.hello());
         assertEquals('y', defaultValues.affirmative());
         verify(updateListener).migrationSkip(migration, List.of(dummyError));
-        verify(updateListener).loadedDefaults();
+        verify(updateListener).wroteDefaults();
         verifyNoInteractions(dummyTransition);
     }
 

@@ -19,6 +19,8 @@
 
 package space.arim.dazzleconf;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -27,6 +29,7 @@ import space.arim.dazzleconf2.Configuration;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.*;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.UpdateListener;
 import space.arim.dazzleconf2.engine.UpdateReason;
 
@@ -52,6 +55,21 @@ public class ConfigureTest {
         default char affirmative() {
             return 'y';
         }
+    }
+
+    @BeforeEach
+    public void setup() {
+        lenient().when(backend.meta()).thenReturn(new Backend.Meta() {
+            @Override
+            public boolean supportsComments(boolean documentLevel, boolean reading, @NonNull CommentLocation location) {
+                return true;
+            }
+
+            @Override
+            public boolean supportsOrder(boolean reading) {
+                return true;
+            }
+        });
     }
 
     @Test
@@ -83,7 +101,7 @@ public class ConfigureTest {
         assertEquals('y', defaultValues.affirmative());
 
         // Check update listener
-        verify(updateListener).loadedDefaults();
+        verify(updateListener).wroteDefaults();
         verifyNoMoreInteractions(updateListener);
 
         // Check the data that was written back

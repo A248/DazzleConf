@@ -29,6 +29,7 @@ import space.arim.dazzleconf2.backend.DefaultKeyMapper;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.backend.Printable;
+import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.LoadListener;
 import space.arim.dazzleconf2.engine.TypeLiaison;
 import space.arim.dazzleconf2.engine.UpdateListener;
@@ -110,7 +111,7 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     @Override
-    public @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadOptions readOptions) {
+    public @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadWithUpdateOptions readOptions) {
         Objects.requireNonNull(dataTree, "dataTree");
         Objects.requireNonNull(readOptions, "readOptions");
         return definition.readWithUpdate(dataTree, readOptions);
@@ -131,16 +132,24 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     @Override
     public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree, @NonNull LoadListener loadListener) {
-        KeyMapper keyMapper = this.keyMapper;
-        if (keyMapper == null) keyMapper = new DefaultKeyMapper();
-        return readFrom(dataTree, new ReadOpts(loadListener, keyMapper));
+        KeyMapper keyMapper = this.keyMapper != null ? this.keyMapper : new DefaultKeyMapper();
+        return readFrom(dataTree, new ReadOptions() {
+            @Override
+            public @NonNull LoadListener loadListener() {
+                return loadListener;
+            }
+
+            @Override
+            public @NonNull KeyMapper keyMapper() {
+                return keyMapper;
+            }
+        });
     }
 
     @Override
     public void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree) {
-        KeyMapper keyMapper = this.keyMapper;
-        if (keyMapper == null) keyMapper = new DefaultKeyMapper();
-        writeTo(config, dataTree, new WriteOpts(keyMapper));
+        KeyMapper keyMapper = this.keyMapper != null ? this.keyMapper : new DefaultKeyMapper();
+        writeTo(config, dataTree, () -> keyMapper);
     }
 
     @Override
@@ -159,7 +168,7 @@ final class BuiltConfig<C> implements Configuration<C> {
         boolean updated;
 
         @Override
-        public void loadedDefaults() {}
+        public void wroteDefaults() {}
 
         @Override
         public void migratedFrom(@NonNull Migration<?, ?> migration) {}
@@ -181,8 +190,8 @@ final class BuiltConfig<C> implements Configuration<C> {
             }
 
             @Override
-            public void loadedDefaults() {
-                delegate.loadedDefaults();
+            public void wroteDefaults() {
+                delegate.wroteDefaults();
             }
 
             @Override
@@ -205,29 +214,17 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     private LoadResult<C> configureWith0(@NonNull CachedBackend backend, @Nullable UpdateListener updateListener) {
-
         // 0. Setup
         Layout layout = getLayout();
         RecordUpdates recordUpdates = (updateListener == null) ?
                 new RecordUpdates() : new RecordUpdates.WithDelegate(updateListener);
         KeyMapper keyMapper = (this.keyMapper != null) ? this.keyMapper : backend.recommendKeyMapper();
         Objects.requireNonNull(keyMapper, "Backend returned null key mapper");
-        ErrorContext.Source errorSource = new LoadError.Factory() {
-            @Override
-            public @NonNull ErrorContext buildError(@NonNull Printable message) {
-                return new LoadError(message, libraryLang);
-            }
-
-            @Override
-            public @NonNull LibraryLang getLibraryLang() {
-                return libraryLang;
-            }
-        };
-
+        ErrorContext.Source errorSource = makeErrorSource();
         // 1. Try to migrate if possible
         if (!migrations.isEmpty()) {
             // Build migraton context
-            class MigrateCtx extends LoadError.Factory implements MigrateContext {
+            class MigrateCtx implements MigrateContext {
 
                 @Override
                 public @NonNull Backend mainBackend() {
@@ -240,24 +237,19 @@ final class BuiltConfig<C> implements Configuration<C> {
                 }
 
                 @Override
-                public @NonNull ErrorContext buildError(@NonNull Printable message) {
-                    return new LoadError(message, libraryLang);
-                }
-
-                @Override
-                public @NonNull LibraryLang getLibraryLang() {
-                    return libraryLang;
+                public ErrorContext.@NonNull Source errorSource() {
+                    return errorSource;
                 }
             }
             MigrateCtx migrateCtx = new MigrateCtx();
             // Try all migrations
             for (Migration<?, C> migration : migrations) {
                 LoadResult<C> attempt = migration.tryMigrate(migrateCtx);
-                C migrated;
-                if (attempt.isSuccess() && (migrated = attempt.getOrThrow()) != null) {
+                if (attempt.isSuccess()) {
+                    C migrated = attempt.getOrThrow();
                     // Update the backend with the migrated value
                     DataTree.Mut migratedData = new DataTree.Mut();
-                    writeTo(migrated, migratedData, new WriteOpts(keyMapper));
+                    writeTo(migrated, migratedData, () -> keyMapper);
                     backend.write(new Backend.Document() {
                         @Override
                         public @NonNull CommentData comments() {
@@ -281,7 +273,7 @@ final class BuiltConfig<C> implements Configuration<C> {
             recordUpdates.updated = false;
         }
         // 2. Load configuration
-        LoadResult<Backend.@Nullable Document> read = backend.read(() -> errorSource);
+        LoadResult<Backend.@Nullable Document> read = backend.read(errorSource);
         if (read.isFailure()) {
             return LoadResult.failure(read.getErrorContexts());
         }
@@ -290,7 +282,7 @@ final class BuiltConfig<C> implements Configuration<C> {
             // 3. Write defaults if necessary
             C defaults = loadDefaults();
             DataTree.Mut defaultData = new DataTree.Mut();
-            writeTo(defaults, defaultData, new WriteOpts(keyMapper));
+            writeTo(defaults, defaultData, () -> keyMapper);
             backend.write(new Backend.Document() {
                 @Override
                 public @NonNull CommentData comments() {
@@ -302,21 +294,52 @@ final class BuiltConfig<C> implements Configuration<C> {
                     return defaultData;
                 }
             });
-            recordUpdates.loadedDefaults();
+            recordUpdates.wroteDefaults();
             return LoadResult.of(defaults);
         }
         DataTree.Mut updatableTree = document.data().intoMut();
-        LoadResult<C> loadResult = readWithUpdate(updatableTree, new ReadOpts(recordUpdates, keyMapper));
+        Backend.Meta backendMeta = backend.meta();
+        LoadResult<C> loadResult = readWithUpdate(updatableTree, new ReadWithUpdateOptions() {
+
+            @Override
+            public @NonNull LoadListener loadListener() {
+                return recordUpdates;
+            }
+
+            @Override
+            public @NonNull KeyMapper keyMapper() {
+                return keyMapper;
+            }
+
+            @Override
+            public boolean writeEntryComments(@NonNull CommentLocation location) {
+                return refreshComments(backendMeta, false, location);
+            }
+        });
         if (loadResult.isSuccess() && recordUpdates.updated) {
-            // 4. Update if necessary: preserves order thanks to DataTree's order guarantees
+            // 4. Update if necessary
             backend.write(new Backend.Document() {
+                // Preserve comments if possible, or refresh them from the layout
                 @Override
                 public @NonNull CommentData comments() {
-                    return document.comments();
+                    CommentData fromLayout = getLayout().getComments();
+                    CommentData current = document.comments();
+                    for (CommentLocation location : CommentLocation.values()) {
+                        if (refreshComments(backendMeta, true, location)) {
+                            current = current.setAt(location, fromLayout.getAt(location));
+                        }
+                    }
+                    return current;
                 }
 
                 @Override
                 public @NonNull DataTree data() {
+                    if (backendMeta.supportsOrder(true)) {
+                        // Preserves order thanks to DataTree's order guarantees
+                    } else if (backendMeta.supportsOrder(false)) {
+                        // Supports writing order, but not reading it. So, we need to sort the data tree
+                        // TODO: Figure out how to do this with nested sub-sections
+                    }
                     return updatableTree;
                 }
             });
@@ -324,25 +347,28 @@ final class BuiltConfig<C> implements Configuration<C> {
         return loadResult;
     }
 
+    private static boolean refreshComments(Backend.Meta backendMeta, boolean documentLevel, CommentLocation location) {
+        boolean supportsReading = backendMeta.supportsComments(documentLevel, true, location);
+        boolean supportsWriting = backendMeta.supportsComments(documentLevel, false, location);
+        return !supportsReading && supportsWriting;
+    }
+
     @Override
     public @NonNull C configureOrFallback(@NonNull Backend backend, @NonNull ErrorPrint errorPrint) {
-        LoadResult<C> result = configureWith(backend);
-        if (result.isSuccess()) {
-            return result.getOrThrow();
-        }
-        errorPrint.onError(result.getErrorContexts());
-        return loadDefaults();
+        return handleErrors(configureWith(backend), errorPrint);
     }
 
     @Override
     public @NonNull C configureOrFallback(@NonNull Backend backend, @NonNull UpdateListener updateListener,
                                           @NonNull ErrorPrint errorPrint) {
-        LoadResult<C> result = configureWith(backend);
+        return handleErrors(configureWith(backend, updateListener), errorPrint);
+    }
+
+    private C handleErrors(LoadResult<C> result, ErrorPrint errorPrint) {
         if (result.isSuccess()) {
             return result.getOrThrow();
         }
         errorPrint.onError(result.getErrorContexts());
-        updateListener.loadedDefaults();
         return loadDefaults();
     }
 
@@ -351,5 +377,20 @@ final class BuiltConfig<C> implements Configuration<C> {
         ReloadShell<C> reloadShell = getInstantiator().generateShell(getType().getRawType());
         reloadShell.setCurrentDelegate(initialValue);
         return reloadShell;
+    }
+
+    @Override
+    public ErrorContext.@NonNull Source makeErrorSource() {
+        return new LoadError.Factory() {
+            @Override
+            public @NonNull ErrorContext buildError(@NonNull Printable message) {
+                return new LoadError(message, libraryLang);
+            }
+
+            @Override
+            public @NonNull LibraryLang getLibraryLang() {
+                return libraryLang;
+            }
+        };
     }
 }

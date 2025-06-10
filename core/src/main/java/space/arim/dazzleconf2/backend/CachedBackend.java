@@ -21,8 +21,8 @@ package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.engine.CommentLocation;
 
 import java.util.Objects;
 
@@ -49,11 +49,11 @@ public final class CachedBackend implements Backend {
     }
 
     @Override
-    public @NonNull LoadResult<@Nullable Document> read(@NonNull ReadRequest readRequest) {
+    public @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource) {
         if (currentDocument != null) {
             return LoadResult.of(currentDocument);
         }
-        LoadResult<Document> read = delegate.read(readRequest);
+        LoadResult<Document> read = delegate.read(errorSource);
         if (read.isSuccess()) {
             currentDocument = read.getOrThrow();
         }
@@ -69,12 +69,12 @@ public final class CachedBackend implements Backend {
     }
 
     @Override
-    public boolean supportsComments(boolean documentLevel, @NonNull CommentLocation location) {
-        return delegate.supportsComments(documentLevel, location);
+    public @NonNull KeyMapper recommendKeyMapper() {
+        return delegate.recommendKeyMapper();
     }
 
     @Override
-    public @NonNull KeyMapper recommendKeyMapper() {
-        return delegate.recommendKeyMapper();
+    public @NonNull Meta meta() {
+        return delegate.meta();
     }
 }

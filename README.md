@@ -1,105 +1,151 @@
 
 # DazzleConf [![Maven Central](https://img.shields.io/maven-central/v/space.arim.dazzleconf/dazzleconf-parent?color=brightgreen&label=maven%20central)](https://mvnrepository.com/artifact/space.arim.dazzleconf/dazzleconf-core) [![Javadoc](https://javadoc.io/badge2/space.arim.dazzleconf/dazzleconf-core/javadoc.svg)](https://javadoc.io/doc/space.arim.dazzleconf/dazzleconf-core) [![discord](https://img.shields.io/discord/784154359067443280?label=discord)](https://discord.gg/es9EuHqqNr)
 
-Prepare to be dazzled
-
-## Introduction
-
-It's here. The moment you've been waiting for.
-
-A type-safe, thread-safe, fail-fast, user-oriented, easy to setup, extensible and flexible configuration library.
+A sleek, usable, and fully-featured configuration library. Supports HOCON, TOML, and YAML.
 
 ### Objectives
 
-* *Eliminate* stringly-typed spaghetti such as `getString("key")` or `getAsInt("section.subsection")`. Use your configuration just as you would any other immutable bean.
-
-* *Write defaults once* and never bother with them again.
-
-* *Validate configuration* in all manners, and fail-fast with informative messages.
-
-* *Easily update* old configurations with the latest keys. No need to version config files.
-
-* *Pave the way* for users with incredibly flexible type conversion.
-
-* *Take advantage of* enums, collections, and nested configuration sections.
+* Extensible and user-friendly. All types use the same framework, and library users can easily add new types.
+* Type safety. Configuration is an immutable interface.
+* Automatically update old configurations with the latest keys. No need to version config files.
+* No NULLs. No public mutable fields. No stringly-typed spaghetti such as `getString("key")`.
+* Informative, helpful error reports. Messages that human beings (even non-programmers!) can understand. Reports key path and line number, and library error messages can even be translated depending on the locale. 
 
 ### Features
 
-* Lightweight, simple, well-tested library.
-* Immutable and thread safe by design. Values loaded once and never modified thereafter.
-* Readable for programmers and users. Annotation-driven and supports comments.
-* Configuration objects are format-independent.
-* Support for YAML, HOCON, and JSON out of the box, and allows easy extension with more formats.
-* Identify the precise cause of user errors.
-* Use a decoupled and testable config interface.
-
-## Usage
-
-### Example
+DazzleConf is a clean, well-tested library to meet your configuration needs. It lets you use an interface, define default values and return types in a type-safe fashion.
+The API has both high-level convenience and low-level strength, which makes it quick to get running:
 
 ```java
-@ConfSerialisers(URLSerialiser.class)
-public interface MyConfig {
+Configuration<DatabaseConfig> configuration = Configuration.defaultBuilder(DatabaseConfig.class).build();
+Backend backend = new YamlBackend(new PathRoot(Path.of("config.yml")));
+DatabaseConfig config = configuration.configureOrFallback(backend, new StandardErrorPrint(output -> output.printTo(System.out)));
+// DONE! You now have a user-friendly, type-safe configuration system
+```
 
-  @DefaultInteger(3)
-  int someInteger();
+This library is covered by rigorous testing, and it should have no bugs. Starting with version 2.0, anyone who finds **two bugs** in the core library will be featured in this README.md.
+
+### Usage Example
+
+Here's a more complete example.
+
+```java
+public interface DatabaseConfig {
   
-  @ConfKey("display.user-message")
-  @ConfComments("The message shown when a certain thing happens")
-  @DefaultString("Hello user")
-  String userMessage();
-  
-  @ConfKey("display.enable-user-message")
-  @DefaultBoolean(true)
-  boolean enableUserMessage();
+  @Comments("Retry count for contacting the database")
+  default int numberOfTries() { return 3; }
   
   @IntegerRange(min = 1, max = Integer.MAX_VALUE - 1)
-  @DefaultLong(10)
-  long boundedNumeric();
+  default long boundedNumeric() { return 10; }
   
-  @DefaultString("ONE")
-  MyEnum enumValue();
-  
-  @SubSection
-  NestedSection nestedConfigSection();
+  default MyEnum enumValue() {
+      return MyEnum.ONE;
+  }
 
-  @DefaultString("https://github.com")
+  enum MyEnum {
+      ONE, 
+      TWO
+  }
+
+  @SubSection Display display();
+
+  interface Display {
+
+      @Comments("The message shown when a certain thing happens")
+      default String userMessage() {
+          return "Hello user";
+      }
+
+      default boolean enableUserMessage() { return true; }
+
+      @Comments("Every annotation shown above works here too")
+      default String flexibility() {
+          return "Also, methods are inherited if this interface extends another, enabling inheritable config interfaces";
+      }
+
+  }
+  
+  @Comments("Custom objects are supported - and can make use of existing annotations")
+  @DefaultString("https://github.com") // Because who wants to construct URL directly?
   URL validUrl();
-
-}
-
-public enum MyEnum {
-  ONE,
-  TWO
-}
-
-
-public interface NestedSection {
-
-  @ConfComments("Every annotation shown above works here too")
-  @DefaultString("Also, methods are inherited if this interface extends another, enabling inheritable config interfaces")
-  String flexibility();
 
 }
 ```
 
-When using the YAML configuration format, the following result can be generated by writing the default configuration:
+Let's use the YAML backend and write the default values.
+
+```java
+Configuration<DatabaseConfig> configuration = Configuration.defaultBuilder(DatabaseConfig.class).build();
+// Using configureWith() will automatically write the default configuration if it doesn't exist
+LoadResult<DatabaseConfig> loadResult = configuration.configureWith();
+DatabaseConfig databaseConfig = loadResult.getOrThrow(); // Can substitute better error handling
+```
+
+When using the YAML backend, the following result is generated by writing the default configuration.
+
+Notice how keys are mapped to `lower-snake-case`. This happens automatically depending on the backend.
 
 ```yaml
-someInteger: 3
+some-integer: 3
+bounded-numeric: 10
+enum-value: 'ONE'
 display:
   # The message shown when a certain thing happens
   user-message: 'Hello user'
   enable-user-message: true
-boundedNumeric: 10
-enumValue: 'ONE'
-nestedConfigSection:
   # Every annotation shown above works here too
   flexibility: 'Also, methods are inherited if this interface extends another, enabling inheritable config interfaces'
-validUrl: 'https://github.com'
+valid-url: 'https://github.com'
 ```
 
 The same document can be reparsed to an instance of the configuration interface. Type and constraint validation is performed when config values are parsed and loaded, not when they are retrieved - having an instance of the config interface is enough to ensure the configuration is valid.
+
+### Configuration formats
+
+We offer multiple configuration formats depending on your preference. Simply depend on the artifact matching the format you want.
+
+| Format | Reference                                                            | Artifact           | Comment Support |
+|--------|----------------------------------------------------------------------|--------------------|-----------------|
+| HOCON  | [HOCON.md](https://github.com/lightbend/config/blob/master/HOCON.md) | `dazzleconf-hocon` | Writing only    |
+| TOML   | [TOML 1.0 spec](https://toml.io/en/v1.0.0)                           | `dazzleconf-toml`  | Full            |
+| YAML   | [YAML 1.2 spec](https://yaml.org/spec/1.2.2/)                        | `dazzleconf-yaml`  | Full            |
+
+### Full Feature List
+
+* Serializers can depend on each other.
+* Full generics support. Support for infinitely nested generics, collections, configuration subsections, etc.
+  * `List<List<List<List<MyType>>>>` is fully usable, requiring no extra code.
+  * Library users can write their own type like `MyGeneric<T>`, extract the generic parameter T, and get a serializer for T.
+  * Anything you can imagine is possible. Even generic parameters on the configuration itself are supported. For example, `MyConfig<V>` with a method `V myOption()`.
+* Immutable and thread safe by design.
+  * Values loaded once and never modified thereafter.
+  * Loading is fail-fast: if a configured value from the text file is not interpretable as the desired return type, it is rejected.
+* Reading and writing:
+  * Read from file. ✔️
+  * Write to file. ✔️
+  * Combined read/write operation, to update existing data. ✔️
+  * Can write any object implementing the configurtion interface (not just implementations by the library).
+* Migrations:
+  * Detect old versions, and migrate safely to latest version.
+  * Lets you change keys, move keys around, and merge or separate sections.
+  * Lets you migrate from other configuration libraries when their files exist on disk.
+* Notifications. Caller can listen for:
+  * When data is updated. E.g. `"3" -> 3`.
+  * When missing keys are added.
+  * If using migrations, when migrations are triggered.
+* Excellent and translatable error messages:
+  * Select user locale, or auto-detect default locale.
+  * Community can provide translations of all messages.
+  * If you made a mistake as a developer, error message includes information needed to fix the problem.
+* Backends:
+  * HOCON, TOML, and YAML implemented so far.
+  * No external dependencies: they are shaded in.
+* Low-level `DataTree` API: 
+  * Can read and write data, independent of the backend.
+  * Can read and write comments if the backend supports it, including document-level header and footer.
+  * Comments can be placed above, below, or inline.
+
+## Extra
 
 ### Requirements
 
