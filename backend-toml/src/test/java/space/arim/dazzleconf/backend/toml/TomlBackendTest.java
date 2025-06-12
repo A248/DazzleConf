@@ -17,31 +17,23 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.reflect;
+package space.arim.dazzleconf.backend.toml;
 
-import org.apiguardian.api.API;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+import space.arim.dazzleconf.backend.BackendTest;
+import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.StringRoot;
 
-/**
- * A marker value used for {@link MethodYield} that instructs the {@link Instantiator} to call the default method.
- * <p>
- * Equality on this object is not specified. Usage should test for it using <code>instanceof</code> checks.
- *
- */
-@API(status = API.Status.MAINTAINED)
-public final class InvokeDefaultFunction {
-
-    /**
-     * Creates
-     */
-    public InvokeDefaultFunction() {}
-
+@ExtendWith(MockitoExtension.class)
+public class TomlBackendTest extends BackendTest {
     @Override
-    public boolean equals(Object other) {
-        return other instanceof InvokeDefaultFunction;
+    protected Backend createBackend() {
+        return new TomlBackend(new StringRoot(""));
     }
 
     @Override
-    public int hashCode() {
-        return InvokeDefaultFunction.class.hashCode();
+    protected boolean nonStringKeys() {
+        return false;
     }
 }

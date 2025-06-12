@@ -22,9 +22,7 @@ package space.arim.dazzleconf.backend.yaml;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import space.arim.dazzleconf.TestingErrorSource;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
@@ -36,11 +34,11 @@ import space.arim.dazzleconf2.engine.CommentLocation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@ExtendWith(MockitoExtension.class)
 public class CommentsTest {
 
     private final StringRoot stringRoot = new StringRoot("");
     private final YamlBackend yamlBackend = new YamlBackend(stringRoot);
+    private final ErrorContext.Source errorSource = new TestingErrorSource().makeErrorSource();
 
     @BeforeEach
     public void clearData() {
@@ -89,7 +87,7 @@ public class CommentsTest {
     }
 
     @Test
-    public void roundTripHeader(@Mock ErrorContext.Source errorSource) {
+    public void roundTripHeader() {
         CommentData header = CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "Hello", "There", "World")
                 .setAt(CommentLocation.BELOW, "Below");
@@ -149,7 +147,7 @@ public class CommentsTest {
     }
 
     @Test
-    public void readEntryComments(@Mock ErrorContext.Source errorSource) {
+    public void readEntryComments() {
         stringRoot.writeString("""
                 sub:
                   plain: 1
@@ -227,7 +225,7 @@ public class CommentsTest {
     }
 
     @Test
-    public void readDistinguishSubSectionFromEntryComments(@Mock ErrorContext.Source errorSource) {
+    public void readDistinguishSubSectionFromEntryComments() {
         stringRoot.writeString("""
                 sub:
                   plain: 1

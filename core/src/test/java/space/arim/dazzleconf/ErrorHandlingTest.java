@@ -70,8 +70,18 @@ public class ErrorHandlingTest {
             }
 
             @Override
-            public boolean supportsOrder(boolean reading) {
+            public boolean preservesOrder(boolean reading) {
                 return true;
+            }
+
+            @Override
+            public boolean writesFloatAsDouble() {
+                return false;
+            }
+
+            @Override
+            public boolean allKeysAreStrings() {
+                return false;
             }
         });
     }

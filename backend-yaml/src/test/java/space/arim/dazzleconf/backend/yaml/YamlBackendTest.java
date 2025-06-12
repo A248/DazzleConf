@@ -24,6 +24,7 @@ import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.StringRoot;
 
 public class YamlBackendTest extends BackendTest {
+
     @Override
     protected Backend createBackend() {
         return new YamlBackend(new StringRoot(""));

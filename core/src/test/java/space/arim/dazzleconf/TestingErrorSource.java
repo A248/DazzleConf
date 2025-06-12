@@ -17,31 +17,17 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.reflect;
+package space.arim.dazzleconf;
 
-import org.apiguardian.api.API;
+import space.arim.dazzleconf2.ConfigurationBuilder;
+import space.arim.dazzleconf2.ErrorContext;
+import space.arim.dazzleconf2.reflect.TypeToken;
 
-/**
- * A marker value used for {@link MethodYield} that instructs the {@link Instantiator} to call the default method.
- * <p>
- * Equality on this object is not specified. Usage should test for it using <code>instanceof</code> checks.
- *
- */
-@API(status = API.Status.MAINTAINED)
-public final class InvokeDefaultFunction {
+public final class TestingErrorSource {
 
-    /**
-     * Creates
-     */
-    public InvokeDefaultFunction() {}
+    public interface ForErrorPurposes {}
 
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof InvokeDefaultFunction;
-    }
-
-    @Override
-    public int hashCode() {
-        return InvokeDefaultFunction.class.hashCode();
+    public ErrorContext.Source makeErrorSource() {
+        return new ConfigurationBuilder<>(new TypeToken<ForErrorPurposes>() {}).build().makeErrorSource();
     }
 }

@@ -71,7 +71,7 @@ public @interface Comments {
      * {@link DataEntry#withComments(CommentLocation, List)} using the given location, merging with existing comments
      * at that location as necessary.
      * <p>
-     * If no location is specified, the default is {@link CommentLocation#ABOVE}.
+     * If no location is specified, the default is {@code ABOVE}.
      *
      * @return where to place the comments
      */

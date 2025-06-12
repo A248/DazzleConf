@@ -27,6 +27,7 @@ import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.LabelSorting;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 import space.arim.dazzleconf2.engine.UpdateReason;
@@ -295,7 +296,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         // Updating values is based on calls to deserializeUpdate
         SerializeOutput outputForUpdate = new SerOutput(readOptions.keyMapper(), modifyComments);
 
-        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree.Mut>() {
+        LoadResult<C> loadResult = readingNexus(dataTree, readOptions, new HowToUpdate<DataTree.Mut>() {
             @Override
             public <V> void insertMissingValue(DataTree.Mut dataTree, String mappedKey,
                                                TypeSkeleton.MethodNode<V> methodNode, V missingValue) {
@@ -326,6 +327,10 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                 }
             }
         });
+        if (loadResult.isSuccess()) {
+            outputSort(readOptions, dataTree);
+        }
+        return loadResult;
     }
 
     @Override
@@ -344,6 +349,27 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                     entry = modifyComments.applyTo(entry, methodNode.comments);
                 }
                 dataTree.set(mappedKey, entry);
+            }
+        }
+        outputSort(writeOptions, dataTree);
+    }
+
+    private void outputSort(WriteOptions writeOptions, DataTree.Mut dataTree) {
+        LabelSorting outputSorting = writeOptions.sorting();
+        if (outputSorting.isEnabled()) {
+            String[] sortedLabels = this.labels.clone();
+            String[] sortedKeys = new String[sortedLabels.length];
+            DataEntry[] sortedEntries = new DataEntry[sortedLabels.length];
+
+            Arrays.sort(sortedLabels, outputSorting.labelComparator());
+            for (int n = 0; n < sortedLabels.length; n++) {
+                String mappedKey = writeOptions.keyMapper().labelToKey(sortedLabels[n]).toString();
+                sortedKeys[n] = mappedKey;
+                sortedEntries[n] = dataTree.get(mappedKey);
+            }
+            dataTree.clear();
+            for (int n = 0; n < sortedLabels.length; n++) {
+                dataTree.set(sortedKeys[n], sortedEntries[n]);
             }
         }
     }

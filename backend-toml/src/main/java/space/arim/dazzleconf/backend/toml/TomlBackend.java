@@ -21,45 +21,261 @@ package space.arim.dazzleconf.backend.toml;
 
 import io.github.wasabithumb.jtoml.JToml;
 import io.github.wasabithumb.jtoml.JToml_Access;
+import io.github.wasabithumb.jtoml.comment.Comment;
+import io.github.wasabithumb.jtoml.comment.CommentPosition;
+import io.github.wasabithumb.jtoml.comment.Comments;
 import io.github.wasabithumb.jtoml.document.TomlDocument;
+import io.github.wasabithumb.jtoml.except.TomlException;
+import io.github.wasabithumb.jtoml.except.TomlIOException;
+import io.github.wasabithumb.jtoml.except.parse.TomlLocalParseException;
+import io.github.wasabithumb.jtoml.key.TomlKey;
 import io.github.wasabithumb.jtoml.option.JTomlOption;
 import io.github.wasabithumb.jtoml.option.JTomlOptions;
+import io.github.wasabithumb.jtoml.value.TomlValue;
+import io.github.wasabithumb.jtoml.value.array.TomlArray;
+import io.github.wasabithumb.jtoml.value.primitive.TomlPrimitive;
+import io.github.wasabithumb.jtoml.value.table.TomlTable;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
+import space.arim.dazzleconf2.backend.CommentData;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.ReadableRoot;
 import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
 import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 
+import static space.arim.dazzleconf2.backend.Printable.preBuilt;
+
+/**
+ * A backend for TOML.
+ * <p>
+ * <b>Comments</b>
+ * <p>
+ * This backend does not support comments. The backing library (which is not exposed) has yet to add a comment reading
+ * or writing API. See <a href="https://github.com/WasabiThumb/jtoml/issues/11">WasabiThumb/jtoml issue 11</a>.
+ * <p>
+ * <b>Types</b>
+ * <p>
+ *
+ * TOML does not have a concept of null, so no special handling is needed in this {@code Backend} implementation.
+ */
 public final class TomlBackend implements Backend {
 
     private final ReadableRoot dataRoot;
+    private final URL syntaxLinter;
+
     private final JToml jToml;
 
+    /**
+     * Creates from a readable data root. For example, to load from a file:
+     * <pre>
+     *     {@code
+     *         Backend tomlBackend = new TomlBackend(new PathRoot(Path.of("config.toml")));
+     *         Configuration<MyConfig> configuration = Configuration.defaultBuilder(MyConfig.class).build();
+     *         LoadResult<MyConfig> loaded = configuration.configureWith(tomlBackend);
+     *     }
+     * </pre>
+     *
+     * @param dataRoot the data root from which to read and write
+     */
     public TomlBackend(@NonNull ReadableRoot dataRoot) {
         this.dataRoot = Objects.requireNonNull(dataRoot);
+        this.syntaxLinter = defaultSyntaxLinter();
 
-        JTomlOptions jTomlOptions = JTomlOptions.builder().set(JTomlOption.WRITE_EMPTY_TABLES, true).build();
+        JTomlOptions jTomlOptions = JTomlOptions.builder()
+                .set(JTomlOption.READ_COMMENTS, true)
+                .set(JTomlOption.WRITE_EMPTY_TABLES, true)
+                .set(JTomlOption.WRITE_COMMENTS, true)
+                .build();
         jToml = new JToml_Access(jTomlOptions).getInstance();
+    }
+
+    private static URL defaultSyntaxLinter() {
+        try {
+            return new URI("https", "toolbox.helpch.at", "/validators/toml", null).toURL();
+        } catch (URISyntaxException | MalformedURLException ex) {
+            throw new AssertionError(ex);
+        }
     }
 
     @Override
     public @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource) {
-        dataRoot.openReader(reader -> {
-            jToml.read(reader);
-            return null;
+        TomlDocument tomlDocument;
+        try {
+            if (!dataRoot.dataExists()) {
+                return LoadResult.of(null);
+            }
+            tomlDocument = dataRoot.openReader(jToml::read);
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        } catch (TomlIOException ioEx) {
+            throw new UncheckedIOException(ioEx.getCause());
+        } catch (TomlLocalParseException parseEx) {
+            LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
+            ErrorContext error = errorSource.buildError(preBuilt(libraryLang.failed()));
+            error.addDetail(ErrorContext.BACKEND_MESSAGE, preBuilt(parseEx.getMessage()));
+            error.addDetail(ErrorContext.SYNTAX_LINTER, syntaxLinter);
+            error.addDetail(ErrorContext.LINE_NUMBER, parseEx.getLineNumber());
+            return LoadResult.failure(error);
+        } catch (TomlException parseEx) {
+            LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
+            ErrorContext error = errorSource.buildError(preBuilt(libraryLang.failed()));
+            error.addDetail(ErrorContext.BACKEND_MESSAGE, preBuilt(parseEx.getMessage()));
+            return LoadResult.failure(error);
+        }
+        return LoadResult.of(new Document() {
+            @Override
+            public @NonNull CommentData comments() {
+                return getComments(tomlDocument);
+            }
+
+            @Override
+            public @NonNull DataTree data() {
+                return dataTreeFromToml(tomlDocument);
+            }
         });
-        return null;
+    }
+
+    private DataTree dataTreeFromToml(TomlTable tomlTable) {
+        DataTree.Mut dataTree = new DataTree.Mut();
+        for (TomlKey tomlKey : tomlTable.keys(false)) {
+            Iterator<String> keyIter = tomlKey.iterator();
+            String key = keyIter.next();
+            if (keyIter.hasNext()) throw new IllegalStateException("TomlTable#keys should each have length of 1");
+
+            TomlValue tomlValue = tomlTable.get(tomlKey);
+            assert tomlValue != null;
+            dataTree.set(key, entryFromToml(tomlValue));
+        }
+        return dataTree;
+    }
+
+    private DataEntry entryFromToml(TomlValue tomlValue) {
+        Object value;
+        if (tomlValue.isTable()) {
+            value = dataTreeFromToml(tomlValue.asTable());
+        } else if (tomlValue.isArray()) {
+            TomlArray tomlArray = tomlValue.asArray();
+            List<DataEntry> entryList = new ArrayList<>(tomlArray.size());
+            for (TomlValue tomlElem : tomlArray.toArray()) {
+                entryList.add(entryFromToml(tomlElem));
+            }
+            value = entryList;
+        } else {
+            value = tomlValue.asPrimitive().value();
+        }
+        return new DataEntry(value).withComments(getComments(tomlValue));
+    }
+
+    private CommentData getComments(TomlValue tomlValue) {
+        CommentData commentData = CommentData.empty();
+        for (Comment tomlComment : tomlValue.comments().all()) {
+            CommentPosition tomlPosition = tomlComment.position();
+            CommentLocation location = commentLocationFrom(tomlPosition);
+            commentData = commentData.appendAt(location, tomlComment.content());
+        }
+        return commentData;
     }
 
     @Override
     public void write(@NonNull Document document) {
+        TomlTable tomlTable = dataTreeToToml(document.data());
+        setComments(tomlTable, document.comments());
+        try {
+            dataRoot.openWriter(writer -> {
+                jToml.write(writer, tomlTable);
+                return null;
+            });
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
 
+    private TomlTable dataTreeToToml(DataTree dataTree) {
+        TomlTable tomlTable = TomlTable.create();
+        dataTree.forEach((key, entry) -> {
+            tomlTable.put(key.toString(), entryToToml(entry));
+        });
+        return tomlTable;
+    }
+
+    private TomlArray entryListToToml(List<DataEntry> entryList) {
+        TomlArray tomlArray = TomlArray.create(entryList.size());
+        for (DataEntry dataEntry : entryList) {
+            tomlArray.add(entryToToml(dataEntry));
+        }
+        return tomlArray;
+    }
+
+    private TomlValue entryToToml(DataEntry entry) {
+        Object value = entry.getValue();
+        TomlValue tomlValue;
+        if (value instanceof DataTree) {
+            tomlValue = dataTreeToToml((DataTree) value);
+        }  else if (value instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<DataEntry> castValue = (List<DataEntry>) value;
+            tomlValue = entryListToToml(castValue);
+        } else if (value instanceof Byte || value instanceof Short || value instanceof Integer) {
+            tomlValue = TomlPrimitive.of(((Number) value).intValue());
+        } else if (value instanceof Long) {
+            tomlValue = TomlPrimitive.of((Long) value);
+        } else if (value instanceof Float) {
+            tomlValue = TomlPrimitive.of((Float) value);
+        } else if (value instanceof Double) {
+            tomlValue = TomlPrimitive.of((Double) value);
+        } else if (value instanceof Boolean) {
+            tomlValue = TomlPrimitive.of((Boolean) value);
+        } else if (value instanceof Character) {
+            tomlValue = TomlPrimitive.of(((Character) value).toString());
+        } else if (value instanceof String) {
+            tomlValue = TomlPrimitive.of((String) value);
+        } else {
+            throw new IllegalStateException("Unknown type in data entry " + value);
+        }
+        setComments(tomlValue, entry.getComments());
+        return tomlValue;
+    }
+
+    private void setComments(TomlValue tomlValue, CommentData commentData) {
+        Comments tomlComments = tomlValue.comments();
+        for (CommentPosition tomlPosition : CommentPosition.values()) {
+            CommentLocation location = commentLocationFrom(tomlPosition);
+            List<String> commentsHere = commentData.getAt(location);
+            if (location == CommentLocation.INLINE && commentsHere.size() > 1) {
+                throw new DeveloperMistakeException("Can add at most one inline comment on a toml value");
+            }
+            for (String commentHere : commentsHere) {
+                tomlComments.add(tomlPosition, commentHere);
+            }
+        }
+    }
+
+    private static CommentLocation commentLocationFrom(CommentPosition position) {
+        switch (position) {
+            case PRE: return CommentLocation.ABOVE;
+            case INLINE: return CommentLocation.INLINE;
+            case POST: return CommentLocation.BELOW;
+            default: throw new IncompatibleClassChangeError(
+                    "Unknown" + ' ' +  CommentPosition.class.getSimpleName()+ ' ' + position);
+        }
     }
 
     @Override
@@ -72,12 +288,22 @@ public final class TomlBackend implements Backend {
         return new Meta() {
             @Override
             public boolean supportsComments(boolean documentLevel, boolean reading, @NonNull CommentLocation location) {
+                return true;
+            }
+
+            @Override
+            public boolean preservesOrder(boolean reading) {
                 return false;
             }
 
             @Override
-            public boolean supportsOrder(boolean reading) {
-                return false;
+            public boolean writesFloatAsDouble() {
+                return true;
+            }
+
+            @Override
+            public boolean allKeysAreStrings() {
+                return true;
             }
         };
     }

@@ -36,7 +36,6 @@ import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
@@ -109,7 +108,7 @@ public final class HoconBackend implements Backend {
      * Creates from a readable data root. For example, to load from a file:
      * <pre>
      *     {@code
-     *         Backend hoconBackend = new HoconBackend(new PathRoot(Path.of("config.yml")));
+     *         Backend hoconBackend = new HoconBackend(new PathRoot(Path.of("config.conf")));
      *         Configuration<MyConfig> configuration = Configuration.defaultBuilder(MyConfig.class).build();
      *         LoadResult<MyConfig> loaded = configuration.configureWith(hoconBackend);
      *     }
@@ -133,9 +132,10 @@ public final class HoconBackend implements Backend {
     public @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource) {
         Config loaded;
         try {
-            loaded = dataRoot.openReader(reader -> {
-                return ConfigFactory.parseReader(reader, configParseOptions);
-            });
+            if (!dataRoot.dataExists()) {
+                return LoadResult.of(null);
+            }
+            loaded = dataRoot.openReader(reader -> ConfigFactory.parseReader(reader, configParseOptions));
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         } catch (ConfigException.IO ioEx) {
@@ -156,17 +156,7 @@ public final class HoconBackend implements Backend {
             return LoadResult.failure(error);
         }
         ConfigObject root = loaded.resolve(configResolveOptions).root();
-        return LoadResult.of(new Document() {
-            @Override
-            public @NonNull CommentData comments() {
-                return CommentData.empty();
-            }
-
-            @Override
-            public @NonNull DataTree data() {
-                return dataTreeFromHocon(root);
-            }
-        });
+        return LoadResult.of(Document.simple(dataTreeFromHocon(root)));
     }
 
     private DataTree dataTreeFromHocon(ConfigObject hoconObject) {
@@ -231,22 +221,7 @@ public final class HoconBackend implements Backend {
         private ConfigObject dataTreeToHocon(DataTree dataTree) {
             LinkedHashMap<String, ConfigValue> hoconConfigMap = new LinkedHashMap<>();
             dataTree.forEach((key, entry) -> {
-
-                // 1. Key
-                if (!(key instanceof String)) {
-                    throw new DeveloperMistakeException(
-                            "Error writing key " + key + ". HOCON does not support non-string keys."
-                    );
-                }
-                String keyString = (String) key;
-
-                // 2. Value
-                ConfigValue hoconValue = entryToHocon(entry);
-                // 3. Comments
-                List<String> comments = entry.getComments(CommentLocation.ABOVE);
-                hoconValue = hoconValue.withOrigin(hoconValue.origin().withComments(comments));
-
-                hoconConfigMap.put(keyString, hoconValue);
+                hoconConfigMap.put(key.toString(), entryToHocon(entry));
             });
             return writeHoconAccess.fromMap(hoconConfigMap);
         }
@@ -271,6 +246,8 @@ public final class HoconBackend implements Backend {
             } else {
                 hoconValue = writeHoconAccess.fromScalar(value);
             }
+            List<String> comments = entry.getComments(CommentLocation.ABOVE);
+            hoconValue = hoconValue.withOrigin(hoconValue.origin().withComments(comments));
             return hoconValue;
         }
     }
@@ -290,8 +267,18 @@ public final class HoconBackend implements Backend {
             }
 
             @Override
-            public boolean supportsOrder(boolean reading) {
+            public boolean preservesOrder(boolean reading) {
                 return !reading;
+            }
+
+            @Override
+            public boolean writesFloatAsDouble() {
+                return true;
+            }
+
+            @Override
+            public boolean allKeysAreStrings() {
+                return true;
             }
         };
     }

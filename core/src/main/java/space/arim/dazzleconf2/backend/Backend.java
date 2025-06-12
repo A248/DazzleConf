@@ -228,17 +228,48 @@ public interface Backend {
          * <p>
          * <b>Implications</b>
          * <p>
-         * If order is not supported during reading, entries in a data tree may be read in any order. If not
-         * supported during writing, the serialized format may be written in a different order.
+         * If order is not preserved during reading, entries in a data tree may be read in any order. If not
+         * preserved during writing, the serialized format may be written in a different order.
          * <p>
-         * If order is supported in both contexts, then the backend should preserve a stable iteration order across
+         * If order is preserved in both contexts, then the backend should preserve a stable iteration order across
          * multiple calls to {@code read} and {@code write} using the same data. Loading a data tree should produce an
          * order which remains stable if that same tree is written and re-read at a later point.
          *
          * @param reading true for reading data, false for writing it
          * @return if order is preserved across the reading or writing operation
          */
-        boolean supportsOrder(boolean reading);
+        boolean preservesOrder(boolean reading);
+
+        /**
+         * Whether the backend writes {@code float} values by casting them to {@code double}.
+         * <p>
+         * Some backend formats do not inherently support floats, but the {@code Backend} implementation is required
+         * to write them if they appear.
+         * <p>
+         * <b>Implictions</b>
+         * <p>
+         * If this method returns true, he {@code Backend} will write float values by first casting them to doubles.
+         * Conversion operations may lead to a loss of precision in some cases.
+         *
+         * @return if the backend writes float as doubles
+         */
+        boolean writesFloatAsDouble();
+
+        /**
+         * Whether the backend only recognizes string keys.
+         * <p>
+         * Some backend formats do not support non-string keys, meaning that all keys (no matter what type they appear
+         * to be) will be loaded as strings.
+         * <p>
+         * <b>Implications</b>
+         * <p>
+         * If this method returns true, all keys in a loaded {@code DataTree} will be strings. During writing, if a
+         * non-string key is encountered, the {@code Backend} implementation will convert the key to a string using its
+         * {@code toString()} method.
+         *
+         * @return if the backend loads all keys as strings, and writes them as strings likewise
+         */
+        boolean allKeysAreStrings();
 
     }
 }

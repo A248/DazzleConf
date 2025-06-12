@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2;
 
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.KeyPath;
@@ -58,6 +59,7 @@ public interface ErrorContext {
      * <p>
      * If the backend wishes, it can provide this URL, to an online syntax linter, to help the user check what's wrong.
      */
+    @API(status = API.Status.EXPERIMENTAL)
     Key<URL> SYNTAX_LINTER = new Key<>(LibraryLang::syntaxLinter, (output, value) -> output.append(value.toExternalForm()));
 
     /**

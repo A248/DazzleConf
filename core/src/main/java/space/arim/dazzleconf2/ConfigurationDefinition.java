@@ -28,6 +28,7 @@ import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.LoadListener;
+import space.arim.dazzleconf2.engine.LabelSorting;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 import space.arim.dazzleconf2.reflect.Instantiator;
@@ -75,24 +76,27 @@ public interface ConfigurationDefinition<C> {
         @NonNull CommentData getComments();
 
         /**
-         * Gets the unmapped key set. These are the same as the method names from the configuration interface,
-         * excluding default methods annotated with <code>@CallableFn</code>.
+         * Gets the labels of this layout.
+         * <p>
+         * These are the same as the method names from the configuration interface, excluding default methods annotated
+         * with <code>@CallableFn</code>. Their order will match however this definition orders its entries
          * <p>
          * The returned collection is immutable and ordered according to how this {@code ConfigurationDefinition} orders
-         * its entries. It is unmapped in the sense that a {@code KeyMapper} has not been applied to the elements.
+         * its entries.
+         * <p>
+         * Note that this method returns <i>labels</i>, not keys. As such, a {@code KeyMapper} has not been applied to
+         * the elements. If callers want key mapping, they must perform it themselves.
          *
-         * @return the ordered labels for this definition
+         * @return the ordered labels for this definition, an immutable but ordered collection. If using Java 21 or
+         * later, this return value can be safely cast to {@code java.util.SequencedCollection}.
          */
         @NonNull Collection<@NonNull String> getLabels();
 
         /**
-         * Gets the unmapped key set, as a stream. These are the same as the method names from the configuration
-         * interface, excluding default methods annotated with <code>@CallableFn</code>.
+         * Gets the labels, as a stream.
          * <p>
-         * The returned stream is ordered according to how this {@code ConfigurationDefinition} orders its entries. It is
-         * unmapped in the sense that a {@code KeyMapper} has not been applied to the elements.
-         * <p>
-         * This function is semantically equivalent to <code>getLabels().stream()</code>.
+         * This function is a stream version of {@link #getLabels()}, and using it may be more efficient than calling
+         * <code>getLabels().stream()</code>.
          *
          * @return the ordered labels for this definition
          */
@@ -202,6 +206,21 @@ public interface ConfigurationDefinition<C> {
      */
     interface ReadWithUpdateOptions extends ReadOptions, WriteOptions {
 
+        // TODO complete the documentation here
+        /**
+         *
+         *
+         * Note that if updating the data tree failed with one or more errors, it is undefined as to which entries in
+         * the data tree, if any, will be sorted.
+         *
+         * @return the sorting for the updatable data tree
+         */
+        @Override
+        @API(status = API.Status.EXPERIMENTAL)
+        default @NonNull LabelSorting sorting() {
+            return LabelSorting.disabled();
+        }
+
         /**
          * Controls whether comments on existing data entries are refreshed.
          * <p>
@@ -218,7 +237,9 @@ public interface ConfigurationDefinition<C> {
          */
         @Override
         @API(status = API.Status.EXPERIMENTAL)
-        boolean writeEntryComments(@NonNull CommentLocation location);
+        default boolean writeEntryComments(@NonNull CommentLocation location) {
+            return false;
+        }
 
     }
 
@@ -234,6 +255,19 @@ public interface ConfigurationDefinition<C> {
          * @return the key mapper
          */
         @NonNull KeyMapper keyMapper();
+
+        /**
+         * Controls the order in which entries are written to the output data tree.
+         * <p>
+         * Please see {@link LabelSorting} for a full discussion of ordering, its implications, and the role of that
+         * interface.
+         *
+         * @return the sorting for the output data tree
+         */
+        @API(status = API.Status.EXPERIMENTAL)
+        default @NonNull LabelSorting sorting() {
+            return LabelSorting.disabled();
+        }
 
         /**
          * Controls whether comments are written to data entries.

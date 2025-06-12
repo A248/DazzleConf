@@ -8,7 +8,7 @@ A sleek, usable, and fully-featured configuration library. Supports HOCON, TOML,
 * Extensible and user-friendly. All types use the same framework, and library users can easily add new types.
 * Type safety. Configuration is an immutable interface.
 * Automatically update old configurations with the latest keys. No need to version config files.
-* No NULLs. No public mutable fields. No stringly-typed spaghetti such as `getString("key")`.
+* No NULLs. No public mutable fields. No stringly-typed spaghetti such as `getString("key")`, and no type-unsafe calls like `getInt("maybe-not-really-an-integer")`.
 * Informative, helpful error reports. Messages that human beings (even non-programmers!) can understand. Reports key path and line number, and library error messages can even be translated depending on the locale. 
 
 ### Features
@@ -117,6 +117,7 @@ We offer multiple configuration formats depending on your preference. Simply dep
   * `List<List<List<List<MyType>>>>` is fully usable, requiring no extra code.
   * Library users can write their own type like `MyGeneric<T>`, extract the generic parameter T, and get a serializer for T.
   * Anything you can imagine is possible. Even generic parameters on the configuration itself are supported. For example, `MyConfig<V>` with a method `V myOption()`.
+  * Annotations are usable as well.
 * Immutable and thread safe by design.
   * Values loaded once and never modified thereafter.
   * Loading is fail-fast: if a configured value from the text file is not interpretable as the desired return type, it is rejected.
@@ -124,7 +125,9 @@ We offer multiple configuration formats depending on your preference. Simply dep
   * Read from file. ✔️
   * Write to file. ✔️
   * Combined read/write operation, to update existing data. ✔️
-  * Can write any object implementing the configurtion interface (not just implementations by the library).
+  * Can write any object implementing the configuration interface (not just implementations by the library).
+* Reloading:
+  * Easy-to-reload "shell" instance can be created, to swap the values in a live configuration.
 * Migrations:
   * Detect old versions, and migrate safely to latest version.
   * Lets you change keys, move keys around, and merge or separate sections.
@@ -140,6 +143,7 @@ We offer multiple configuration formats depending on your preference. Simply dep
 * Backends:
   * HOCON, TOML, and YAML implemented so far.
   * No external dependencies: they are shaded in.
+  * Relevant library features (key format, comment support) automatically adapt to the backend in use.
 * Low-level `DataTree` API: 
   * Can read and write data, independent of the backend.
   * Can read and write comments if the backend supports it, including document-level header and footer.

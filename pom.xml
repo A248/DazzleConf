@@ -268,7 +268,7 @@
 		<module>core</module>
 		<!-- Version 2 format-specific "backends" -->
 		<module>backend-hocon</module>
-		<!-- <module>backend-toml</module> -->
+		<module>backend-toml</module>
 		<module>backend-yaml</module>
 		<!-- Version 1 format-specific "extensions" -->
 		<module>gson</module>

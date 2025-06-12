@@ -82,7 +82,7 @@
 		<dependency>
 			<groupId>io.github.wasabithumb</groupId>
 			<artifactId>jtoml</artifactId>
-			<version>0.5.0</version>
+			<version>0.6.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
@@ -91,6 +91,13 @@
 		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-junit-jupiter</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>space.arim.dazzleconf</groupId>
+			<artifactId>dazzleconf-core</artifactId>
+			<version>${project.version}</version>
+			<type>test-jar</type>
+			<classifier>tests</classifier>
 		</dependency>
 	</dependencies>
 </project>

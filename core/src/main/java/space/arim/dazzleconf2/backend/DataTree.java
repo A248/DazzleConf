@@ -24,7 +24,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 /**
@@ -83,6 +85,15 @@ public abstract class DataTree {
      */
     public int size() {
         return data.size();
+    }
+
+    /**
+     * Gets all the keys in this data tree.
+     *
+     * @return the key set, which may be immutable
+     */
+    public @NonNull Set<@NonNull Object> keySet() {
+        return Collections.unmodifiableSet(data.keySet());
     }
 
     /**

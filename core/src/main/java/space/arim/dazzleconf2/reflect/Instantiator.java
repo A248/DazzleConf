@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.reflect;
 
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ReloadShell;
 
@@ -48,6 +49,7 @@ import space.arim.dazzleconf2.ReloadShell;
  * strict sense. Existing code will never break. However, newer features may be disabled or refuse to work.
  *
  */
+@API(status = API.Status.MAINTAINED)
 public interface Instantiator {
 
     /**

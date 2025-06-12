@@ -30,6 +30,7 @@ import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf2.engine.LabelSorting;
 import space.arim.dazzleconf2.engine.LoadListener;
 import space.arim.dazzleconf2.engine.TypeLiaison;
 import space.arim.dazzleconf2.engine.UpdateListener;
@@ -299,6 +300,10 @@ final class BuiltConfig<C> implements Configuration<C> {
         }
         DataTree.Mut updatableTree = document.data().intoMut();
         Backend.Meta backendMeta = backend.meta();
+        LabelSorting sorting = LabelSorting.disabled();
+        if (!backendMeta.preservesOrder(true) && backendMeta.preservesOrder(false)) {
+            // TODO: Set sorting here
+        }
         LoadResult<C> loadResult = readWithUpdate(updatableTree, new ReadWithUpdateOptions() {
 
             @Override
@@ -309,6 +314,11 @@ final class BuiltConfig<C> implements Configuration<C> {
             @Override
             public @NonNull KeyMapper keyMapper() {
                 return keyMapper;
+            }
+
+            @Override
+            public @NonNull LabelSorting sorting() {
+                return sorting;
             }
 
             @Override
@@ -334,9 +344,9 @@ final class BuiltConfig<C> implements Configuration<C> {
 
                 @Override
                 public @NonNull DataTree data() {
-                    if (backendMeta.supportsOrder(true)) {
+                    if (backendMeta.preservesOrder(true)) {
                         // Preserves order thanks to DataTree's order guarantees
-                    } else if (backendMeta.supportsOrder(false)) {
+                    } else if (backendMeta.preservesOrder(false)) {
                         // Supports writing order, but not reading it. So, we need to sort the data tree
                         // TODO: Figure out how to do this with nested sub-sections
                     }
