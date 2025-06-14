@@ -25,6 +25,7 @@ import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf2.engine.LabelSorting;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 
 import java.util.List;
@@ -34,16 +35,23 @@ final class SerOutput implements SerializeOutput {
 
     private Object output;
     private final KeyMapper keyMapper;
+    private final LabelSorting labelSorting;
     private final ModifyComments modifyComments;
 
-    SerOutput(KeyMapper keyMapper, ModifyComments modifyComments) {
+    SerOutput(KeyMapper keyMapper, LabelSorting labelSorting, ModifyComments modifyComments) {
         this.keyMapper = Objects.requireNonNull(keyMapper, "key mapper");
+        this.labelSorting = Objects.requireNonNull(labelSorting, "label sorting");
         this.modifyComments = modifyComments;
     }
 
     @Override
     public @NonNull KeyMapper keyMapper() {
         return keyMapper;
+    }
+
+    @Override
+    public @NonNull LabelSorting sorting() {
+        return labelSorting;
     }
 
     @Override

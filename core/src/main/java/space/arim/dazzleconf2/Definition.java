@@ -294,7 +294,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         // Updating comments, based on read options, usually depends on whether the backend needs it
         ModifyComments modifyComments = new ModifyComments(readOptions);
         // Updating values is based on calls to deserializeUpdate
-        SerializeOutput outputForUpdate = new SerOutput(readOptions.keyMapper(), modifyComments);
+        SerializeOutput outputForUpdate = new SerOutput(readOptions.keyMapper(), readOptions.sorting(), modifyComments);
 
         LoadResult<C> loadResult = readingNexus(dataTree, readOptions, new HowToUpdate<DataTree.Mut>() {
             @Override
@@ -337,7 +337,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     public void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree, @NonNull WriteOptions writeOptions) {
 
         ModifyComments modifyComments = new ModifyComments(writeOptions);
-        SerializeOutput serOutput = new SerOutput(writeOptions.keyMapper(), modifyComments);
+        SerializeOutput serOutput = new SerOutput(writeOptions.keyMapper(), writeOptions.sorting(), modifyComments);
 
         for (int n = 0; n < superTypesArray.length; n++) {
             MethodMirror.Invoker invoker = methodMirror.makeInvoker(config, superTypesArray[n]);

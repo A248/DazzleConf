@@ -86,7 +86,7 @@ public abstract class KeyPath implements Printable {
             this.parts = new ArrayDeque<>(other.parts);
         } else {
             ArrayDeque<CharSequence> parts = new ArrayDeque<>(other.parts.size());
-            other.parts.forEach(part -> parts.addLast(other.keyMapper.labelToKey(part.toString())));
+            other.parts.forEach(part -> parts.addLast(other.keyMapper.labelToKey(part)));
             this.parts = parts;
         }
     }
@@ -166,7 +166,7 @@ public abstract class KeyPath implements Printable {
         }
         String unmapped = edgeValue.toString();
         KeyMapper keyMapper = this.keyMapper;
-        return keyMapper == null ? unmapped : keyMapper.labelToKey(unmapped).toString();
+        return keyMapper == null ? unmapped : keyMapper.labelToKey(unmapped);
     }
 
     /**
@@ -233,7 +233,7 @@ public abstract class KeyPath implements Printable {
         KeyMapper keyMapper = this.keyMapper;
         if (keyMapper != null) {
             for (int n = 0; n < intoParts.length; n++) {
-                intoParts[n] = keyMapper.labelToKey(intoParts[n].toString());
+                intoParts[n] = keyMapper.labelToKey(intoParts[n]);
             }
         }
         return intoParts;
@@ -292,9 +292,7 @@ public abstract class KeyPath implements Printable {
             if (n != 0) {
                 output.append('.');
             }
-            output.append(keyMapper == null ?
-                    parts[n] : keyMapper.labelToKey(parts[n].toString())
-            );
+            output.append(keyMapper == null ? parts[n] : keyMapper.labelToKey(parts[n]));
         }
     }
 
@@ -414,7 +412,7 @@ public abstract class KeyPath implements Printable {
                 if (!parts.isEmpty()) {
                     ArrayDeque<CharSequence> mappedParts = new ArrayDeque<>(this.parts.size() + 8);
                     for (CharSequence part : this.parts) {
-                        mappedParts.add(keyMapper.labelToKey(part.toString()));
+                        mappedParts.add(keyMapper.labelToKey(part));
                     }
                     this.parts = mappedParts;
                     dataFrozen = false;

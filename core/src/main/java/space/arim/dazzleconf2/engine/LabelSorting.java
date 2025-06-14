@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf2.engine;
 
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.ConfigurationDefinition;
 import space.arim.dazzleconf2.backend.Backend;
@@ -54,6 +55,7 @@ import java.util.Comparator;
  * the first source (listed above) of undefined order.
  *
  */
+@API(status = API.Status.EXPERIMENTAL)
 public interface LabelSorting {
 
     /**

@@ -21,10 +21,8 @@ package space.arim.dazzleconf2.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.ConfigurationDefinition;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.KeyMapper;
 
 import java.util.List;
 
@@ -43,30 +41,7 @@ import java.util.List;
  * extracted (and simultaneously cleared) by calling {@link #getAndClearLastOutput()}.
  *
  */
-public interface SerializeOutput {
-
-    /**
-     * Gets the key mapper being used
-     *
-     * @return the key mapper
-     */
-    @NonNull KeyMapper keyMapper();
-
-    /**
-     * Checks whether comments are being written on entries, and if so, where.
-     * <p>
-     * This method helps the serializer decide to attach comments to entries in written {@code DataTree}s. The result
-     * of this method is a hint, and it does not have to be followed.
-     * <p>
-     * This function is analogous to {@link ConfigurationDefinition.WriteOptions#writeEntryComments(CommentLocation)}.
-     * However, this function may not necessarily call that one (responses may be cached, or other settings might
-     * influence behavior).
-     *
-     * @param location the location of the entry comments in question
-     * @return whether comments at this location are being written
-     */
-
-    boolean writeEntryComments(@NonNull CommentLocation location);
+public interface SerializeOutput extends SerializeContext {
 
     /**
      * Outputs a string

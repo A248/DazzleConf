@@ -344,12 +344,6 @@ final class BuiltConfig<C> implements Configuration<C> {
 
                 @Override
                 public @NonNull DataTree data() {
-                    if (backendMeta.preservesOrder(true)) {
-                        // Preserves order thanks to DataTree's order guarantees
-                    } else if (backendMeta.preservesOrder(false)) {
-                        // Supports writing order, but not reading it. So, we need to sort the data tree
-                        // TODO: Figure out how to do this with nested sub-sections
-                    }
                     return updatableTree;
                 }
             });

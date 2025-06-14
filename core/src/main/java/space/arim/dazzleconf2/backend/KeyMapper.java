@@ -23,7 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.Configuration;
 
 /**
- * Simple interface for mapping method names into backend configuration keys.
+ * Simple interface for mapping method names into backend configuration keys, and vice versa.
  * <p>
  * For example, some formats (JSON) use lowerCamelCase for option names, whereas others use snake-case (YAML).
  * Fortunately, the key mapper is configured automatically when using {@link Configuration#configureWith(Backend)}.
@@ -31,11 +31,13 @@ import space.arim.dazzleconf2.Configuration;
 public interface KeyMapper {
 
     /**
-     * Turns the argument into a key. The argument is usually a method name.
+     * Turns the argument into a key.
+     * <p>
+     * The argument is usually a method name, and as such, it should follow lowerCamelCase convention.
      *
      * @param label the method name
-     * @return the key compponent
+     * @return the key part
      */
-    @NonNull CharSequence labelToKey(@NonNull String label);
+    @NonNull CharSequence labelToKey(@NonNull CharSequence label);
 
 }

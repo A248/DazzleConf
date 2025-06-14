@@ -56,6 +56,7 @@ public interface ConfigurationDefinition<C> {
      *
      * @return the scanned layout of the configuration interface
      */
+    @API(status = API.Status.MAINTAINED)
     @NonNull Layout getLayout();
 
     /**
@@ -206,10 +207,9 @@ public interface ConfigurationDefinition<C> {
      */
     interface ReadWithUpdateOptions extends ReadOptions, WriteOptions {
 
-        // TODO complete the documentation here
         /**
-         *
-         *
+         * Allows the caller to sort the data tree based on the labels for each entry.
+         * <p>
          * Note that if updating the data tree failed with one or more errors, it is undefined as to which entries in
          * the data tree, if any, will be sorted.
          *

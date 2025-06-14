@@ -180,7 +180,7 @@ public final class SubSectionLiaison implements TypeLiaison {
 
                     @Override
                     public boolean writeEntryComments(@NonNull CommentLocation location) {
-                        // TODO: Improve this API, maybe return an object instead of having this function here
+                        // TODO: Improve this API: return an object instead of having this function here
                         return ser.writeEntryComments(location);
                     }
                 });

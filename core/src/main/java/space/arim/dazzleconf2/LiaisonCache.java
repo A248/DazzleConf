@@ -119,12 +119,7 @@ final class LiaisonCache {
             DefaultValues<V> defaultValues = makeDefaultValues(
                     methodId, optional, () -> methodAnnotations, defaultsInvoker
             );
-            CommentData comments;
-            // Try the method itself first, then look at the return type's class declaration
-            comments = CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
-            if (comments.isEmpty()) {
-                comments = CommentData.buildFrom(methodId.returnType().rawType().getAnnotationsByType(Comments.class));
-            }
+            CommentData comments  = CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
             return new TypeSkeleton.MethodNode<>(comments, optional, methodId, defaultValues, serializer);
         }
     }

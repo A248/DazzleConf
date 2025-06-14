@@ -34,8 +34,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 /**
  * Adds comments to a configuration entry or type.
  * <p>
- * This annotation can be repeated multiple times to specify comments in different locations. Please note that
- * writing this annotation multiple times for the same location will simply result in that location being overidden.
+ * This annotation can be repeated multiple times to specify comments in different locations. Writing this annotation
+ * multiple times for the same location will append additional comments at that location.
  * <p>
  * <b>Usage on a method</b>
  * <p>
@@ -75,7 +75,7 @@ public @interface Comments {
      *
      * @return where to place the comments
      */
-    CommentLocation location() default CommentLocation.ABOVE;
+    @NonNull CommentLocation location() default CommentLocation.ABOVE;
 
     /**
      * The repeatable annotations container for adding multiple comments.
