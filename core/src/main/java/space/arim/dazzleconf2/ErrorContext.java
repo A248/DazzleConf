@@ -205,4 +205,22 @@ public interface ErrorContext {
         <R> @NonNull LoadResult<R> throwError(@NonNull Printable message);
 
     }
+
+    /**
+     * A sink for error contexts.
+     * <p>
+     * This class is intended for low-level purposes where errors may be output in non-conventional fashion; most of
+     * the time, errors are output by returning {@link LoadResult}.
+     *
+     */
+    interface Sink {
+
+        /**
+         *
+         *
+         * @param errorContext
+         */
+        void onError(@NonNull ErrorContext errorContext);
+
+    }
 }
