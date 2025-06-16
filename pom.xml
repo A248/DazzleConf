@@ -38,7 +38,7 @@
 		<developer>
 			<id>anandbeh</id>
 			<name>Anand Beh</name>
-			<email>theanandbeh@gmail.com</email>
+			<email>a248-dev@tuta.io</email>
 			<url>https://github.com/A248</url>
 			<roles>
 				<role>creator</role>
@@ -47,18 +47,14 @@
 			<timezone>America/New_York</timezone>
 		</developer>
 	</developers>
-	
+
 	<distributionManagement>
 		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+			<id>central</id>
+			<url>https://central.sonatype.com/repository/maven-snapshots/</url>
 		</snapshotRepository>
-		<repository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
 	</distributionManagement>
-	
+
 	<build>
 		<plugins>
 			<!-- Sources and javadoc -->
@@ -126,7 +122,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
-				<version>3.0.1</version>
+				<version>3.2.7</version>
 				<executions>
 					<execution>
 						<id>sign-artifacts</id>
@@ -135,6 +131,7 @@
 							<goal>sign</goal>
 						</goals>
 						<configuration>
+							<bestPractices>true</bestPractices>
 							<gpgArguments>
 								<arg>--pinentry-mode</arg>
 								<arg>loopback</arg>
@@ -146,12 +143,14 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-release-plugin</artifactId>
-				<version>3.0.0-M7</version>
+				<version>3.1.1</version>
 				<configuration>
 					<autoVersionSubmodules>true</autoVersionSubmodules>
 					<tagNameFormat>@{project.version}</tagNameFormat>
 					<preparationGoals>--quiet help:help</preparationGoals>
-					<goals>clean deploy -DskipTests -DskipPitest -Dinvoker.skip=true</goals>
+					<goals>clean deploy -DskipTests -DskipPitest -Dinvoker.skip=true -Prelease-to-central</goals>
+					<pushChanges>false</pushChanges>
+					<localCheckout>true</localCheckout>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -181,6 +180,11 @@
 							</configuration>
 						</execution>
 					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>3.4.2</version>
 				</plugin>
 				<!-- Testing -->
 				<plugin>
@@ -230,9 +234,39 @@
 						<goals>verify</goals>
 					</configuration>
 				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-install-plugin</artifactId>
+					<version>3.1.4</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-deploy-plugin</artifactId>
+					<version>3.1.4</version>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>release-to-central</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.sonatype.central</groupId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
+						<version>0.7.0</version>
+						<extensions>true</extensions>
+						<configuration>
+							<publishingServerId>central</publishingServerId>
+							<checksums>all</checksums>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 	
 	<modules>
 		<module>core</module>

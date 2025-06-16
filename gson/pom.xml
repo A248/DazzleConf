@@ -8,6 +8,7 @@
 	</parent>
 
 	<artifactId>dazzleconf-ext-gson</artifactId>
+	<name>DazzleConf (Ext Gson)</name>
 	
 	<dependencies>
 		<dependency>

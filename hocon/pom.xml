@@ -8,6 +8,7 @@
     </parent>
 
     <artifactId>dazzleconf-ext-hocon</artifactId>
+    <name>DazzleConf (Ext Hocon)</name>
 
     <dependencies>
         <dependency>

@@ -8,6 +8,7 @@
 	</parent>
 
 	<artifactId>dazzleconf-core</artifactId>
+	<name>DazzleConf (Core)</name>
 	
 	<build>
 		<plugins>
