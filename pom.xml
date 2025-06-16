@@ -225,6 +225,9 @@
 							<goals>
 								<goal>verify</goal>
 							</goals>
+							<configuration>
+								<streamLogsOnFailures>true</streamLogsOnFailures>
+							</configuration>
 						</execution>
 					</executions>
 					<configuration>
