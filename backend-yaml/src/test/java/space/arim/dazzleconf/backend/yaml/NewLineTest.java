@@ -45,7 +45,7 @@ public class NewLineTest {
     })
     public void newLineInValue(String value) {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("Z", new DataEntry(value));
+        dataTree.put("Z", new DataEntry(value));
         yamlBackend.write(Backend.Document.simple(dataTree));
         DataTree reloaded = yamlBackend.read(errorSource).getOrThrow().data();
         DataEntry reloadedEntry = reloaded.get("Z");

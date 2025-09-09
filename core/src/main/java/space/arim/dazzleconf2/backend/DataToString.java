@@ -34,6 +34,17 @@ final class DataToString {
         this.output = output;
     }
 
+    static String implToString(Object implementor) {
+        StringBuilder output = new StringBuilder();
+        DataToString.Scope topScope = new DataToString(output).new Scope(0);
+        if (implementor instanceof DataEntry) {
+            ((DataEntry) implementor).toString(topScope);
+        } else {
+            topScope.valueToString(implementor);
+        }
+        return output.toString();
+    }
+
     final class Scope {
 
         private final int indent;
@@ -52,45 +63,49 @@ final class DataToString {
         void valueToString(Object value) {
             if (value instanceof String) {
                 new EscapeString((String) value).printTo(output);
+
+            } else if (value instanceof DataList) {
+                DataList dataList = (DataList) value;
+                if (parentContainers.add(dataList)) {
+                    try {
+                        dataList.toString(this);
+                    } finally {
+                        parentContainers.remove(dataList);
+                    }
+                } else {
+                    output.append("<circular list>");
+                }
+
             } else if (value instanceof DataTree) {
-                ((DataTree) value).toString(this);
-            } else if (value instanceof List) {
-                listToString((List<?>) value);
+                DataTree dataTree = (DataTree) value;
+                if (parentContainers.add(dataTree)) {
+                    try {
+                        dataTree.toString(this);
+                    } finally {
+                        parentContainers.remove(dataTree);
+                    }
+                } else {
+                    output.append("<circular map>");
+                }
+
             } else {
                 output.append(value);
             }
         }
 
-        void listToString(List<?> list) {
+        void listToString(List<DataEntry> list) {
             output.append('[');
             if (!list.isEmpty()) {
-                Scope subScope = new Scope(indent + 2);
-                if (parentContainers.add(list)) {
-                    try {
-                        subScope.listElementsToString(list);
-                    } finally {
-                        parentContainers.remove(list);
-                    }
-                    writeNewLine(); // Place trailing ']' on appropriate line
-                } else {
-                    output.append("<circular list>");
-                }
+                new Scope(indent + 2).listElementsToString(list);
+                writeNewLine();
             }
             output.append(']');
         }
 
-        private void listElementsToString(List<?> list) {
-            for (Object elem : list) {
+        private void listElementsToString(List<DataEntry> list) {
+            for (DataEntry elem : list) {
                 writeNewLine();
-                if (elem instanceof DataEntry) {
-                    ((DataEntry) elem).toString(this);
-                } else {
-                    // Shouldn't happen, but maybe callers are being funny
-                    output.append("ILLEGAL");
-                    output.append('{');
-                    valueToString(elem);
-                    output.append('}');
-                }
+                elem.toString(this);
                 output.append(',');
             }
         }
@@ -98,17 +113,8 @@ final class DataToString {
         void mapToString(Map<Object, DataEntry> map) {
             output.append('{');
             if (!map.isEmpty()) {
-                Scope subScope = new Scope(indent + 2);
-                if (parentContainers.add(map)) {
-                    try {
-                        subScope.mapElementsToString(map);
-                    } finally {
-                        parentContainers.remove(map);
-                    }
-                    writeNewLine(); // Place trailing '}' on appropriate line
-                } else {
-                    output.append("<circular map>");
-                }
+                new Scope(indent + 2).mapElementsToString(map);
+                writeNewLine();
             }
             output.append('}');
         }

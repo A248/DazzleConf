@@ -20,7 +20,6 @@
 package space.arim.dazzleconf2.internals.lang;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.Printable;
 
 import java.net.URL;
@@ -29,20 +28,11 @@ import java.util.Locale;
 
 import static space.arim.dazzleconf2.backend.Printable.preBuilt;
 
-public final class LibraryLangAr extends LibraryLang.Base {
-
-    LibraryLangAr(@Nullable Locale overrideLocale) {
-        super(overrideLocale);
-    }
+public final class LangAr implements LanguageCandidate {
 
     @Override
-    protected Locale getActualLocale() {
+    public Locale getActualLocale() {
         return Locale.forLanguageTag("ar");
-    }
-
-    @Override
-    public @NonNull LibraryLang pretendToUseLocale(@NonNull Locale usingLocale) {
-        return new LibraryLangAr(usingLocale);
     }
 
     @Override
@@ -111,8 +101,8 @@ public final class LibraryLangAr extends LibraryLang.Base {
     }
 
     @Override
-    public @NonNull String more(int howMany) {
-        return formatNumber(howMany) + " كمان...";
+    public @NonNull String more(String what) {
+        return what + " كمان...";
     }
 
     @Override

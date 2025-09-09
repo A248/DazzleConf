@@ -42,6 +42,7 @@ import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
@@ -57,7 +58,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -69,15 +69,17 @@ import static space.arim.dazzleconf2.backend.Printable.preBuilt;
  * <p>
  * <b>Comments</b>
  * <p>
- * This backend does not support comments. The backing library (which is not exposed) has yet to add a comment reading
- * or writing API. See <a href="https://github.com/WasabiThumb/jtoml/issues/11">WasabiThumb/jtoml issue 11</a>.
+ * This backend supports writing comments, but not reading them. Although the backing library (which is not exposed)
+ * is capable of reading comments, it does not provide enough information to reconstitute the correct location of
+ * previously written comments.
  * <p>
  * <b>Types</b>
  * <p>
- * Although TOML inherently supports date-related types, using them is incompatible with the library model. As such,
- * strings which might be interpreted as dates must be quoted.
+ * Although TOML inherently supports date and time types, using them is incompatible with the library model. If a date
+ * or time type is encountered, an error will be returned. Therefore, users writing TOML must quote strings that seem
+ * to follow a time or date format.
  * <p>
- * TOML does not have a concept of null, so no special handling is needed in this {@code Backend} implementation.
+ * TOML does not have a concept of null, so no special handling is needed for nulls.
  */
 public final class TomlBackend implements Backend {
 
@@ -183,29 +185,28 @@ public final class TomlBackend implements Backend {
 
                 TomlValue tomlValue = tomlTable.get(tomlKey);
                 assert tomlValue != null;
-                DataEntry dataEntry;
                 keyPathStack.addLast(key);
                 try {
-                    dataEntry = entryFromToml(tomlValue);
-                    if (error != null) {
+                    DataEntry dataEntry = entryFromToml(tomlValue);
+                    if (dataEntry == null) {
                         return;
                     }
+                    dataTree.put(key, dataEntry);
                 } finally {
                     keyPathStack.pollLast();
                 }
-                dataTree.set(key, dataEntry);
             }
         }
 
-        private void readTomlList(TomlArray tomlArray, List<DataEntry> entryList) {
+        private void readTomlList(TomlArray tomlArray, DataList.Mut dataList) {
             keyPathStack.addLast("$");
             try {
-                for (TomlValue tomlElem : tomlArray.toArray()) {
-                    DataEntry entryFromToml = entryFromToml(tomlElem);
-                    if (error != null) {
+                for (TomlValue tomlElem : tomlArray) {
+                    DataEntry dataEntry = entryFromToml(tomlElem);
+                    if (dataEntry == null) {
                         return;
                     }
-                    entryList.add(entryFromToml);
+                    dataList.add(dataEntry);
                 }
             } finally {
                 keyPathStack.pollLast();
@@ -222,9 +223,9 @@ public final class TomlBackend implements Backend {
 
             } else if (tomlValue.isArray()) {
                 TomlArray tomlArray = tomlValue.asArray();
-                List<DataEntry> entryList = new ArrayList<>(tomlArray.size());
-                readTomlList(tomlArray, entryList);
-                value = entryList;
+                DataList.Mut dataList = new DataList.Mut(tomlArray.size());
+                readTomlList(tomlArray, dataList);
+                value = dataList;
 
             } else {
                 value = tomlValue.asPrimitive().value();
@@ -232,23 +233,14 @@ public final class TomlBackend implements Backend {
                     LibraryLang libraryLang = LibraryLang.Accessor.access(errorSource, ErrorContext.Source::getLocale);
                     error = errorSource.buildError(preBuilt(libraryLang.tomlDateType()));
                     error.addDetail(ErrorContext.ENTRY_PATH, new KeyPath.Immut(keyPathStack.toArray(new String[0])));
-                    return null;
                 }
+            }
+            if (error != null) {
+                return null;
             }
             return new DataEntry(value);
         }
     }
-
-    /*
-    private CommentData getComments(TomlValue tomlValue) {
-        CommentData commentData = CommentData.empty();
-        for (Comment tomlComment : tomlValue.comments().all()) {
-            CommentPosition tomlPosition = tomlComment.position();
-            CommentLocation location = commentLocationFrom(tomlPosition);
-            commentData = commentData.appendAt(location, tomlComment.content());
-        }
-        return commentData;
-    }*/
 
     @Override
     public void write(@NonNull Document document) {
@@ -272,11 +264,9 @@ public final class TomlBackend implements Backend {
         return tomlTable;
     }
 
-    private TomlArray entryListToToml(List<DataEntry> entryList) {
-        TomlArray tomlArray = TomlArray.create(entryList.size());
-        for (DataEntry dataEntry : entryList) {
-            tomlArray.add(entryToToml(dataEntry));
-        }
+    private TomlArray dataListToToml(DataList dataList) {
+        TomlArray tomlArray = TomlArray.create(dataList.size());
+        dataList.forEach(entry -> tomlArray.add(entryToToml(entry)));
         return tomlArray;
     }
 
@@ -285,10 +275,8 @@ public final class TomlBackend implements Backend {
         TomlValue tomlValue;
         if (value instanceof DataTree) {
             tomlValue = dataTreeToToml((DataTree) value);
-        }  else if (value instanceof List) {
-            @SuppressWarnings("unchecked")
-            List<DataEntry> castValue = (List<DataEntry>) value;
-            tomlValue = entryListToToml(castValue);
+        }  else if (value instanceof DataList) {
+            tomlValue = dataListToToml((DataList) value);
         } else if (value instanceof Byte || value instanceof Short || value instanceof Integer) {
             tomlValue = TomlPrimitive.of(((Number) value).intValue());
         } else if (value instanceof Long) {

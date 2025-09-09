@@ -22,7 +22,6 @@ package space.arim.dazzleconf2;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.CachedBackend;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.DefaultKeyMapper;
@@ -152,7 +151,7 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     @Override
     public @NonNull LoadResult<@NonNull C> configureWith(@NonNull Backend backend) {
-        return configureWith0(new CachedBackend(backend), new ConfigureListener() {
+        return configureWith0(backend, new ConfigureListener() {
             @Override
             public void wroteDefaults() {}
 
@@ -169,16 +168,113 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     @Override
     public @NonNull LoadResult<@NonNull C> configureWith(@NonNull Backend backend, @NonNull ConfigureListener configureListener) {
-        Objects.requireNonNull(configureListener, "updateListener");
-        return configureWith0(new CachedBackend(backend), configureListener);
+        Objects.requireNonNull(configureListener, "configureListener");
+        return configureWith0(backend, configureListener);
     }
 
-    private LoadResult<C> configureWith0(@NonNull CachedBackend backend, @NonNull ConfigureListener configureListener) {
+    private LoadResult<C> configureWith0(@NonNull Backend backend, @NonNull ConfigureListener configureListener) {
+        ErrorContext.Source errorSource = makeErrorSource();
+        try (CachedBackend cachedBackend = new CachedBackend(backend)) {
+            cachedBackend.initialLoad(errorSource);
+            return implConfigureWith(cachedBackend, errorSource, configureListener);
+        }
+    }
+
+    // Helps avoid redundant read/write operations to the actual backend
+    private static final class CachedBackend implements Backend, AutoCloseable {
+
+        private final Backend delegate;
+        private final Backend.Meta meta;
+
+        private List<ErrorContext> currentErrors;
+        private Document currentDoc;
+        private boolean changed;
+
+        CachedBackend(Backend delegate) {
+            this.delegate = delegate;
+            meta = delegate.meta();
+        }
+
+        void initialLoad(ErrorContext.@NonNull Source errorSource) {
+            LoadResult<Document> initialDoc = delegate.read(errorSource);
+            if (initialDoc.isSuccess()) {
+                currentDoc = initialDoc.getOrThrow();
+            } else {
+                currentErrors = initialDoc.getErrorContexts();
+            }
+        }
+
+        @Override
+        // Not actually called by us -- might be invoked by migrations
+        public @NonNull LoadResult<@Nullable Document> read(ErrorContext.@NonNull Source errorSource) {
+            if (currentErrors != null) {
+                return LoadResult.failure(currentErrors);
+            }
+            Document readDoc = currentDoc;
+            if (readDoc == null) {
+                return LoadResult.of(null);
+            }
+            // We return an immutable data tree for use by migrations
+            return LoadResult.of(new Document() {
+                @Override
+                public @NonNull CommentData comments() {
+                    return readDoc.comments();
+                }
+
+                @Override
+                public @NonNull DataTree data() {
+                    return readDoc.data().intoImmut();
+                }
+            });
+        }
+
+        // Used by us, skips intoImmut() on data tree
+        LoadResult<@Nullable Document> readOwned() {
+            if (currentErrors != null) {
+                return LoadResult.failure(currentErrors);
+            }
+            return LoadResult.of(/* nullable */ currentDoc);
+        }
+
+        @Override
+        public void write(@NonNull Document document) {
+            changed = true;
+            currentErrors = null;
+            currentDoc = document;
+        }
+
+        @Override
+        public void close() {
+            if (changed) {
+                delegate.write(currentDoc);
+            }
+        }
+
+        // Meta-related
+
+        @Override
+        public @NonNull KeyMapper recommendKeyMapper() {
+            return delegate.recommendKeyMapper();
+        }
+
+        @Override
+        public @NonNull Meta meta() {
+            return meta;
+        }
+
+        boolean shouldRefreshComments(boolean documentLevel, CommentLocation location) {
+            boolean supportsReading = meta.supportsComments(documentLevel, true, location);
+            boolean supportsWriting = meta.supportsComments(documentLevel, false, location);
+            return !supportsReading && supportsWriting;
+        }
+    }
+
+    private LoadResult<C> implConfigureWith(@NonNull CachedBackend backend, ErrorContext.@NonNull Source errorSource,
+                                            @NonNull ConfigureListener configureListener) {
         // 0. Setup
         Layout layout = getLayout();
         KeyMapper keyMapper = (this.keyMapper != null) ? this.keyMapper : backend.recommendKeyMapper();
         Objects.requireNonNull(keyMapper, "Backend returned null key mapper");
-        ErrorContext.Source errorSource = makeErrorSource();
         // 1. Try to migrate if possible
         if (!migrations.isEmpty()) {
             // Build migraton context
@@ -229,7 +325,8 @@ final class BuiltConfig<C> implements Configuration<C> {
             }
         }
         // 2. Load configuration
-        LoadResult<Backend.@Nullable Document> read = backend.read(errorSource);
+        // It should already exist in memory, and calling #readOwned should give us a copy-free mutable tree
+        LoadResult<Backend.@Nullable Document> read = backend.readOwned();
         if (read.isFailure()) {
             return LoadResult.failure(read.getErrorContexts());
         }
@@ -254,8 +351,7 @@ final class BuiltConfig<C> implements Configuration<C> {
             return LoadResult.of(defaults);
         }
         DataTree.Mut updatableTree = document.data().intoMut();
-        Backend.Meta backendMeta = backend.meta();
-        if (!backendMeta.preservesOrder(true) && backendMeta.preservesOrder(false)) {
+        if (!backend.meta().preservesOrder(true) && backend.meta().preservesOrder(false)) {
             // TODO in future release: Implement sorting here
             // By re-sorting the data tree, we can rely on the backend to write ordered data
         }
@@ -280,7 +376,7 @@ final class BuiltConfig<C> implements Configuration<C> {
 
             @Override
             public boolean writeEntryComments(@NonNull CommentLocation location) {
-                return refreshComments(backendMeta, false, location);
+                return backend.shouldRefreshComments(false, location);
             }
         }
         ReadWithUpdateOpts readWithUpdateOpts = new ReadWithUpdateOpts();
@@ -294,7 +390,7 @@ final class BuiltConfig<C> implements Configuration<C> {
                     CommentData fromLayout = getLayout().getComments();
                     CommentData current = document.comments();
                     for (CommentLocation location : CommentLocation.values()) {
-                        if (refreshComments(backendMeta, true, location)) {
+                        if (backend.shouldRefreshComments(true, location)) {
                             current = current.setAt(location, fromLayout.getAt(location));
                         }
                     }
@@ -308,12 +404,6 @@ final class BuiltConfig<C> implements Configuration<C> {
             });
         }
         return loadResult;
-    }
-
-    private static boolean refreshComments(Backend.Meta backendMeta, boolean documentLevel, CommentLocation location) {
-        boolean supportsReading = backendMeta.supportsComments(documentLevel, true, location);
-        boolean supportsWriting = backendMeta.supportsComments(documentLevel, false, location);
-        return !supportsReading && supportsWriting;
     }
 
     @Override

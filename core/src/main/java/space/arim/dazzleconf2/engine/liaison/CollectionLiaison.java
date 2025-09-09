@@ -23,8 +23,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.DeveloperMistakeException;
+import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.DefaultValues;
 import space.arim.dazzleconf2.engine.DeserializeInput;
@@ -33,7 +35,6 @@ import space.arim.dazzleconf2.engine.SerializeOutput;
 import space.arim.dazzleconf2.engine.TypeLiaison;
 import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.ImmutableCollections;
-import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.util.Arrays;
@@ -134,66 +135,89 @@ public final class CollectionLiaison implements TypeLiaison {
 
         abstract @NonNull COLL buildThenCast(@NonNull BUILD_COLL output);
 
-        private @NonNull LoadResult<@NonNull COLL> implDeserialize(@NonNull DeserializeInput deser,
-                                                                   @NonNull ImplDeserialize<COLL, E> impl) {
-            Object object = deser.object();
-            if (!(object instanceof List)) {
-                LibraryLang libraryLang = LibraryLang.Accessor.access(deser, DeserializeInput::getLocale);
-                return deser.throwError(libraryLang.wrongTypeForValue(object, List.class));
+        private <D extends DataList> @NonNull LoadResult<@NonNull COLL> implDeserialize(
+                @NonNull DeserializeInput deser, @NonNull ImplDeserialize<COLL, D, E> impl) {
+            // In order to reduce stack depth, avoid functions like LoadResult#flatMap
+            LoadResult<DataList> dataListResult = deser.requireDataList();
+            if (dataListResult.isFailure()) {
+                return LoadResult.failure(dataListResult.getErrorContexts());
             }
-            // We have that `object` is guaranteed to be List<DataEntry>. So, this toArray() call is safe
-            // Also, when dealing with updates, this array performs a double responsibility of storing them
-            @SuppressWarnings("SuspiciousToArrayCall")
-            DataEntry[] updatableInput = ((List<?>) object).toArray(new DataEntry[0]);
-
+            // Either a DataList (for #serialize) or a DataList.Mut (for #serializeUpdate)
+            // When dealing with updates, this variable performs the double responsibility of storing them
+            D input = impl.prepare(dataListResult.getOrThrow());
             // Output collection, an Object[] for List/Collection or LinkedHashSet for Set
-            BUILD_COLL output = makeMutableOutput(updatableInput.length);
+            BUILD_COLL output = makeMutableOutput(input.size());
+            // Error handling - get a certain maximum before quitting, becomes non-null if we find at least 1 error
+            ErrorContext[] collectedErrors = null;
+            int errorCount = 0;
 
-            for (int n = 0; n < updatableInput.length; n++) {
+            for (int n = 0; n < input.size(); n++) {
                 // Deserialize element
-                DataEntry inputEntry = updatableInput[n];
+                DataEntry inputEntry = input.get(n);
                 LoadResult<E> elemResult = impl.deserialize(elementSerializer, deser.makeChild(inputEntry.getValue()));
                 if (elemResult.isFailure()) {
-                    return LoadResult.failure(elemResult.getErrorContexts());
-                }
-                // Record update wish if necessary
-                impl.updateIfDesired(updatableInput, n);
+                    if (collectedErrors == null) {
+                        collectedErrors = new ErrorContext[deser.maximumErrorCollect()];
+                    }
+                    for (ErrorContext errorToAppend : elemResult.getErrorContexts()) {
+                        // Append this error
+                        collectedErrors[errorCount++] = errorToAppend;
+                        // Check if maxed out
+                        if (errorCount == collectedErrors.length) {
+                            return LoadResult.failure(collectedErrors);
+                        }
+                    }
+                } else if (collectedErrors == null) {
+                    // Record update wish if necessary
+                    impl.updateIfDesired(input, inputEntry, n);
 
-                addToMutableOutput(output, n, elemResult.getOrThrow());
+                    addToMutableOutput(output, n, elemResult.getOrThrow());
+                }
             }
-            // Construct result
+            // Error handling
+            if (collectedErrors != null) {
+                return LoadResult.failure(Arrays.copyOf(collectedErrors, errorCount));
+            }
+            // Success - construct result
             COLL built = buildThenCast(output);
             // Finish recording updates - check if size changed for Set, to handle notifications or updates
-            if (built.size() != updatableInput.length) {
+            if (built.size() != input.size()) {
                 impl.updateSizeShrunk(elementSerializer, deser, built);
             } else {
-                impl.updateMaybeOtherwise(updatableInput);
+                impl.updateMaybeOtherwise(input);
             }
             return LoadResult.of(built);
         }
 
-        interface ImplDeserialize<COLL extends Collection<E>, E> {
+        interface ImplDeserialize<COLL extends Collection<E>, D extends DataList, E> {
+
+            D prepare(DataList dataList);
 
             LoadResult<E> deserialize(SerializeDeserialize<E> elementSerializer, DeserializeInput deser);
 
-            void updateIfDesired(DataEntry[] updatableInput, int index);
+            void updateIfDesired(D updatableInput, DataEntry existingEntry, int idx);
 
             void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser, COLL built);
 
-            void updateMaybeOtherwise(DataEntry[] updatableInput);
+            void updateMaybeOtherwise(D updatableInput);
 
         }
 
         @Override
         public @NonNull LoadResult<@NonNull COLL> deserialize(@NonNull DeserializeInput deser) {
-            return implDeserialize(deser, new ImplDeserialize<COLL, E>() {
+            return implDeserialize(deser, new ImplDeserialize<COLL, DataList, E>() {
+                @Override
+                public DataList prepare(DataList dataList) {
+                    return dataList;
+                }
+
                 @Override
                 public LoadResult<E> deserialize(SerializeDeserialize<E> elementSerializer, DeserializeInput deser) {
                     return elementSerializer.deserialize(deser);
                 }
 
                 @Override
-                public void updateIfDesired(DataEntry[] updatableInput, int index) {}
+                public void updateIfDesired(DataList updatableInput, DataEntry existingEntry, int idx) {}
 
                 @Override
                 public void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser,
@@ -202,15 +226,20 @@ public final class CollectionLiaison implements TypeLiaison {
                 }
 
                 @Override
-                public void updateMaybeOtherwise(DataEntry[] updatableInput) {}
+                public void updateMaybeOtherwise(DataList updatableInput) {}
             });
         }
 
         @Override
         public @NonNull LoadResult<@NonNull COLL> deserializeUpdate(@NonNull DeserializeInput deser,
                                                                     @NonNull SerializeOutput updateTo) {
-            return implDeserialize(deser, new ImplDeserialize<COLL, E>() {
+            return implDeserialize(deser, new ImplDeserialize<COLL, DataList.Mut, E>() {
                 private boolean updated;
+
+                @Override
+                public DataList.Mut prepare(DataList dataList) {
+                    return dataList.intoMut();
+                }
 
                 @Override
                 public LoadResult<E> deserialize(SerializeDeserialize<E> elementSerializer, DeserializeInput deser) {
@@ -218,10 +247,10 @@ public final class CollectionLiaison implements TypeLiaison {
                 }
 
                 @Override
-                public void updateIfDesired(DataEntry[] updatableInput, int index) {
+                public void updateIfDesired(DataList.Mut updatableInput, DataEntry existingEntry, int idx) {
                     Object elemUpdate = updateTo.getAndClearLastOutput();
-                    if (elemUpdate != null && !updatableInput[index].getValue().equals(elemUpdate)) {
-                        updatableInput[index] = updatableInput[index].withValue(elemUpdate);
+                    if (elemUpdate != null && !existingEntry.getValue().equals(elemUpdate)) {
+                        updatableInput.set(idx, existingEntry.withValue(elemUpdate));
                         updated = true;
                     }
                 }
@@ -233,11 +262,11 @@ public final class CollectionLiaison implements TypeLiaison {
                 }
 
                 @Override
-                public void updateMaybeOtherwise(DataEntry[] updatableInput) {
+                public void updateMaybeOtherwise(DataList.Mut updatableInput) {
                     // If the size didn't shrink, then perform our update if applicable
                     if (updated) {
                         deser.notifyUpdate(KeyPath.empty(), UpdateReason.UPDATED);
-                        updateTo.outList(Arrays.asList(updatableInput));
+                        updateTo.outDataList(updatableInput);
                     }
                 }
             });
@@ -245,11 +274,8 @@ public final class CollectionLiaison implements TypeLiaison {
 
         @Override
         public void serialize(@NonNull COLL value, @NonNull SerializeOutput ser) {
-            // Transform E[] into DataEntry[], serializing one by one
-            Object[] values = value.toArray();
-            for (int n = 0; n < values.length; n++) {
-                @SuppressWarnings("unchecked")
-                E elem = (E) values[n];
+            DataList.Mut output = new DataList.Mut(value.size());
+            for (E elem : value) {
                 // Use the provided `ser` for per-element output
                 elementSerializer.serialize(elem, ser);
                 Object elemOutput = ser.getAndClearLastOutput();
@@ -258,10 +284,9 @@ public final class CollectionLiaison implements TypeLiaison {
                             "Element serializer " + elementSerializer + " did not produce output"
                     );
                 }
-                values[n] = new DataEntry(elemOutput);
+                output.add(new DataEntry(elemOutput));
             }
-            // All of `values` are now DataEntry, so changing into a List is safe
-            ser.outObjectUnchecked(Arrays.asList(values));
+            ser.outDataList(output);
         }
     }
 

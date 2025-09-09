@@ -20,14 +20,47 @@
 package space.arim.dazzleconf.backend.yaml;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.Configuration;
+import space.arim.dazzleconf2.ErrorContext;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.StringRoot;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@ExtendWith(MockitoExtension.class)
 public class NullValueTest {
+
+	@Test
+	public void readNullKey(@Mock ErrorContext.Source errorSource) {
+		String content = """
+				null: value""";
+		DataTree loaded = new YamlBackend(new StringRoot(content)).read(errorSource).getOrThrow().data();
+		assertEquals(new DataEntry("value"), loaded.get("null"));
+	}
+
+	@Test
+	public void readExplicitNullValue(@Mock ErrorContext.Source errorSource) {
+		String content = """
+				key: null""";
+		DataTree loaded = new YamlBackend(new StringRoot(content)).read(errorSource).getOrThrow().data();
+		assertEquals(new DataEntry("null"), loaded.get("key"));
+	}
+
+	@Test
+	public void skipImplicitNullValue(@Mock ErrorContext.Source errorSource) {
+		String content = """
+				key1:\s
+				key2: hi""";
+		DataTree loaded = new YamlBackend(new StringRoot(content)).read(errorSource).getOrThrow().data();
+		assertEquals(1, loaded.size());
+		assertEquals(new DataEntry("hi"), loaded.get("key2"));
+	}
 
 	@Test
 	public void readLiteralNullListElement() {
@@ -42,7 +75,7 @@ public class NullValueTest {
 	}
 
 	@Test
-	public void readImplicitNullListElement() {
+	public void skipImplicitNullListElement() {
 		String content = """
 				list:
 				  - 'value1'

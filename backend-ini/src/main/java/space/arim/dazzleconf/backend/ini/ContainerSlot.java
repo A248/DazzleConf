@@ -17,18 +17,15 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.internals.lang;
+package space.arim.dazzleconf.backend.ini;
 
-/**
- * Simple functional interface for dealing with {@link LibraryLang}
- */
-public interface LibraryLangKey {
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import space.arim.dazzleconf2.backend.DataEntry;
 
-    /**
-     * Gets the desired message
-     * @param libraryLang the library language chosen
-     * @return the message selected
-     */
-    String getMessage(LibraryLang libraryLang);
+interface ContainerSlot {
+    @Nullable
+    DataEntry getIfPresent();
 
+    void set(@NonNull DataEntry element);
 }

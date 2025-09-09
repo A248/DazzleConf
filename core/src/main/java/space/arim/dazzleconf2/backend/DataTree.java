@@ -22,11 +22,11 @@ package space.arim.dazzleconf2.backend;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
-import space.arim.dazzleconf2.engine.DeserializeInput;
-import space.arim.dazzleconf2.engine.SerializeOutput;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
@@ -52,14 +52,24 @@ import java.util.function.BiConsumer;
  * Canonical types:<ul>
  * <li>String
  * <li>primitives represented by their boxed types
- * <li>DataTree for nesting
- * <li>Lists of {@code DataEntry}
+ * <li>DataTree or DataList for nesting
  * </ul>
  * Keys <b>cannot</b> be DataTree or List. These requirements are enforced at runtime, and they can be
  * checked using {@link #validateKey(Object)} and {@link DataEntry#validateValue(Object)}.
  * <p>
- * Mutability of this class is <b>not defined</b>. Please use {@link DataTree.Mut} or {@link DataTree.Immut} if you need
+ * <b>Mutability</b>
+ * <p>
+ * Mutability of this class is <b>not defined</b>. Please use {@link Mut} or {@link Immut} if you need
  * mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
+ * <p>
+ * <b>Equality</b>
+ * <p>
+ * A data tree is equal to another if they have the same keys, and the entry at each key is equal. Order and mutability
+ * are not considered.
+ * <p>
+ * Note that keys may not be equal if reloading data from a backend, depending on whether that backend converts all
+ * keys to strings (e.g. "1" instead of 1). Additionally, note that {@code DataEntry} does not consider metadata, like
+ * comments or line number, in its equality contract.
  *
  */
 public abstract class DataTree {
@@ -75,6 +85,7 @@ public abstract class DataTree {
      *
      * @return true if empty
      */
+    @Pure
     public boolean isEmpty() {
         return data.isEmpty();
     }
@@ -84,6 +95,7 @@ public abstract class DataTree {
      *
      * @return the size of this data tree
      */
+    @Pure
     public int size() {
         return data.size();
     }
@@ -93,6 +105,7 @@ public abstract class DataTree {
      *
      * @return the key set, which may be immutable
      */
+    @SideEffectFree
     public @NonNull Set<@NonNull Object> keySet() {
         return Collections.unmodifiableSet(data.keySet());
     }
@@ -100,17 +113,14 @@ public abstract class DataTree {
     /**
      * Gets the entry at the specified key, or null if unset.
      * <p>
-     * If accessing keys based on method names, it is strongly recommended to use the <code>KeyMapper</code> to map
-     * method names to keys. See {@link DeserializeInput#keyMapper()} for deserialization or
-     * {@link SerializeOutput#keyMapper()} for serialization.
+     * If accessing keys based on method names, it is strongly recommended to use the {@link KeyMapper} to map
+     * method names to keys. The key mapper is available during both deserialization and serialization.
      *
      * @param key the key
      * @return the entry
      */
     @Pure
-    public @Nullable DataEntry get(@NonNull Object key) {
-        return data.get(key);
-    }
+    public abstract @Nullable DataEntry get(@NonNull Object key);
 
     /**
      * Runs an action for each key/value pair.
@@ -119,31 +129,35 @@ public abstract class DataTree {
      *
      * @param action the action
      */
-    public void forEach(BiConsumer<? super @NonNull Object, ? super @NonNull DataEntry> action) {
-        data.forEach(action);
-    }
-
-    /**
-     * Gets this data tree as a mutable one.
-     * <p>
-     * If not mutable, the data is copied to a new tree which is returned. This copying may be performed lazily, such
-     * as by deferring to the first mutative operation on the returned object.
-     *
-     * @return this tree if mutable, or a mutable copy if needed
-     */
-    public abstract DataTree.@NonNull Mut intoMut();
+    @SideEffectFree
+    public abstract void forEach(BiConsumer<? super @NonNull Object, ? super @NonNull DataEntry> action);
 
     /**
      * Gets this data tree as an immutable one.
      * <p>
-     * The data contained within this {@code DataTree} is evacuated and moved into a new instance. After the call, the
-     * old instance (this object) is poisoned and must not be used.
+     * The data contained within this {@code DataTree} is moved to an immutable instance. The old instance may still be
+     * used, but the implementation of this method may be optimized for the case that it is not.
      * <p>
      * If this instance is already {@code DataTree.Immut}, then it may be returned without changes.
      *
      * @return an immutable data tree
      */
-    public abstract DataTree.@NonNull Immut intoImmut();
+    @SideEffectFree
+    public abstract @NonNull Immut intoImmut();
+
+    /**
+     * Gets this data tree as a mutable one.
+     * <p>
+     * If not mutable, the data is copied to a new tree, which will be made deeply mutable. That is, this function will
+     * also be called on any {@code DataTree}s encountered in this tree's entries, and {@link DataList#intoMut()} on any
+     * data lists likewise.
+     * <p>
+     * If this instance is already {@code DataTree.Mut}, then it may be returned without changes.
+     *
+     * @return this tree if mutable, or a mutable copy if needed
+     */
+    @SideEffectFree
+    public abstract @NonNull Mut intoMut();
 
     /**
      * Checks whether the given object is valid as a key in the data tree. Keys must be either primitive or
@@ -161,6 +175,7 @@ public abstract class DataTree {
 
     @Override
     public final boolean equals(Object o) {
+        if (o == this) return true;
         if (!(o instanceof DataTree)) return false;
 
         DataTree dataTree = (DataTree) o;
@@ -173,10 +188,8 @@ public abstract class DataTree {
     }
 
     @Override
-    public String toString() {
-        StringBuilder output = new StringBuilder();
-        toString(new DataToString(output).new Scope(0));
-        return output.toString();
+    public final String toString() {
+        return DataToString.implToString(this);
     }
 
     void toString(DataToString.Scope output) {
@@ -187,11 +200,13 @@ public abstract class DataTree {
     /**
      * A data tree which is immutable.
      * <p>
-     * Note that although the tree itself is immutable, any {@code DataTree}s contained within it may or may not be.
-     * Thus, this type serves more as a hint that the tree should not be mutated, than a solid guarantee that its
-     * contents will never change.
+     * This type guarantees that all of its entries are immutable (deep immutability). That is, {@code DataTree}s and
+     * {@code DataList}s contained within this tree's entries will always be immutable.
      */
     public static final class Immut extends DataTree {
+
+        // If this Immut was created by intoImmut(), it needs to guarantee deep immutability
+        private boolean needDeepCopy;
 
         /**
          * Creates an empty data tree
@@ -205,26 +220,68 @@ public abstract class DataTree {
         }
 
         @Override
-        public @NonNull Mut intoMut() {
-            Mut mutCopy = new Mut(data);
-            mutCopy.dataFrozen = true;
-            return mutCopy;
+        public @Nullable DataEntry get(@NonNull Object key) {
+            DataEntry entry = data.get(key);
+            if (needDeepCopy && entry != null) {
+                Object value = entry.getValue();
+                if (value instanceof DataTree.Mut || value instanceof DataList.Mut) {
+                    // Preserve deep immutability of copied entries
+                    makeDeepCopy();
+                    needDeepCopy = false;
+                    entry = data.get(key);
+                }
+            }
+            return entry;
+        }
+
+        @Override
+        public void forEach(BiConsumer<? super @NonNull Object, ? super @NonNull DataEntry> action) {
+            // Preserve deep immutability of copied entries
+            if (needDeepCopy) {
+                makeDeepCopy();
+                needDeepCopy = false;
+            }
+            data.forEach(action);
         }
 
         @Override
         public @NonNull Immut intoImmut() {
             return this;
         }
+
+        @Override
+        public @NonNull Mut intoMut() {
+            Mut mutCopy = new Mut(data);
+            mutCopy.state = Mut.FROZEN_COMING_FROM_IMMUT;
+            return mutCopy;
+        }
+
+        private void makeDeepCopy() {
+            LinkedHashMap<Object, DataEntry> newData = new LinkedHashMap<>(data.size());
+            data.forEach((key, entry) -> newData.put(key, entry.intoImmutDeep()));
+            data = newData;
+        }
     }
 
     /**
-     * A data tree which can unmistakably be modified
+     * A data tree which can be modified.
+     * <p>
+     * Note that although the tree itself is mutable, {@code DataTree}s and {@code DataList}s contained within its
+     * entries may or may not be. Thus, the type itself does not guarantee that its values are mutable.
+     * <p>
+     * That said, callers are encouraged to maintain the deep mutability of this {@code Mut}. They should avoid storing
+     * {@link Immut} or {@link DataList.Immut} in it without good reason.
      *
      */
     public static final class Mut extends DataTree {
 
         // If the data in this Mut is shared with an Immut, it should not be modified
-        private boolean dataFrozen;
+        // If this Mut was created by intoMut(), it needs to provide deep mutability
+        private int state;
+
+        private static final int NORMAL = 0;
+        private static final int FROZEN_COMING_FROM_IMMUT = 1;
+        private static final int FROZEN_GOING_TO_IMMUT = 2;
 
         /**
          * Creates
@@ -238,41 +295,73 @@ public abstract class DataTree {
         }
 
         @Override
-        public @NonNull Mut intoMut() {
-            return this;
+        public @Nullable DataEntry get(@NonNull Object key) {
+            DataEntry entry = data.get(key);
+            if (state == FROZEN_COMING_FROM_IMMUT && entry != null) {
+                Object value = entry.getValue();
+                if (value instanceof DataTree.Immut || value instanceof DataList.Immut) {
+                    // Preserve deep mutability of copied entries
+                    ensureMutable();
+                    entry = data.get(key);
+                }
+            }
+            return entry;
+        }
+
+        @Override
+        public void forEach(BiConsumer<? super @NonNull Object, ? super @NonNull DataEntry> action) {
+            if (state == FROZEN_COMING_FROM_IMMUT) {
+                // Preserve deep mutability of copied entries
+                ensureMutable();
+            }
+            data.forEach(action);
         }
 
         @Override
         public @NonNull Immut intoImmut() {
-            // Setting dataFrozen prevents future modifications
-            dataFrozen = true;
-            return new Immut(data);
+            // Setting the state prevents future modifications
+            if (state == NORMAL) state = FROZEN_GOING_TO_IMMUT;
+            Immut immut = new Immut(data);
+            immut.needDeepCopy = true;
+            return immut;
+        }
+
+        @Override
+        public @NonNull Mut intoMut() {
+            return this;
         }
 
         private void ensureMutable() {
-            if (dataFrozen) {
-                data = new LinkedHashMap<>(data);
-                dataFrozen = false;
+            switch (state) {
+                case FROZEN_GOING_TO_IMMUT:
+                    data = new LinkedHashMap<>(data);
+                    break;
+                case FROZEN_COMING_FROM_IMMUT:
+                    LinkedHashMap<Object, DataEntry> newData = new LinkedHashMap<>(data.size());
+                    data.forEach((key, entry) -> newData.put(key, entry.intoMutDeep()));
+                    data = newData;
+                    break;
+                default:
+                    break;
             }
+            state = NORMAL;
         }
 
         /**
-         * Sets the entry at the specified key
+         * Sets the entry at the specified key. Replaces any existing entry at the key
          *
          * @param key the key
-         * @param entry the entry; if null, clears any existing entry
+         * @param entry the entry
+         * @return the previous entry at the key, or null if there is none
          * @throws IllegalArgumentException if the provided key is not a valid canonical type
          */
-        public void set(@NonNull Object key, @Nullable DataEntry entry) {
+        public @Nullable DataEntry put(@NonNull Object key, @NonNull DataEntry entry) {
+            Objects.requireNonNull(entry, "entry");
             if (!validateKey(key)) {
                 throw new IllegalArgumentException("Not a canonical key: " + key);
             }
             ensureMutable();
-            if (entry == null) {
-                data.remove(key);
-            } else {
-                data.put(key, entry);
-            }
+            return data.put(key, entry);
         }
 
         /**
@@ -314,7 +403,7 @@ public abstract class DataTree {
          * values are lists, this function will overwrite the whole list.
          *
          * @param source the tree whose entries to copy into this one
-         * @throws UnsupportedOperationException if this tree contains a {@code DataTree.Immut} or {@code List} that cannot be mutated
+         * @throws UnsupportedOperationException if this tree contains a {@code DataTree.Immut} that cannot be mutated
          */
         public void copyFrom(@NonNull DataTree source) {
             ensureMutable();

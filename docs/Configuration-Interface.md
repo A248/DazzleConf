@@ -142,3 +142,7 @@ public interface MyConfig {
 ```
 
 ## Labels
+
+The name of an interface method is called the *label* of the configuration entry.
+
+In the future, an annotation like `@ChangeLabel` might allow using a method name that differs from the configuration label.

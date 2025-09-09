@@ -38,13 +38,15 @@ import java.util.function.Consumer;
 @API(status = API.Status.MAINTAINED)
 public final class MethodYield {
 
+    /// To make iteration simpler, we avoid adding empty submaps
     private final @NonNull Map<Class<?>, Map<MethodId, Object>> backing;
     private transient int sizeEstimate;
+    /// The current type for which a ForImplementable exists
+    private transient Class<?> currentImplementable;
+    private static final InvokeDefaultFunction INVOKE_DEFAULT_FUNCTION = new InvokeDefaultFunction();
 
     /**
      * Creates an empty yield.
-     * <p>
-     * Values can be added by calling {@link #addEntry(Class, MethodId, Object)}.
      */
     public MethodYield() {
         this(new HashMap<>());
@@ -55,25 +57,74 @@ public final class MethodYield {
     }
 
     /**
-     * Modifies this builder, adding a yielded value as given.
+     * Begins adding yield values for the given interface.
      * <p>
-     * If the given method already has a value set for it, it is replaced.
-     * <p>
-     * If the given method exists in {@code implementable} but was overidden by a subclass, the subclass should be
-     * passed instead.
+     * The returned {@link ForImplementable} must be used, and closed, before this method can be called again.
+     * Additionally, this method cannot be used more than once with the same {@code implementable} argument.
      *
      * @param implementable the interface being implemented
-     * @param method        a method within that interface
-     * @param value         the value to return, or {@link InvokeDefaultFunction} to call the default implementation
+     * @return a handler to attach return values for it
      */
-    public void addEntry(@NonNull Class<?> implementable, @NonNull MethodId method, @NonNull Object value) {
+    public ForImplementable forImplementable(@NonNull Class<?> implementable) {
         Objects.requireNonNull(implementable, "implementable");
-        Objects.requireNonNull(method, "method");
-        Objects.requireNonNull(value, "value");
+        if (backing.containsKey(implementable)) {
+            throw new IllegalStateException("Called already for " + implementable);
+        }
+        if (currentImplementable != null) {
+            throw new IllegalStateException("Existing handler must be closed");
+        }
+        currentImplementable = implementable;
+        return new ForImplementable();
+    }
 
-        Map<MethodId, Object> methodMap = backing.computeIfAbsent(implementable, (k) -> new HashMap<>());
-        if (methodMap.put(method, value) == null) {
-            sizeEstimate++;
+    /**
+     * Builder of return value instructions, given an implementable class. When the caller is finished calling methods
+     * to add return values, they must close this object.
+     *
+     */
+    public final class ForImplementable implements AutoCloseable {
+
+        private final Map<MethodId, Object> methodMap = new HashMap<>();
+
+        /**
+         * Specifies to return the given value. If the given method already has an instruction, it is replaced.
+         * <p>
+         * If the given method is a covariant override of a method in a parent class, this function should be called
+         * twice, with appropriately different {@code MethodId}s.
+         *
+         * @param method        a method within that interface
+         * @param value         the value to return
+         */
+        public void returnValue(@NonNull MethodId method, @NonNull Object value) {
+            Objects.requireNonNull(method, "method");
+            Objects.requireNonNull(value, "value");
+            methodMap.put(method, value);
+        }
+
+        /**
+         * Specifies to invoke the default implementation. If the given method already has an instruction, it is
+         * replaced.
+         * <p>
+         * If the given method exists in the current implementable class but was also overidden by a subclass,
+         * this method should be used for both classes.
+         *
+         * @param method        a method within that interface
+         */
+        public void callDefaultImpl(@NonNull MethodId method) {
+            Objects.requireNonNull(method, "method");
+            methodMap.put(method, INVOKE_DEFAULT_FUNCTION);
+        }
+
+        @Override
+        public void close() {
+            if (currentImplementable == null) {
+                return; // Closed already
+            }
+            if (!methodMap.isEmpty()) {
+                backing.put(currentImplementable, methodMap);
+                sizeEstimate += methodMap.size();
+            }
+            currentImplementable = null;
         }
     }
 
@@ -96,7 +147,7 @@ public final class MethodYield {
     }
 
     /**
-     * Gets all entries added with {@link #addEntry(Class, MethodId, Object)}
+     * Gets all entries added. Each entry represents a single return value instruction
      *
      * @return the iterable entries
      */

@@ -116,8 +116,8 @@ public class ConfigureTest {
 
         // Check the data that was written back
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
-        expectedWriteBack.set("hello", new DataEntry("goodbye"));
-        expectedWriteBack.set("affirmative", new DataEntry('y'));
+        expectedWriteBack.put("hello", new DataEntry("goodbye"));
+        expectedWriteBack.put("affirmative", new DataEntry('y'));
         verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 
@@ -139,8 +139,8 @@ public class ConfigureTest {
 
         // Check the data that was written back
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
-        expectedWriteBack.set("hello", new DataEntry("goodbye-default-if-missing"));
-        expectedWriteBack.set("affirmative", new DataEntry('y'));
+        expectedWriteBack.put("hello", new DataEntry("goodbye-default-if-missing"));
+        expectedWriteBack.put("affirmative", new DataEntry('y'));
         verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 
@@ -151,7 +151,7 @@ public class ConfigureTest {
                 .build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("hello", new DataEntry("present"));
+        dataTree.put("hello", new DataEntry("present"));
         when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
         MigrationTest.Destination withMissing = config.configureWith(backend, configureListener).getOrThrow();
         assertEquals("present", withMissing.hello());
@@ -163,8 +163,8 @@ public class ConfigureTest {
 
         // Check the data that was written back
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
-        expectedWriteBack.set("hello", new DataEntry("present"));
-        expectedWriteBack.set("affirmative", new DataEntry('y'));
+        expectedWriteBack.put("hello", new DataEntry("present"));
+        expectedWriteBack.put("affirmative", new DataEntry('y'));
         verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 }

@@ -21,6 +21,7 @@ package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
@@ -143,22 +144,27 @@ abstract class DeserInput extends LoadError.Factory implements DeserializeInput 
         return context.readOptions.keyMapper();
     }
 
+    private <V> @NonNull LoadResult<@NonNull V> requireAs(Class<V> typeClass) {
+        Object object = object();
+        if (typeClass.isInstance(object)) {
+            return LoadResult.of(typeClass.cast(object));
+        }
+        return throwError(context.libraryLang.wrongTypeForValue(object, typeClass));
+    }
+
     @Override
     public @NonNull LoadResult<@NonNull String> requireString() {
-        Object object = object();
-        if (object instanceof String) {
-            return LoadResult.of((String) object);
-        }
-        return throwError(context.libraryLang.wrongTypeForValue(object, String.class));
+        return requireAs(String.class);
     }
 
     @Override
     public @NonNull LoadResult<@NonNull DataTree> requireDataTree() {
-        Object object = object();
-        if (object instanceof DataTree) {
-            return LoadResult.of((DataTree) object);
-        }
-        return throwError(context.libraryLang.wrongTypeForValue(object, DataTree.class));
+        return requireAs(DataTree.class);
+    }
+
+    @Override
+    public @NonNull LoadResult<@NonNull DataList> requireDataList() {
+        return requireAs(DataList.class);
     }
 
     @Override

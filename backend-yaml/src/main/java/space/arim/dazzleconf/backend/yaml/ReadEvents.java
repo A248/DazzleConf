@@ -33,6 +33,7 @@
 
 package space.arim.dazzleconf.backend.yaml;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.snakeyaml.engine.v2.api.LoadSettings;
 import org.snakeyaml.engine.v2.comments.CommentEventsCollector;
@@ -56,6 +57,7 @@ import org.snakeyaml.engine.v2.resolver.ScalarResolver;
 import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
@@ -112,7 +114,11 @@ final class ReadEvents {
     }
 
     interface ComposeNode {
-        void prepare(@Nullable Object value);
+        CommentSink skipImplicitNull();
+
+        CommentSink prepareSink(@NonNull Object value);
+
+        void readyToRecurse();
     }
 
     private final class WithScope implements AutoCloseable {
@@ -200,27 +206,37 @@ final class ReadEvents {
         /**
          * Preconditions: next event is NodeEvent, and block comments are filled in collector. <br>
          * Postconditions: block comments are waiting (collector unfilled)
-         *
-         * @return true to rollback, happens only if node is a scalar, and the scalar is implicitly null
          */
-        boolean composeNode(CommentSink commentSink, ComposeNode composeNode) {
+        void composeNode(Object recursionKey, ComposeNode composeNode) {
+            context.keyPathStack.addLast(recursionKey);
+            try {
+                composeNode0(composeNode);
+            } finally {
+                context.keyPathStack.pollLast();
+            }
+        }
+
+        private void composeNode0(ComposeNode composeNode) {
             NodeEvent event = (NodeEvent) parser.peekEvent();
             @Nullable Anchor anchor = event.getAnchor().orElse(null);
-            @Nullable Object value; // Only null for implicit nulls
+            CommentSink commentSink;
             Runnable continuation;
             if (parser.checkEvent(Event.ID.Scalar)) {
-                value = composeScalar((ScalarEvent) parser.next(), anchor, true);
+                Object value = composeScalar((ScalarEvent) parser.next(), anchor, true);
+                if (value == null) {
+                    commentSink = composeNode.skipImplicitNull();
+                } else {
+                    commentSink = composeNode.prepareSink(value);
+                }
                 continuation = null;
 
             } else if (parser.checkEvent(Event.ID.SequenceStart)) {
-                List<DataEntry> bucket = new ArrayList<>();
-                value = bucket;
-                continuation = composeSequence(anchor, bucket, commentSink);
+                DataList.Mut bucket = new DataList.Mut();
+                continuation = composeSequence(anchor, bucket, commentSink = composeNode.prepareSink(bucket));
 
             } else if (parser.checkEvent(Event.ID.MappingStart)) {
                 DataTree.Mut bucket = new DataTree.Mut();
-                value = bucket;
-                continuation = composeMap(anchor, bucket, commentSink);
+                continuation = composeMap(anchor, bucket, commentSink = composeNode.prepareSink(bucket));
 
             } else {
                 consumeEventId(Event.ID.Alias);
@@ -229,7 +245,7 @@ final class ReadEvents {
                     ErrorContext error = context.errorSource.buildError(preBuilt("Found undefined alias " + anchor));
                     throw context.throwError(error, event.getStartMark().map(Mark::getLine).orElse(null));
                 }
-                value = anchors.get(anchor);
+                Object value = anchors.get(anchor);
                 if (!DataTree.validateKey(value) && ++nonScalarAliasesCount > loadSettings.getMaxAliasesForCollections()) {
                     ErrorContext error = context.errorSource.buildError(preBuilt(
                             "Number of aliases for non-scalar nodes exceeds the specified max="
@@ -240,19 +256,18 @@ final class ReadEvents {
                     ErrorContext error = context.errorSource.buildError(preBuilt("Cannot use recursive anchors"));
                     throw context.throwError(error, event.getStartMark().map(Mark::getLine).orElse(null));
                 }
+                commentSink = composeNode.prepareSink(value);
                 // We support comments here, even if snakeyaml's Composer originally does not
                 inlineCommentsCollector.collectEvents();
                 continuation = null;
             }
-            composeNode.prepare(value);
             // Add inline comments: for example, this can pull comments beside map keys
             setInlineComments(commentSink, inlineCommentsCollector.consume());
 
+            composeNode.readyToRecurse();
             // Recurse for each entry
             if (continuation != null)
                 continuation.run();
-
-            return value == null;
         }
 
         private void registerAnchor(Anchor anchor, Object value) {
@@ -298,8 +313,8 @@ final class ReadEvents {
          * Preconditions: next event is SequenceStartEvent, and block comments are filled in collector. <br>
          * Postconditions: block comments are waiting (collector unfilled)
          */
-        private Runnable composeSequence(@Nullable Anchor anchor, List<DataEntry> bucket, CommentSink containerCommentSink) {
-            class ComposeSequence implements ComposeCollection<SequenceStartEvent, List<DataEntry>> {
+        private Runnable composeSequence(@Nullable Anchor anchor, DataList.Mut bucket, CommentSink containerCommentSink) {
+            class ComposeSequence implements ComposeCollection<SequenceStartEvent, DataList.Mut> {
 
                 private int index;
 
@@ -319,14 +334,10 @@ final class ReadEvents {
                 }
 
                 @Override
-                public void composeEntry(List<DataEntry> bucket) {
-                    int index = this.index++;
-                    bucket.add(DUMMY_ENTRY); // Pre-fill up to the index
-
+                public void composeEntry(DataList.Mut bucket) {
                     Event event = parser.peekEvent();
                     int indentLevel = context.getIndent(event);
                     Integer lineNumber = event.getStartMark().map(Mark::getLine).orElse(null);
-                    ListEntry listEntry = new ListEntry(bucket, indentLevel, lineNumber, index);
                     /*
                      Comments before the list entry - we will delay this until we know the value
                      Why?
@@ -344,29 +355,38 @@ final class ReadEvents {
                          # Belong?
                          - key: 'value'
                      */
-                    //scope.visitCommentSink(listEntry, blockCommentsCollector.consume());
+                    composeNode("$", new ComposeNode() {
 
-                    // Recursion
-                    context.keyPathStack.addLast("$");
-                    try {
-                        boolean rollback = composeNode(listEntry, value -> {
-                            listEntry.value = value;
+                        @Override
+                        public CommentSink skipImplicitNull() {
+                            CommentSink blackHole = new BlackHoleForComments(indentLevel);
+                            scope.visitCommentSink(blackHole, blockCommentsCollector.consume());
+                            return blackHole;
+                        }
 
-                            if (value instanceof DataTree || value instanceof List) {
+                        private ListEntry needManualFinish;
+
+                        @Override
+                        public CommentSink prepareSink(@NonNull Object value) {
+                            bucket.add(DUMMY_ENTRY); // Pre-fill up to the index
+                            ListEntry listEntry = new ListEntry(bucket, indentLevel, lineNumber, index++, value);
+
+                            if (value instanceof DataTree || value instanceof DataList) {
                                 // SEE ABOVE - we skip adding the list entry as a comment sink
-                                listEntry.finish();
+                                needManualFinish = listEntry;
                             } else {
                                 scope.visitCommentSink(listEntry, blockCommentsCollector.consume());
                             }
-                        });
-                        if (rollback) {
-                            assert bucket.size() == index + 1;
-                            bucket.remove(index);
-                            this.index--;
+                            return listEntry;
                         }
-                    } finally {
-                        context.keyPathStack.pollLast();
-                    }
+
+                        @Override
+                        public void readyToRecurse() {
+                            if (needManualFinish != null) {
+                                needManualFinish.finish();
+                            }
+                        }
+                    });
                 }
             };
             return composeCollection(new ComposeSequence(), anchor, bucket, containerCommentSink);
@@ -403,23 +423,34 @@ final class ReadEvents {
                     }
                     ScalarEvent scalarEvent = (ScalarEvent) parser.next();
                     Object key = composeScalar(scalarEvent, null, false);
-                    MapEntry mapEntry = new MapEntry(
-                            bucket, context.getIndent(scalarEvent),
-                            scalarEvent.getStartMark().map(Mark::getLine).orElse(null), key
-                    );
+                    int indentLevel = context.getIndent(scalarEvent);
+                    Integer lineNumber = scalarEvent.getStartMark().map(Mark::getLine).orElse(null);
                     // Comments before the key/value pair
-                    scope.visitCommentSink(mapEntry, blockCommentsCollector.consume());
+                    List<CommentLine> commentsBeforeKey = blockCommentsCollector.consume();
                     // Comments after the key, but before the value
-                    setInlineComments(mapEntry, inlineCommentsCollector.collectEvents().consume());
+                    inlineCommentsCollector.collectEvents();
                     blockCommentsCollector.collectEvents();
 
-                    // Recursion for the value
-                    context.keyPathStack.addLast(key);
-                    try {
-                        composeNode(mapEntry, value -> mapEntry.value = value);
-                    } finally {
-                        context.keyPathStack.pollLast();
-                    }
+                    composeNode(key, new ComposeNode() {
+                        @Override
+                        public CommentSink skipImplicitNull() {
+                            CommentSink blackHole = new BlackHoleForComments(indentLevel);
+                            scope.visitCommentSink(blackHole, commentsBeforeKey);
+                            return blackHole;
+                        }
+
+                        @Override
+                        public CommentSink prepareSink(@NonNull Object value) {
+                            MapEntry mapEntry = new MapEntry(bucket, indentLevel, lineNumber, key, value);
+                            scope.visitCommentSink(mapEntry, commentsBeforeKey);
+                            return mapEntry;
+                        }
+
+                        @Override
+                        public void readyToRecurse() {
+
+                        }
+                    });
                 }
             };
             return composeCollection(new ComposeMap(), anchor, bucket, containerCommentSink);

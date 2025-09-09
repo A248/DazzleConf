@@ -89,7 +89,7 @@ public class MigrateFromConfigurationTest {
     @Test
     public void successYieldsValue() {
         DataTree.Mut backendTree = new DataTree.Mut();
-        backendTree.set("source", new DataEntry("yay"));
+        backendTree.put("source", new DataEntry("yay"));
         when(mainBackend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(backendTree)));
         when(migrateContext.mainBackend()).thenReturn(mainBackend);
         LoadResult<Config> loadResult = new MigrateFromConfiguration<>(configuration).load(migrateContext);
@@ -100,7 +100,7 @@ public class MigrateFromConfigurationTest {
     @Test
     public void listenToUpdates() {
         DataTree.Mut backendTree = new DataTree.Mut();
-        backendTree.set("other", new DataEntry("no!"));
+        backendTree.put("other", new DataEntry("no!"));
         when(mainBackend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(backendTree)));
         when(migrateContext.mainBackend()).thenReturn(mainBackend);
         LoadResult<Config> loadResult = new MigrateFromConfiguration<>(configuration).load(migrateContext);
@@ -112,7 +112,7 @@ public class MigrateFromConfigurationTest {
     @Test
     public void filterNotUsable() {
         DataTree.Mut backendTree = new DataTree.Mut();
-        backendTree.set("other", new DataEntry("no!"));
+        backendTree.put("other", new DataEntry("no!"));
         when(mainBackend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(backendTree)));
         when(migrateContext.mainBackend()).thenReturn(mainBackend);
         // Add a filter with exactly the value that is going to happen
@@ -126,7 +126,7 @@ public class MigrateFromConfigurationTest {
     @Test
     public void filterStillUsable() {
         DataTree.Mut backendTree = new DataTree.Mut();
-        backendTree.set("source", new DataEntry("yay"));
+        backendTree.put("source", new DataEntry("yay"));
         when(mainBackend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(backendTree)));
         when(migrateContext.mainBackend()).thenReturn(mainBackend);
         LoadResult<Config> loadResult = new MigrateFromConfiguration<>(configuration)

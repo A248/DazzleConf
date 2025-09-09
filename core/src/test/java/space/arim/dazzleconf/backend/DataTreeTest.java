@@ -24,6 +24,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.ImmutabilityGuard;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
@@ -56,15 +57,15 @@ public class DataTreeTest {
         DataTree.Mut dataTree = new DataTree.Mut();
         assertTrue(dataTree.isEmpty());
         assertEquals(0, dataTree.size());
-        dataTree.set("hello", new DataEntry("goodbye"));
-        dataTree.set(1, new DataEntry("key is not a string"));
+        dataTree.put("hello", new DataEntry("goodbye"));
+        dataTree.put(1, new DataEntry("key is not a string"));
         assertFalse(dataTree.isEmpty());
         assertEquals(2, dataTree.size());
 
         Object[] validValues = new Object[] {
                 3, (byte) 4, Long.MAX_VALUE, Double.MIN_VALUE, (float) 42.7,
                 false, 'c', "string",
-                List.of(new DataEntry(4), new DataEntry(true), new DataEntry("list of mixed types")),
+                new DataList.Immut(new DataEntry(4), new DataEntry(true), new DataEntry("list of mixed types")),
                 dataTree
         };
         // Verify usage
@@ -83,9 +84,9 @@ public class DataTreeTest {
     @Test
     public void iterateInOrder() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        dataTreeMut.set("also", new DataEntry("yes"));
-        dataTreeMut.set("zed", new DataEntry(true));
+        dataTreeMut.put("hello", new DataEntry("goodbye"));
+        dataTreeMut.put("also", new DataEntry("yes"));
+        dataTreeMut.put("zed", new DataEntry(true));
 
         List<Object> orderedKeys = new ArrayList<>();
         List<Object> orderedValues = new ArrayList<>();
@@ -101,42 +102,22 @@ public class DataTreeTest {
     }
 
     @Test
-    public void commentsAndLineNumbers() {
-        List<String> comments = List.of("no comment", "second line");
-        List<String> comments2 = List.of("other location", "second line", "third line");
-        DataEntry entry = new DataEntry("hi")
-                .withComments(CommentLocation.ABOVE, comments)
-                .withComments(CommentLocation.INLINE, comments2);
-        assertEquals(comments, entry.getComments(CommentLocation.ABOVE));
-        assertEquals(comments2, entry.getComments(CommentLocation.INLINE));
-        assertEquals(List.of(), entry.getComments(CommentLocation.BELOW));
-        assertEquals(new DataEntry("hi"), entry);
-    }
-
-    @Test
-    public void lineNumber()  {
-        DataEntry entry = new DataEntry("hi").withLineNumber(32);
-        assertEquals(32, entry.getLineNumber());
-        assertEquals(new DataEntry("hi"), entry);
-    }
-
-    @Test
     public void mergeFrom() {
         DataTree.Mut mergeFromDest = new DataTree.Mut();
         DataTree.Mut section = new DataTree.Mut();
-        mergeFromDest.set("hello", new DataEntry("goodbye"));
-        mergeFromDest.set("zed", new DataEntry(true));
-        mergeFromDest.set("section", new DataEntry(section));
-        mergeFromDest.set("original-section", new DataEntry(new DataTree.Mut()));
-        mergeFromDest.set("original-not-section", new DataEntry(false));
+        mergeFromDest.put("hello", new DataEntry("goodbye"));
+        mergeFromDest.put("zed", new DataEntry(true));
+        mergeFromDest.put("section", new DataEntry(section));
+        mergeFromDest.put("original-section", new DataEntry(new DataTree.Mut()));
+        mergeFromDest.put("original-not-section", new DataEntry(false));
         DataTree.Mut mergeFromSource = new DataTree.Mut();
         DataTree.Mut sectionNew = new DataTree.Mut();
-        sectionNew.set("sub", new DataEntry("value"));
-        mergeFromSource.set("hello", new DataEntry("replaced"));
-        mergeFromSource.set("new key", new DataEntry(true));
-        mergeFromSource.set("section", new DataEntry(sectionNew.intoImmut()));
-        mergeFromSource.set("original-section", new DataEntry("no longer section"));
-        mergeFromSource.set("original-not-section", new DataEntry(new DataTree.Immut()));
+        sectionNew.put("sub", new DataEntry("value"));
+        mergeFromSource.put("hello", new DataEntry("replaced"));
+        mergeFromSource.put("new key", new DataEntry(true));
+        mergeFromSource.put("section", new DataEntry(sectionNew.intoImmut()));
+        mergeFromSource.put("original-section", new DataEntry("no longer section"));
+        mergeFromSource.put("original-not-section", new DataEntry(new DataTree.Immut()));
 
         mergeFromDest.copyFrom(mergeFromSource.intoImmut());
         mergeFromSource.forEach((key, expectedEntry) -> {
@@ -148,29 +129,29 @@ public class DataTreeTest {
     @Test
     public void mergeFromFailure() {
         DataTree.Mut mergeFromDest = new DataTree.Mut();
-        mergeFromDest.set("hello", new DataEntry("goodbye"));
-        mergeFromDest.set("also", new DataEntry("yes"));
-        mergeFromDest.set("section", new DataEntry(new DataTree.Immut()));
+        mergeFromDest.put("hello", new DataEntry("goodbye"));
+        mergeFromDest.put("also", new DataEntry("yes"));
+        mergeFromDest.put("section", new DataEntry(new DataTree.Immut()));
         DataTree.Mut mergeFromSource = new DataTree.Mut();
-        mergeFromSource.set("hello", new DataEntry("replaced"));
-        mergeFromSource.set("new key", new DataEntry(true));
-        mergeFromSource.set("section", new DataEntry(new DataTree.Mut()));
+        mergeFromSource.put("hello", new DataEntry("replaced"));
+        mergeFromSource.put("new key", new DataEntry(true));
+        mergeFromSource.put("section", new DataEntry(new DataTree.Mut()));
         assertThrows(IllegalStateException.class, () -> mergeFromDest.copyFrom(mergeFromSource));
     }
 
     @Test
     public void intoMutOnMut() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.put("hello", new DataEntry("goodbye"));
         assertSame(dataTreeMut, dataTreeMut.intoMut());
     }
 
     @Test
     public void intoImmut() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        dataTreeMut.set("also", new DataEntry("yes"));
-        dataTreeMut.set("zed", new DataEntry(true));
+        dataTreeMut.put("hello", new DataEntry("goodbye"));
+        dataTreeMut.put("also", new DataEntry("yes"));
+        dataTreeMut.put("zed", new DataEntry(true));
         DataTree.Immut dataTreeImmut = dataTreeMut.intoImmut();
 
         assertEquals((DataTree) dataTreeImmut, dataTreeMut);
@@ -180,9 +161,9 @@ public class DataTreeTest {
     @Test
     public void intoImmutMutRoundTrip() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        dataTreeMut.set("also", new DataEntry("yes"));
-        dataTreeMut.set("zed", new DataEntry(true));
+        dataTreeMut.put("hello", new DataEntry("goodbye"));
+        dataTreeMut.put("also", new DataEntry("yes"));
+        dataTreeMut.put("zed", new DataEntry(true));
         assertEquals(dataTreeMut, dataTreeMut.intoImmut().intoMut());
 
     }
@@ -190,18 +171,18 @@ public class DataTreeTest {
     @Test
     public void intoMutOnImmutCannotMutateImmut() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
+        dataTreeMut.put("hello", new DataEntry("goodbye"));
 
         DataTree.Immut snapshot = dataTreeMut.intoImmut();
         try (ImmutGuard guard = new ImmutGuard(snapshot)) {
 
             DataTree.Mut backToMut1 = snapshot.intoMut();
-            backToMut1.set("new key", new DataEntry("new value"));
+            backToMut1.put("new key", new DataEntry("new value"));
             guard.check();
             assertNotEquals(backToMut1, snapshot);
 
             DataTree.Mut backToMut2 = snapshot.intoMut();
-            backToMut2.set("hello", null);
+            backToMut2.remove("hello");
             guard.check();
             assertNotEquals(backToMut2, snapshot);
 
@@ -227,13 +208,13 @@ public class DataTreeTest {
     @Test
     public void intoImmutOnMutCannotBeMutatedBySet() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        dataTreeMut.set("also", new DataEntry("yes"));
-        dataTreeMut.set("zed", new DataEntry(true));
+        dataTreeMut.put("hello", new DataEntry("goodbye"));
+        dataTreeMut.put("also", new DataEntry("yes"));
+        dataTreeMut.put("zed", new DataEntry(true));
 
         DataTree.Immut snapshot = dataTreeMut.intoImmut();
         try (ImmutGuard ignored = new ImmutGuard(snapshot)) {
-            dataTreeMut.set("new key", new DataEntry("new value"));
+            dataTreeMut.put("new key", new DataEntry("new value"));
         }
     }
 
@@ -241,13 +222,13 @@ public class DataTreeTest {
     @Test
     public void intoImmutOnMutCannotBeMutatedBySetNull() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        dataTreeMut.set("also", new DataEntry("yes"));
-        dataTreeMut.set("zed", new DataEntry(true));
+        dataTreeMut.put("hello", new DataEntry("goodbye"));
+        dataTreeMut.put("also", new DataEntry("yes"));
+        dataTreeMut.put("zed", new DataEntry(true));
 
         DataTree.Immut snapshot = dataTreeMut.intoImmut();
         try (ImmutGuard ignored = new ImmutGuard(snapshot)) {
-            dataTreeMut.set("hello", null);
+            dataTreeMut.remove("hello");
         }
     }
 
@@ -255,9 +236,9 @@ public class DataTreeTest {
     @Test
     public void intoImmutOnMutCannotBeMutatedByRemove() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        dataTreeMut.set("also", new DataEntry("yes"));
-        dataTreeMut.set("zed", new DataEntry(true));
+        dataTreeMut.put("hello", new DataEntry("goodbye"));
+        dataTreeMut.put("also", new DataEntry("yes"));
+        dataTreeMut.put("zed", new DataEntry(true));
 
         DataTree.Immut snapshot = dataTreeMut.intoImmut();
         try (ImmutGuard ignored = new ImmutGuard(snapshot)) {
@@ -268,9 +249,9 @@ public class DataTreeTest {
     @Test
     public void intoImmutOnMutCannotBeMutatedByClear() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        dataTreeMut.set("also", new DataEntry("yes"));
-        dataTreeMut.set("zed", new DataEntry(true));
+        dataTreeMut.put("hello", new DataEntry("goodbye"));
+        dataTreeMut.put("also", new DataEntry("yes"));
+        dataTreeMut.put("zed", new DataEntry(true));
 
         DataTree.Immut snapshot = dataTreeMut.intoImmut();
         try (ImmutGuard ignored = new ImmutGuard(snapshot)) {
@@ -281,11 +262,11 @@ public class DataTreeTest {
     @Test
     public void intoImmutOnMutCannotBeMutatedByMergeFrom() {
         DataTree.Mut dataTreeMut = new DataTree.Mut();
-        dataTreeMut.set("hello", new DataEntry("goodbye"));
-        dataTreeMut.set("also", new DataEntry("yes"));
-        dataTreeMut.set("zed", new DataEntry(true));
+        dataTreeMut.put("hello", new DataEntry("goodbye"));
+        dataTreeMut.put("also", new DataEntry("yes"));
+        dataTreeMut.put("zed", new DataEntry(true));
         DataTree.Mut mergeFromSource = new DataTree.Mut();
-        mergeFromSource.set("hi", new DataEntry("bye"));
+        mergeFromSource.put("hi", new DataEntry("bye"));
 
         DataTree.Immut snapshot = dataTreeMut.intoImmut();
         try (ImmutGuard ignored = new ImmutGuard(snapshot)) {

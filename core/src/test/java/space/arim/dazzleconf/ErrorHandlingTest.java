@@ -90,7 +90,7 @@ public class ErrorHandlingTest {
     public void noErrors() {
         Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("integral", new DataEntry(1));
+        dataTree.put("integral", new DataEntry(1));
         when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
         Config loaded = configuration.configureOrFallback(backend, errorPrint);
         verifyNoInteractions(errorPrint);
@@ -101,7 +101,7 @@ public class ErrorHandlingTest {
     public void noErrors(@Mock ConfigureListener configureListener) {
         Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("integral", new DataEntry(1));
+        dataTree.put("integral", new DataEntry(1));
         when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
         Config loaded = configuration.configureOrFallback(backend, configureListener, errorPrint);
         verifyNoInteractions(errorPrint);
@@ -124,7 +124,7 @@ public class ErrorHandlingTest {
     public void badValue() {
         Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("integral", new DataEntry("not an integer"));
+        dataTree.put("integral", new DataEntry("not an integer"));
         when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
         Config loaded = configuration.configureOrFallback(backend, errorPrint);
         verify(errorPrint).onError(argThat(list -> !list.isEmpty()));
@@ -135,7 +135,7 @@ public class ErrorHandlingTest {
     public void badValue(@Mock ConfigureListener configureListener) {
         Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("integral", new DataEntry("not an integer"));
+        dataTree.put("integral", new DataEntry("not an integer"));
         when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
         Config loaded = configuration.configureOrFallback(backend, configureListener, errorPrint);
         verify(errorPrint).onError(argThat(list -> !list.isEmpty()));

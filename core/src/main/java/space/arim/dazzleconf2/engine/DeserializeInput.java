@@ -22,6 +22,7 @@ package space.arim.dazzleconf2.engine;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 
 /**
@@ -66,6 +67,13 @@ public interface DeserializeInput extends DeserializeContext {
      * @return the object as a data tree, or an error result if the type is mismatched
      */
     @NonNull LoadResult<@NonNull DataTree> requireDataTree();
+
+    /**
+     * Requires the object to be a list of data entries.
+     *
+     * @return the object as a data list, or an error result if the type is mismatched
+     */
+    @NonNull LoadResult<@NonNull DataList> requireDataList();
 
     /**
      * Makes a child and prepares it for deserialization.

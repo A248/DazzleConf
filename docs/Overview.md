@@ -18,9 +18,11 @@ These make a compelling justification for choosing to abolish null config values
 
 ### Types and Type Safety
 
-Configuration methods should return the same types that are used in your code. This library encourages developers to fully specify the types they need, including by adding custom types if needed.
+Configuration methods should return the same types that are used in your code.
 
-By moving
+This seems like a simple principle, but it's actually quite powerful. While you *CAN* use the traditional approach of "load everything a strings, integers, and booleans," this library encourages developers to fully specify the types they need, including by adding custom types if needed.
+
+By moving type construction and integrity to *configuration loading time*, you guarantee that every configuration object is fully sound and usable.
 
 ### Immutability and Thread Safety
 
@@ -60,7 +62,7 @@ The default type liaisons cover:
 * Maps work similarly to collections. They detect the generic arguments for the key and the value, get a serializer for each type, and rely on the serializers as dependencies.
 * Configuration interfaces annotated with @SubSection. These are loaded like the rest of the configuration interface, and they automatically inherit liaisons from the parent configuration.
 
-Changes from version 1.x: Maps are no longer supported in the default liaisons.
+TODO: In version 2, maps are not yet supported in the default liaisons.
 
 ## Skipped Methods
 

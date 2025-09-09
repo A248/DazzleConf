@@ -107,9 +107,9 @@ public class WriteHoconTest {
     @Test
     public void writeOrdered() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("zeroth-option", new DataEntry(false));
-        dataTree.set("first-option", new DataEntry(true));
-        dataTree.set("second-option", new DataEntry(false));
+        dataTree.put("zeroth-option", new DataEntry(false));
+        dataTree.put("first-option", new DataEntry(true));
+        dataTree.put("second-option", new DataEntry(false));
         StringRoot stringRoot = new StringRoot("");
         HoconBackend backend = new HoconBackend(stringRoot);
         assertDoesNotThrow(() -> backend.write(Backend.Document.simple(dataTree)));
@@ -123,9 +123,9 @@ public class WriteHoconTest {
     @Test
     public void writeOrderedComments() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("zeroth-option", new DataEntry(false).withComments(CommentLocation.ABOVE, List.of("Comments on zeroth")));
-        dataTree.set("first-option", new DataEntry(true).withComments(CommentLocation.ABOVE, List.of("Comments on first")));
-        dataTree.set("second-option", new DataEntry(false).withComments(CommentLocation.ABOVE, List.of("Comments on second")));
+        dataTree.put("zeroth-option", new DataEntry(false).withComments(CommentLocation.ABOVE, List.of("Comments on zeroth")));
+        dataTree.put("first-option", new DataEntry(true).withComments(CommentLocation.ABOVE, List.of("Comments on first")));
+        dataTree.put("second-option", new DataEntry(false).withComments(CommentLocation.ABOVE, List.of("Comments on second")));
         StringRoot stringRoot = new StringRoot("");
         HoconBackend backend = new HoconBackend(stringRoot);
         assertDoesNotThrow(() -> backend.write(Backend.Document.simple(dataTree)));

@@ -20,25 +20,21 @@
 package space.arim.dazzleconf.backend.yaml;
 
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 
-import java.util.List;
-
-final class ListEntry extends ContainerEntry<List<DataEntry>> {
+final class ListEntry extends ContainerEntry<DataList.Mut> {
 
     private final int index;
-    Object value;
+    private final Object value;
 
-    ListEntry(List<DataEntry> container, int indentLevel, Integer lineNumber, int index) {
-        super(container, indentLevel, lineNumber);
+    ListEntry(DataList.Mut bucket, int indentLevel, Integer lineNumber, int index, Object value) {
+        super(bucket, indentLevel, lineNumber);
         this.index = index;
+        this.value = value;
     }
 
     @Override
     public void finish() {
-        if (value == null) {
-            // Can only happen for implicit nulls - see ReadEvents and Backend javadoc
-            return;
-        }
         DataEntry dataEntry = new DataEntry(value).withComments(commentData);
         if (lineNumber != null) dataEntry = dataEntry.withLineNumber(lineNumber);
         bucket.set(index, dataEntry);

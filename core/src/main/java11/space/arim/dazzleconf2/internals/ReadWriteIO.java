@@ -20,13 +20,15 @@
 package space.arim.dazzleconf2.internals;
 
 import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-public final class FileIO {
+public final class ReadWriteIO {
 
-    private FileIO() {}
+    private ReadWriteIO() {}
 
     public static String readString(Path path, Charset cs) throws IOException {
         return Files.readString(path, cs);
@@ -34,5 +36,9 @@ public final class FileIO {
 
     public static void writeString(Path path, CharSequence csq, Charset cs) throws IOException {
         Files.writeString(path, csq, cs);
+    }
+
+    public static void transferToWriter(Reader in, Writer out) throws IOException {
+        in.transferTo(out);
     }
 }

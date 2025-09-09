@@ -64,10 +64,14 @@ public class DataEntryTest {
 
     @Test
     public void comments() {
-        CommentData comments = CommentData.empty().setAt(CommentLocation.ABOVE, "hi");
+        CommentData comments = CommentData.empty()
+                .setAt(CommentLocation.ABOVE, "hi")
+                .setAt(CommentLocation.INLINE, "other location", "second line", "third line");
         DataEntry commented = entry.withComments(comments);
         assertEquals(comments, commented.getComments());
         assertEquals(List.of("hi"), commented.getComments(CommentLocation.ABOVE));
+        assertEquals(List.of("other location", "second line", "third line"), commented.getComments(CommentLocation.INLINE));
+        assertEquals(List.of(), commented.getComments(CommentLocation.BELOW));
     }
 
     @Test

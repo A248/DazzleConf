@@ -24,22 +24,19 @@ import space.arim.dazzleconf2.backend.DataTree;
 
 final class MapEntry extends ContainerEntry<DataTree.Mut> {
 
-    final Object key;
-    Object value;
+    private final Object key;
+    private final Object value;
 
-    MapEntry(DataTree.Mut bucket, int indentLevel, Integer lineNumber, Object key) {
+    MapEntry(DataTree.Mut bucket, int indentLevel, Integer lineNumber, Object key, Object value) {
         super(bucket, indentLevel, lineNumber);
         this.key = key;
+        this.value = value;
     }
 
     @Override
     public void finish() {
-        if (value == null) {
-            // Can only happen for implicit nulls - see ReadEvents and Backend javadoc
-            return;
-        }
         DataEntry dataEntry = new DataEntry(value).withComments(commentData);
         if  (lineNumber != null) dataEntry = dataEntry.withLineNumber(lineNumber);
-        bucket.set(key, dataEntry);
+        bucket.put(key, dataEntry);
     }
 }

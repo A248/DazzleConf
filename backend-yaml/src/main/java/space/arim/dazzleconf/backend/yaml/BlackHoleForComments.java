@@ -17,22 +17,30 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf2.internals;
+package space.arim.dazzleconf.backend.yaml;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.List;
 
-public final class FileIO {
+final class BlackHoleForComments implements CommentSink {
 
-    private FileIO() {}
+    private final int indentLevel;
 
-    public static String readString(Path path, Charset cs) throws IOException {
-        return new String(Files.readAllBytes(path), cs);
+    BlackHoleForComments(int indentLevel) {
+        this.indentLevel = indentLevel;
     }
 
-    public static void writeString(Path path, CharSequence csq, Charset cs) throws IOException {
-        Files.write(path, csq.toString().getBytes(cs));
+    @Override
+    public int indentLevel() {
+        return indentLevel;
+    }
+
+    @Override
+    public void setBlockComments(boolean comingFromBelow, List<String> comments) {
+
+    }
+
+    @Override
+    public void finish() {
+
     }
 }

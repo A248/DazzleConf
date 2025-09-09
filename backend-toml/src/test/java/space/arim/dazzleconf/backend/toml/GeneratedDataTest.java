@@ -27,6 +27,7 @@ import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.StringRoot;
 import space.arim.dazzleconf2.engine.CommentLocation;
@@ -46,8 +47,8 @@ public class GeneratedDataTest {
     @Test
     public void writeFloat() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("1r1G", new DataEntry(true));
-        dataTree.set("Hxh", new DataEntry(0.99000555));
+        dataTree.put("1r1G", new DataEntry(true));
+        dataTree.put("Hxh", new DataEntry(0.99000555));
         tomlBackend.write(Backend.Document.simple(dataTree));
         assertDoesNotThrow(tomlBackend.read(errorSource)::getOrThrow, stringRoot.readString());
     }
@@ -55,7 +56,7 @@ public class GeneratedDataTest {
     @Test
     public void writeKanjiKey() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("漢", new DataEntry(true));
+        dataTree.put("漢", new DataEntry(true));
         assertDoesNotThrow(() -> tomlBackend.write(Backend.Document.simple(dataTree)));
     }
 
@@ -71,20 +72,20 @@ AI0ons2K=DataEntry{value=-1130343348, lineNumber=null, comments=CommentData{{}}}
 42=DataEntry{value=Mut{{}}, lineNumber=null, comments=CommentData{{}}}}}
          */
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set(-29, new DataEntry(8296509441357041660L));
-        dataTree.set("똊", new DataEntry(false).withComments(CommentData.empty()
+        dataTree.put(-29, new DataEntry(8296509441357041660L));
+        dataTree.put("똊", new DataEntry(false).withComments(CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "QZSbcItn", "4JSs92nR", "H")
                 .setAt(CommentLocation.INLINE, "MLMCEJd")
                 .setAt(CommentLocation.BELOW, "GgUOMZK", "vy5", "U5ERu3")
         ));
-        dataTree.set(false, new DataEntry(0.17445159).withComments(CommentData.empty()
+        dataTree.put(false, new DataEntry(0.17445159).withComments(CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "Q3", "HWuZBe2", "r5rBRt6W")
                 .setAt(CommentLocation.INLINE, "k")
                 .setAt(CommentLocation.BELOW, "h", "BzROM", "rvRXWMX")
         ));
-        dataTree.set("AI0ons2K", new DataEntry(-1130343348));
-        dataTree.set(-2074373901, new DataEntry(false));
-        dataTree.set(42, new DataEntry(new DataTree.Immut()));
+        dataTree.put("AI0ons2K", new DataEntry(-1130343348));
+        dataTree.put(-2074373901, new DataEntry(false));
+        dataTree.put(42, new DataEntry(new DataTree.Immut()));
         tomlBackend.write(Backend.Document.simple(dataTree));
         assertEquals("""
                 -2074373901 = false
@@ -137,17 +138,17 @@ data=Immut{{
 true=DataEntry{value=Mut{{Ĝ=DataEntry{value
  */ // Yes, the assertion message cut off here... maybe an extremely weird string value pre-consumed what came after
         DataTree.Mut dataTree = new DataTree.Mut();
-        List<DataEntry> dataList = new ArrayList<>();
-        List<DataEntry> subList = new ArrayList<>();
-        List<DataEntry> subSubList1 = new ArrayList<>();
-        List<DataEntry> subSubList2 = new ArrayList<>();
-        dataTree.set("26", new DataEntry(dataList));
+        DataList.Mut dataList = new DataList.Mut();
+        DataList.Mut subList = new DataList.Mut();
+        DataList.Mut subSubList1 = new DataList.Mut();
+        DataList.Mut subSubList2 = new DataList.Mut();
+        dataTree.put("26", new DataEntry(dataList));
         dataList.add(new DataEntry(subList));
         subList.add(new DataEntry(subSubList1));
         subList.add(new DataEntry(subSubList2));
 
         subSubList1.add(new DataEntry(new DataTree.Mut()));
-        subSubList1.add(new DataEntry(new ArrayList<>()));
+        subSubList1.add(new DataEntry(new DataList.Mut()));
         List<String> weirdLines = new ArrayList<>();
         weirdLines.add("��ܗ[��Yɽ\"��");
         weirdLines.add("�");

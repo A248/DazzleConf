@@ -255,9 +255,9 @@ public interface Backend {
          * Some backend formats do not inherently support floats, but the {@code Backend} implementation is required
          * to write them if they appear.
          * <p>
-         * <b>Implictions</b>
+         * <b>Implications</b>
          * <p>
-         * If this method returns true, he {@code Backend} will write float values by first casting them to doubles.
+         * If this method returns true, the {@code Backend} will write float values by first casting them to doubles.
          * Conversion operations may lead to a loss of precision in some cases.
          *
          * @return if the backend writes float as doubles

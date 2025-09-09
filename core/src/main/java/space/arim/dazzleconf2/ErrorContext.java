@@ -25,7 +25,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
-import space.arim.dazzleconf2.internals.lang.LibraryLangKey;
 
 import java.io.IOException;
 import java.net.URL;
@@ -136,10 +135,10 @@ public interface ErrorContext {
      */
     final class Key<V> {
 
-        final LibraryLangKey langKey;
+        final LibraryLang.Key langKey;
         final FormatData<V> formatData;
 
-        Key(LibraryLangKey langKey, FormatData<V> formatData) {
+        Key(LibraryLang.Key langKey, FormatData<V> formatData) {
             this.langKey = langKey;
             this.formatData = formatData;
         }

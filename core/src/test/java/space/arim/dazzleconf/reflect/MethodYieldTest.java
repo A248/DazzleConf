@@ -44,9 +44,11 @@ public class MethodYieldTest {
     }
 
     @Test
-    public void addEntry() {
+    public void addValue() {
         MethodYield methodYield = new MethodYield();
-        methodYield.addEntry(MethodYieldTest.class, sample, "my value");
+        try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(MethodYieldTest.class)) {
+            methodYieldFor.returnValue(sample, "my value");
+        }
         MethodYield.Entry entry = methodYield.entries().iterator().next();
         assertEquals(MethodYieldTest.class, entry.implementable());
         assertEquals(sample,  entry.method());
@@ -56,7 +58,9 @@ public class MethodYieldTest {
     @Test
     public void clear() {
         MethodYield methodYield = new MethodYield();
-        methodYield.addEntry(MethodYieldTest.class, sample, "my value");
+        try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(MethodYieldTest.class)) {
+            methodYieldFor.returnValue(sample, "my value");
+        }
         methodYield.clear();
         assertFalse(methodYield.entries().iterator().hasNext());
     }
@@ -64,7 +68,9 @@ public class MethodYieldTest {
     @Test
     public void copy() {
         MethodYield original = new MethodYield();
-        original.addEntry(MethodYieldTest.class, sample, "s");
+        try (MethodYield.ForImplementable methodYieldFor = original.forImplementable(MethodYieldTest.class)) {
+            methodYieldFor.returnValue(sample, "s");
+        }
         MethodYield copy = original.copy();
         MethodYield.Entry entry = copy.entries().iterator().next();
         assertEquals(MethodYieldTest.class, entry.implementable());
@@ -75,7 +81,9 @@ public class MethodYieldTest {
     @Test
     public void copyCannotMutate() {
         MethodYield original = new MethodYield();
-        original.addEntry(MethodYieldTest.class, sample, "s");
+        try (MethodYield.ForImplementable methodYieldFor = original.forImplementable(MethodYieldTest.class)) {
+            methodYieldFor.returnValue(sample, "s");
+        }
         MethodYield copy = original.copy();
         assertTrue(original.entries().iterator().hasNext());
         copy.clear();
@@ -85,7 +93,9 @@ public class MethodYieldTest {
     @Test
     public void copyCannotBeMutated() {
         MethodYield original = new MethodYield();
-        original.addEntry(MethodYieldTest.class, sample, "s");
+        try (MethodYield.ForImplementable methodYieldFor = original.forImplementable(MethodYieldTest.class)) {
+            methodYieldFor.returnValue(sample, "s");
+        }
         MethodYield copy = original.copy();
         assertTrue(copy.entries().iterator().hasNext());
         original.clear();
@@ -103,7 +113,9 @@ public class MethodYieldTest {
     @Test
     public void toStringTest() {
         MethodYield methodYield = new MethodYield();
-        methodYield.addEntry(MethodYieldTest.class, sample, "myvalue");
+        try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(MethodYieldTest.class)) {
+            methodYieldFor.returnValue(sample, "myvalue");
+        }
         assertTrue(methodYield.toString().contains("myvalue"));
     }
 }

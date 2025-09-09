@@ -22,6 +22,7 @@ package space.arim.dazzleconf;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf2.Configuration;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
@@ -37,7 +38,7 @@ public class ConfigurationTest {
         assertEquals("hi", config.loadDefaults().helloThere());
 
         DataTree.Mut sourceTree = new DataTree.Mut();
-        sourceTree.set("helloThere", new DataEntry("goodbye"));
+        sourceTree.put("helloThere", new DataEntry("goodbye"));
         HelloWorld loadedFromSource = config.readFrom(sourceTree.intoImmut()).getOrThrow();
         assertEquals("goodbye", loadedFromSource.helloThere());
         {
@@ -46,7 +47,7 @@ public class ConfigurationTest {
             assertEquals(sourceTree, writeBack);
         }
         DataTree.Mut writeCustom = new DataTree.Mut();
-        writeCustom.set("helloThere", new DataEntry("bye"));
+        writeCustom.put("helloThere", new DataEntry("bye"));
         DataTree.Mut output = new DataTree.Mut();
         config.writeTo(new HelloWorld() {
             @Override
@@ -73,7 +74,7 @@ public class ConfigurationTest {
 
         List<String> testList = List.of("hi", "nope", "yes");
         DataTree.Mut sourceTree = new DataTree.Mut();
-        sourceTree.set("testList", new DataEntry(List.of(new DataEntry("hi"), new DataEntry("nope"), new DataEntry("yes"))));
+        sourceTree.put("testList", new DataEntry(new DataList.Mut(new DataEntry("hi"), new DataEntry("nope"), new DataEntry("yes"))));
         GenericWorld<String> loadedFromSource = config.readFrom(sourceTree).getOrThrow();
         assertEquals(testList, loadedFromSource.testList());
         {
@@ -82,7 +83,7 @@ public class ConfigurationTest {
             assertEquals(sourceTree, writeBack);
         }
         DataTree.Mut writeCustom = new DataTree.Mut();
-        writeCustom.set("testList", new DataEntry(List.of(new DataEntry("1"), new DataEntry("2"))));
+        writeCustom.put("testList", new DataEntry(new DataList.Immut(new DataEntry("1"), new DataEntry("2"))));
         DataTree.Mut output = new DataTree.Mut();
         config.writeTo(new GenericWorld<>() {
             @Override
@@ -108,8 +109,8 @@ public class ConfigurationTest {
 
         List<Integer> testList = List.of(1, 3);
         DataTree.Mut sourceTree = new DataTree.Mut();
-        sourceTree.set("helloThere", new DataEntry("goodbye"));
-        sourceTree.set("testList", new DataEntry(List.of(new DataEntry(1), new DataEntry(3))));
+        sourceTree.put("helloThere", new DataEntry("goodbye"));
+        sourceTree.put("testList", new DataEntry(new DataList.Mut(new DataEntry(1), new DataEntry(3))));
         InheritedWorld loadedFromSource = config.readFrom(sourceTree).getOrThrow();
         assertEquals("goodbye", loadedFromSource.helloThere());
         assertEquals(testList, loadedFromSource.testList());
@@ -119,8 +120,8 @@ public class ConfigurationTest {
             assertEquals(sourceTree, writeBack);
         }
         DataTree.Mut writeCustom = new DataTree.Mut();
-        writeCustom.set("helloThere", new DataEntry("bye"));
-        writeCustom.set("testList", new DataEntry(List.of(new DataEntry(4), new DataEntry(5))));
+        writeCustom.put("helloThere", new DataEntry("bye"));
+        writeCustom.put("testList", new DataEntry(new DataList.Mut(new DataEntry(4), new DataEntry(5))));
         DataTree.Mut output = new DataTree.Mut();
         config.writeTo(new InheritedWorld() {
             @Override

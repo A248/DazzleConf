@@ -27,6 +27,7 @@ import space.arim.dazzleconf2.ErrorPrint;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.StandardErrorPrint;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
@@ -124,10 +125,10 @@ public class ErrorPrintingTest {
     @Test
     public void singleBadValue() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("opening", new DataEntry("hi"));
-        dataTree.set("hello", new DataEntry("goodbye"));
-        dataTree.set("enabled", new DataEntry(true));
-        dataTree.set("sub-section", new DataEntry(-1));
+        dataTree.put("opening", new DataEntry("hi"));
+        dataTree.put("hello", new DataEntry("goodbye"));
+        dataTree.put("enabled", new DataEntry(true));
+        dataTree.put("sub-section", new DataEntry(-1));
 
         expectOutput(dataTree, """
                 We found problems loading the configuration file.
@@ -138,10 +139,10 @@ public class ErrorPrintingTest {
     @Test
     public void twoBadValuesAndLineNumber() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("opening", new DataEntry("hi"));
-        dataTree.set("hello", new DataEntry("goodbye"));
-        dataTree.set("enabled", new DataEntry("BROKEN").withLineNumber(2));
-        dataTree.set("sub-section", new DataEntry(-1));
+        dataTree.put("opening", new DataEntry("hi"));
+        dataTree.put("hello", new DataEntry("goodbye"));
+        dataTree.put("enabled", new DataEntry("BROKEN").withLineNumber(2));
+        dataTree.put("sub-section", new DataEntry(-1));
         expectOutput(dataTree, """
                 We found problems loading the configuration file.
                 Where or how the error happened:
@@ -152,10 +153,10 @@ public class ErrorPrintingTest {
     @Test
     public void oneBadValueBecauseCapped() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("opening", new DataEntry("hi"));
-        dataTree.set("hello", new DataEntry("goodbye"));
-        dataTree.set("enabled", new DataEntry("BROKEN").withLineNumber(2));
-        dataTree.set("sub-section", new DataEntry(-1));
+        dataTree.put("opening", new DataEntry("hi"));
+        dataTree.put("hello", new DataEntry("goodbye"));
+        dataTree.put("enabled", new DataEntry("BROKEN").withLineNumber(2));
+        dataTree.put("sub-section", new DataEntry(-1));
         expectOutput(1, dataTree, """
                 We found problems loading the configuration file.
                 Where or how the error happened:
@@ -165,8 +166,8 @@ public class ErrorPrintingTest {
     @Test
     public void sixMissingValues() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("opening", new DataEntry("hi"));
-        dataTree.set("sub-section", new DataEntry(new DataTree.Immut()));
+        dataTree.put("opening", new DataEntry("hi"));
+        dataTree.put("sub-section", new DataEntry(new DataTree.Immut()));
         expectOutput(dataTree, """
                 We found problems loading the configuration file.
                 Where or how the error happened:
@@ -180,8 +181,8 @@ public class ErrorPrintingTest {
     @Test
     public void fiveMissingValuesBecauseCapped() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("opening", new DataEntry("hi"));
-        dataTree.set("sub-section", new DataEntry(new DataTree.Immut()));
+        dataTree.put("opening", new DataEntry("hi"));
+        dataTree.put("sub-section", new DataEntry(new DataTree.Immut()));
         expectOutput(5, dataTree, """
                 We found problems loading the configuration file.
                 Where or how the error happened:
@@ -205,21 +206,46 @@ public class ErrorPrintingTest {
     @Test
     public void errorsInChildElements() {
         DataTree.Mut subSection = new DataTree.Mut();
-        subSection.set("integral", new DataEntry(2));
-        subSection.set("character", new DataEntry("not a character"));
-        subSection.set("decimal-list", new DataEntry(List.of(new DataEntry(0.0), new DataEntry(1.1), new DataEntry(-4.9))));
-        subSection.set("super-nested-bools", new DataEntry(List.of(
-                new DataEntry(List.of()),
-                new DataEntry(List.of(
+        subSection.put("integral", new DataEntry(2));
+        subSection.put("character", new DataEntry("not a character"));
+        subSection.put("decimal-list", new DataEntry(new DataList.Immut(new DataEntry(0.0), new DataEntry(1.1), new DataEntry(-4.9))));
+        subSection.put("super-nested-bools", new DataEntry(new DataList.Immut(
+                new DataEntry(new DataList.Immut()),
+                new DataEntry(new DataList.Immut(
                         new DataEntry("true"), new DataEntry("false"), new DataEntry("NA"), new DataEntry("NOPE")
                 ))
         )));
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("opening", new DataEntry("hi"));
-        dataTree.set("hello", new DataEntry("goodbye"));
-        dataTree.set("enabled", new DataEntry(false));
-        dataTree.set("sub-section", new DataEntry(subSection));
+        dataTree.put("opening", new DataEntry("hi"));
+        dataTree.put("hello", new DataEntry("goodbye"));
+        dataTree.put("enabled", new DataEntry(false));
+        dataTree.put("sub-section", new DataEntry(subSection));
         expectOutput(dataTree, """
+                We found problems loading the configuration file.
+                Where or how the error happened:
+                  sub-section.character: This value is not chosen correctly. The value < not a character > is of type text/string, but it should be character.
+                  sub-section.super-nested-bools.$1.$2: This value is not chosen correctly. The value < NA > is of type text/string, but it should be true/false value.
+                  sub-section.super-nested-bools.$1.$3: This value is not chosen correctly. The value < NOPE > is of type text/string, but it should be true/false value.""");
+    }
+
+    @Test
+    public void errorsInChildElementsCapped() {
+        DataTree.Mut subSection = new DataTree.Mut();
+        subSection.put("integral", new DataEntry(2));
+        subSection.put("character", new DataEntry("not a character"));
+        subSection.put("decimal-list", new DataEntry(new DataList.Immut(new DataEntry(0.0), new DataEntry(1.1), new DataEntry(-4.9))));
+        subSection.put("super-nested-bools", new DataEntry(new DataList.Immut(
+                new DataEntry(new DataList.Immut()),
+                new DataEntry(new DataList.Immut(
+                        new DataEntry("true"), new DataEntry("false"), new DataEntry("NA"), new DataEntry("NOPE")
+                ))
+        )));
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.put("opening", new DataEntry("hi"));
+        dataTree.put("hello", new DataEntry("goodbye"));
+        dataTree.put("enabled", new DataEntry(false));
+        dataTree.put("sub-section", new DataEntry(subSection));
+        expectOutput(2, dataTree, """
                 We found problems loading the configuration file.
                 Where or how the error happened:
                   sub-section.character: This value is not chosen correctly. The value < not a character > is of type text/string, but it should be character.

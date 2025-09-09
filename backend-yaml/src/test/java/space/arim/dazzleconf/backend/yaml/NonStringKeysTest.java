@@ -49,12 +49,12 @@ public class NonStringKeysTest {
     @Test
     public void integerKeysSupported(@Mock ErrorContext.Source errorSource) {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set(1, new DataEntry("hello"));
-        dataTree.set("option", new DataEntry(false));
+        dataTree.put(1, new DataEntry("hello"));
+        dataTree.put("option", new DataEntry(false));
         DataTree.Mut subTree = new DataTree.Mut();
-        dataTree.set(-5, new DataEntry(subTree));
-        subTree.set("hi", new DataEntry("yes"));
-        subTree.set(1, new DataEntry("no"));
+        dataTree.put(-5, new DataEntry(subTree));
+        subTree.put("hi", new DataEntry("yes"));
+        subTree.put(1, new DataEntry("no"));
 
         StringRoot stringRoot = new StringRoot("");
         new YamlBackend(stringRoot).write(new Backend.Document() {

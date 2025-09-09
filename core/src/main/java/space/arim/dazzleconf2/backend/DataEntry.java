@@ -24,17 +24,14 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
-import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Set;
 
 /**
  * A data value, with associated metadata as interoperable with backend formats.
  * <p>
- * Values must conform to the canonical requirements. That means String, primitives, {@code List<DataEntry>}, or
- * another {@link DataTree} for nesting. Although a {@code DataEntry} itself is immutable, its contents may not be,
- * and mutable lists and mutable data trees are permitted to be the value.
+ * Values must conform to the canonical requirements. That means String, primitives, {@link DataTree}, or
+ * {@link DataList}. Although a {@code DataEntry} itself is immutable, its contents may not be, and mutable data lists
+ * and mutable data trees are permitted to be the value.
  * <p>
  * Equality is defined for an entry based on its value. Comments and line numbers are <b>not</b> counted in
  * equality comparisons and hash code. Note that because of the equality properties of {@code float} and {@code double},
@@ -50,7 +47,7 @@ public final class DataEntry {
      * Creates from a nonnull value.
      * <p>
      * The value must conform to {@link #validateValue(Object)}. I.e., it must be of a primitive type,
-     * <code>String</code>, {@code List<DataEntry>}, or <code>DataTree</code>. Null values are not valid.
+     * <code>String</code>, <code>DataList</code>, or <code>DataTree</code>. Null values are not valid.
      *
      * @param value the value
      * @throws IllegalArgumentException if the value is not of the canonical types
@@ -163,6 +160,28 @@ public final class DataEntry {
         return comments.getAt(location);
     }
 
+    // Used by DataTree#intoMut and DataList#intoMut
+    DataEntry intoMutDeep() {
+        if (value instanceof DataTree.Immut) {
+            return withValue(((DataTree) value).intoMut());
+        }
+        if (value instanceof DataList.Immut) {
+            return withValue(((DataList) value).intoMut());
+        }
+        return this;
+    }
+
+    // Used by DataTree#intoImmut and DataList#intoImmut
+    DataEntry intoImmutDeep() {
+        if (value instanceof DataTree.Mut) {
+            return withValue(((DataTree) value).intoImmut());
+        }
+        if (value instanceof DataList.Mut) {
+            return withValue(((DataList) value).intoImmut());
+        }
+        return this;
+    }
+
     @Override
     public boolean equals(Object obj) {
         return obj instanceof DataEntry && value.equals(((DataEntry) obj).value);
@@ -175,9 +194,7 @@ public final class DataEntry {
 
     @Override
     public String toString() {
-        StringBuilder output = new StringBuilder();
-        toString(new DataToString(output).new Scope(0));
-        return output.toString();
+        return DataToString.implToString(this);
     }
 
     void toString(DataToString.Scope output) {
@@ -203,23 +220,13 @@ public final class DataEntry {
     /**
      * Checks whether the given object is valid as a value.
      * <p>
-     * Values must be one of primitive, <code>String</code>, <code>List</code> with elements of <code>DataEntry</code>,
-     * or <code>DataTree</code>. Null values are not valid.
+     * Values must be one of primitive, <code>String</code>, <code>DataList</code>, or <code>DataTree</code>. Null
+     * values are not valid.
      *
      * @param value the value
      * @return true if a valid canonical value, false if not
      */
     public static boolean validateValue(@Nullable Object value) {
-        if (value instanceof List) {
-            // Yes, it's technically possible for someone to TOCTOU this per-element check
-            // Does it matter? No. Anyone who is doing that WANTS to break the library.
-            for (Object elem : (List<?>) value) {
-                if (!(elem instanceof DataEntry)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return value instanceof DataTree || DataTree.validateKey(value);
+        return value instanceof DataTree ||  value instanceof DataList || DataTree.validateKey(value);
     }
 }

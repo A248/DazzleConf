@@ -22,11 +22,11 @@ package space.arim.dazzleconf.backend;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -53,7 +53,7 @@ record RandomGen(Backend.Meta backendMeta, ThreadLocalRandom random, CountEntrie
                 key = generateRandomValue(true, nestDepth);
             } while (seenKeys != null && !seenKeys.add(key.toString()));
 
-            dataTree.set(key, generateRandomEntry(nestDepth));
+            dataTree.put(key, generateRandomEntry(nestDepth));
         }
         countEntries.count += length;
     }
@@ -62,12 +62,12 @@ record RandomGen(Backend.Meta backendMeta, ThreadLocalRandom random, CountEntrie
         return generateComments(true);
     }
 
-    private List<DataEntry> generateRandomList(int nestDepth) {
+    private DataList generateRandomList(int nestDepth) {
         if (nestDepth == DEPTH_LIMIT) {
-            return List.of();
+            return new DataList.Immut();
         }
         int length = random.nextInt(LENGTH_LIMIT);
-        List<DataEntry> entryList = new ArrayList<>(length);
+        DataList.Mut entryList = new DataList.Mut(length);
         for (int n = 0; n < length; n++) {
             entryList.add(generateRandomEntry(nestDepth));
         }
@@ -116,6 +116,8 @@ record RandomGen(Backend.Meta backendMeta, ThreadLocalRandom random, CountEntrie
             int switchLimit;
             if (!key) {
                 switchLimit = 9; // Accept everything below
+            } else if (backendMeta.onlyAlphanumericKeys()) {
+                return randAlphanumericString();
             } else if (backendMeta.allKeysAreStrings()) {
                 switchLimit = 7; // Skip float, double
             } else {

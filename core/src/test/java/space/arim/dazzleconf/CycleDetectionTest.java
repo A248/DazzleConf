@@ -236,8 +236,8 @@ public class CycleDetectionTest {
         NoCycleJustMultipleCalls loaded;
         {
             DataTree.Mut dataTree = new DataTree.Mut();
-            dataTree.set("precious1", new DataEntry(1));
-            dataTree.set("precious2", new DataEntry(2));
+            dataTree.put("precious1", new DataEntry(1));
+            dataTree.put("precious2", new DataEntry(2));
             loaded = configuration.readFrom(dataTree).getOrThrow();
         }
         DataTree.Mut output = new DataTree.Mut();

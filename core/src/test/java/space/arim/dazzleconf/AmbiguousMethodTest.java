@@ -55,7 +55,7 @@ public class AmbiguousMethodTest {
         Config config;
         if (fromData) {
             DataTree.Mut dataTree = new DataTree.Mut();
-            dataTree.set("trouble", new DataEntry(-2));
+            dataTree.put("trouble", new DataEntry(-2));
             config = configuration.readFrom(dataTree).getOrThrow();
         } else {
             config = configuration.loadDefaults();
@@ -72,7 +72,7 @@ public class AmbiguousMethodTest {
         Config config;
         if (fromData) {
             DataTree.Mut dataTree = new DataTree.Mut();
-            dataTree.set("trouble", new DataEntry(-2));
+            dataTree.put("trouble", new DataEntry(-2));
             config = configuration.readFrom(dataTree).getOrThrow();
         } else {
             config = configuration.loadDefaults();

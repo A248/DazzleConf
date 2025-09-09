@@ -61,7 +61,7 @@ public class OptionalTest {
     public void loadPresentValue() {
         Configuration<Config> config = Configuration.defaultBuilder(Config.class).build();
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("missingByDefault", new DataEntry("set here"));
+        dataTree.put("missingByDefault", new DataEntry("set here"));
         Config loaded = config.readFrom(dataTree).getOrThrow();
         assertEquals(Optional.empty(), loaded.presentByDefault());
         assertEquals(Optional.of("set here"), loaded.missingByDefault());
@@ -87,7 +87,7 @@ public class OptionalTest {
         assertEquals(new DataEntry("set here"), output.get("missingByDefault"));
 
         DataTree.Mut expected = new DataTree.Mut();
-        expected.set("missingByDefault", new DataEntry("set here"));
+        expected.put("missingByDefault", new DataEntry("set here"));
         assertEquals(expected, output);
     }
 }

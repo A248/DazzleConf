@@ -21,8 +21,8 @@ package space.arim.dazzleconf.internals.lang;
 
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
-import space.arim.dazzleconf2.internals.lang.LibraryLangAr;
-import space.arim.dazzleconf2.internals.lang.LibraryLangEn;
+import space.arim.dazzleconf2.internals.lang.LangAr;
+import space.arim.dazzleconf2.internals.lang.LangEn;
 
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -34,22 +34,23 @@ public class LibraryLangTest {
 
     @Test
     public void loadEnglish() {
-        assert LibraryLang.loadLang(Locale.ENGLISH) instanceof LibraryLangEn;
-        assert LibraryLang.loadLang(Locale.US) instanceof LibraryLangEn;
-        assert LibraryLang.loadLang(Locale.UK) instanceof LibraryLangEn;
-        assert LibraryLang.loadLang(Locale.CANADA) instanceof LibraryLangEn;
+        assert LibraryLang.loadLang(Locale.ENGLISH).getChosen() instanceof LangEn;
+        assert LibraryLang.loadLang(Locale.US).getChosen() instanceof LangEn;
+        assert LibraryLang.loadLang(Locale.UK).getChosen() instanceof LangEn;
+        assert LibraryLang.loadLang(Locale.CANADA).getChosen() instanceof LangEn;
     }
 
     @Test
     public void loadArabic() {
-        assert LibraryLang.loadLang(Locale.of("ar")) instanceof LibraryLangAr;
-        assert LibraryLang.loadLang(Locale.of("ar", "JO")) instanceof LibraryLangAr;
-        assert LibraryLang.loadLang(Locale.of("ar", "EG")) instanceof LibraryLangAr;
-        assert LibraryLang.loadLang(Locale.of("ar", "DZ")) instanceof LibraryLangAr;
+        assert LibraryLang.loadLang(Locale.of("ar")).getChosen() instanceof LangAr;
+        assert LibraryLang.loadLang(Locale.of("ar", "JO")).getChosen() instanceof LangAr;
+        assert LibraryLang.loadLang(Locale.of("ar", "EG")).getChosen() instanceof LangAr;
+        assert LibraryLang.loadLang(Locale.of("ar", "DZ")).getChosen() instanceof LangAr;
     }
 
     @Test
     public void loadAny() {
+        // See LibraryLang for when to remove this System.out check
         PrintStream originalSysOut = System.out;
         System.setOut(new PrintStream(OutputStream.nullOutputStream()));
         try {

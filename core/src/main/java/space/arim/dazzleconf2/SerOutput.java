@@ -21,13 +21,12 @@ package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 
-import java.util.List;
 import java.util.Objects;
 
 final class SerOutput implements SerializeOutput {
@@ -102,7 +101,7 @@ final class SerOutput implements SerializeOutput {
     }
 
     @Override
-    public void outList(@NonNull List<@NonNull DataEntry> value) {
+    public void outDataList(@NonNull DataList value) {
         output = Objects.requireNonNull(value);
     }
 

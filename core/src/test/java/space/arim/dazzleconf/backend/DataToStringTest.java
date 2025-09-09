@@ -22,6 +22,7 @@ package space.arim.dazzleconf.backend;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
@@ -35,9 +36,9 @@ public class DataToStringTest {
     @Test
     public void simpleTrees() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("hi", new DataEntry(1));
-        dataTree.set("newliner", new DataEntry("line:\n"));
-        dataTree.set("subtree", new DataEntry(new DataTree.Immut()));
+        dataTree.put("hi", new DataEntry(1));
+        dataTree.put("newliner", new DataEntry("line:\n"));
+        dataTree.put("subtree", new DataEntry(new DataTree.Immut()));
         assertEquals("""
                 Mut{
                   hi=DataEntry{value=1},
@@ -48,16 +49,16 @@ public class DataToStringTest {
 
     @Test
     public void simpleLists() {
-        List<DataEntry> entryList = new ArrayList<>();
+        DataList.Mut entryList = new DataList.Mut();
         entryList.add(new DataEntry(false));
         entryList.add(new DataEntry("hello").withLineNumber(5));
-        entryList.add(new DataEntry(List.of()));
+        entryList.add(new DataEntry(new DataList.Immut()));
         DataEntry topEntry = new DataEntry(entryList);
         assertEquals("""
-                DataEntry{value=[
+                DataEntry{value=Mut[
                   DataEntry{value=false},
                   DataEntry{value="hello", lineNumber=5},
-                  DataEntry{value=[]},
+                  DataEntry{value=Immut[]},
                 ]}""", topEntry.toString());
     }
 
@@ -74,15 +75,15 @@ public class DataToStringTest {
     @Test
     public void complexTree() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("hi", new DataEntry(1));
+        dataTree.put("hi", new DataEntry(1));
         DataTree.Mut subTree = new DataTree.Mut();
-        subTree.set("subkey", new DataEntry(true).withLineNumber(10));
-        subTree.set("escape-value", new DataEntry("\u007F"));
-        dataTree.set("subtree", new DataEntry(subTree));
+        subTree.put("subkey", new DataEntry(true).withLineNumber(10));
+        subTree.put("escape-value", new DataEntry("\u007F"));
+        dataTree.put("subtree", new DataEntry(subTree));
         List<DataEntry> entryList = new ArrayList<>();
         entryList.add(new DataEntry(false));
-        entryList.add(new DataEntry(List.of()));
-        dataTree.set("list", new DataEntry(entryList));
+        entryList.add(new DataEntry(new DataList.Mut()));
+        dataTree.put("list", new DataEntry(new DataList.Immut(entryList)));
 
         assertEquals("""
                 Mut{
@@ -91,9 +92,9 @@ public class DataToStringTest {
                     subkey=DataEntry{value=true, lineNumber=10},
                     escape-value=DataEntry{value="\\u007f"},
                   }},
-                  list=DataEntry{value=[
+                  list=DataEntry{value=Immut[
                     DataEntry{value=false},
-                    DataEntry{value=[]},
+                    DataEntry{value=Mut[]},
                   ]},
                 }""", dataTree.toString());
     }

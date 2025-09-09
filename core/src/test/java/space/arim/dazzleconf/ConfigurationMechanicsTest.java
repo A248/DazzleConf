@@ -127,19 +127,19 @@ public class ConfigurationMechanicsTest {
         AccessFlag bigEnum = AccessFlag.MANDATED;
 
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("inherited", new DataEntry(inherited));
-        dataTree.set("key-press", new DataEntry(updatableValues ? String.valueOf(keyPress) : keyPress));
-        dataTree.set("matrix",  new DataEntry(List.of(new DataEntry(List.of(
-                new DataEntry(List.of(new DataEntry("beside"))), new DataEntry(List.of()),
-                new DataEntry(List.of(new DataEntry("hello"), new DataEntry("crazy")))
+        dataTree.put("inherited", new DataEntry(inherited));
+        dataTree.put("key-press", new DataEntry(updatableValues ? String.valueOf(keyPress) : keyPress));
+        dataTree.put("matrix",  new DataEntry(new DataList.Immut(new DataEntry(new DataList.Immut(
+                new DataEntry(new DataList.Immut(new DataEntry("beside"))), new DataEntry(new DataList.Immut()),
+                new DataEntry(new DataList.Immut(new DataEntry("hello"), new DataEntry("crazy")))
         )))));
-        dataTree.set("floats", new DataEntry(List.of(new DataEntry(floats.iterator().next()))));
-        dataTree.set("small-enum", new DataEntry(smallEnum.name()));
+        dataTree.put("floats", new DataEntry(new DataList.Immut(new DataEntry(floats.iterator().next()))));
+        dataTree.put("small-enum", new DataEntry(smallEnum.name()));
         DataTree.Mut subTree = new DataTree.Mut();
-        dataTree.set("sub-section", new DataEntry(subTree));
-        subTree.set("enabled", new DataEntry(updatableValues ? String.valueOf(enabled) : enabled));
-        subTree.set("message", new DataEntry(message));
-        subTree.set("big-enum", new DataEntry(bigEnum.name()));
+        dataTree.put("sub-section", new DataEntry(subTree));
+        subTree.put("enabled", new DataEntry(updatableValues ? String.valueOf(enabled) : enabled));
+        subTree.put("message", new DataEntry(message));
+        subTree.put("big-enum", new DataEntry(bigEnum.name()));
 
         LoadResult<Config> loadResult = configuration.readFrom(dataTree, new ConfigurationDefinition.ReadOptions() {
             @Override
@@ -247,11 +247,11 @@ public class ConfigurationMechanicsTest {
             assertEquals(keyPress, keyPressEntry.getValue());
             assertEquals(CommentData.empty().setAt(CommentLocation.ABOVE, "Game control key"), keyPressEntry.getComments());
         }
-        assertEquals(new DataEntry(List.of(new DataEntry(List.of(
-                new DataEntry(List.of(new DataEntry("beside"))), new DataEntry(List.of()),
-                new DataEntry(List.of(new DataEntry("hello"), new DataEntry("crazy")))
+        assertEquals(new DataEntry(new DataList.Immut(new DataEntry(new DataList.Immut(
+                new DataEntry(new DataList.Immut(new DataEntry("beside"))), new DataEntry(new DataList.Immut()),
+                new DataEntry(new DataList.Immut(new DataEntry("hello"), new DataEntry("crazy")))
         )))), dataTree.get("matrix"));
-        assertEquals(new DataEntry(List.of(new DataEntry(floats.iterator().next()))), dataTree.get("floats"));
+        assertEquals(new DataEntry(new DataList.Immut(new DataEntry(floats.iterator().next()))), dataTree.get("floats"));
         assertEquals(new DataEntry(smallEnum.name()), dataTree.get("small-enum"));
 
         DataEntry subEntry = dataTree.get("sub-section");
@@ -287,21 +287,21 @@ public class ConfigurationMechanicsTest {
         AccessFlag bigEnum = AccessFlag.MANDATED;
 
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("inherited", new DataEntry(inherited));
-        dataTree.set("key-press", new DataEntry(updatableValues ? String.valueOf(keyPress) : keyPress)
+        dataTree.put("inherited", new DataEntry(inherited));
+        dataTree.put("key-press", new DataEntry(updatableValues ? String.valueOf(keyPress) : keyPress)
                 .withComments(CommentLocation.ABOVE, List.of("Game control key (edited)")));
-        dataTree.set("matrix", new DataEntry(List.of(new DataEntry(List.of(
-                new DataEntry(List.of(new DataEntry("beside"))), new DataEntry(List.of()),
-                new DataEntry(List.of(new DataEntry("hello"), new DataEntry("crazy")))
+        dataTree.put("matrix", new DataEntry(new DataList.Immut(new DataEntry(new DataList.Immut(
+                new DataEntry(new DataList.Immut(new DataEntry("beside"))), new DataEntry(new DataList.Immut()),
+                new DataEntry(new DataList.Immut(new DataEntry("hello"), new DataEntry("crazy")))
         )))));
-        dataTree.set("floats", new DataEntry(List.of(new DataEntry(floats.iterator().next()))));
-        dataTree.set("small-enum", new DataEntry(smallEnum.name()));
+        dataTree.put("floats", new DataEntry(new DataList.Immut(new DataEntry(floats.iterator().next()))));
+        dataTree.put("small-enum", new DataEntry(smallEnum.name()));
         DataTree.Mut subTree = new DataTree.Mut();
-        dataTree.set("sub-section", new DataEntry(subTree)
+        dataTree.put("sub-section", new DataEntry(subTree)
                 .withComments(CommentLocation.INLINE, List.of("Comments placed on subsection declaration")));
-        subTree.set("enabled", new DataEntry(updatableValues ? String.valueOf(enabled) : enabled));
-        subTree.set("message", new DataEntry(message));
-        subTree.set("big-enum", new DataEntry(bigEnum.name()));
+        subTree.put("enabled", new DataEntry(updatableValues ? String.valueOf(enabled) : enabled));
+        subTree.put("message", new DataEntry(message));
+        subTree.put("big-enum", new DataEntry(bigEnum.name()));
 
         LoadResult<Config> loadResult = configuration.readWithUpdate(dataTree, new ConfigurationDefinition.ReadWithUpdateOptions() {
             @Override
@@ -340,11 +340,11 @@ public class ConfigurationMechanicsTest {
             assertEquals(new DataEntry(keyPress), keyPressEntry);
             assertEquals(CommentData.empty().setAt(CommentLocation.ABOVE, "Game control key (edited)"), keyPressEntry.getComments());
         }
-        assertEquals(new DataEntry(List.of(new DataEntry(List.of(
-                new DataEntry(List.of(new DataEntry("beside"))), new DataEntry(List.of()),
-                new DataEntry(List.of(new DataEntry("hello"), new DataEntry("crazy")))
+        assertEquals(new DataEntry(new DataList.Immut(new DataEntry(new DataList.Immut(
+                new DataEntry(new DataList.Immut(new DataEntry("beside"))), new DataEntry(new DataList.Immut()),
+                new DataEntry(new DataList.Immut(new DataEntry("hello"), new DataEntry("crazy")))
         )))), dataTree.get("matrix"));
-        assertEquals(new DataEntry(List.of(new DataEntry(floats.iterator().next()))), dataTree.get("floats"));
+        assertEquals(new DataEntry(new DataList.Immut(new DataEntry(floats.iterator().next()))), dataTree.get("floats"));
         assertEquals(new DataEntry(smallEnum.name()), dataTree.get("small-enum"));
 
         DataEntry subEntry = dataTree.get("sub-section");

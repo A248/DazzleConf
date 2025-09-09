@@ -22,9 +22,8 @@ package space.arim.dazzleconf2.engine;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
-
-import java.util.List;
 
 /**
  * The output for serialization, which is handed to {@link SerializeDeserialize#serialize}.
@@ -114,11 +113,11 @@ public interface SerializeOutput extends SerializeContext {
     void outDataTree(@NonNull DataTree value);
 
     /**
-     * Outputs a list of data entries
+     * Outputs a data list
      *
-     * @param value the list of data entries
+     * @param value the data list
      */
-    void outList(@NonNull List<@NonNull DataEntry> value);
+    void outDataList(@NonNull DataList value);
 
     /**
      * Outputs the given object.

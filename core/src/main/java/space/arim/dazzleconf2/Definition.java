@@ -32,7 +32,6 @@ import space.arim.dazzleconf2.engine.SerializeOutput;
 import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.Instantiator;
-import space.arim.dazzleconf2.reflect.InvokeDefaultFunction;
 import space.arim.dazzleconf2.reflect.MethodId;
 import space.arim.dazzleconf2.reflect.MethodMirror;
 import space.arim.dazzleconf2.reflect.MethodYield;
@@ -59,8 +58,6 @@ final class Definition<C> implements ConfigurationDefinition<C> {
      */
     private final Class<?>[] superTypesArray;
     private final TypeSkeleton[] skeletonArray;
-
-    private static final InvokeDefaultFunction INVOKE_DEFAULT_VALUE = new InvokeDefaultFunction();
 
     Definition(TypeToken<C> configType, CommentData topLevelComments,
                LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons, LibraryLang libraryLang,
@@ -121,14 +118,17 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         for (int n = 0; n < superTypesArray.length; n++) {
             Class<?> currentType = superTypesArray[n];
             TypeSkeleton typeSkeleton = skeletonArray[n];
-            // Add callable default methods
-            for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
-                methodYield.addEntry(currentType, callableMethod, INVOKE_DEFAULT_VALUE);
-            }
-            // Add default values
-            for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
-                Object defaultValue = methodNode.makeDefaultValue(currentType);
-                methodYield.addEntry(currentType, methodNode.methodId, defaultValue);
+
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(currentType)) {
+                // Add callable default methods
+                for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
+                    methodYieldFor.callDefaultImpl(callableMethod);
+                }
+                // Add default values
+                for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
+                    Object defaultValue = methodNode.makeDefaultValue(currentType);
+                    methodYieldFor.returnValue(methodNode.methodId, defaultValue);
+                }
             }
         }
         return instantiator.generate(configType.getRawType(), methodYield);
@@ -141,8 +141,8 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         MethodYield methodYield = new MethodYield();
         DeserInput.Context deserContext = new DeserInput.Context(libraryLang, readOptions);
 
-        // Collected errors - get a certain maximum before quitting
-        ErrorContext[] collectedErrors = new ErrorContext[readOptions.maximumErrorCollect()];
+        // Collected errors - get a certain maximum before quitting, becomes non-null if we find at least 1 error
+        ErrorContext[] collectedErrors = null;
         int errorCount = 0;
 
         // For each type in the hierarchy
@@ -150,42 +150,47 @@ final class Definition<C> implements ConfigurationDefinition<C> {
 
             Class<?> currentType = superTypesArray[n];
             TypeSkeleton typeSkeleton = skeletonArray[n];
-            // Add callable default methods
-            for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
-                methodYield.addEntry(currentType, callableMethod, INVOKE_DEFAULT_VALUE);
-            }
 
-            // Add values for each method
-            for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(currentType)) {
+                // Add callable default methods
+                for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
+                    methodYieldFor.callDefaultImpl(callableMethod);
+                }
 
-                ErrorContext[] errorContexts = readingNexusForEntry(
-                        methodYield, deserContext, currentType, methodNode, dataTree, readOptions, howToUpdate
-                );
-                if (errorContexts != null) {
-                    for (ErrorContext errorToAppend : errorContexts) {
-                        // Append this error
-                        collectedErrors[errorCount++] = errorToAppend;
-                        // Check if maxed out
-                        if (errorCount == collectedErrors.length) {
-                            return LoadResult.failure(collectedErrors);
+                // Add values for each method
+                for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
+
+                    ErrorContext[] errorContexts = readingNexusForEntry(
+                            methodYieldFor, deserContext, currentType, methodNode, dataTree, readOptions, howToUpdate
+                    );
+                    if (errorContexts != null) {
+                        if (collectedErrors == null) {
+                            collectedErrors = new ErrorContext[readOptions.maximumErrorCollect()];
+                        }
+                        for (ErrorContext errorToAppend : errorContexts) {
+                            // Append this error
+                            collectedErrors[errorCount++] = errorToAppend;
+                            // Check if maxed out
+                            if (errorCount == collectedErrors.length) {
+                                return LoadResult.failure(collectedErrors);
+                            }
                         }
                     }
                 }
             }
         }
         // Error handling
-        if (errorCount > 0) {
-            ErrorContext[] trimmedToSize = Arrays.copyOf(collectedErrors, errorCount);
-            return LoadResult.failure(trimmedToSize);
+        if (collectedErrors != null) {
+            return LoadResult.failure(Arrays.copyOf(collectedErrors, errorCount));
         }
         // No errors - success
         return LoadResult.of(instantiator.generate(configType.getRawType(), methodYield));
     }
 
     private <DT extends DataTree, V> @NonNull ErrorContext @Nullable [] readingNexusForEntry(
-            @NonNull MethodYield methodYield, DeserInput.@NonNull Context deserContext, @NonNull Class<?> currentType,
-            TypeSkeleton.@NonNull MethodNode<V> methodNode, @NonNull DT dataTree, @NonNull ReadOptions readOptions,
-            @NonNull HowToUpdate<DT> howToUpdate) {
+            MethodYield.@NonNull ForImplementable methodYieldFor, DeserInput.@NonNull Context deserContext,
+            @NonNull Class<?> currentType, TypeSkeleton.@NonNull MethodNode<V> methodNode, @NonNull DT dataTree,
+            @NonNull ReadOptions readOptions, @NonNull HowToUpdate<DT> howToUpdate) {
 
         Object value;
         V missingValue;
@@ -233,7 +238,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             value = valueResult.getOrThrow();
             if (methodNode.optional) value = Optional.of(value);
         }
-        methodYield.addEntry(currentType, methodNode.methodId, value);
+        methodYieldFor.returnValue(methodNode.methodId, value);
         return null;
     }
 
@@ -279,7 +284,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             public <V> void insertMissingValue(DataTree.Mut dataTree, String mappedKey,
                                                TypeSkeleton.MethodNode<V> methodNode, V missingValue) {
                 DataEntry serializedMissingValue = methodNode.serialize(missingValue, outputForUpdate);
-                dataTree.set(mappedKey, serializedMissingValue.withComments(methodNode.comments));
+                dataTree.put(mappedKey, serializedMissingValue.withComments(methodNode.comments));
             }
 
             @Override
@@ -301,7 +306,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                     changed = true;
                 }
                 if (changed) {
-                    dataTree.set(mappedKey, sourceEntry);
+                    dataTree.put(mappedKey, sourceEntry);
                 }
             }
         });
@@ -319,10 +324,15 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             for (TypeSkeleton.MethodNode<?> methodNode : skeletonArray[n].methodNodes) {
                 String mappedKey = writeOptions.keyMapper().labelToKey(methodNode.methodId.name()).toString();
                 DataEntry entry = methodNode.serialize(invoker, serOutput);
-                if (entry != null && modifyComments.isAnyLocationEnabled()) {
-                    entry = modifyComments.applyTo(entry, methodNode.comments);
+                if (entry == null) {
+                    // Empty optional value
+                    dataTree.remove(mappedKey);
+                } else {
+                    if (modifyComments.isAnyLocationEnabled()) {
+                        entry = modifyComments.applyTo(entry, methodNode.comments);
+                    }
+                    dataTree.put(mappedKey, entry);
                 }
-                dataTree.set(mappedKey, entry);
             }
         }
     }

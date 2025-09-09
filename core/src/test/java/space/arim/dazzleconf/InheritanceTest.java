@@ -180,8 +180,8 @@ public class InheritanceTest {
         // Try loading a Set with duplicates, check that they're removed
         // This ensures that setWhenOveridden() is using the set liaison
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("usable", new DataEntry("msg"));
-        dataTree.set("setWhenOveridden", new DataEntry(List.of(new DataEntry("hi"), new DataEntry("hi"), new DataEntry("hi"))));
+        dataTree.put("usable", new DataEntry("msg"));
+        dataTree.put("setWhenOveridden", new DataEntry(new DataList.Immut(new DataEntry("hi"), new DataEntry("hi"), new DataEntry("hi"))));
 
         C readFrom = configuration.readFrom(dataTree.intoImmut()).getOrThrow();
         assertEquals("usable", readFrom.usableWhenOveridden());
@@ -212,7 +212,7 @@ public class InheritanceTest {
         }).getOrThrow();
         assertEquals("usable", readWithUpdate.usableWhenOveridden());
         assertEquals(Set.of("hi"), readWithUpdate.setWhenOveridden());
-        assertEquals(new DataEntry(List.of(new DataEntry("hi"))), dataTree.get("setWhenOveridden"));
+        assertEquals(new DataEntry(new DataList.Immut(new DataEntry("hi"))), dataTree.get("setWhenOveridden"));
         assertEquals(new DataEntry(2), dataTree.get("reabstractMe"));
         verify(updateListener).notifyUpdate(new KeyPath.Mut("setWhenOveridden"), UpdateReason.OTHER);
     }

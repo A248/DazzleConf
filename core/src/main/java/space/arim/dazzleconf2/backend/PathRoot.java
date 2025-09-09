@@ -20,8 +20,10 @@
 package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.internals.FileIO;
+import space.arim.dazzleconf2.internals.ReadWriteIO;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -41,7 +43,10 @@ import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 
 /**
- * Data root from a path
+ * A data root from a file path.
+ * <p>
+ * Both textual and binary operations can be performed on this data root. If textual operations are used, then the
+ * charset specified at construction will be used to provide encoding.
  *
  */
 public final class PathRoot implements ReadableRoot, BinaryRoot {
@@ -80,12 +85,16 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
 
     @Override
     public @NonNull String readString() throws IOException {
-        return FileIO.readString(path, charset);
+        return ReadWriteIO.readString(path, charset);
     }
 
     @Override
     public <R> R openReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
         class ReadableByteChannelOperation implements Operation<R, ReadableByteChannel> {
+            @Override
+            public boolean handlesBuffering() {
+                return true;
+            }
 
             @Override
             public R operateUsing(ReadableByteChannel read) throws IOException {
@@ -105,12 +114,16 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
 
     @Override
     public void writeString(@NonNull String content) throws IOException {
-        FileIO.writeString(path, content, charset);
+        ReadWriteIO.writeString(path, content, charset);
     }
 
     @Override
     public <R> R openWriter(@NonNull Operation<R, @NonNull Writer> operation) throws IOException {
         class WritableChannelOperation implements Operation<R, WritableByteChannel> {
+            @Override
+            public boolean handlesBuffering() {
+                return true;
+            }
 
             @Override
             public R operateUsing(WritableByteChannel write) throws IOException {
@@ -138,7 +151,13 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
     @Override
     public <R> R openInputStream(@NonNull Operation<R, @NonNull InputStream> operation) throws IOException {
         try (InputStream inputStream = Files.newInputStream(path, StandardOpenOption.READ)) {
-            return operation.operateUsing(inputStream);
+            if (operation.handlesBuffering()) {
+                return operation.operateUsing(inputStream);
+            } else {
+                try (BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream)) {
+                    return operation.operateUsing(bufferedInputStream);
+                }
+            }
         }
     }
 
@@ -154,7 +173,13 @@ public final class PathRoot implements ReadableRoot, BinaryRoot {
     public <R> R openOutputStream(@NonNull Operation<R, @NonNull OutputStream> operation) throws IOException {
         try (OutputStream outputStream = Files.newOutputStream(path,
                 StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
-            return operation.operateUsing(outputStream);
+            if (operation.handlesBuffering()) {
+                return operation.operateUsing(outputStream);
+            } else {
+                try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream)) {
+                    return operation.operateUsing(bufferedOutputStream);
+                }
+            }
         }
     }
 }

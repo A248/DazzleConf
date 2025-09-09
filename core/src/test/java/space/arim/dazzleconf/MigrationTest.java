@@ -75,7 +75,7 @@ public class MigrationTest {
                 new MigrateSource<>() {
                     @Override
                     public @NonNull LoadResult<@NonNull String> load(@NonNull MigrateContext migrateContext) {
-                        DataTree dataTree = migrateContext.mainBackend().read(any()).getOrThrow().data();
+                        DataTree dataTree = migrateContext.mainBackend().read(migrateContext.errorSource()).getOrThrow().data();
                         DataEntry oldHello = dataTree.get("old-hello");
                         assertNotNull(oldHello);
                         return LoadResult.of((String) oldHello.getValue());
@@ -111,8 +111,8 @@ public class MigrationTest {
                 .addMigration(migration)
                 .build();
         DataTree.Mut sourceTree = new DataTree.Mut();
-        sourceTree.set("version", new DataEntry("old"));
-        sourceTree.set("old-hello", new DataEntry("old-goodbye"));
+        sourceTree.put("version", new DataEntry("old"));
+        sourceTree.put("old-hello", new DataEntry("old-goodbye"));
         when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(sourceTree)));
         Destination migrated = config.configureWith(backend).getOrThrow();
         assertEquals("old-goodbye", migrated.hello());
@@ -257,8 +257,8 @@ public class MigrationTest {
         assertEquals(List.of(skipMigration, firstApplicable, secondApplicable), config.getMigrations());
 
         DataTree.Mut sourceTree = new DataTree.Mut();
-        sourceTree.set("version", new DataEntry("old"));
-        sourceTree.set("old-hello", new DataEntry("old-goodbye"));
+        sourceTree.put("version", new DataEntry("old"));
+        sourceTree.put("old-hello", new DataEntry("old-goodbye"));
         when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(sourceTree)));
         Destination migrated = config.configureWith(backend, configureListener).getOrThrow();
         assertEquals("old-goodbye-first-chain", migrated.hello());
@@ -271,8 +271,8 @@ public class MigrationTest {
 
         // Check the data that was written back
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
-        expectedWriteBack.set("hello", new DataEntry("old-goodbye-first-chain"));
-        expectedWriteBack.set("affirmative", new DataEntry('1'));
+        expectedWriteBack.put("hello", new DataEntry("old-goodbye-first-chain"));
+        expectedWriteBack.put("affirmative", new DataEntry('1'));
         verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 

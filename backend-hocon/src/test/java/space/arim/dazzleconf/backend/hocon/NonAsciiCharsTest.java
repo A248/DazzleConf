@@ -44,8 +44,8 @@ public class NonAsciiCharsTest {
     @Test
     public void writeReadHanzi() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("hello", new DataEntry("篡"));
-        dataTree.set("there", new DataEntry("㖗"));
+        dataTree.put("hello", new DataEntry("篡"));
+        dataTree.put("there", new DataEntry("㖗"));
         backend.write(Backend.Document.simple(dataTree));
         assertEquals(dataTree, backend.read(errorSource).getOrThrow().data());
     }
@@ -54,8 +54,8 @@ public class NonAsciiCharsTest {
     public void writeReadOther() {
         // Please, someone rename the test if they know what language or script these characters come from
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("unknown", new DataEntry("뗖"));
-        dataTree.set("unknown2", new DataEntry("췒"));
+        dataTree.put("unknown", new DataEntry("뗖"));
+        dataTree.put("unknown2", new DataEntry("췒"));
         backend.write(Backend.Document.simple(dataTree));
         assertEquals(dataTree, backend.read(errorSource).getOrThrow().data());
     }

@@ -21,6 +21,8 @@ package space.arim.dazzleconf2.backend;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.Pure;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -112,6 +114,7 @@ public abstract class KeyPath implements Printable {
      *
      * @return true if empty
      */
+    @Pure
     public boolean isEmpty() {
         return parts.isEmpty();
     }
@@ -121,6 +124,7 @@ public abstract class KeyPath implements Printable {
      *
      * @return the number of parts in this key path
      */
+    @Pure
     public int size() {
         return parts.size();
     }
@@ -195,6 +199,7 @@ public abstract class KeyPath implements Printable {
      *
      * @param action the action on each part
      */
+    @SideEffectFree
     public void forEach(@NonNull Consumer<? super @NonNull CharSequence> action) {
         iterateFrom(SequenceBoundary.FRONT, action);
     }
@@ -207,6 +212,7 @@ public abstract class KeyPath implements Printable {
      *
      * @return this key path if mutable, or a mutable copy if needed
      */
+    @SideEffectFree
     public abstract KeyPath.@NonNull Mut intoMut();
 
     /**
@@ -219,6 +225,7 @@ public abstract class KeyPath implements Printable {
      *
      * @return an immutable key path
      */
+    @SideEffectFree
     public abstract KeyPath.@NonNull Immut intoImmut();
 
     /**
@@ -228,6 +235,7 @@ public abstract class KeyPath implements Printable {
      *
      * @return the key path's parts
      */
+    @SideEffectFree
     public @NonNull CharSequence @NonNull [] intoParts() {
         CharSequence[] intoParts = parts.toArray(new CharSequence[0]);
         KeyMapper keyMapper = this.keyMapper;
@@ -247,6 +255,7 @@ public abstract class KeyPath implements Printable {
      *
      * @return the key path parts
      */
+    @SideEffectFree
     public @NonNull List<@NonNull CharSequence> intoPartsList() {
         return Arrays.asList(intoParts());
     }

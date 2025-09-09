@@ -54,8 +54,8 @@
  * <p>
  * <b>Mutability models</b>
  * <p>
- * Both {@code DataTree} and {@code KeyPath} rely on a type-level mutability model that is designed for efficient data
- * access, guarded mutation, and firm control over ownership.
+ * Both {@code DataTree}, {@code DataList} and {@code KeyPath} rely on a type-level mutability model that is designed
+ * for efficient data access, guarded mutation, and firm control over ownership.
  * <p>
  * This model makes use of subclasses which denote the mutability of the data they contain. Because mutation methods
  * are only available in the mutable variant, modifying an immutable data tree becomes statically impossible. This is

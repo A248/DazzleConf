@@ -34,6 +34,7 @@ import org.snakeyaml.engine.v2.nodes.ScalarNode;
 import org.snakeyaml.engine.v2.nodes.SequenceNode;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 
 import java.util.ArrayList;
@@ -104,11 +105,11 @@ final class ReadNodes {
             Continuation continuation = new Continuation();
             Object value = visitValue(valueNode, keyNode, inlineCommentStore, continuation);
             // Make new entry
+            Object key = getKeyValue(keyNode);
             MapEntry mapEntry = new MapEntry(
                     bucket, context.getIndent(keyNode), keyNode.getStartMark().map(Mark::getLine).orElse(null),
-                    getKeyValue(keyNode)
+                    key, value
             );
-            mapEntry.value = value;
             inlineCommentStore.moveAccumulatedTo(mapEntry);
             // Collect comments between this entry and the last one
             visitBlockComments(keyNode.getBlockComments());
@@ -118,7 +119,7 @@ final class ReadNodes {
             // GO
             // Either return here, or recurse to find more values
             if (continuation.runner != null) {
-                context.keyPathStack.addLast(mapEntry.key);
+                context.keyPathStack.addLast(key);
                 try {
                     continuation.runner.accept(this);
                 } finally {
@@ -127,7 +128,7 @@ final class ReadNodes {
             }
         }
 
-        void visitList(SequenceNode sequenceNode, List<DataEntry> bucket) {
+        void visitList(SequenceNode sequenceNode, DataList.Mut bucket) {
             visitBlockComments(sequenceNode.getBlockComments());
             List<Node> elemNodes = sequenceNode.getValue();
             // We'll pre-fill the bucket up to the size desired - then add elements at their indexes later
@@ -138,7 +139,7 @@ final class ReadNodes {
             visitBlockComments(sequenceNode.getEndComments());
         }
 
-        void visitListElement(Node elemNode, int index, List<DataEntry> bucket) {
+        void visitListElement(Node elemNode, int index, DataList.Mut bucket) {
             // Following the same procedure - almost - from visitMapEntry.
             InlineCommentStore inlineCommentStore = new InlineCommentStore();
             Continuation continuation = new Continuation();
@@ -151,14 +152,12 @@ final class ReadNodes {
                 // This lets comments gather on scalar list elements
                 ListEntry listEntry = new ListEntry(
                         bucket, context.getIndent(elemNode), elemNode.getStartMark().map(Mark::getLine).orElse(null),
-                        index
+                        index, value
                 );
-                listEntry.value = value;
                 inlineCommentStore.moveAccumulatedTo(listEntry);
                 scope.visitCommentSink(listEntry, commentBuffer);
                 commentBuffer.clear();
-            }
-            if (continuation.runner != null) {
+            } else {
                 // `value` is itself a container (DataTree or List), so add it right away
                 bucket.set(index, new DataEntry(value));
                 // Run recursion here
@@ -229,9 +228,9 @@ final class ReadNodes {
             SequenceNode sequenceNode = (SequenceNode) valueNode;
 
             inlineCommentStore.gatherFromNode(keyNodeIfFromMap);
-            List<DataEntry> list = new ArrayList<>(sequenceNode.getValue().size());
-            continuation.runner = read -> read.visitList(sequenceNode, list);
-            return list;
+            DataList.Mut dataList = new DataList.Mut(sequenceNode.getValue().size());
+            continuation.runner = read -> read.visitList(sequenceNode, dataList);
+            return dataList;
         }
         throw new IllegalStateException("Unknown Node subclass: " + valueNode);
     }

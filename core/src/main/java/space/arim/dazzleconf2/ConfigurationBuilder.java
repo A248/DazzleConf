@@ -106,7 +106,8 @@ public final class ConfigurationBuilder<C> {
     }
 
     /**
-     * Sets the locale for displaying error messages.
+     * Sets the locale for displaying error messages. <b>Version 2 preview: this method is currently a no-op, except
+     * when assertions are enabled, until DazzleConf enters full release.</b>
      * <p>
      * If not set, defaults to the system locale.
      *
@@ -114,7 +115,8 @@ public final class ConfigurationBuilder<C> {
      * @return this builder
      */
     public @This @NonNull ConfigurationBuilder<C> locale(@NonNull Locale locale) {
-        this.locale = Objects.requireNonNull(locale, "locale");
+        // See LibraryLang for when to remove this - DON'T FORGET THE JAVADOC
+        assert (this.locale = locale) != null : "null locale";
         return this;
     }
 

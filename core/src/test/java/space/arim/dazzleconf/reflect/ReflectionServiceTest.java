@@ -136,9 +136,9 @@ public abstract class ReflectionServiceTest {
         public void generateSingleMethod() {
             String toReturn = "val1";
             MethodYield methodYield = new MethodYield();
-            methodYield.addEntry(
-                    SingleMethod.class, valueMethod, toReturn
-            );
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, toReturn);
+            }
             SingleMethod generated = instantiator.generate(SingleMethod.class, methodYield.copy());
             assertNotNull(generated);
             assertInstanceOf(SingleMethod.class, generated);
@@ -153,9 +153,9 @@ public abstract class ReflectionServiceTest {
             assertTrue(generated.toString().contains(toReturn));
 
             MethodYield otherMethodYield = new MethodYield();
-            otherMethodYield.addEntry(
-                    SingleMethod.class, valueMethod, "junk"
-            );
+            try (MethodYield.ForImplementable methodYieldFor = otherMethodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, "junk");
+            }
             assertNotEqualsBothWays(
                     generated,
                     instantiator.generate(SingleMethod.class, otherMethodYield)
@@ -218,11 +218,11 @@ public abstract class ReflectionServiceTest {
 
             // Equality with regular generation
             MethodYield methodYield = new MethodYield();
-            methodYield.addEntry(
-                    SingleMethod.class, new MethodId(
-                            "value", new TypeToken<String>() {}.getReifiedType(), new ReifiedType[0], false
-                    ), toReturn
-            );
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(new MethodId(
+                        "value", new TypeToken<String>() {}.getReifiedType(), new ReifiedType[0], false
+                ), toReturn);
+            }
             SingleMethod generated = instantiator.generate(SingleMethod.class, methodYield);
             reloadShell.setCurrentDelegate(null);
             assertNotEqualsBothWays(generated, shell);
@@ -241,9 +241,9 @@ public abstract class ReflectionServiceTest {
             assertNotEqualsBothWays(generated, instantiator.generateEmpty(EmptyInterface.class));
 
             MethodYield otherMethodYield = new MethodYield();
-            otherMethodYield.addEntry(
-                    SingleMethod.class, valueMethod, "junk"
-            );
+            try (MethodYield.ForImplementable methodYieldFor = otherMethodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, "junk");
+            }
             assertNotEqualsBothWays(
                     generated,
                     instantiator.generate(SingleMethod.class, otherMethodYield)
@@ -264,9 +264,9 @@ public abstract class ReflectionServiceTest {
         public void generateInheritedMethod() {
             String toReturn = "val1";
             MethodYield methodYield = new MethodYield();
-            methodYield.addEntry(
-                    SingleMethod.class, valueMethod, toReturn
-            );
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, toReturn);
+            }
             InheritedMethod generated = instantiator.generate(InheritedMethod.class, methodYield.copy());
             assertNotNull(generated);
             assertInstanceOf(InheritedMethod.class, generated);
@@ -282,9 +282,9 @@ public abstract class ReflectionServiceTest {
                     instantiator.generate(SingleMethod.class, methodYield)
             );
             MethodYield otherMethodYield = new MethodYield();
-            otherMethodYield.addEntry(
-                    SingleMethod.class, valueMethod, "junk"
-            );
+            try (MethodYield.ForImplementable methodYieldFor = otherMethodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, "junk");
+            }
             assertNotEqualsBothWays(
                     generated,
                     instantiator.generate(InheritedMethod.class, otherMethodYield)
@@ -359,9 +359,9 @@ public abstract class ReflectionServiceTest {
 
             // Equality with regular generation
             MethodYield methodYield = new MethodYield();
-            methodYield.addEntry(
-                    SingleMethod.class, valueMethod, toReturn
-            );
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, toReturn);
+            }
             InheritedMethod generated = instantiator.generate(
                     InheritedMethod.class, methodYield
             );
@@ -384,9 +384,9 @@ public abstract class ReflectionServiceTest {
             assertNotEqualsBothWays(generated, instantiator.generateEmpty(SingleMethod.class));
 
             MethodYield methodYield = new MethodYield();
-            methodYield.addEntry(
-                    SingleMethod.class, valueMethod, "junk"
-            );
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, "junk");
+            }
             assertNotEqualsBothWays(
                     generated,
                     instantiator.generate(InheritedMethod.class, methodYield)
@@ -412,12 +412,12 @@ public abstract class ReflectionServiceTest {
         public void generatePlusDefaultMethod() {
             String toReturn = "val1";
             MethodYield methodYield = new MethodYield();
-            methodYield.addEntry(
-                    SingleMethod.class, valueMethod, toReturn
-            );
-            methodYield.addEntry(
-                    PlusDefaultMethod.class, giveBackMethod, new InvokeDefaultFunction()
-            );
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, toReturn);
+            }
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(PlusDefaultMethod.class)) {
+                methodYieldFor.callDefaultImpl(giveBackMethod);
+            }
             PlusDefaultMethod generated = instantiator.generate(PlusDefaultMethod.class, methodYield.copy());
             assertNotNull(generated);
             assertInstanceOf(PlusDefaultMethod.class, generated);
@@ -430,20 +430,20 @@ public abstract class ReflectionServiceTest {
                     instantiator.generate(PlusDefaultMethod.class, methodYield.copy())
             );
             methodYield.clear();
-            methodYield.addEntry(
-                    SingleMethod.class, valueMethod, toReturn
-            );
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, toReturn);
+            }
             assertNotEqualsBothWays(
                     generated,
                     instantiator.generate(InheritedMethod.class, methodYield)
             );
             MethodYield otherMethodYield = new MethodYield();
-            otherMethodYield.addEntry(
-                    SingleMethod.class, valueMethod, "junk"
-            );
-            otherMethodYield.addEntry(
-                    PlusDefaultMethod.class, giveBackMethod, new InvokeDefaultFunction()
-            );
+            try (MethodYield.ForImplementable methodYieldFor = otherMethodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, "junk");
+            }
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(PlusDefaultMethod.class)) {
+                methodYieldFor.callDefaultImpl(giveBackMethod);
+            }
             assertNotEqualsBothWays(
                     generated,
                     instantiator.generate(PlusDefaultMethod.class, otherMethodYield)
@@ -503,12 +503,12 @@ public abstract class ReflectionServiceTest {
             assertTrue(instantiator.hasProduced(generated));
 
             MethodYield methodYield = new MethodYield();
-            methodYield.addEntry(
-                    SingleMethod.class, valueMethod, "junk"
-            );
-            methodYield.addEntry(
-                    PlusDefaultMethod.class, giveBackMethod, new InvokeDefaultFunction()
-            );
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(SingleMethod.class)) {
+                methodYieldFor.returnValue(valueMethod, "junk");
+            }
+            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(PlusDefaultMethod.class)) {
+                methodYieldFor.callDefaultImpl(giveBackMethod);
+            }
             assertNotEqualsBothWays(
                     generated,
                     instantiator.generate(PlusDefaultMethod.class, methodYield)

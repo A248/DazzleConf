@@ -25,11 +25,11 @@ import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.StringRoot;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,8 +44,8 @@ public class GeneratedDataTest {
     @Test
     public void floats() {
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set(false, new DataEntry(new DataTree.Mut()));
-        dataTree.set(96.0, new DataEntry(new DataTree.Mut()));
+        dataTree.put(false, new DataEntry(new DataTree.Mut()));
+        dataTree.put(96.0, new DataEntry(new DataTree.Mut()));
         yamlBackend.write(Backend.Document.simple(dataTree));
         DataTree reloaded = yamlBackend.read(errorSource).getOrThrow().data();
         assertEquals(dataTree, reloaded);
@@ -63,11 +63,11 @@ Mut{{PRX=DataEntry{value=r󱭆�*.�A
  But failed because of Failed at key PRX
          */
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("PRX", new DataEntry("r45as\nhi\n")
+        dataTree.put("PRX", new DataEntry("r45as\nhi\n")
                 .withComments(CommentLocation.INLINE, List.of("�"))
                 .withComments(CommentLocation.BELOW, List.of("below multiliner"))
         );
-        dataTree.set("pI5", new DataEntry("\\h�3��3�").withComments(CommentLocation.ABOVE, List.of("ԉ$Y", "Rd�鐧y#H", "N�p����")));
+        dataTree.put("pI5", new DataEntry("\\h�3��3�").withComments(CommentLocation.ABOVE, List.of("ԉ$Y", "Rd�鐧y#H", "N�p����")));
         yamlBackend.write(Backend.Document.simple(dataTree));
         DataTree reloaded = yamlBackend.read(errorSource).getOrThrow().data();
         assertEquals(dataTree, reloaded);
@@ -101,19 +101,19 @@ SNG=DataEntry{value=[], lineNumber=null, comments=CommentData{{}}}}}.
  But failed because of Failed at key LymQpJDB
          */
         DataTree.Mut dataTree = new DataTree.Mut();
-        dataTree.set("T4q5GM", new DataEntry(-34190314).withComments(CommentData.empty()
+        dataTree.put("T4q5GM", new DataEntry(-34190314).withComments(CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "gXd������C�w��}�c���", "��;��", "J�;e�")
                 .setAt(CommentLocation.INLINE, "�R��l")
                 .setAt(CommentLocation.BELOW, "\\���'�A�IF+�h", "����e��`�", "�")
         ));
-        dataTree.set("o2gZz", new DataEntry(0.3669793));
+        dataTree.put("o2gZz", new DataEntry(0.3669793));
         DataEntry originalLymEntry = new DataEntry("�~�\r\n+���P�mɒq���5��").withComments(CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "", "t�", "")
                 .setAt(CommentLocation.INLINE, "�蝾�{te")
                 .setAt(CommentLocation.BELOW, "?9", "���J���&���O�y", "d�R\"աW�)'@E0")
         );
-        dataTree.set("LymQpJDB", originalLymEntry);
-        dataTree.set("G34q", new DataEntry(List.of()).withComments(CommentData.empty()
+        dataTree.put("LymQpJDB", originalLymEntry);
+        dataTree.put("G34q", new DataEntry(List.of()).withComments(CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "", "@���P�S<", "�#�")
                 .setAt(CommentLocation.INLINE, "��")
                 .setAt(CommentLocation.BELOW, "%?�9��", "��", "")
@@ -165,7 +165,7 @@ lz=DataEntry{value=[
                 .setAt(CommentLocation.INLINE, "[?���8�&�b���s\\�pp��2��")
                 .setAt(CommentLocation.BELOW, ")�ĳo#/4� �fX���", "-L", "�Z")
         );
-        dataTree.set("H4j", h4jEntry);
+        dataTree.put("H4j", h4jEntry);
         DataEntry dataList1 = new DataEntry(4585).withComments(CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "�Ŕ����PW�", "", "�9")
                 .setAt(CommentLocation.INLINE, "�")
@@ -173,8 +173,8 @@ lz=DataEntry{value=[
         );
         DataEntry dataList2 = new DataEntry(new DataTree.Immut());
         DataEntry dataList3 = new DataEntry(82580996); // No comments
-        DataEntry dataList4 = new DataEntry(List.of());
-        dataTree.set("4P3hgrR", new DataEntry(List.of(dataList1, dataList2, dataList3, dataList4)));
+        DataEntry dataList4 = new DataEntry(new DataList.Mut());
+        dataTree.put("4P3hgrR", new DataEntry(new DataList.Mut(dataList1, dataList2, dataList3, dataList4)));
 
         yamlBackend.write(Backend.Document.simple(dataTree));
         DataTree reloaded = yamlBackend.read(errorSource).getOrThrow().data();
@@ -211,10 +211,10 @@ Mut{{7WFE3=DataEntry{value=Mut{{px=DataEntry{value=0.6403029978265398, lineNumbe
 
         DataTree.Mut dataTree = new DataTree.Mut();
         DataTree.Mut subTree = new DataTree.Mut();
-        dataTree.set("7WFE3", new DataEntry(subTree));
-        subTree.set("px", new DataEntry(0.6403029978265398));
-        subTree.set("pX", new DataEntry(new DataTree.Mut()));
-        dataTree.set("wvW6t", new DataEntry("傓").withComments(commentData));
+        dataTree.put("7WFE3", new DataEntry(subTree));
+        subTree.put("px", new DataEntry(0.6403029978265398));
+        subTree.put("pX", new DataEntry(new DataTree.Mut()));
+        dataTree.put("wvW6t", new DataEntry("傓").withComments(commentData));
         yamlBackend.write(Backend.Document.simple(dataTree));
         /*
 7WFE3:
@@ -247,9 +247,9 @@ Mut{{8iHh=DataEntry{value=ᷯ, lineNumber=null, comments=CommentData{{}}}, oCifa
                 .setAt(CommentLocation.BELOW, "\\�w�R����5�l���ƪARP�=��Ⱥ]��", "k��,X�p|�", "i\\h�?�W�");
         DataTree.Mut dataTree = new DataTree.Mut();
         DataTree.Mut subTree = new DataTree.Mut();
-        dataTree.set("8iHh", new DataEntry(""));
-        dataTree.set("oCifae0", new DataEntry(subTree));
-        subTree.set("APWNF", new DataEntry("o �]i\n" + "�ߘ㧡�\\Ҕ�>���").withComments(commentData));
+        dataTree.put("8iHh", new DataEntry(""));
+        dataTree.put("oCifae0", new DataEntry(subTree));
+        subTree.put("APWNF", new DataEntry("o �]i\n" + "�ߘ㧡�\\Ҕ�>���").withComments(commentData));
         yamlBackend.write(Backend.Document.simple(dataTree));
         DataTree reloaded = yamlBackend.read(errorSource).getOrThrow().data();
         DataEntry reloadedEntry = reloaded.get("oCifae0");
@@ -289,9 +289,9 @@ lwM:
                 .setAt(CommentLocation.INLINE, "̮")
                 .setAt(CommentLocation.BELOW, "�ɗvvĕh, m, �oPE�ܴ��&y�F�");
         DataTree.Mut dataTree = new DataTree.Mut();
-        List<DataEntry> dataList = new ArrayList<>();
-        dataTree.set("lwM", new DataEntry(dataList));
-        dataList.add(new DataEntry(List.of()));
+        DataList.Mut dataList = new DataList.Mut();
+        dataTree.put("lwM", new DataEntry(dataList));
+        dataList.add(new DataEntry(new DataList.Mut()));
         dataList.add(new DataEntry("").withComments(emptyStringCommentData));
         yamlBackend.write(Backend.Document.simple(dataTree));
 
@@ -305,7 +305,7 @@ lwM:
         DataTree reloaded = yamlBackend.read(errorSource).getOrThrow().data();
         DataEntry reloadedList = reloaded.get("lwM");
         assertNotNull(reloadedList);
-        DataEntry reloadedEntry = (DataEntry) ((List<?>) reloadedList.getValue()).get(1);
+        DataEntry reloadedEntry = ((DataList) reloadedList.getValue()).get(1);
         assertEquals("", reloadedEntry.getValue());
         assertEquals(emptyStringCommentData, reloadedEntry.getComments());
     }
@@ -325,16 +325,16 @@ q@�WI, lineNumber=null, comments=CommentData{{ABOVE=[.)L�, [�#c��o�|
                 .setAt(CommentLocation.INLINE, "�wk:n+���ˍ�G�����}�����t�")
                 .setAt(CommentLocation.BELOW, "�WX�", "S�3��", "���Z;�����^-");
         DataTree.Mut dataTree = new DataTree.Mut();
-        List<DataEntry> dataList = new ArrayList<>();
-        dataTree.set("WQNs688", new DataEntry(dataList));
-        dataList.add(new DataEntry(List.of()));
+        DataList.Mut dataList = new DataList.Mut();
+        dataTree.put("WQNs688", new DataEntry(dataList));
+        dataList.add(new DataEntry(new DataList.Mut()));
         dataList.add(new DataEntry("��wy���3S��惷��{s�x��\nq@�WI").withComments(multilineStringCommentData));
         dataList.add(new DataEntry("final").withComments(CommentLocation.ABOVE, List.of("comment on next item")));
         yamlBackend.write(Backend.Document.simple(dataTree));
         DataTree reloaded = yamlBackend.read(errorSource).getOrThrow().data();
         DataEntry reloadedList = reloaded.get("WQNs688");
         assertNotNull(reloadedList);
-        DataEntry reloadedEntry = (DataEntry) ((List<?>) reloadedList.getValue()).get(1);
+        DataEntry reloadedEntry = ((DataList) reloadedList.getValue()).get(1);
         assertEquals(multilineStringCommentData, reloadedEntry.getComments());
     }
 
@@ -354,22 +354,22 @@ Mut{{hgXURRq=DataEntry{value=[
  But failed because of Failed at key hgXURRq. Note that document comments were added: CommentData{{ABOVE=[F�pM�8�,  v"E����?m, �C��], BELOW=[�2�]�RF�g�����0�, ���,,W�0+, ��^۬�]}}
          */
         DataTree.Mut dataTree = new DataTree.Mut();
-        List<DataEntry> dataList = new ArrayList<>();
+        DataList.Mut dataList = new DataList.Mut();
         DataTree.Mut treeElement = new DataTree.Mut();
-        dataTree.set("hgXURRq", new DataEntry(dataList));
+        dataTree.put("hgXURRq", new DataEntry(dataList));
         dataList.add(new DataEntry(treeElement));
 
         CommentData deepComments = CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "O�ǝ��m��", "�", "ۉN����")
                 .setAt(CommentLocation.INLINE, "�9Eq�-���Y�>�e6��qU���")
                 .setAt(CommentLocation.BELOW, "", "�", "�^{=�G�U");
-        treeElement.set("PwpPlDpu", new DataEntry(12532).withComments(deepComments));
+        treeElement.put("PwpPlDpu", new DataEntry(12532).withComments(deepComments));
         yamlBackend.write(Backend.Document.simple(dataTree));
 
         DataTree reloaded = yamlBackend.read(errorSource).getOrThrow().data();
         DataEntry reloadedList = reloaded.get("hgXURRq");
         assertNotNull(reloadedList);
-        DataEntry reloadedTreeElement = (DataEntry) ((List<?>) reloadedList.getValue()).getFirst();
+        DataEntry reloadedTreeElement = ((DataList) reloadedList.getValue()).get(0);
         DataEntry reloadedNumeral = ((DataTree) reloadedTreeElement.getValue()).get("PwpPlDpu");
         assertNotNull(reloadedNumeral);
         assertEquals(deepComments, reloadedNumeral.getComments());

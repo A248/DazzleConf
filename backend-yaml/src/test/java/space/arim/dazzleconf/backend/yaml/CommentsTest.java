@@ -57,7 +57,7 @@ public class CommentsTest {
             @Override
             public @NonNull DataTree data() {
                 DataTree.Mut dataTree = new DataTree.Mut();
-                dataTree.set("option", new DataEntry("value"));
+                dataTree.put("option", new DataEntry("value"));
                 return dataTree;
             }
         });
@@ -79,7 +79,7 @@ public class CommentsTest {
             @Override
             public @NonNull DataTree data() {
                 DataTree.Mut dataTree = new DataTree.Mut();
-                dataTree.set("option", new DataEntry("value"));
+                dataTree.put("option", new DataEntry("value"));
                 return dataTree;
             }
         });
@@ -100,7 +100,7 @@ public class CommentsTest {
             @Override
             public @NonNull DataTree data() {
                 DataTree.Mut dataTree = new DataTree.Mut();
-                dataTree.set("option", new DataEntry("value"));
+                dataTree.put("option", new DataEntry("value"));
                 return dataTree;
             }
         });
@@ -127,10 +127,10 @@ public class CommentsTest {
             public @NonNull DataTree data() {
                 DataTree.Mut dataTree = new DataTree.Mut();
                 DataTree.Mut subTree = new DataTree.Mut();
-                dataTree.set("sub", new DataEntry(subTree));
-                dataTree.set("another", new DataEntry(false));
-                subTree.set("plain", new DataEntry(1));
-                subTree.set("commented", new DataEntry("hello").withComments(commentsOnEntry));
+                dataTree.put("sub", new DataEntry(subTree));
+                dataTree.put("another", new DataEntry(false));
+                subTree.put("plain", new DataEntry(1));
+                subTree.put("commented", new DataEntry("hello").withComments(commentsOnEntry));
                 return dataTree;
             }
         });
@@ -198,12 +198,12 @@ public class CommentsTest {
                 DataTree.Mut dataTree = new DataTree.Mut();
                 DataTree.Mut subTree = new DataTree.Mut();
                 DataTree.Mut subSubTree = new DataTree.Mut();
-                dataTree.set("sub", new DataEntry(subTree));
-                subTree.set("plain", new DataEntry(1));
-                subTree.set("commented", new DataEntry("hello").withComments(commentsOnEntry));
-                subTree.set("section", new DataEntry(subSubTree).withComments(commentsOnSection));
-                subSubTree.set("dummy", new DataEntry("will we snag the comments?"));
-                subSubTree.set("mischievous", new DataEntry(true));
+                dataTree.put("sub", new DataEntry(subTree));
+                subTree.put("plain", new DataEntry(1));
+                subTree.put("commented", new DataEntry("hello").withComments(commentsOnEntry));
+                subTree.put("section", new DataEntry(subSubTree).withComments(commentsOnSection));
+                subSubTree.put("dummy", new DataEntry("will we snag the comments?"));
+                subSubTree.put("mischievous", new DataEntry(true));
                 return dataTree;
             }
         });

@@ -655,6 +655,14 @@ final class SimpleConfigObject extends AbstractConfigObject implements Serializa
         return entries;
     }
 
+    // DAZZLECONF start
+    @Override
+    // Work around entrySet() usage in forEach loops
+    public void forEach(java.util.function.BiConsumer<? super String, ? super ConfigValue> action) {
+        value.forEach(action);
+    }
+    // DAZZLECONF end
+
     @Override
     public boolean isEmpty() {
         return value.isEmpty();

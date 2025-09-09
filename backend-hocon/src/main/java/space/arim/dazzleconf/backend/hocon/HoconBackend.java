@@ -36,6 +36,7 @@ import space.arim.dazzleconf2.ErrorContext;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.ReadableRoot;
@@ -163,11 +164,8 @@ public final class HoconBackend implements Backend {
     private DataTree dataTreeFromHocon(ConfigObject hoconObject) {
         DataTree.Mut dataTree = new DataTree.Mut();
         // HOCON chose to implement entrySet() horribly: they re-make the whole object just to avoid an unchecked cast
-        // So, we use keySet() iteration which is more efficient
-        //noinspection KeySetIterationMayUseEntrySet
-        for (String key : hoconObject.keySet()) {
-            dataTree.set(key, entryFromHocon(hoconObject.get(key)));
-        }
+        // So, remember not to use their entrySet() method
+        hoconObject.forEach((key, hoconValue) -> dataTree.put(key, entryFromHocon(hoconValue)));
         return dataTree;
     }
 
@@ -177,11 +175,11 @@ public final class HoconBackend implements Backend {
             value = dataTreeFromHocon((ConfigObject) hoconValue);
         } else if (hoconValue instanceof ConfigList) {
             ConfigList hoconList = (ConfigList) hoconValue;
-            List<DataEntry> entryList = new ArrayList<>(hoconList.size());
+            DataList.Mut dataList = new DataList.Mut(hoconList.size());
             for (ConfigValue hoconElem : hoconList) {
-                entryList.add(entryFromHocon(hoconElem));
+                dataList.add(entryFromHocon(hoconElem));
             }
-            value = entryList;
+            value = dataList;
         } else {
             Object unwrappedScalar = hoconValue.unwrapped();
             value = unwrappedScalar == null ? "null" : unwrappedScalar;
@@ -220,18 +218,14 @@ public final class HoconBackend implements Backend {
         }
 
         private ConfigObject dataTreeToHocon(DataTree dataTree) {
-            LinkedHashMap<String, ConfigValue> hoconConfigMap = new LinkedHashMap<>();
-            dataTree.forEach((key, entry) -> {
-                hoconConfigMap.put(key.toString(), entryToHocon(entry));
-            });
+            LinkedHashMap<String, ConfigValue> hoconConfigMap = new LinkedHashMap<>(dataTree.size() + 1, 0.999f);
+            dataTree.forEach((key, entry) -> hoconConfigMap.put(key.toString(), entryToHocon(entry)));
             return writeHoconAccess.fromMap(hoconConfigMap);
         }
 
-        private ConfigList entryListToHocon(List<DataEntry> entryList) {
-            List<ConfigValue> hoconList = new ArrayList<>(entryList.size());
-            for (DataEntry dataEntry : entryList) {
-                hoconList.add(entryToHocon(dataEntry));
-            }
+        private ConfigList dataListToHocon(DataList dataList) {
+            List<ConfigValue> hoconList = new ArrayList<>(dataList.size());
+            dataList.forEach(entry -> hoconList.add(entryToHocon(entry)));
             return writeHoconAccess.fromList(hoconList);
         }
 
@@ -240,10 +234,8 @@ public final class HoconBackend implements Backend {
             ConfigValue hoconValue;
             if (value instanceof DataTree) {
                 hoconValue = dataTreeToHocon((DataTree) value);
-            }  else if (value instanceof List) {
-                @SuppressWarnings("unchecked")
-                List<DataEntry> castValue = (List<DataEntry>) value;
-                hoconValue = entryListToHocon(castValue);
+            }  else if (value instanceof DataList) {
+                hoconValue = dataListToHocon((DataList) value);
             } else {
                 hoconValue = writeHoconAccess.fromScalar(value);
             }

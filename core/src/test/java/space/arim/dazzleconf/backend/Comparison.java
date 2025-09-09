@@ -22,10 +22,10 @@ package space.arim.dazzleconf.backend;
 import space.arim.dazzleconf2.backend.Backend;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -81,18 +81,12 @@ record Comparison(Backend.Document subject, Backend.Document reloaded, Backend.M
             }
             treesEqual(libraryTree, backendTree);
             return; // Skip comment check
-        } else if (libraryValue instanceof List<?> libraryList) {
-            if (!(backendValue instanceof List<?> backendList) || libraryList.size() != backendList.size()) {
+        } else if (libraryValue instanceof DataList libraryList) {
+            if (!(backendValue instanceof DataList backendList) || libraryList.size() != backendList.size()) {
                 throw error("Not a list " + backendValue + ", expected " + libraryList);
             }
             for (int n = 0; n < libraryList.size(); n++) {
-                Object libraryElem = libraryList.get(n);
-                Object backendElem = backendList.get(n);
-                if (!(libraryElem instanceof DataEntry libraryElemEntry)
-                        || !(backendElem instanceof DataEntry backendElemEntry)) {
-                    throw error("Wrongly typed list entries " + libraryElem + " and " + backendElem);
-                }
-                entriesEqual(libraryElemEntry, backendElemEntry);
+                entriesEqual(libraryList.get(n), backendList.get(n));
             }
             return; // Skip comment check
         } else if (libraryValue instanceof Float || libraryValue instanceof Double) {
