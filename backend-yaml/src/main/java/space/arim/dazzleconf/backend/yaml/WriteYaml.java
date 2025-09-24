@@ -34,6 +34,7 @@ import org.snakeyaml.engine.v2.nodes.Tag;
 import org.snakeyaml.engine.v2.representer.StandardRepresenter;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.engine.CommentLocation;
 
@@ -70,13 +71,13 @@ final class WriteYaml {
         return new MappingNode(Tag.MAP, keyValuePairs, FlowStyle.AUTO);
     }
 
-    private Node dataListToNode(List<DataEntry> entryList) {
-        List<Node> nodeList = new ArrayList<>(entryList.size());
-        for (DataEntry elem : entryList) {
+    private Node dataListToNode(DataList dataList) {
+        List<Node> nodeList = new ArrayList<>(dataList.size());
+        dataList.forEach(elem -> {
             Node elemNode = entryToNode(elem, true);
             setComments(new SetCommentsOnListEntry(elemNode), elem.getComments());
             nodeList.add(elemNode);
-        }
+        });
         return new SequenceNode(Tag.SEQ, nodeList, FlowStyle.AUTO);
     }
 
@@ -85,11 +86,9 @@ final class WriteYaml {
         if (value instanceof DataTree) {
             return dataTreeToNode((DataTree) value);
         }
-        if (value instanceof List) {
+        if (value instanceof DataList) {
             // Per the documentation of DataEntry, this cast is safe
-            @SuppressWarnings("unchecked")
-            List<DataEntry> entryList = (List<DataEntry>) value;
-            return dataListToNode(entryList);
+            return dataListToNode((DataList) value);
         }
         // 1. Inline comments on list elements are incompatible with multi-line strings
         // 2. Strings which are just new lines don't round-trip in YamlBackend, because of footer writing '\n'
@@ -179,7 +178,7 @@ final class WriteYaml {
                     return elemNode instanceof CollectionNode ? null : elemNode;
             }
             throw new IncompatibleClassChangeError("Unknown comment location " + location);
-        };
+        }
     }
 
     private static void setComments(SetCommentsOn setCommentsOn, CommentData commentData) {

@@ -5,7 +5,7 @@ The bug hunt is a collaborative effort to find bugs...
 
 ### Introduction
 
-Starting with the release of `2.0.0-M1`, anyone who finds a qualifying bug will be featured and mentioned in the README.
+Starting with the release of `2.0.0-M1`, anyone who finds a qualifying bug will be featured and mentioned in the README. This will end at a time deemed appropriate by the maintainers.
 
 ### What counts as a bug?
 

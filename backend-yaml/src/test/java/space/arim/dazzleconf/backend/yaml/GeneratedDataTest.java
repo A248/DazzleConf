@@ -113,7 +113,7 @@ SNG=DataEntry{value=[], lineNumber=null, comments=CommentData{{}}}}}.
                 .setAt(CommentLocation.BELOW, "?9", "���J���&���O�y", "d�R\"աW�)'@E0")
         );
         dataTree.put("LymQpJDB", originalLymEntry);
-        dataTree.put("G34q", new DataEntry(List.of()).withComments(CommentData.empty()
+        dataTree.put("G34q", new DataEntry(new DataList.Immut()).withComments(CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "", "@���P�S<", "�#�")
                 .setAt(CommentLocation.INLINE, "��")
                 .setAt(CommentLocation.BELOW, "%?�9��", "��", "")
@@ -186,8 +186,7 @@ lz=DataEntry{value=[
         DataEntry reloaded4P3 = reloaded.get("4P3hgrR");
         assertNotNull(reloaded4P3);
         assertEquals(dataTree.get("4P3hgrR"), reloaded4P3); // Checks the values
-        @SuppressWarnings("unchecked")
-        List<DataEntry> reloadedList = (List<DataEntry>) reloaded4P3.getValue();
+        DataList reloadedList = (DataList) reloaded4P3.getValue();
         DataEntry reloadedList1 = reloadedList.get(0);
         DataEntry reloadedList2 = reloadedList.get(1);
         DataEntry reloadedList3 = reloadedList.get(2);

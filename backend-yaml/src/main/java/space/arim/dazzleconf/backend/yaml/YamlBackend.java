@@ -151,6 +151,7 @@ public final class YamlBackend implements Backend {
                 .setLabel(YamlBackend.class.getSimpleName())
                 .build();
         dumpSettings = DumpSettings.builder()
+                .setExplicitStart(false)
                 .setNonPrintableStyle(NonPrintableStyle.ESCAPE)
                 .setDumpComments(true)
                 .setSchema(schema)

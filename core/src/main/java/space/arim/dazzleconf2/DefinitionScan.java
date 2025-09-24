@@ -78,10 +78,6 @@ final class DefinitionScan {
             if (classContentMap.containsKey(currentType)) {
                 return new MethodMirror.TypeWalker[0];
             }
-            // Check if accessible
-            if (false && !AccessChecking.isAccessible(currentType)) {
-                throw new DeveloperMistakeException("Configuration interface not accessible: " + currentType);
-            }
             ClassContent classContent = new ClassContent();
             classContentMap.put(currentType, classContent);
 
@@ -90,12 +86,12 @@ final class DefinitionScan {
 
                 MethodLocator methodLocator = new MethodLocator(methodId);
                 // We need to make sure that subclasses own the methods they override
-                // To do this, check existing types, and see if the current type is a sub-type of them
+                // To do this, check existing types, and see if the current type is a subtype of them
                 Class<?> existingOwner = methodsFoundWhere.get(methodLocator);
                 if (existingOwner == null) {
                     // All good
                 } else if (existingOwner.isAssignableFrom(currentType)) {
-                    // There's an existing owner, but current type is a sub-type of it
+                    // There's an existing owner, but current type is a subtype of it
                     // So, move ownership of this method to the current type
                     classContentMap.get(existingOwner).ownedMethods.remove(methodLocator);
                 } else {

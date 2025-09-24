@@ -1,9 +1,11 @@
 
 # DazzleConf [![Maven Central](https://img.shields.io/maven-central/v/space.arim.dazzleconf/dazzleconf-parent?color=brightgreen&label=maven%20central)](https://mvnrepository.com/artifact/space.arim.dazzleconf/dazzleconf-core) [![Javadoc](https://javadoc.io/badge2/space.arim.dazzleconf/dazzleconf-core/javadoc.svg)](https://javadoc.io/doc/space.arim.dazzleconf/dazzleconf-core) [![discord](https://img.shields.io/discord/784154359067443280?label=discord)](https://discord.gg/es9EuHqqNr)
 
-A sleek, usable, and fully-featured configuration library. Supports HOCON, INI, TOML, and YAML.
+A sleek, usable, and fully-featured configuration library. Supports HOCON, TOML, and YAML.
 
 Documentation is in the [/docs/](docs) folder.
+
+**Version 2 is still in the preview stage while we stabilize the API**; for version 1.0, see the "master" branch.
 
 ### Objectives
 
@@ -121,7 +123,7 @@ Check out this page to get started using the library: [Getting started](docs/Get
 Not yet implemented:
 * Streaming API for more efficient read/write.
   * Would make I/O more efficient.
-  * Could skip intermediate structures like unnecessary maps and lists.
+  * Could skip intermediate structures like unnecessary maps and lists, and have them created in an on-demand basis.
 * Greater communication between backend format and configuration definition, where the configuration interface gives the backend hints about which basic types (e.g., string or integer) and type structures (scalar/map/array) are preferred
   * Planned to be combined with the streaming API.
 

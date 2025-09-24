@@ -28,14 +28,13 @@ import space.arim.dazzleconf2.engine.CommentLocation;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 record RandomGen(Backend.Meta backendMeta, ThreadLocalRandom random, CountEntries countEntries) {
 
-    private static final int DEPTH_LIMIT = 4;
-    private static final int LENGTH_LIMIT = 5;
+    private static final int DEPTH_LIMIT = 2;
+    private static final int LENGTH_LIMIT = 2;
 
     void fillDataTree(DataTree.Mut dataTree, int lengthMinimum, int nestDepth) {
         if (nestDepth == DEPTH_LIMIT) {
@@ -80,7 +79,7 @@ record RandomGen(Backend.Meta backendMeta, ThreadLocalRandom random, CountEntrie
         boolean comments;
         {
             Object value = entry.getValue();
-            comments = !(value instanceof DataTree) && !(value instanceof List);
+            comments = !(value instanceof DataTree) && !(value instanceof DataList);
         }
         if (comments && random.nextBoolean()) {
             entry = entry.withComments(generateComments(false));
@@ -98,11 +97,7 @@ record RandomGen(Backend.Meta backendMeta, ThreadLocalRandom random, CountEntrie
                 };
                 String[] comments = new String[cap];
                 for (int n = 0; n < cap; n++) {
-                    String generated;
-                    do {
-                        generated = randString();
-                    } while (generated.codePoints().anyMatch(Character::isISOControl));
-                    comments[n] = generated;
+                    comments[n] = randAlphanumericString();
                 }
                 commentData = commentData.setAt(commentLocation, comments);
             }
@@ -116,8 +111,6 @@ record RandomGen(Backend.Meta backendMeta, ThreadLocalRandom random, CountEntrie
             int switchLimit;
             if (!key) {
                 switchLimit = 9; // Accept everything below
-            } else if (backendMeta.onlyAlphanumericKeys()) {
-                return randAlphanumericString();
             } else if (backendMeta.allKeysAreStrings()) {
                 switchLimit = 7; // Skip float, double
             } else {

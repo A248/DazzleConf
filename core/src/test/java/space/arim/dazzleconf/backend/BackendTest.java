@@ -46,7 +46,7 @@ public abstract class BackendTest {
         AtomicInteger sizeRecord = new AtomicInteger();
         AtomicLong ratioRecord = new AtomicLong(Double.doubleToRawLongBits(0L));
         return Stream.generate(DataTree.Mut::new)
-                .limit(100L)
+                .limit(1000L)
                 .map(dataTree -> {
 
                     StringRoot stringRoot = new StringRoot("");

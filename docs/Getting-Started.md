@@ -81,7 +81,6 @@ I won't go over the specifics of shading because it is assumed you already know 
 Relocating `space.arim.dazzleconf` is critical.
 Since version 2.0, this is the only namespace you have to relocate.
 
-
 **Transitive Dependencies**
 
 Since version 2.0, DazzleConf artifacts no longer expose you to third-party dependencies.

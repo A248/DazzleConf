@@ -526,6 +526,7 @@ public abstract class ReflectionServiceTest {
             int hello();
 
             List<V> overidden();
+
         }
 
         public interface MidLevel<V> extends Parent<V> {
@@ -563,6 +564,10 @@ public abstract class ReflectionServiceTest {
 
             default String[] giveArray() {
                 return new String[0];
+            }
+
+            static Comparable<String> staticIgnore() {
+                return "static ignore";
             }
         }
 

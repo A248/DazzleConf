@@ -1,5 +1,11 @@
 
 
+## API Stability
+
+DazzleConf follows [SemVer](https://semver.org/). This means that methods will never disapppear or incompatibly change behavior in minor or patch releases.
+
+However, we also use the `@Api` annotations from `api-guardian`. Methods and classes marked with `@Api()` are not considered in SemVer, but we will give ample warning when they are being changed.
+
 ## Custom Types
 
 ### Type Liaison

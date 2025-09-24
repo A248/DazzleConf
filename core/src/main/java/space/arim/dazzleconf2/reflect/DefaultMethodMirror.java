@@ -30,6 +30,7 @@ import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.stream.Stream;
@@ -80,6 +81,7 @@ final class DefaultMethodMirror implements MethodMirror {
             Class<?> declaringClass = enclosingType.rawType();
             Method[] classMethods = declaringClass.getDeclaredMethods();
             return Arrays.stream(classMethods)
+                    .filter(method -> !Modifier.isStatic(method.getModifiers()))
                     .filter(method -> !method.isSynthetic() && !method.isBridge())
                     .map((method -> {
                         ReifiedType.Annotated reifiedReturn = classGenerics.reify(method.getAnnotatedReturnType());
