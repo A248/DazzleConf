@@ -20,8 +20,6 @@
 package space.arim.dazzleconf.backend;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

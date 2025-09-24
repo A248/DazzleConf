@@ -21,13 +21,13 @@ package space.arim.dazzleconf.backend.yaml.samples.ness;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.engine.DefaultValues;
-import space.arim.dazzleconf2.engine.DeserializeInput;
-import space.arim.dazzleconf2.engine.SerializeDeserialize;
-import space.arim.dazzleconf2.engine.SerializeOutput;
-import space.arim.dazzleconf2.engine.TypeLiaison;
-import space.arim.dazzleconf2.reflect.TypeToken;
+import space.arim.dazzleconf.LoadResult;
+import space.arim.dazzleconf.engine.DefaultValues;
+import space.arim.dazzleconf.engine.DeserializeInput;
+import space.arim.dazzleconf.engine.SerializeDeserialize;
+import space.arim.dazzleconf.engine.SerializeOutput;
+import space.arim.dazzleconf.engine.TypeLiaison;
+import space.arim.dazzleconf.reflect.TypeToken;
 
 abstract class IntPairSerializer<T> implements TypeLiaison, SerializeDeserialize<T> {
 

@@ -19,9 +19,5 @@
 
 package space.arim.dazzleconf.backend;
 
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.backend.DataTree;
-
 public record SimpleDocument(CommentData comments, DataTree.Immut data) implements Backend.Document {
 }

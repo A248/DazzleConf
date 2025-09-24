@@ -20,8 +20,8 @@
 package space.arim.dazzleconf.backend.toml;
 
 import space.arim.dazzleconf.backend.BackendTest;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.ReadableRoot;
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.ReadableRoot;
 
 public class TomlBackendTest extends BackendTest {
     @Override

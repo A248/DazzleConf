@@ -20,11 +20,10 @@
 package space.arim.dazzleconf;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataList;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.reflect.TypeToken;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataList;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.reflect.TypeToken;
 
 import java.util.List;
 

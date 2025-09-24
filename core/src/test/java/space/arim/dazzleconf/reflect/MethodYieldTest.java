@@ -21,9 +21,6 @@ package space.arim.dazzleconf.reflect;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.reflect.MethodId;
-import space.arim.dazzleconf2.reflect.MethodYield;
-import space.arim.dazzleconf2.reflect.ReifiedType;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

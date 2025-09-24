@@ -22,12 +22,8 @@ package space.arim.dazzleconf.backend;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import space.arim.dazzleconf.TestingErrorSource;
-import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.ReadableRoot;
-import space.arim.dazzleconf2.backend.StringRoot;
+import space.arim.dazzleconf.ErrorContext;
+import space.arim.dazzleconf.LoadResult;
 
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;

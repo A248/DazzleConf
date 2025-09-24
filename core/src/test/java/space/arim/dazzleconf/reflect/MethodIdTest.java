@@ -20,8 +20,6 @@
 package space.arim.dazzleconf.reflect;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.reflect.MethodId;
-import space.arim.dazzleconf2.reflect.ReifiedType;
 
 import java.lang.reflect.Method;
 

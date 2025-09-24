@@ -1,0 +1,121 @@
+/*
+ * DazzleConf
+ * Copyright © 2025 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
+ * and navigate to version 3 of the GNU Lesser General Public License.
+ */
+
+package space.arim.dazzleconf.reflect;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf.internals.ArrayType;
+
+import java.lang.reflect.AnnotatedArrayType;
+import java.lang.reflect.AnnotatedParameterizedType;
+import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.AnnotatedTypeVariable;
+import java.lang.reflect.AnnotatedWildcardType;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+
+import static space.arim.dazzleconf.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
+
+/**
+ * A low level helper for reifying generic members within context of a generic class declaration.
+ * <p>
+ * Usage of this class ignores method-level generics. If method-level type variables are set, their usage is replaced
+ * by {@link #unknownVariable(String)}.
+ */
+abstract class GenericContext {
+
+    private final ReifiedType.Annotated parent;
+    private final TypeVariable<?>[] typeVars;
+
+    /**
+     * Creates from a parent type.
+     * <p>
+     * This is the type that provides class-level type variables, and it will also be used in debug messages.
+     *
+     * @param parent the parent type in which our operations are located
+     */
+    GenericContext(ReifiedType.@NonNull Annotated parent) {
+        this.parent = parent;
+        TypeVariable<?>[] typeVars = parent.rawType().getTypeParameters();
+        if (typeVars.length != parent.argumentCount()) {
+            throw new IllegalStateException("Malformed input type. Wrong number of arguments on " + parent);
+        }
+        this.typeVars = typeVars;
+    }
+
+    private ReifiedType.Annotated getTypeArgument(String varName) {
+        for (int n = 0; n < typeVars.length; n++) {
+            if (typeVars[n].getName().equals(varName)) {
+                return parent.argumentAt(n);
+            }
+        }
+        return unknownVariable(varName);
+    }
+
+    abstract ReifiedType.Annotated unknownVariable(String varName);
+
+    /**
+     * Reifies the given annotated type.
+     * <p>
+     * This function assumes the given type is taken from a member within the parent type. If that is not the case,
+     * behavior is not defined.
+     *
+     * @param type the annotated type to reify
+     * @return the reified result
+     */
+    ReifiedType.Annotated reify(AnnotatedType type) {
+        if (type instanceof AnnotatedParameterizedType) {
+            AnnotatedParameterizedType parameterizedType = (AnnotatedParameterizedType) type;
+
+            AnnotatedType[] sourceArgs = parameterizedType.getAnnotatedActualTypeArguments();
+            ReifiedType.Annotated[] reifiedArgs = new ReifiedType.Annotated[sourceArgs.length];
+            for (int n = 0; n < sourceArgs.length; n++) {
+                reifiedArgs[n] = reify(sourceArgs[n]);
+            }
+            Class<?> mainType = (Class<?>) ((ParameterizedType) parameterizedType.getType()).getRawType();
+            return new ReifiedType.Annotated(mainType, reifiedArgs, type);
+        }
+        if (type instanceof AnnotatedTypeVariable) {
+            return getTypeArgument(((TypeVariable<?>) type.getType()).getName());
+        }
+        if (type instanceof AnnotatedWildcardType) {
+            AnnotatedWildcardType wildcardType = (AnnotatedWildcardType) type;
+
+            return reify(wildcardType.getAnnotatedUpperBounds()[0]);
+        }
+        if (type instanceof AnnotatedArrayType) {
+            AnnotatedArrayType arrayType = (AnnotatedArrayType) type;
+
+            // Use the component type as the source of annotations - discard annotations on the array
+            AnnotatedType annotatedComponent = arrayType.getAnnotatedGenericComponentType();
+            ReifiedType.Annotated reifiedComponent = reify(annotatedComponent);
+            return new ReifiedType.Annotated(
+                    ArrayType.arrayType(reifiedComponent.rawType()),
+                    reifiedComponent.arguments(),
+                    annotatedComponent
+            );
+        }
+        Type rawType = type.getType();
+        if (rawType instanceof Class) {
+            return new ReifiedType.Annotated((Class<?>) rawType, EMPTY_ARRAY, type);
+        }
+        throw new IllegalStateException("Unable to reify type " + type + " within a method of " + parent);
+    }
+}

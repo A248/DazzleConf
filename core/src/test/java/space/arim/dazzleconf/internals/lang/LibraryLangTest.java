@@ -20,9 +20,6 @@
 package space.arim.dazzleconf.internals.lang;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.internals.lang.LibraryLang;
-import space.arim.dazzleconf2.internals.lang.LangAr;
-import space.arim.dazzleconf2.internals.lang.LangEn;
 
 import java.io.OutputStream;
 import java.io.PrintStream;

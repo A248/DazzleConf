@@ -24,8 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.LoadResult;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -33,7 +31,7 @@ import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.lenient;
-import static space.arim.dazzleconf2.backend.Printable.preBuilt;
+import static space.arim.dazzleconf.backend.Printable.preBuilt;
 
 @ExtendWith(MockitoExtension.class)
 public class LoadResultTest {

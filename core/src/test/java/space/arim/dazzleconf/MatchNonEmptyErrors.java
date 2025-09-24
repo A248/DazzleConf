@@ -20,7 +20,6 @@
 package space.arim.dazzleconf;
 
 import org.mockito.ArgumentMatcher;
-import space.arim.dazzleconf2.ErrorContext;
 
 import java.util.List;
 

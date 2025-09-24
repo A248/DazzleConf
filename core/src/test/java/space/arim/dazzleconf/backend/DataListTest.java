@@ -22,8 +22,6 @@ package space.arim.dazzleconf.backend;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataList;
 
 import java.util.ArrayList;
 import java.util.List;

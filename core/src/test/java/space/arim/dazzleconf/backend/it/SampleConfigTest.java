@@ -20,11 +20,11 @@
 package space.arim.dazzleconf.backend.it;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.StringRoot;
-import space.arim.dazzleconf2.engine.liaison.SubSection;
+import space.arim.dazzleconf.Configuration;
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.backend.StringRoot;
+import space.arim.dazzleconf.engine.liaison.SubSection;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

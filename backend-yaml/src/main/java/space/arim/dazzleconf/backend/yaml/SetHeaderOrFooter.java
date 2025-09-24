@@ -19,7 +19,7 @@
 
 package space.arim.dazzleconf.backend.yaml;
 
-import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf.engine.CommentLocation;
 
 import java.util.List;
 

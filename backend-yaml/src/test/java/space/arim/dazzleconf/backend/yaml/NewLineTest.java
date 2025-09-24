@@ -22,11 +22,11 @@ package space.arim.dazzleconf.backend.yaml;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import space.arim.dazzleconf.TestingErrorSource;
-import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.StringRoot;
+import space.arim.dazzleconf.ErrorContext;
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.backend.StringRoot;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

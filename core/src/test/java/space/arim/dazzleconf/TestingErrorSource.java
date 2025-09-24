@@ -19,9 +19,7 @@
 
 package space.arim.dazzleconf;
 
-import space.arim.dazzleconf2.ConfigurationBuilder;
-import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.reflect.TypeToken;
+import space.arim.dazzleconf.reflect.TypeToken;
 
 public final class TestingErrorSource {
 

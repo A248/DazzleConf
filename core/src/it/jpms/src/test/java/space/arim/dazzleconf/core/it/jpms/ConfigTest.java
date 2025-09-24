@@ -19,25 +19,26 @@
 
 package space.arim.dazzleconf.core.it.jpms;
 
+import java.lang.invoke.MethodHandles;
+import space.arim.dazzleconf.Configuration;
 import space.arim.dazzleconf.core.it.jpms.exported.CustomType;
+import space.arim.dazzleconf.reflect.TypeToken;
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf.ConfigurationOptions;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class ConfigTest {
 
 	@Test
 	public void loadConfig() {
-		loadDefaults(Config.class);
-	}
-
-	@Test
-	public void loadConfigWithDefaultMethods() {
-		loadDefaults(ConfigWithDefaultMethods.class);
-	}
-
-	private <C> C loadDefaults(Class<C> configClass) {
-		return new DefaultsOnlyFactory<>(configClass,
-				new ConfigurationOptions.Builder().addSerialiser(new CustomType.Serialiser()).build()).loadDefaults();
+        Configuration<Config> config = Configuration.defaultBuilder(Config.class)
+                .lookup(MethodHandles.lookup())
+                .addSimpleSerializer(new TypeToken<CustomType>() {}, new CustomType.Serializer())
+                .build();
+        Config defaults = config.loadDefaults();
+        assertFalse(defaults.someOption());
+        assertEquals("whatever", defaults.customType().value());
 	}
 
 }

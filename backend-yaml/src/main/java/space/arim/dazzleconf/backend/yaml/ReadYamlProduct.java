@@ -20,9 +20,9 @@
 package space.arim.dazzleconf.backend.yaml;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.CommentData;
+import space.arim.dazzleconf.backend.DataTree;
 
 class ReadYamlProduct implements Backend.Document {
 

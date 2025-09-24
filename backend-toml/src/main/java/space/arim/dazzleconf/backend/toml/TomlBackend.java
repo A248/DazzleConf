@@ -36,20 +36,20 @@ import io.github.wasabithumb.jtoml.value.primitive.TomlPrimitive;
 import io.github.wasabithumb.jtoml.value.table.TomlTable;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf2.DeveloperMistakeException;
-import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataList;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.backend.ReadableRoot;
-import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
-import space.arim.dazzleconf2.engine.CommentLocation;
-import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf.DeveloperMistakeException;
+import space.arim.dazzleconf.ErrorContext;
+import space.arim.dazzleconf.LoadResult;
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.CommentData;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataList;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.backend.KeyMapper;
+import space.arim.dazzleconf.backend.KeyPath;
+import space.arim.dazzleconf.backend.ReadableRoot;
+import space.arim.dazzleconf.backend.SnakeCaseKeyMapper;
+import space.arim.dazzleconf.engine.CommentLocation;
+import space.arim.dazzleconf.internals.lang.LibraryLang;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -62,7 +62,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
-import static space.arim.dazzleconf2.backend.Printable.preBuilt;
+import static space.arim.dazzleconf.backend.Printable.preBuilt;
 
 /**
  * A backend for TOML.

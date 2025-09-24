@@ -20,14 +20,14 @@
 package space.arim.dazzleconf.backend.hocon;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.StringRoot;
-import space.arim.dazzleconf2.engine.CommentLocation;
-import space.arim.dazzleconf2.engine.Comments;
-import space.arim.dazzleconf2.engine.liaison.SubSection;
+import space.arim.dazzleconf.Configuration;
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.backend.StringRoot;
+import space.arim.dazzleconf.engine.CommentLocation;
+import space.arim.dazzleconf.engine.Comments;
+import space.arim.dazzleconf.engine.liaison.SubSection;
 
 import java.util.ArrayList;
 import java.util.List;

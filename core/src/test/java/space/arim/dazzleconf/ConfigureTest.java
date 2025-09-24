@@ -25,13 +25,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.*;
-import space.arim.dazzleconf2.engine.CommentLocation;
-import space.arim.dazzleconf2.ConfigureListener;
-import space.arim.dazzleconf2.engine.UpdateReason;
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.backend.DefaultKeyMapper;
+import space.arim.dazzleconf.backend.KeyPath;
+import space.arim.dazzleconf.engine.CommentLocation;
+import space.arim.dazzleconf.engine.UpdateReason;
 
 import java.util.List;
 

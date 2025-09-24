@@ -19,38 +19,34 @@
 
 package space.arim.dazzleconf.core.it.jpms.exported;
 
-import space.arim.dazzleconf.error.BadValueException;
-import space.arim.dazzleconf.serialiser.Decomposer;
-import space.arim.dazzleconf.serialiser.FlexibleType;
-import space.arim.dazzleconf.serialiser.ValueSerialiser;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf.LoadResult;
+import space.arim.dazzleconf.engine.DeserializeInput;
+import space.arim.dazzleconf.engine.SerializeDeserialize;
+import space.arim.dazzleconf.engine.SerializeOutput;
 
 public final class CustomType {
 
-	private final String value;
+    private final String value;
 
-	public CustomType(String value) {
-		this.value = value;
-	}
+    public CustomType(String value) {
+        this.value = value;
+    }
 
-	public String value() {
-		return value;
-	}
+    public String value() {
+        return value;
+    }
 
-	public static class Serialiser implements ValueSerialiser<CustomType> {
+    public static class Serializer implements SerializeDeserialize<CustomType> {
 
-		@Override
-		public Class<CustomType> getTargetClass() {
-			return CustomType.class;
-		}
+        @Override
+        public @NonNull LoadResult<@NonNull CustomType> deserialize(@NonNull DeserializeInput deser) {
+            return deser.requireString().map(CustomType::new);
+        }
 
-		@Override
-		public CustomType deserialise(FlexibleType flexibleType) throws BadValueException {
-			return new CustomType(flexibleType.getString());
-		}
-
-		@Override
-		public Object serialise(CustomType value, Decomposer decomposer) {
-			return value.value();
-		}
-	}
+        @Override
+        public void serialize(@NonNull CustomType value, @NonNull SerializeOutput ser) {
+            ser.outString(value.value);
+        }
+    }
 }

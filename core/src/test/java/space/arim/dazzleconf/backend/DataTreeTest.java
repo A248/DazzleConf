@@ -23,10 +23,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.ImmutabilityGuard;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataList;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf.engine.CommentLocation;
 
 import java.util.ArrayList;
 import java.util.HashMap;

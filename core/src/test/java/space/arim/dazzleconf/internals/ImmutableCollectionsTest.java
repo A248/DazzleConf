@@ -20,7 +20,6 @@
 package space.arim.dazzleconf.internals;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.internals.ImmutableCollections;
 
 import java.util.Arrays;
 import java.util.List;

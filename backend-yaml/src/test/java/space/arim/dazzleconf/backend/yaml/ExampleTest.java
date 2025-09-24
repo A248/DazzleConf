@@ -21,9 +21,9 @@ package space.arim.dazzleconf.backend.yaml;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.PathRoot;
+import space.arim.dazzleconf.Configuration;
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.PathRoot;
 
 import java.io.IOException;
 import java.nio.file.Files;

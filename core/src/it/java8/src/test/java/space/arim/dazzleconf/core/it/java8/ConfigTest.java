@@ -20,17 +20,13 @@
 package space.arim.dazzleconf.core.it.java8;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf.ConfigurationOptions;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 public class ConfigTest {
 
 	@Test
 	public void loadConfig() {
-		loadDefaults(Config.class);
+        assertDoesNotThrow(Config::create);
 	}
-
-	private <C> C loadDefaults(Class<C> configClass) {
-		return new DefaultsOnlyFactory<>(configClass, ConfigurationOptions.defaults()).loadDefaults();
-	}
-
 }

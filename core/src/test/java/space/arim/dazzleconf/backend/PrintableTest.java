@@ -20,7 +20,6 @@
 package space.arim.dazzleconf.backend;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.backend.Printable;
 
 import java.io.IOException;
 

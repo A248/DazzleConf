@@ -21,9 +21,9 @@ package space.arim.dazzleconf.backend.hocon;
 
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.TestingErrorSource;
-import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.StringRoot;
+import space.arim.dazzleconf.ErrorContext;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.backend.StringRoot;
 
 import java.util.ArrayList;
 import java.util.List;

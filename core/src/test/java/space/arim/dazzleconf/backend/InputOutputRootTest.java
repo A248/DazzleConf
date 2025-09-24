@@ -22,7 +22,6 @@ package space.arim.dazzleconf.backend;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.io.TempDir;
-import space.arim.dazzleconf2.backend.InputOutputRoot;
 
 import java.io.IOException;
 import java.io.InputStream;

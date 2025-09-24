@@ -21,7 +21,6 @@ package space.arim.dazzleconf.backend;
 
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.io.TempDir;
-import space.arim.dazzleconf2.backend.PathRoot;
 
 import java.nio.charset.Charset;
 import java.nio.file.Path;

@@ -54,13 +54,13 @@ import org.snakeyaml.engine.v2.nodes.ScalarNode;
 import org.snakeyaml.engine.v2.nodes.Tag;
 import org.snakeyaml.engine.v2.parser.Parser;
 import org.snakeyaml.engine.v2.resolver.ScalarResolver;
-import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataList;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
-import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf.ErrorContext;
+import space.arim.dazzleconf.LoadResult;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataList;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.backend.SnakeCaseKeyMapper;
+import space.arim.dazzleconf.internals.lang.LibraryLang;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -72,7 +72,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-import static space.arim.dazzleconf2.backend.Printable.preBuilt;
+import static space.arim.dazzleconf.backend.Printable.preBuilt;
 
 /**
  * An events reader that used {@link org.snakeyaml.engine.v2.composer.Composer} as an inspiration and a base. This

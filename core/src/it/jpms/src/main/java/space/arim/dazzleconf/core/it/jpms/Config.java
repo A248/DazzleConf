@@ -20,17 +20,19 @@
 package space.arim.dazzleconf.core.it.jpms;
 
 import space.arim.dazzleconf.core.it.jpms.exported.CustomType;
-import space.arim.dazzleconf.annote.ConfDefault;
+import space.arim.dazzleconf.engine.liaison.StringDefault;
 
 interface Config {
 
-	@ConfDefault.DefaultString("str")
-	String myString();
+    @StringDefault("str")
+    String myString();
 
-	@ConfDefault.DefaultBoolean(false)
-	boolean someOption();
+    default boolean someOption() {
+        return false;
+    }
 
-	@ConfDefault.DefaultString("whatever")
-	CustomType customType();
+	default CustomType customType() {
+        return new CustomType("whatever");
+    }
 
 }

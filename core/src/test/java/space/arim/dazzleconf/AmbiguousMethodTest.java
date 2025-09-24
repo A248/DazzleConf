@@ -22,13 +22,12 @@ package space.arim.dazzleconf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.engine.CallableFn;
-import space.arim.dazzleconf2.reflect.MethodId;
-import space.arim.dazzleconf2.reflect.MethodMirror;
-import space.arim.dazzleconf2.reflect.TypeToken;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.engine.CallableFn;
+import space.arim.dazzleconf.reflect.MethodId;
+import space.arim.dazzleconf.reflect.MethodMirror;
+import space.arim.dazzleconf.reflect.TypeToken;
 
 import java.lang.reflect.InvocationTargetException;
 

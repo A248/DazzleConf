@@ -19,8 +19,8 @@
 
 package space.arim.dazzleconf.backend.yaml;
 
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataTree;
 
 final class MapEntry extends ContainerEntry<DataTree.Mut> {
 

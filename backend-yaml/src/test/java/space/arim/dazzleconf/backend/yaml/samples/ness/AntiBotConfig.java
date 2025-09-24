@@ -19,7 +19,7 @@
 
 package space.arim.dazzleconf.backend.yaml.samples.ness;
 
-import space.arim.dazzleconf2.engine.Comments;
+import space.arim.dazzleconf.engine.Comments;
 
 public interface AntiBotConfig {
 

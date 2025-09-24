@@ -26,7 +26,7 @@
 	<packaging>pom</packaging>
 	
 	<name>DazzleConf</name>
-	<description>Boilerplate-free, type-safe configuration solution.</description>
+	<description>Powerful, type-safe configuration solution based on immutable interfaces.</description>
 	<url>https://github.com/A248/DazzleConf</url>
 	<inceptionYear>2020</inceptionYear>
 	
@@ -291,14 +291,9 @@
 
 	<modules>
 		<module>core</module>
-		<!-- Version 2 format-specific "backends" -->
 		<module>backend-hocon</module>
 		<module>backend-toml</module>
 		<module>backend-yaml</module>
-		<!-- Version 1 format-specific "extensions" -->
-		<module>gson</module>
-		<module>snakeyaml</module>
-        <module>hocon</module>
     </modules>
 
 	<dependencyManagement>

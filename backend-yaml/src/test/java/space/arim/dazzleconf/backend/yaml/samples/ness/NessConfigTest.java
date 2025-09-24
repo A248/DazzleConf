@@ -22,10 +22,10 @@ package space.arim.dazzleconf.backend.yaml.samples.ness;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.backend.yaml.YamlBackend;
-import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.StringRoot;
+import space.arim.dazzleconf.Configuration;
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.backend.StringRoot;
 
 import java.util.List;
 import java.util.Set;

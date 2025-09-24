@@ -20,8 +20,8 @@
 package space.arim.dazzleconf;
 
 import org.mockito.ArgumentMatcher;
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.DataTree;
 
 import java.util.Objects;
 

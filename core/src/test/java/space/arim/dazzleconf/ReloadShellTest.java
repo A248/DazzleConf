@@ -20,9 +20,7 @@
 package space.arim.dazzleconf;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.ReloadShell;
-import space.arim.dazzleconf2.engine.CallableFn;
+import space.arim.dazzleconf.engine.CallableFn;
 
 import static org.junit.jupiter.api.Assertions.*;
 

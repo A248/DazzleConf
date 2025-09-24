@@ -19,14 +19,19 @@
 
 package space.arim.dazzleconf.core.it.java8;
 
-import space.arim.dazzleconf.annote.ConfDefault;
+import space.arim.dazzleconf.Configuration;
+import space.arim.dazzleconf.engine.liaison.StringDefault;
 
 interface Config {
 
-	@ConfDefault.DefaultString("str")
-	String myString();
+    @StringDefault("str")
+    String myString();
 
-	@ConfDefault.DefaultBoolean(false)
-	boolean someOption();
+    default boolean someOption() {
+        return false;
+    }
 
+    static Config create() {
+        return Configuration.defaultBuilder(Config.class).build().loadDefaults();
+    }
 }

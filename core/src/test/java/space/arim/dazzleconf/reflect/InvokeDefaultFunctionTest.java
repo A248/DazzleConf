@@ -21,7 +21,6 @@ package space.arim.dazzleconf.reflect;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.reflect.InvokeDefaultFunction;
 
 public class InvokeDefaultFunctionTest {
 

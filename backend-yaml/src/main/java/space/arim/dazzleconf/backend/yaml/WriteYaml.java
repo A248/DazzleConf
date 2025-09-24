@@ -32,11 +32,11 @@ import org.snakeyaml.engine.v2.nodes.ScalarNode;
 import org.snakeyaml.engine.v2.nodes.SequenceNode;
 import org.snakeyaml.engine.v2.nodes.Tag;
 import org.snakeyaml.engine.v2.representer.StandardRepresenter;
-import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataList;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf.backend.CommentData;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataList;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.engine.CommentLocation;
 
 import java.util.ArrayList;
 import java.util.Collections;

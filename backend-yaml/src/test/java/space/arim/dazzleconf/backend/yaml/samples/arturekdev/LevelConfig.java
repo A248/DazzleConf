@@ -20,7 +20,7 @@
 package space.arim.dazzleconf.backend.yaml.samples.arturekdev;
 
 
-import space.arim.dazzleconf2.engine.liaison.SubSection;
+import space.arim.dazzleconf.engine.liaison.SubSection;
 
 import java.util.Map;
 

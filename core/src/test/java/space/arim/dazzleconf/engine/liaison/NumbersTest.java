@@ -20,9 +20,8 @@
 package space.arim.dazzleconf.engine.liaison;
 
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.Configuration;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.engine.liaison.*;
+import space.arim.dazzleconf.Configuration;
+import space.arim.dazzleconf.backend.DataTree;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

@@ -26,7 +26,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static space.arim.dazzleconf2.internals.AccessChecking.isAccessible;
+import static space.arim.dazzleconf.internals.AccessChecking.isAccessible;
 
 public class AccessCheckingTest {
 

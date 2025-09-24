@@ -1,0 +1,185 @@
+/*
+ * DazzleConf
+ * Copyright © 2025 Anand Beh
+ *
+ * DazzleConf is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * DazzleConf is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
+ * and navigate to version 3 of the GNU Lesser General Public License.
+ */
+
+package space.arim.dazzleconf.backend;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf.internals.ReadWriteIO;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Objects;
+
+/**
+ * A data root from a file path.
+ * <p>
+ * Both textual and binary operations can be performed on this data root. If textual operations are used, then the
+ * charset specified at construction will be used to provide encoding.
+ *
+ */
+public final class PathRoot implements ReadableRoot, BinaryRoot {
+
+    private final Path path;
+    private final Charset charset;
+
+    /**
+     * Creates from a path and a charset.
+     * <p>
+     * The charset will be used for operations which read or write textual data.
+     *
+     * @param path the path
+     * @param charset the charset
+     */
+    public PathRoot(@NonNull Path path, @NonNull Charset charset) {
+        this.path = Objects.requireNonNull(path, "path");
+        this.charset = Objects.requireNonNull(charset, "charset");
+    }
+
+    /**
+     * Creates from a path.
+     * <p>
+     * UTF-8 charset will be used for operations which read or write textual data.
+     *
+     * @param path the path
+     */
+    public PathRoot(@NonNull Path path) {
+        this(path, StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public boolean dataExists() throws IOException {
+        return Files.exists(path);
+    }
+
+    @Override
+    public @NonNull String readString() throws IOException {
+        return ReadWriteIO.readString(path, charset);
+    }
+
+    @Override
+    public <R> R openReader(@NonNull Operation<R, @NonNull Reader> operation) throws IOException {
+        class ReadableByteChannelOperation implements Operation<R, ReadableByteChannel> {
+            @Override
+            public boolean handlesBuffering() {
+                return true;
+            }
+
+            @Override
+            public R operateUsing(ReadableByteChannel read) throws IOException {
+                try (Reader reader = Channels.newReader(read, charset.newDecoder(), -1)) {
+                    if (operation.handlesBuffering()) {
+                        return operation.operateUsing(reader);
+                    } else {
+                        try (BufferedReader buffered = new BufferedReader(reader)) {
+                            return operation.operateUsing(buffered);
+                        }
+                    }
+                }
+            }
+        }
+        return openReadChannel(new ReadableByteChannelOperation());
+    }
+
+    @Override
+    public void writeString(@NonNull String content) throws IOException {
+        ReadWriteIO.writeString(path, content, charset);
+    }
+
+    @Override
+    public <R> R openWriter(@NonNull Operation<R, @NonNull Writer> operation) throws IOException {
+        class WritableChannelOperation implements Operation<R, WritableByteChannel> {
+            @Override
+            public boolean handlesBuffering() {
+                return true;
+            }
+
+            @Override
+            public R operateUsing(WritableByteChannel write) throws IOException {
+                try (Writer writer = Channels.newWriter(write, charset.newEncoder(), -1)) {
+                    if (operation.handlesBuffering()) {
+                        return operation.operateUsing(writer);
+                    } else {
+                        try (BufferedWriter buffered = new BufferedWriter(writer)) {
+                            return operation.operateUsing(buffered);
+                        }
+                    }
+                }
+            }
+        }
+        return openWriteChannel(new WritableChannelOperation());
+    }
+
+    @Override
+    public <R> R openReadChannel(@NonNull Operation<R, @NonNull ReadableByteChannel> operation) throws IOException {
+        try (FileChannel fileChannel = FileChannel.open(path, StandardOpenOption.READ)) {
+            return operation.operateUsing(fileChannel);
+        }
+    }
+
+    @Override
+    public <R> R openInputStream(@NonNull Operation<R, @NonNull InputStream> operation) throws IOException {
+        try (InputStream inputStream = Files.newInputStream(path, StandardOpenOption.READ)) {
+            if (operation.handlesBuffering()) {
+                return operation.operateUsing(inputStream);
+            } else {
+                try (BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream)) {
+                    return operation.operateUsing(bufferedInputStream);
+                }
+            }
+        }
+    }
+
+    @Override
+    public <R> R openWriteChannel(@NonNull Operation<R, @NonNull WritableByteChannel> operation) throws IOException {
+        try (FileChannel fileChannel = FileChannel.open(path,
+                StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            return operation.operateUsing(fileChannel);
+        }
+    }
+
+    @Override
+    public <R> R openOutputStream(@NonNull Operation<R, @NonNull OutputStream> operation) throws IOException {
+        try (OutputStream outputStream = Files.newOutputStream(path,
+                StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            if (operation.handlesBuffering()) {
+                return operation.operateUsing(outputStream);
+            } else {
+                try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream)) {
+                    return operation.operateUsing(bufferedOutputStream);
+                }
+            }
+        }
+    }
+}

@@ -22,10 +22,9 @@ package space.arim.dazzleconf.reflect;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import space.arim.dazzleconf2.ReloadShell;
-import space.arim.dazzleconf2.engine.Comments;
-import space.arim.dazzleconf2.engine.liaison.StringDefault;
-import space.arim.dazzleconf2.reflect.*;
+import space.arim.dazzleconf.ReloadShell;
+import space.arim.dazzleconf.engine.Comments;
+import space.arim.dazzleconf.engine.liaison.StringDefault;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.AnnotatedElement;

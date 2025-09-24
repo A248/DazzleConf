@@ -19,8 +19,8 @@
 
 package space.arim.dazzleconf.backend.yaml;
 
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataList;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataList;
 
 final class ListEntry extends ContainerEntry<DataList.Mut> {
 

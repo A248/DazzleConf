@@ -25,10 +25,10 @@ import org.snakeyaml.engine.v2.comments.CommentType;
 import org.snakeyaml.engine.v2.events.Event;
 import org.snakeyaml.engine.v2.exceptions.Mark;
 import org.snakeyaml.engine.v2.nodes.Node;
-import space.arim.dazzleconf2.ErrorContext;
-import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf.ErrorContext;
+import space.arim.dazzleconf.LoadResult;
+import space.arim.dazzleconf.backend.KeyPath;
+import space.arim.dazzleconf.internals.lang.LibraryLang;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

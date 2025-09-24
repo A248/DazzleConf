@@ -26,8 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import space.arim.dazzleconf2.engine.liaison.IntegerRange;
-import space.arim.dazzleconf2.reflect.ReifiedType;
+import space.arim.dazzleconf.engine.liaison.IntegerRange;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -37,7 +36,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static space.arim.dazzleconf.Utilities.assertEqualsBothWays;
 import static space.arim.dazzleconf.Utilities.assertNotEqualsBothWays;
-import static space.arim.dazzleconf2.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
+import static space.arim.dazzleconf.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
 
 @ExtendWith(MockitoExtension.class)
 public class ReifiedTypeTest {

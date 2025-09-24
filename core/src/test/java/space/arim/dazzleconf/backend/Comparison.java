@@ -19,12 +19,7 @@
 
 package space.arim.dazzleconf.backend;
 
-import space.arim.dazzleconf2.backend.Backend;
-import space.arim.dazzleconf2.backend.CommentData;
-import space.arim.dazzleconf2.backend.DataEntry;
-import space.arim.dazzleconf2.backend.DataList;
-import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf.engine.CommentLocation;
 
 import java.util.Map;
 import java.util.stream.Collectors;

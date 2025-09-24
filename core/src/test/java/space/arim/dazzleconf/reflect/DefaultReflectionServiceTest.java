@@ -19,8 +19,6 @@
 
 package space.arim.dazzleconf.reflect;
 
-import space.arim.dazzleconf2.reflect.DefaultReflectionService;
-
 public class DefaultReflectionServiceTest extends ReflectionServiceTest {
 
     public DefaultReflectionServiceTest() {

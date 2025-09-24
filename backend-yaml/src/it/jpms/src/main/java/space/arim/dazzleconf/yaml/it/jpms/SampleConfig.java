@@ -19,8 +19,8 @@
 
 package space.arim.dazzleconf.backend.yaml.it.jpms;
 
-import space.arim.dazzleconf2.engine.liaison.BooleanDefault;
-import space.arim.dazzleconf2.engine.liaison.SubSection;
+import space.arim.dazzleconf.engine.liaison.BooleanDefault;
+import space.arim.dazzleconf.engine.liaison.SubSection;
 
 public interface SampleConfig {
 
