@@ -46,3 +46,7 @@ Place this in `~/.m2/toolchains.xml`:
         </toolchain>
 </toolchains>
 ```
+
+## Releases
+
+As a maintainer, I make a release by using `mvn release:prepare release:perform`. Assuming the release was successful, I push the release commits and tag with `git push` and `git push origin tag <version>`.

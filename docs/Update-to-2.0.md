@@ -40,6 +40,10 @@ Using the migrate feature is a surefire way to overcome library upgrade difficul
 
 This is DazzleConf 2.0. Once you are using this artifact successfully, you have fully transitioned to DazzleConf 2.
 
+### Version 2.0 - backend artifacts
+
+Please note that for version 2.0, the backend artifacts bundle their format-specific libraries. Thus, you **don't need to shade SnakeYAML, HOCON, or jtoml**. These libraries are shaded automatically into the backend artifact.
+
 # Migrating library usage
 
 Each section below describes a changed library feature and how to adapt to it.
@@ -128,8 +132,9 @@ The `ConfigurationSorter` interface has been removed. 1.x used this interface to
 In 2.x, we are aiming to do something better: maintain order at every step of the way, so that sorting later is unnecessary. However, this is a difficult effort. Thus, order is still something that version 2.0 is working on:
 
 * The backend (YAML, HOCON, TOML) needs to provide consistent order.
-  * So far, only YAML preserves order both ways (reading + writing).
-  * HOCON preserves order while writing, but when reading, the data is loaded in random order. We are working to solve this and looking for a maintainable solution.
+  * YAML reliably preserves order both ways (reading + writing).
+  * HOCON also preserves order while writing and reading. This is implemented in a semi-hacky (but stable) way, so please open an issue if you found any problems.
+  * TOML does not (PRs welcome).
 * The reflection mechanism needs to provide consistent order. By default, this is `Class.getDeclaredMethods()`, which has undefined order. However, we have made the reflection mechanism swappable (ConfigurationBuilder#instantiator), so you could theoretically override this to provide order for returned methods.
 
 Thus, while `ConfigurationSorter` doesn't exist anymore, you could provide your own ordering by ensuring 1) you use YAML 2) you override the `Instantiator` used to scan configuration interfaces.

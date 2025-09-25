@@ -4,7 +4,14 @@
 
 DazzleConf follows [SemVer](https://semver.org/). This means that methods will never disapppear or incompatibly change behavior in minor or patch releases.
 
-However, we also use the `@Api` annotations from `api-guardian`. Methods and classes marked with `@Api()` are not considered in SemVer, but we will give ample warning when they are being changed.
+However, there are two main exceptions to SemVer:
+
+* We use milestone and release candidates versions.
+  * **Milestones**: Versions suffixed with `-M1`, `-M2`, etc. These milestone releases may be subject to a fair amount of change, and should be thought of as "preview" releases.
+  * **Release candidates**: Versions suffixed with `-RC1`, `-RC2`, etc. We reserve the right to change these before they become a full release. However, they are more stable than milestones.
+* We also use the `@Api` annotations from `api-guardian`.
+  * Methods and classes marked in this way are not considered in SemVer, but we will still give ample warning when they are being changed.
+  * For example, `@API(status = API.Status.EXPERIMENTAL)` on a method means that it is **NOT** stable API.
 
 ## Custom Types
 
@@ -63,7 +70,7 @@ Configuration objects are immutable and therefore also thread safe.
 
 The sole exception to immutability is the `ReloadShell` feature, which manages a hot-swappable configuration interface. Using `ReloadShelll` does not break thread safety, however, since swapping the delegate configuration is performed with an atomic write.
 
-Otherwise, the only way to break immutability and thread safety
+Otherwise, the only way to break immutability and thread safety is to introduce a custom type that is mutable / not thread safe.
 
 ### Equality
 

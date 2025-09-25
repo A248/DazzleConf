@@ -115,7 +115,7 @@ Check out this page to get started using the library: [Getting started](docs/Get
   * HOCON, TOML, and YAML implemented so far.
   * No external dependencies: they are shaded in.
   * Relevant library features (key format, comment support) automatically adapt to the backend in use.
-* Low-level `DataTree` API: 
+* Low-level `DataTree` API:
   * Can read and write data, independent of the backend.
   * Can read and write comments if the backend supports it, including document-level header and footer.
   * Comments can be placed above, below, or inline.
