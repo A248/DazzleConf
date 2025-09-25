@@ -22,7 +22,7 @@
 	
 	<groupId>space.arim.dazzleconf</groupId>
 	<artifactId>dazzleconf-parent</artifactId>
-	<version>1.4.0-M1</version>
+	<version>1.4.0-M2-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	
 	<name>DazzleConf</name>
@@ -44,7 +44,7 @@
 		<connection>scm:git:ssh://git@github.com/A248/DazzleConf.git</connection>
 		<developerConnection>scm:git:ssh://git@github.com/A248/DazzleConf.git</developerConnection>
 		<url>http://github.com/A248/DazzleConf/tree/master</url>
-	  <tag>1.4.0-M1</tag>
+	  <tag>HEAD</tag>
   </scm>
 	
 	<licenses>
