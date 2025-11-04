@@ -68,6 +68,24 @@ repositories {
 }
 ```
 
+### Kotlin
+
+If you're using Kotlin, you need to enable the `-Xemit-jvm-type-annotations` option in the Kotlin compiler.
+
+This option ensures that the Kotlin compiler will correctly emit annotations! It really should be enabled by default. Here's an example of enabling it using `build.gradle.kts`:
+
+```
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    compilerOptions {
+        freeCompilerArgs.set(
+            listOf(
+                "-Xemit-jvm-type-annotations"
+            )
+        )
+    }
+}
+```
+
 ### Shading and Relocation
 
 In order for your project to work at runtime, you'll need to shade this library using your build system.
