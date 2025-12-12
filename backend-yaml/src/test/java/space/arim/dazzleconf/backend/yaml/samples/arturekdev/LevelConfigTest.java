@@ -20,7 +20,6 @@
 package space.arim.dazzleconf.backend.yaml.samples.arturekdev;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.backend.yaml.YamlBackend;
 import space.arim.dazzleconf.Configuration;
@@ -34,7 +33,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@Disabled("Version 2.0 of the library does not yet provide a map liaison")
 public class LevelConfigTest {
 
 	private Configuration<LevelConfig> configuration;

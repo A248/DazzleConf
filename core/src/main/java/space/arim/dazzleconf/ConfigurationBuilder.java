@@ -35,6 +35,7 @@ import space.arim.dazzleconf.engine.liaison.EnumLiaison;
 import space.arim.dazzleconf.engine.liaison.FloatLiaison;
 import space.arim.dazzleconf.engine.liaison.IntegerLiaison;
 import space.arim.dazzleconf.engine.liaison.LongLiaison;
+import space.arim.dazzleconf.engine.liaison.MapLiaison;
 import space.arim.dazzleconf.engine.liaison.ShortLiaison;
 import space.arim.dazzleconf.engine.liaison.SimpleTypeLiaison;
 import space.arim.dazzleconf.engine.liaison.StringLiaison;
@@ -94,12 +95,12 @@ public final class ConfigurationBuilder<C> {
     private final List<Migration<?, C>> migrations = new ArrayList<>();
 
     /**
-     * Creates from the specified type.
+     * Creates for the specified interface type.
      * <p>
-     * This creates an empty configuration builder. No type liaisons are added to it, including primitive types and
-     * <code>String</code>. To add liaisons, please use one of the appropriate methods.
+     * This creates an empty configuration builder. No type liaisons are added to it, not even primitive types.
+     * To add liaisons, please use one of the appropriate methods.
      *
-     * @param configType the config type
+     * @param configType the config interface type
      */
     public ConfigurationBuilder(@NonNull TypeToken<C> configType) {
         this.configType = Objects.requireNonNull(configType, "config type");
@@ -201,7 +202,7 @@ public final class ConfigurationBuilder<C> {
      * <p>
      * The full list of types handled by this method: boolean/Boolean, char/Character, byte/Byte, short/Short,
      * int/Integer, long/Long, float/Float, double/Double, String, types for which <code>Class#isEnum</code> is true,
-     * Collection, List, Set, and interface types where the type usage is annotated with {@link SubSection}.
+     * Collection, List, Set, Map, and interface types where the type usage is annotated with {@link SubSection}.
      * <p>
      * <b>Notable annotations</b>
      * <p>
@@ -226,7 +227,9 @@ public final class ConfigurationBuilder<C> {
      * @return this builder
      */
     public @This @NonNull ConfigurationBuilder<C> addDefaultTypeLiaisons() {
-        return addPrimitiveTypeLiaisons().addTypeLiaisons(new CollectionLiaison(), new EnumLiaison(), new SubSectionLiaison());
+        return addPrimitiveTypeLiaisons().addTypeLiaisons(
+                new CollectionLiaison(), new MapLiaison(), new EnumLiaison(), new SubSectionLiaison()
+        );
     }
 
     /**

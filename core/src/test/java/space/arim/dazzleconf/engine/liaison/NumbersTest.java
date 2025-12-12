@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class NumbersTest {
 
-    public interface Config {
+    private interface Config {
 
         default byte byteValue() {
             return 1;
