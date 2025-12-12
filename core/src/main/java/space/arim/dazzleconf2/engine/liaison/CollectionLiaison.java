@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -53,6 +53,12 @@ import java.util.function.Supplier;
  * the sequence given by the collection type) during serialization.
  * <p>
  * If a {@code Set} is requested, but the user input contains a duplicate element, it will be silently skipped.
+ * <p>
+ * <b>Limitations</b>
+ * <p>
+ * This liaison does not, and <b>cannot</b>, preserve entry metadata, such as comments, on list entries across separate
+ * acts of deserialization and serialization. Only a {@link SerializeDeserialize#deserializeUpdate} operation can
+ * preserve this entry metadata.
  * <p>
  * <b>Effective consistent order</b>
  * <p>
@@ -182,9 +188,10 @@ public final class CollectionLiaison implements TypeLiaison {
             COLL built = buildThenCast(output);
             // Finish recording updates - check if size changed for Set, to handle notifications or updates
             if (built.size() != input.size()) {
-                impl.updateSizeShrunk(elementSerializer, deser, built);
+                // Note that size-related updates can't happen during iteration itself (concurrent modification)
+                impl.updateSizeShrunk(deser, built);
             } else {
-                impl.updateMaybeOtherwise(input);
+                impl.updateMaybeOtherwise(deser, input);
             }
             return LoadResult.of(built);
         }
@@ -197,9 +204,9 @@ public final class CollectionLiaison implements TypeLiaison {
 
             void updateIfDesired(D updatableInput, DataEntry existingEntry, int idx);
 
-            void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser, COLL built);
+            void updateSizeShrunk(DeserializeInput deser, COLL built);
 
-            void updateMaybeOtherwise(D updatableInput);
+            void updateMaybeOtherwise(DeserializeInput deser, D updatableInput);
 
         }
 
@@ -220,13 +227,13 @@ public final class CollectionLiaison implements TypeLiaison {
                 public void updateIfDesired(DataList updatableInput, DataEntry existingEntry, int idx) {}
 
                 @Override
-                public void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser,
+                public void updateSizeShrunk(DeserializeInput deser,
                                              COLL built) {
                     deser.notifyUpdate(KeyPath.empty(), UpdateReason.OTHER);
                 }
 
                 @Override
-                public void updateMaybeOtherwise(DataList updatableInput) {}
+                public void updateMaybeOtherwise(DeserializeInput deser, DataList updatableInput) {}
             });
         }
 
@@ -256,13 +263,13 @@ public final class CollectionLiaison implements TypeLiaison {
                 }
 
                 @Override
-                public void updateSizeShrunk(SerializeDeserialize<E> elementSerializer, DeserializeInput deser, COLL built) {
+                public void updateSizeShrunk(DeserializeInput deser, COLL built) {
                     deser.notifyUpdate(KeyPath.empty(), UpdateReason.OTHER);
                     serialize(built, updateTo); // Reserialize the whole collection
                 }
 
                 @Override
-                public void updateMaybeOtherwise(DataList.Mut updatableInput) {
+                public void updateMaybeOtherwise(DeserializeInput deser, DataList.Mut updatableInput) {
                     // If the size didn't shrink, then perform our update if applicable
                     if (updated) {
                         deser.notifyUpdate(KeyPath.empty(), UpdateReason.UPDATED);
@@ -355,6 +362,7 @@ public final class CollectionLiaison implements TypeLiaison {
         @Override
         @NonNull Set<E> buildThenCast(@NonNull LinkedHashSet<E> output) {
             if (output.isEmpty()) {
+                // Optimization
                 return ImmutableCollections.emptySet();
             }
             return Collections.unmodifiableSet(output);

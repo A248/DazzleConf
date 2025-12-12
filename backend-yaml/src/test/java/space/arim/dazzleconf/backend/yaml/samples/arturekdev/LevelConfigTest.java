@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -20,7 +20,6 @@
 package space.arim.dazzleconf.backend.yaml.samples.arturekdev;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.backend.yaml.YamlBackend;
 import space.arim.dazzleconf2.Configuration;
@@ -34,7 +33,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@Disabled("Version 2.0 of the library does not yet provide a map liaison")
 public class LevelConfigTest {
 
 	private Configuration<LevelConfig> configuration;
