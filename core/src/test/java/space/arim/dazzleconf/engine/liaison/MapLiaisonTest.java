@@ -73,8 +73,8 @@ public class MapLiaisonTest {
                     ),
                     values
             );
-            verify(updateListener).notifyUpdate(new KeyPath.Immut("values", "$0", "$0"), UpdateReason.UPDATED);
-            verify(updateListener).notifyUpdate(new KeyPath.Immut("values", "$2", "$0"), UpdateReason.UPDATED);
+            verify(updateListener).notifyUpdate(new KeyPath.Immut("values", "friends"), UpdateReason.UPDATED);
+            verify(updateListener).notifyUpdate(new KeyPath.Immut("values", "good"), UpdateReason.UPDATED);
             verifyNoMoreInteractions(updateListener);
         }
     }
