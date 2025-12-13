@@ -49,7 +49,7 @@ import space.arim.dazzleconf.backend.Backend;
 import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.ReadableRoot;
-import space.arim.dazzleconf.backend.SnakeCaseKeyMapper;
+import space.arim.dazzleconf.backend.KebabCaseKeyMapper;
 import space.arim.dazzleconf.engine.CommentLocation;
 import space.arim.dazzleconf.internals.lang.LibraryLang;
 
@@ -328,7 +328,7 @@ public final class YamlBackend implements Backend {
 
     @Override
     public @NonNull KeyMapper recommendKeyMapper() {
-        return new SnakeCaseKeyMapper();
+        return new KebabCaseKeyMapper();
     }
 
     @Override

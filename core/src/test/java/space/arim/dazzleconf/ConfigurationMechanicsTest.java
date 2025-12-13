@@ -33,7 +33,7 @@ import space.arim.dazzleconf.backend.DataList;
 import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
-import space.arim.dazzleconf.backend.SnakeCaseKeyMapper;
+import space.arim.dazzleconf.backend.KebabCaseKeyMapper;
 import space.arim.dazzleconf.engine.CommentLocation;
 import space.arim.dazzleconf.engine.Comments;
 import space.arim.dazzleconf.engine.UpdateListener;
@@ -61,7 +61,7 @@ public class ConfigurationMechanicsTest {
 
     private Configuration<Config> configuration;
     private final UpdateListener updateListener;
-    private final KeyMapper keyMapper = new SnakeCaseKeyMapper();
+    private final KeyMapper keyMapper = new KebabCaseKeyMapper();
 
     public ConfigurationMechanicsTest(@Mock UpdateListener updateListener) {
         this.updateListener = updateListener;

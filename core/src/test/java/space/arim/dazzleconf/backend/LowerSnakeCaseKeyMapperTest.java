@@ -23,9 +23,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class SnakeCaseKeyMapperTest {
+public class LowerSnakeCaseKeyMapperTest {
 
-    private final KeyMapper keyMapper = new SnakeCaseKeyMapper();
+    private final KeyMapper keyMapper = new LowerSnakeCaseKeyMapper();
 
     @Test
     public void simple() {
@@ -34,21 +34,21 @@ public class SnakeCaseKeyMapperTest {
 
     @Test
     public void standard1() {
-        assertEquals("my-brave-world", keyMapper.labelToKey("myBraveWorld"));
+        assertEquals("my_brave_world", keyMapper.labelToKey("myBraveWorld"));
     }
 
     @Test
     public void standard2() {
-        assertEquals("my-brave-world-two", keyMapper.labelToKey("myBraveWorldTwo"));
+        assertEquals("my_brave_world_two", keyMapper.labelToKey("myBraveWorldTwo"));
     }
 
     @Test
     public void malformed1() {
-        assertEquals("my-brave", keyMapper.labelToKey("MyBrave"));
+        assertEquals("my_brave", keyMapper.labelToKey("MyBrave"));
     }
 
     @Test
     public void malformed2() {
-        assertEquals("m-b-w", keyMapper.labelToKey("MBW"));
+        assertEquals("m_b_w", keyMapper.labelToKey("MBW"));
     }
 }

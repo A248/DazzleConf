@@ -47,7 +47,7 @@ import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.backend.ReadableRoot;
-import space.arim.dazzleconf.backend.SnakeCaseKeyMapper;
+import space.arim.dazzleconf.backend.KebabCaseKeyMapper;
 import space.arim.dazzleconf.engine.CommentLocation;
 import space.arim.dazzleconf.internals.lang.LibraryLang;
 
@@ -324,7 +324,7 @@ public final class TomlBackend implements Backend {
 
     @Override
     public @NonNull KeyMapper recommendKeyMapper() {
-        return new SnakeCaseKeyMapper();
+        return new KebabCaseKeyMapper();
     }
 
     @Override

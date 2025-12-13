@@ -27,7 +27,7 @@ import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.backend.Printable;
-import space.arim.dazzleconf.backend.SnakeCaseKeyMapper;
+import space.arim.dazzleconf.backend.KebabCaseKeyMapper;
 import space.arim.dazzleconf.engine.UpdateReason;
 import space.arim.dazzleconf.engine.liaison.SubSection;
 import space.arim.dazzleconf.reflect.DefaultReflectionService;
@@ -89,7 +89,7 @@ public class ErrorPrintingTest {
 
                     @Override
                     public @NonNull KeyMapper keyMapper() {
-                        return new SnakeCaseKeyMapper();
+                        return new KebabCaseKeyMapper();
                     }
 
                     @Override

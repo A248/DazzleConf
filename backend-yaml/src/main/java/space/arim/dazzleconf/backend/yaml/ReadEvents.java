@@ -59,7 +59,7 @@ import space.arim.dazzleconf.LoadResult;
 import space.arim.dazzleconf.backend.DataEntry;
 import space.arim.dazzleconf.backend.DataList;
 import space.arim.dazzleconf.backend.DataTree;
-import space.arim.dazzleconf.backend.SnakeCaseKeyMapper;
+import space.arim.dazzleconf.backend.KebabCaseKeyMapper;
 import space.arim.dazzleconf.internals.lang.LibraryLang;
 
 import java.util.ArrayList;
@@ -147,7 +147,7 @@ final class ReadEvents {
             if (!parser.checkEvent(eventId)) {
                 // We can re-use SnakeCaseKeyMapper to build readable event names
                 // For example, StreamStart -> stream-start -> stream start
-                String displayName = new SnakeCaseKeyMapper().labelToKey(eventId.name()).toString();
+                String displayName = new KebabCaseKeyMapper().labelToKey(eventId.name()).toString();
                 String message = "Expected " + displayName.replace('-', ' ');
                 ErrorContext error = context.errorSource.buildError(preBuilt(message));
                 throw context.throwError(error, null);
