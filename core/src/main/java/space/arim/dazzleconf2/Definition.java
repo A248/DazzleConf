@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -137,9 +137,8 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     private <DT extends DataTree> @NonNull LoadResult<@NonNull C> readingNexus(
             @NonNull DT dataTree, @NonNull ReadOptions readOptions, @NonNull HowToUpdate<DT> howToUpdate
     ) {
-        // What we're building (an instance) and how we're doing that
+        // Output goes here
         MethodYield methodYield = new MethodYield();
-        DeserInput.Context deserContext = new DeserInput.Context(libraryLang, readOptions);
 
         // Collected errors - get a certain maximum before quitting, becomes non-null if we find at least 1 error
         ErrorContext[] collectedErrors = null;
@@ -161,7 +160,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                 for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
 
                     ErrorContext[] errorContexts = readingNexusForEntry(
-                            methodYieldFor, deserContext, currentType, methodNode, dataTree, readOptions, howToUpdate
+                            methodYieldFor, currentType, methodNode, dataTree, readOptions, howToUpdate
                     );
                     if (errorContexts != null) {
                         if (collectedErrors == null) {
@@ -188,9 +187,10 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     private <DT extends DataTree, V> @NonNull ErrorContext @Nullable [] readingNexusForEntry(
-            MethodYield.@NonNull ForImplementable methodYieldFor, DeserInput.@NonNull Context deserContext,
-            @NonNull Class<?> currentType, TypeSkeleton.@NonNull MethodNode<V> methodNode, @NonNull DT dataTree,
-            @NonNull ReadOptions readOptions, @NonNull HowToUpdate<DT> howToUpdate) {
+            MethodYield.@NonNull ForImplementable methodYieldFor, @NonNull Class<?> currentType,
+            TypeSkeleton.@NonNull MethodNode<V> methodNode, @NonNull DT dataTree, @NonNull ReadOptions readOptions,
+            @NonNull HowToUpdate<DT> howToUpdate
+    ) {
 
         Object value;
         V missingValue;
@@ -225,7 +225,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
 
             // Deserialization
             LoadResult<V> valueResult = howToUpdate.deserialize(
-                    methodNode.serializer, new DeserInput.Base(dataEntry, mappedKey, deserContext)
+                    methodNode.serializer, new DeserInput.Base(dataEntry, libraryLang, readOptions, mappedKey)
             );
             // Error handling
             if (valueResult.isFailure()) {

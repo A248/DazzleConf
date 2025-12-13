@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -42,14 +42,23 @@ import space.arim.dazzleconf2.backend.DataTree;
 public interface DeserializeInput extends DeserializeContext {
 
     /**
+     * The entry of the object being deserialized.
+     *
+     * @return the entry
+     */
+    @NonNull DataEntry entry();
+
+    /**
      * The actual object which is being deserialized.
      * <p>
-     * This is guaranteed to be one of the canonical values used in {@link DataTree}, i.e. primitives,
-     * <code>String</code>, or <code>DataTree</code>, or {@code List<DataEntry>}.
+     * This is merely {@code entry().getValue()}, meaning it is guaranteed to be one of the canonical values given by
+     * {@link DataEntry}: primitives, String, DataList, or DataTree.
      *
      * @return the object
      */
-    @NonNull Object object();
+    default @NonNull Object object() {
+        return entry().getValue();
+    }
 
     /**
      * Requires the object to be a string
@@ -79,13 +88,32 @@ public interface DeserializeInput extends DeserializeContext {
      * Makes a child and prepares it for deserialization.
      * <p>
      * The child value is supposed to be taken "from" this object. For example, an element in a list would be a child
-     * object of the list.
-     * <p>
-     * The child value is checked to conform to {@link DataEntry#validateValue(Object)}.
+     * object of the list. The child value is checked to conform to {@link DataEntry#validateValue(Object)}.
      *
      * @param value the child value to wrap
      * @return deserializable input
+     * @throws IllegalArgumentException if {@code DataEntry.validateValue(value)} returns false
+     * @deprecated This method will be removed in 2.0 in favor of {@link #makeChild(DataEntry, Object)}. That method
+     * requires the caller to supply the child value's location, so to replicate this method's behavior, you would
+     * need to number your calls to this method and pass {@code "$" + idx} as the location.
      */
+    @Deprecated
+    // 2.0.0-M3: Remove this and all its remnants
     @NonNull DeserializeInput makeChild(@NonNull Object value);
+
+    /**
+     * Makes a child at the given subkey and prepares it for deserialization.
+     * <p>
+     * The child entry is supposed to be taken "from" this object. For example, an element in a list would be a child
+     * entry of the list.
+     * <p>
+     * The {@code keyPart} argument provides a user recognizable string identifying where the child value is located.
+     * For example, list items can provide the index of the element.
+     *
+     * @param entry the child entry to wrap
+     * @param locIdentiier an identifier for the child entry's location, based on {@code toString()}
+     * @return deserializable input
+     */
+    @NonNull DeserializeInput makeChild(@NonNull DataEntry entry, @NonNull Object locIdentiier);
 
 }

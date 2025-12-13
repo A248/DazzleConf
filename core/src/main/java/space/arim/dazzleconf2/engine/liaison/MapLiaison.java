@@ -143,8 +143,9 @@ public final class MapLiaison implements TypeLiaison {
                             "Key " + inputKey + " is part of keySet() but not in the data tree itself"
                     );
                 }
-                DeserializeInput deserKey = deser.makeChild(inputKey);
-                LoadResult<K> keyResult = implDeserialize.deserialize(keySerializer, deserKey);
+                LoadResult<K> keyResult = implDeserialize.deserialize(
+                        keySerializer, deser.makeChild(inputEntry.withValue(inputKey), inputKey)
+                );
                 if (keyResult.isFailure()) {
                     if (collectedErrors == null) {
                         collectedErrors = new ErrorContext[deser.maximumErrorCollect()];
@@ -162,7 +163,9 @@ public final class MapLiaison implements TypeLiaison {
                 K key = keyResult.getOrThrow();
                 Object keyUpdate = implDeserialize.getUpdateFromDeserializeCall();
 
-                LoadResult<V> valueResult = implDeserialize.deserialize(valueSerializer, deserKey.makeChild(inputEntry.getValue()));
+                LoadResult<V> valueResult = implDeserialize.deserialize(
+                        valueSerializer, deser.makeChild(inputEntry, inputKey)
+                );
                 if (valueResult.isFailure()) {
                     if (collectedErrors == null) {
                         collectedErrors = new ErrorContext[deser.maximumErrorCollect()];

@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -224,8 +224,8 @@ public class ErrorPrintingTest {
                 We found problems loading the configuration file.
                 Where or how the error happened:
                   sub-section.character: This value is not chosen correctly. The value < not a character > is of type text/string, but it should be character.
-                  sub-section.super-nested-bools.$1.$2: This value is not chosen correctly. The value < NA > is of type text/string, but it should be true/false value.
-                  sub-section.super-nested-bools.$1.$3: This value is not chosen correctly. The value < NOPE > is of type text/string, but it should be true/false value.""");
+                  sub-section.super-nested-bools.1.2: This value is not chosen correctly. The value < NA > is of type text/string, but it should be true/false value.
+                  sub-section.super-nested-bools.1.3: This value is not chosen correctly. The value < NOPE > is of type text/string, but it should be true/false value.""");
     }
 
     @Test
@@ -249,7 +249,7 @@ public class ErrorPrintingTest {
                 We found problems loading the configuration file.
                 Where or how the error happened:
                   sub-section.character: This value is not chosen correctly. The value < not a character > is of type text/string, but it should be character.
-                  sub-section.super-nested-bools.$1.$2: This value is not chosen correctly. The value < NA > is of type text/string, but it should be true/false value.""");
+                  sub-section.super-nested-bools.1.2: This value is not chosen correctly. The value < NA > is of type text/string, but it should be true/false value.""");
     }
 
     // Delegate to default MethodMirror, but sort returned methods
