@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,20 +15,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with DazzleConf. If not, see <https://www.gnu.org/licenses/>
  * and navigate to version 3 of the GNU Lesser General Public License.
- */
-
-/*
- * Copyright (c) 2018, SnakeYAML
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License. You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
- * the License.
  */
 
 package space.arim.dazzleconf.backend.yaml;
@@ -59,8 +45,8 @@ import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf2.backend.KebabCaseKeyMapper;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -145,9 +131,9 @@ final class ReadEvents {
 
         private void consumeEventId(Event.ID eventId) {
             if (!parser.checkEvent(eventId)) {
-                // We can re-use SnakeCaseKeyMapper to build readable event names
+                // We can re-use KebabCaseKeyMapper to build readable event names
                 // For example, StreamStart -> stream-start -> stream start
-                String displayName = new SnakeCaseKeyMapper().labelToKey(eventId.name()).toString();
+                String displayName = new KebabCaseKeyMapper().labelToKey(eventId.name()).toString();
                 String message = "Expected " + displayName.replace('-', ' ');
                 ErrorContext error = context.errorSource.buildError(preBuilt(message));
                 throw context.throwError(error, null);
@@ -388,7 +374,7 @@ final class ReadEvents {
                         }
                     });
                 }
-            };
+            }
             return composeCollection(new ComposeSequence(), anchor, bucket, containerCommentSink);
         }
 
@@ -452,7 +438,7 @@ final class ReadEvents {
                         }
                     });
                 }
-            };
+            }
             return composeCollection(new ComposeMap(), anchor, bucket, containerCommentSink);
         }
 

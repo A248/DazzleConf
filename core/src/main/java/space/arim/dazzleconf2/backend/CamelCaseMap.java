@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -19,26 +19,11 @@
 
 package space.arim.dazzleconf2.backend;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
+final class CamelCaseMap {
 
-/**
- * A key mapper which converts lower camel case patterns to lower snake case.
- * <p>
- * This is intended for use with YAML and TOML and other formats that use lower snake case. For example, a method
- * named "myConfOption" will become "my-conf-option" using this key mapper.
- *
- */
-public final class SnakeCaseKeyMapper implements KeyMapper {
+    private CamelCaseMap() {}
 
-    /**
-     * Creates
-     *
-     */
-    public SnakeCaseKeyMapper() {}
-
-    @Override
-    public @NonNull CharSequence labelToKey(@NonNull CharSequence label) {
-
+    static CharSequence toCasedLower(CharSequence label, char separator) {
         StringBuilder builder = new StringBuilder();
         int startAppend = 0;
 
@@ -48,7 +33,7 @@ public final class SnakeCaseKeyMapper implements KeyMapper {
                 // Found a segment: append everything before us
                 builder.append(label, startAppend, n);
                 if (n != 0) {
-                    builder.append('-');
+                    builder.append(separator);
                 }
                 builder.append(Character.toLowerCase(currentChar));
                 startAppend = n + 1;

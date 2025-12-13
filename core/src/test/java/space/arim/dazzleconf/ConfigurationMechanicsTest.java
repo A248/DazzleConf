@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -30,12 +30,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf2.Configuration;
 import space.arim.dazzleconf2.ConfigurationDefinition;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.backend.*;
+import space.arim.dazzleconf2.backend.CommentData;
+import space.arim.dazzleconf2.backend.DataEntry;
+import space.arim.dazzleconf2.backend.DataList;
+import space.arim.dazzleconf2.backend.DataTree;
+import space.arim.dazzleconf2.backend.KeyMapper;
+import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.engine.Comments;
 import space.arim.dazzleconf2.engine.UpdateListener;
 import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.engine.liaison.SubSection;
+import space.arim.dazzleconf2.backend.KebabCaseKeyMapper;
 
 import java.lang.reflect.AccessFlag;
 import java.nio.file.StandardCopyOption;
@@ -58,7 +64,7 @@ public class ConfigurationMechanicsTest {
 
     private Configuration<Config> configuration;
     private final UpdateListener updateListener;
-    private final KeyMapper keyMapper = new SnakeCaseKeyMapper();
+    private final KeyMapper keyMapper = new KebabCaseKeyMapper();
 
     public ConfigurationMechanicsTest(@Mock UpdateListener updateListener) {
         this.updateListener = updateListener;
@@ -277,9 +283,6 @@ public class ConfigurationMechanicsTest {
     public void readWithUpdateKeyMapped(boolean updatableValues) {
         String inherited = "inheritance";
         char keyPress = 'k';
-        List<List<List<String>>> matrix = List.of(List.of(
-                List.of("beside"), List.of(), List.of("hello", "crazy")
-        ));
         Set<Float> floats = Set.of(1.4f);
         StandardCopyOption smallEnum = StandardCopyOption.COPY_ATTRIBUTES;
         boolean enabled = true;

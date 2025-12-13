@@ -21,6 +21,7 @@ package space.arim.dazzleconf;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
+import space.arim.dazzleconf2.backend.KebabCaseKeyMapper;
 import space.arim.dazzleconf2.Configuration;
 import space.arim.dazzleconf2.ConfigurationDefinition;
 import space.arim.dazzleconf2.ErrorPrint;
@@ -32,7 +33,6 @@ import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.backend.Printable;
-import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
 import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.engine.liaison.SubSection;
 import space.arim.dazzleconf2.reflect.DefaultReflectionService;
@@ -94,7 +94,7 @@ public class ErrorPrintingTest {
 
                     @Override
                     public @NonNull KeyMapper keyMapper() {
-                        return new SnakeCaseKeyMapper();
+                        return new KebabCaseKeyMapper();
                     }
 
                     @Override

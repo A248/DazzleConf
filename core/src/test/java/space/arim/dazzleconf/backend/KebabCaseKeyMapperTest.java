@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -20,14 +20,14 @@
 package space.arim.dazzleconf.backend;
 
 import org.junit.jupiter.api.Test;
+import space.arim.dazzleconf2.backend.KebabCaseKeyMapper;
 import space.arim.dazzleconf2.backend.KeyMapper;
-import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class SnakeCaseKeyMapperTest {
+public class KebabCaseKeyMapperTest {
 
-    private final KeyMapper keyMapper = new SnakeCaseKeyMapper();
+    private final KeyMapper keyMapper = new KebabCaseKeyMapper();
 
     @Test
     public void simple() {

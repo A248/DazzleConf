@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -40,9 +40,9 @@ import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.ReadableRoot;
-import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
 import space.arim.dazzleconf2.engine.CommentLocation;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
+import space.arim.dazzleconf2.backend.KebabCaseKeyMapper;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -247,7 +247,7 @@ public final class HoconBackend implements Backend {
 
     @Override
     public @NonNull KeyMapper recommendKeyMapper() {
-        return new SnakeCaseKeyMapper();
+        return new KebabCaseKeyMapper();
     }
 
     @Override

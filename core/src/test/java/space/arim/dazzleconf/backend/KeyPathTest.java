@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -24,9 +24,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import space.arim.dazzleconf2.backend.DefaultKeyMapper;
+import space.arim.dazzleconf2.backend.KebabCaseKeyMapper;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.backend.SnakeCaseKeyMapper;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -86,14 +86,14 @@ public class KeyPathTest {
     public void addFrontKeyMap() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
         keyPath.addFront("thisFeature");
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         verify.assertEq(keyPath, "this-feature");
     }
 
     @Test
     public void addFrontKeyMapPostCall() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addFront("thisFeature");
         verify.assertEq(keyPath, "thisFeature");
     }
@@ -102,14 +102,14 @@ public class KeyPathTest {
     public void addBackKeyMap() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
         keyPath.addBack("thisFeature");
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         verify.assertEq(keyPath, "this-feature");
     }
 
     @Test
     public void addBackKeyMapPostCall() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addBack("thisFeature");
         verify.assertEq(keyPath, "thisFeature");
     }
@@ -203,7 +203,7 @@ public class KeyPathTest {
     @Test
     public void buildVariously9() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addFront("myBraveWorld");
         keyPath.addBack("thisFeature");
         keyPath.addBack("enabled");
@@ -214,7 +214,7 @@ public class KeyPathTest {
     @Test
     public void buildVariously10() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addBack("myBraveWorld");
         keyPath.addBack("thisFeature");
         keyPath.addBack("enabled");
@@ -225,7 +225,7 @@ public class KeyPathTest {
     @Test
     public void buildVariously11() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addFront("myBraveWorld");
         keyPath.addBack("thisFeature");
         keyPath.addFront("sectionMapped");
@@ -236,7 +236,7 @@ public class KeyPathTest {
     @Test
     public void buildVariously12() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addBack("myBraveWorld");
         keyPath.addBack("thisFeature");
         keyPath.addFront("sectionMapped");
@@ -247,56 +247,56 @@ public class KeyPathTest {
     @Test
     public void buildVariously13() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addFront("myBraveWorld");
         keyPath.addBack("thisFeature");
         keyPath = keyPath.intoImmut().intoMut();
         keyPath = new KeyPath.Mut(keyPath);
         keyPath.addBack("enabled");
         keyPath.addFront("sectionMapped");
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         verify.assertEq(keyPath, "section-mapped", "my-brave-world", "this-feature", "enabled");
     }
 
     @Test
     public void buildVariously14() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addBack("myBraveWorld");
         keyPath.addBack("thisFeature");
         keyPath = keyPath.intoImmut().intoMut();
         keyPath = new KeyPath.Mut(keyPath);
         keyPath.addBack("enabled");
         keyPath.addFront("sectionMapped");
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         verify.assertEq(keyPath, "section-mapped", "my-brave-world", "this-feature", "enabled");
     }
 
     @Test
     public void buildVariously15() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addFront("myBraveWorld");
         keyPath.addBack("thisFeature");
         keyPath = keyPath.intoImmut().intoMut();
         keyPath = new KeyPath.Mut(keyPath);
         keyPath.addFront("sectionMapped");
         keyPath.addBack("enabled");
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         verify.assertEq(keyPath, "section-mapped", "my-brave-world", "this-feature", "enabled");
     }
 
     @Test
     public void buildVariously16() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addBack("myBraveWorld");
         keyPath.addBack("thisFeature");
         keyPath = keyPath.intoImmut().intoMut();
         keyPath = new KeyPath.Mut(keyPath);
         keyPath.addFront("sectionMapped");
         keyPath.addBack("enabled");
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         verify.assertEq(keyPath, "section-mapped", "my-brave-world", "this-feature", "enabled");
     }
 
@@ -305,7 +305,7 @@ public class KeyPathTest {
         KeyPath.Mut keyPath = new KeyPath.Mut();
         keyPath.addFront("myBraveWorld");
         keyPath.addBack("thisFeature");
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath = new KeyPath.Mut(keyPath);
         keyPath.addFront("sectionMapped");
         keyPath.addBack("enabled");
@@ -315,10 +315,10 @@ public class KeyPathTest {
     @Test
     public void buildVariously18() {
         KeyPath.Mut keyPath = new KeyPath.Mut();
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath.addBack("myBraveWorld");
         keyPath.addBack("thisFeature");
-        keyPath.applyKeyMapper(new SnakeCaseKeyMapper());
+        keyPath.applyKeyMapper(new KebabCaseKeyMapper());
         keyPath = new KeyPath.Mut(keyPath);
         keyPath.addFront("sectionMapped");
         keyPath.addBack("enabled");
@@ -394,7 +394,7 @@ public class KeyPathTest {
     public void equalityDifferentKeyMapper() {
         KeyPath.Mut original = new KeyPath.Mut("bookCalled", "thereThere");
         KeyPath.Mut twin = new KeyPath.Mut(original);
-        KeyMapper keyMapper = new SnakeCaseKeyMapper();
+        KeyMapper keyMapper = new KebabCaseKeyMapper();
         twin.applyKeyMapper(keyMapper);
         assertNotEqualsBothWays(original, twin);
         assertEqualsBothWays(new KeyPath.Mut("book-called", "there-there"), twin);
