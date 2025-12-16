@@ -41,7 +41,8 @@ final class ReadMe {
         return new LanguageCandidate[] {
 
                 new LangAr(),
-                new LangEn()
+                new LangEn(),
+                new LangFi()
 
         };
     }
