@@ -125,7 +125,11 @@ public interface TypeLiaison {
     interface DefaultInit {
 
         /**
-         * The interface type where the method is located
+         * The interface type where the method is located, after computing inheritance.
+         * <p>
+         * In particular, this is the configuration interface passed to the library. This is <b>not</b> the source code
+         * location, which means that if the configuration type extends one or more parent interfaces, the
+         * main interface will always be returned (and never a parent interface).
          *
          * @return the interface type
          */

@@ -100,15 +100,14 @@ public final class LibraryLang implements LanguageMessages {
     public static @NonNull LibraryLang loadLang(@NonNull Locale usingLocale) {
         LanguageCandidate chosen = bestCandidate(usingLocale);
         if (chosen == null) {
-            // TODO: Remove this System.out message
+            // 2.0.0-RC1: Remove this System.out message
             // When DazzleConf 2.0 has exited the preview phase, we will remove this message. Right now, it exists
             // to help identify missing translations and encourage contributions.
             //
-            // Codebase: upon existing the preview phase, make the following changes:
+            // Codebase: upon exiting the preview phase, make the following changes:
             // 1. Make Locale configurable using ConfigurationBuilder#locale, and re-enable the test for it
             // 2. Remove this System.out message
             // 3. Remove the proofing for System.out usage in LibraryLangTest.java
-
 
 
             // Non-matched locale. If you've arrived here, this is your opportunity to contribute a PR

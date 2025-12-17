@@ -114,13 +114,14 @@ final class LiaisonCache {
             return DefaultValues.simple(typeToken.cast(defaultVal));
         }
 
-        TypeSkeleton.MethodNode<V> makeMethodNode(MethodId methodId, boolean optional,
-                                                  AnnotatedElement methodAnnotations,
-                                                  MethodMirror.Invoker defaultsInvoker) {
+        TypeSkeleton.MethodNode<V> makeMethodNode(
+                MethodId methodId, boolean optional, AnnotatedElement methodAnnotations,
+                TypeToken<?> interfaceToken, MethodMirror.Invoker defaultsInvoker
+        ) {
             TypeLiaison.DefaultInit defaultInit = new TypeLiaison.DefaultInit() {
                 @Override
                 public @NonNull TypeToken<?> enclosingType() {
-                    return typeToken;
+                    return interfaceToken;
                 }
 
                 @Override

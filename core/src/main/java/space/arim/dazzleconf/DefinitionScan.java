@@ -26,7 +26,6 @@ import space.arim.dazzleconf.engine.CallableFn;
 import space.arim.dazzleconf.engine.Comments;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.TypeLiaison;
-import space.arim.dazzleconf.internals.AccessChecking;
 import space.arim.dazzleconf.internals.lang.LibraryLang;
 import space.arim.dazzleconf.reflect.Instantiator;
 import space.arim.dazzleconf.reflect.MethodId;
@@ -191,7 +190,9 @@ final class DefinitionScan {
                     } catch (DeveloperMistakeException rethrow) {
                         throw new DeveloperMistakeException("Failed to make type agent for " + methodId, rethrow);
                     }
-                    methodNodes.add(handleType.makeMethodNode(methodId, optional, methodAnnotations, defaultsInvoker));
+                    methodNodes.add(handleType.makeMethodNode(
+                            methodId, optional, methodAnnotations, typeToken, defaultsInvoker
+                    ));
                 }
                 return new TypeSkeleton(callableDefaultMethods, methodNodes);
             }
