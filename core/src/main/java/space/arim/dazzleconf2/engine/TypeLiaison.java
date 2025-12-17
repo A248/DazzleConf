@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -125,7 +125,11 @@ public interface TypeLiaison {
     interface DefaultInit {
 
         /**
-         * The interface type where the method is located
+         * The interface type where the method is located, after computing inheritance.
+         * <p>
+         * In particular, this is the configuration interface passed to the library. This is <b>not</b> the source code
+         * location, which means that if the configuration type extends one or more parent interfaces, the
+         * main interface will always be returned (and never a parent interface).
          *
          * @return the interface type
          */

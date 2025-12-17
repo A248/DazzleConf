@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -114,13 +114,14 @@ final class LiaisonCache {
             return DefaultValues.simple(typeToken.cast(defaultVal));
         }
 
-        TypeSkeleton.MethodNode<V> makeMethodNode(MethodId methodId, boolean optional,
-                                                  AnnotatedElement methodAnnotations,
-                                                  MethodMirror.Invoker defaultsInvoker) {
+        TypeSkeleton.MethodNode<V> makeMethodNode(
+                MethodId methodId, boolean optional, AnnotatedElement methodAnnotations,
+                TypeToken<?> interfaceToken, MethodMirror.Invoker defaultsInvoker
+        ) {
             TypeLiaison.DefaultInit defaultInit = new TypeLiaison.DefaultInit() {
                 @Override
                 public @NonNull TypeToken<?> enclosingType() {
-                    return typeToken;
+                    return interfaceToken;
                 }
 
                 @Override

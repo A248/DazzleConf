@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -26,7 +26,6 @@ import space.arim.dazzleconf2.engine.CallableFn;
 import space.arim.dazzleconf2.engine.Comments;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.TypeLiaison;
-import space.arim.dazzleconf2.internals.AccessChecking;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.Instantiator;
 import space.arim.dazzleconf2.reflect.MethodId;
@@ -191,7 +190,9 @@ final class DefinitionScan {
                     } catch (DeveloperMistakeException rethrow) {
                         throw new DeveloperMistakeException("Failed to make type agent for " + methodId, rethrow);
                     }
-                    methodNodes.add(handleType.makeMethodNode(methodId, optional, methodAnnotations, defaultsInvoker));
+                    methodNodes.add(handleType.makeMethodNode(
+                            methodId, optional, methodAnnotations, typeToken, defaultsInvoker
+                    ));
                 }
                 return new TypeSkeleton(callableDefaultMethods, methodNodes);
             }
