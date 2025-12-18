@@ -79,7 +79,9 @@ public interface TypeLiaison {
          * @throws DeveloperMistakeException if a library usage failure happened
          */
         @SideEffectFree
-        @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit defaultInit);
+        default @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit<V> defaultInit) {
+            return defaultInit.methodDefault();
+        }
 
         /**
          * Makes a serializer for the type. After the serializer is made, it will be permanently bound to the type
@@ -121,8 +123,9 @@ public interface TypeLiaison {
     /**
      * Provides relevant resources related to default value creation
      *
+     * @param <V> the type of the configuration object
      */
-    interface DefaultInit {
+    interface DefaultInit<V> {
 
         /**
          * The interface type where the method is located, after computing inheritance.
@@ -148,6 +151,18 @@ public interface TypeLiaison {
          * @return the method level annotations
          */
         @NonNull AnnotatedElement methodAnnotations();
+
+        /**
+         * Extracts default values from the default method if one exists.
+         * <p>
+         * Returns {@code null} if there is no default method implementation. If the default method returns
+         * {@code Optional} and the optional was empty, this method also returns {@code null}.
+         *
+         * @return the default values from the default method
+         * @throws DeveloperMistakeException if the default method is implemented incorrectly. Liaison implementations
+         * should not catch this exception but simply let it propagate
+         */
+        @Nullable DefaultValues<V> methodDefault();
 
     }
 

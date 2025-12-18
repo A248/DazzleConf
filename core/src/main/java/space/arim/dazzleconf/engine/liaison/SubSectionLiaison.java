@@ -69,7 +69,11 @@ public final class SubSectionLiaison implements TypeLiaison {
 
         @Override
         @SideEffectFree
-        public @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit defaultInit) {
+        public @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit<V> defaultInit) {
+            DefaultValues<V> methodDefault = defaultInit.methodDefault();
+            if (methodDefault != null) {
+                return methodDefault;
+            }
             return new DefaultValues<V>() {
                 @Override
                 public @NonNull V defaultValue() {

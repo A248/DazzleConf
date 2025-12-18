@@ -59,7 +59,7 @@ public final class BooleanLiaison implements TypeLiaison {
 
         @Override
         @SideEffectFree
-        public @Nullable DefaultValues<Boolean> loadDefaultValues(@NonNull DefaultInit defaultInit) {
+        public @Nullable DefaultValues<Boolean> loadDefaultValues(@NonNull DefaultInit<Boolean> defaultInit) {
             BooleanDefault booleanDefault = defaultInit.methodAnnotations().getAnnotation(BooleanDefault.class);
             if (booleanDefault != null) {
                 return new DefaultValues<Boolean>() {
@@ -74,7 +74,7 @@ public final class BooleanLiaison implements TypeLiaison {
                     }
                 };
             }
-            return null;
+            return defaultInit.methodDefault();
         }
 
         @Override

@@ -22,7 +22,6 @@ package space.arim.dazzleconf.engine.liaison;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.SideEffectFree;
-import space.arim.dazzleconf.engine.DefaultValues;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.reflect.TypeToken;
@@ -59,21 +58,17 @@ public final class SimpleTypeLiaison<U> implements TypeLiaison {
         if (this.typeToken.equals(typeToken)) {
             // Safe cast - the type token matches
             @SuppressWarnings("unchecked")
-            Agent<V> casted = (Agent<V>) new Agent<U>() {
-                @Override
-                @SideEffectFree
-                public @Nullable DefaultValues<U> loadDefaultValues(@NonNull DefaultInit defaultInit) {
-                    return null;
-                }
-
-                @Override
-                @SideEffectFree
-                public @NonNull SerializeDeserialize<U> makeSerializer() {
-                    return serializeDeserialize;
-                }
-            };
+            Agent<V> casted = (Agent<V>) new AgentImpl();
             return casted;
         }
         return null;
+    }
+
+    private final class AgentImpl implements Agent<U> {
+
+        @Override
+        public @NonNull SerializeDeserialize<U> makeSerializer() {
+            return serializeDeserialize;
+        }
     }
 }

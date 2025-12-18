@@ -53,8 +53,7 @@ public final class StringLiaison implements TypeLiaison {
     private static final class StringAgent implements Agent<String> {
         @Override
         @SideEffectFree
-        public @Nullable DefaultValues<String> loadDefaultValues(@NonNull DefaultInit defaultInit) {
-
+        public @Nullable DefaultValues<String> loadDefaultValues(@NonNull DefaultInit<String> defaultInit) {
             StringDefault stringDefault = defaultInit.methodAnnotations().getAnnotation(StringDefault.class);
             if (stringDefault != null) {
                 String defaultValue = stringDefault.value();
@@ -76,7 +75,7 @@ public final class StringLiaison implements TypeLiaison {
                     };
                 }
             }
-            return null;
+            return defaultInit.methodDefault();
         }
 
         @Override

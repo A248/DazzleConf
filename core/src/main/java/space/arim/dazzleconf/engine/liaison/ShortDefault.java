@@ -31,7 +31,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * Specifies the default value as a short.
  * <p>
  * This annotation is made to be used with {@code short} or {@code Short} and not other numeric types. It is only
- * supported by the short liaison.
+ * supported by the short liaison. Its presence will also <b>override</b> the value of the default method, if it exists.
  */
 @Retention(RUNTIME)
 @Target(METHOD)

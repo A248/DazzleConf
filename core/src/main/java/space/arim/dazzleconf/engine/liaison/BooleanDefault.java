@@ -31,6 +31,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * Specifies the default value as a boolean.
  * <p>
  * This annotation is made to be used with {@code boolean} or {@code Boolean} through the boolean liaison.
+ * Its presence will <b>override</b> the value of the default method, if it exists.
  */
 @Retention(RUNTIME)
 @Target(METHOD)

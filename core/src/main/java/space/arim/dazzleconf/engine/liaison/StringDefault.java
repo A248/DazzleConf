@@ -31,6 +31,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * Specifies the default value as string.
  * <p>
  * While primarily used by {@link StringLiaison}, this annotation can theoretically be used by any type liaison.
+ * Its presence will also <b>override</b> the value of the default method, if it exists.
  */
 @Retention(RUNTIME)
 @Target(METHOD)

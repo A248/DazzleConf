@@ -23,7 +23,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf.LoadResult;
-import space.arim.dazzleconf.engine.DefaultValues;
 import space.arim.dazzleconf.engine.DeserializeInput;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.SerializeOutput;
@@ -67,12 +66,6 @@ public final class EnumLiaison implements TypeLiaison {
 
         AgentImpl(Class<E> enumClass) {
             this.enumConstants = enumClass.getEnumConstants();
-        }
-
-        @Override
-        @SideEffectFree
-        public @Nullable DefaultValues<E> loadDefaultValues(@NonNull DefaultInit defaultInit) {
-            return null;
         }
 
         @Override

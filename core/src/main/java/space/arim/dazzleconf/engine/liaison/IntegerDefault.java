@@ -31,7 +31,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * Specifies the default value as an integer.
  * <p>
  * This annotation is made to be used with {@code int} or {@code Integer} and not other numeric types. It is only
- * supported by the integer liaison.
+ * supported by the integer liaison. Its presence will also <b>override</b> the value of the default method, if it exists.
  */
 @Retention(RUNTIME)
 @Target(METHOD)

@@ -89,7 +89,7 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
 
         @Override
         @SideEffectFree
-        public @Nullable DefaultValues<TYPE> loadDefaultValues(@NonNull DefaultInit defaultInit) {
+        public @Nullable DefaultValues<TYPE> loadDefaultValues(@NonNull DefaultInit<TYPE> defaultInit) {
             DEF_ANNOTE defaultAnnotation = defaultInit.methodAnnotations().getAnnotation(defaultAnnotation());
             if (defaultAnnotation != null) {
                 TYPE defaultValue = defaultValue(defaultAnnotation);
@@ -106,7 +106,7 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
                     }
                 };
             }
-            return null;
+            return defaultInit.methodDefault();
         }
 
         @Override
