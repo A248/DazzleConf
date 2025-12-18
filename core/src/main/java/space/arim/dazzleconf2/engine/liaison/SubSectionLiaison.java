@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -69,7 +69,11 @@ public final class SubSectionLiaison implements TypeLiaison {
 
         @Override
         @SideEffectFree
-        public @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit defaultInit) {
+        public @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit<V> defaultInit) {
+            DefaultValues<V> methodDefault = defaultInit.methodDefault();
+            if (methodDefault != null) {
+                return methodDefault;
+            }
             return new DefaultValues<V>() {
                 @Override
                 public @NonNull V defaultValue() {

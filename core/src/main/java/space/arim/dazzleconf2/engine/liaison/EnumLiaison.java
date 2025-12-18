@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -23,7 +23,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf2.LoadResult;
-import space.arim.dazzleconf2.engine.DefaultValues;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.SerializeOutput;
@@ -67,12 +66,6 @@ public final class EnumLiaison implements TypeLiaison {
 
         AgentImpl(Class<E> enumClass) {
             this.enumConstants = enumClass.getEnumConstants();
-        }
-
-        @Override
-        @SideEffectFree
-        public @Nullable DefaultValues<E> loadDefaultValues(@NonNull DefaultInit defaultInit) {
-            return null;
         }
 
         @Override

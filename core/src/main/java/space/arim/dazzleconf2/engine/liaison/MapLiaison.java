@@ -28,7 +28,6 @@ import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.engine.DefaultValues;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.SerializeOutput;
@@ -108,11 +107,6 @@ public final class MapLiaison implements TypeLiaison {
         private AgentImpl(SerializeDeserialize<K> keySerializer, SerializeDeserialize<V> valueSerializer) {
             this.keySerializer = keySerializer;
             this.valueSerializer = valueSerializer;
-        }
-
-        @Override
-        public @Nullable DefaultValues<Map<K, V>> loadDefaultValues(@NonNull DefaultInit defaultInit) {
-            return null;
         }
 
         @Override

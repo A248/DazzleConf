@@ -20,6 +20,7 @@
 package space.arim.dazzleconf2;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.backend.CommentData;
 import space.arim.dazzleconf2.engine.Comments;
 import space.arim.dazzleconf2.engine.DefaultValues;
@@ -79,46 +80,11 @@ final class LiaisonCache {
             this.serializer = serializer;
         }
 
-        private DefaultValues<V> makeDefaultValues(MethodId methodId, boolean optional,
-                                                   TypeLiaison.DefaultInit defaultInit,
-                                                   MethodMirror.Invoker defaultsInvoker) {
-            DefaultValues<V> defaultValues = agent.loadDefaultValues(defaultInit);
-            if (defaultValues != null) {
-                return defaultValues;
-            }
-            if (!methodId.isDefault()) {
-                // No default values here for this entry.
-                // Meaning either the developer is a complete novice or an advanced library user
-                return null;
-            }
-            // Let's try calling the default method
-            Object defaultVal;
-            try {
-                defaultVal = defaultsInvoker.invokeMethod(methodId);
-            } catch (InvocationTargetException ex) {
-                throw new DeveloperMistakeException("Default method threw an exception", ex);
-            }
-            if (defaultVal == null) {
-                throw new DeveloperMistakeException("Default method " + methodId + " returned null");
-            }
-            // Unpack Optional as needed
-            if (optional) {
-                Optional<?> optDefaultVal = (Optional<?>) defaultVal;
-                if (optDefaultVal.isPresent()) {
-                    defaultVal = optDefaultVal.get();
-                } else {
-                    // That's okay, since optional entries don't need defaults
-                    return null;
-                }
-            }
-            return DefaultValues.simple(typeToken.cast(defaultVal));
-        }
-
         TypeSkeleton.MethodNode<V> makeMethodNode(
                 MethodId methodId, boolean optional, AnnotatedElement methodAnnotations,
                 TypeToken<?> interfaceToken, MethodMirror.Invoker defaultsInvoker
         ) {
-            TypeLiaison.DefaultInit defaultInit = new TypeLiaison.DefaultInit() {
+            TypeLiaison.DefaultInit<V> defaultInit = new TypeLiaison.DefaultInit<V>() {
                 @Override
                 public @NonNull TypeToken<?> enclosingType() {
                     return interfaceToken;
@@ -133,8 +99,36 @@ final class LiaisonCache {
                 public @NonNull AnnotatedElement methodAnnotations() {
                     return methodAnnotations;
                 }
+
+                @Override
+                public @Nullable DefaultValues<V> methodDefault() {
+                    if (!methodId.isDefault()) {
+                        return null;
+                    }
+                    // Try calling the default method
+                    Object defaultVal;
+                    try {
+                        defaultVal = defaultsInvoker.invokeMethod(methodId);
+                    } catch (InvocationTargetException ex) {
+                        throw new DeveloperMistakeException("Default method threw an exception", ex);
+                    }
+                    if (defaultVal == null) {
+                        throw new DeveloperMistakeException("Default method " + methodId + " returned null");
+                    }
+                    // Unpack Optional as needed
+                    if (optional) {
+                        Optional<?> optDefaultVal = (Optional<?>) defaultVal;
+                        if (optDefaultVal.isPresent()) {
+                            defaultVal = optDefaultVal.get();
+                        } else {
+                            // That's okay, since optional entries don't need defaults
+                            return null;
+                        }
+                    }
+                    return DefaultValues.simple(typeToken.cast(defaultVal));
+                }
             };
-            DefaultValues<V> defaultValues = makeDefaultValues(methodId, optional, defaultInit, defaultsInvoker);
+            DefaultValues<V> defaultValues = agent.loadDefaultValues(defaultInit);
             CommentData comments  = CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
             return new TypeSkeleton.MethodNode<>(comments, optional, methodId, defaultValues, serializer);
         }

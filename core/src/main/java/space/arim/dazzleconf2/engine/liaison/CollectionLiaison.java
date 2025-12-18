@@ -28,7 +28,6 @@ import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.KeyPath;
-import space.arim.dazzleconf2.engine.DefaultValues;
 import space.arim.dazzleconf2.engine.DeserializeInput;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.SerializeOutput;
@@ -121,12 +120,6 @@ public final class CollectionLiaison implements TypeLiaison {
 
         private AgentBase(SerializeDeserialize<E> elementSerializer) {
             this.elementSerializer = elementSerializer;
-        }
-
-        @Override
-        @SideEffectFree
-        public @Nullable DefaultValues<COLL> loadDefaultValues(@NonNull DefaultInit defaultInit) {
-            return null;
         }
 
         @Override
