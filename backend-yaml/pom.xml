@@ -85,6 +85,16 @@
 	</build>
 	
 	<dependencies>
+        <dependency>
+            <groupId>org.checkerframework</groupId>
+            <artifactId>checker-qual</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apiguardian</groupId>
+            <artifactId>apiguardian-api</artifactId>
+            <optional>true</optional>
+        </dependency>
 		<dependency>
 			<groupId>space.arim.dazzleconf</groupId>
 			<artifactId>dazzleconf-core</artifactId>

@@ -307,13 +307,11 @@
 				<groupId>org.checkerframework</groupId>
 				<artifactId>checker-qual</artifactId>
 				<version>${checkerqual.version}</version>
-				<optional>true</optional>
 			</dependency>
 			<dependency>
 				<groupId>org.apiguardian</groupId>
 				<artifactId>apiguardian-api</artifactId>
 				<version>${apiguardian.version}</version>
-				<optional>true</optional>
 			</dependency>
 			<dependency>
 				<groupId>org.junit.jupiter</groupId>
