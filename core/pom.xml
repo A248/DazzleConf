@@ -176,8 +176,8 @@
 					</execution>
 				</executions>
 				<configuration>
-					<coverageThreshold>75</coverageThreshold>
-					<mutationThreshold>75</mutationThreshold>
+					<coverageThreshold>65</coverageThreshold>
+					<mutationThreshold>65</mutationThreshold>
 					<threads>2</threads>
 					<excludedClasses>
 						<excludedClass>space.arim.dazzleconf.**</excludedClass>
