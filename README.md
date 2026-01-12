@@ -5,7 +5,7 @@ A sleek, usable, and fully-featured configuration library. Supports HOCON, TOML,
 
 Documentation is in the [/docs/](docs) folder.
 
-**Version 2 is still in the preview stage while we stabilize the API**; for version 1.0, see the "master" branch.
+**Version 2 is currently in the milestone stage.** This is a way of saying that the API is mostly stable, but a few things (including behavior) might still change.
 
 ### Objectives
 
