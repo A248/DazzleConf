@@ -10,7 +10,7 @@ The artifact you choose will depend on which configuration format you desire. In
 ```xml
 <dependency>
 	<groupId>space.arim.dazzleconf</groupId>
-	<artifactId>dazzleconf-yaml/artifactId>
+	<artifactId>dazzleconf-yaml</artifactId>
 	<version>2.0.0-M1</version>
 </dependency>
 ```

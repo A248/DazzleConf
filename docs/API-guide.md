@@ -59,17 +59,50 @@ When the library has loaded and parsed configuration values, it instantiates the
 
 ### Immutability and Thread Safety
 
-Configuration objects are immutable and therefore also thread safe.
+Configuration objects are immutable and thread safe. The only way to break this property is to introduce a custom type that is mutable and/or not thread safe.
 
-The sole exception to immutability is the `ReloadShell` feature, which manages a hot-swappable configuration interface. Using `ReloadShelll` does not break thread safety, however, since swapping the delegate configuration is performed with an atomic write.
-
-Otherwise, the only way to break immutability and thread safety
+Note that using the `ReloadShell` feature lets you change the backing configuration instance (see below), which is thread safe but makes the shell configuration appear mutable to callers.
 
 ### Equality
 
 Configuration objects are equal to one another if they implement the same interface types and yield the same values.
 
 Because of this, it is strongly recommended that all user-defined types implement `equals` and `hashCode` properly. The equality of the configuration object reflects the equality behavior of its return types.
+
+### Reloading shells
+
+The "reload shell" feature manages a hot-swappable configuration interface. This feautre does not break thread safety since swapping the delegate configuration is performed with an atomic write.
+
+Here is how one might use it:
+
+```java
+Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
+ReloadShell<Config> reloadShell = configuration.makeReloadShell(configuration.loadDefalts());
+// Put THIS instance everywhere in your code (private final fields)
+Config passAround = reloadShell.getShell();
+MyManager mgr = new MyManager(passAround);
+// Use the ReloadShell + Configuration to implement a reload function
+Runnable reloadUsing = () -> {
+    Path configFile = Path.of("config.toml");
+    Config newConfig = configuration.configureOrFallback(new TomlBackend(configFile), new StandardErrorPrint(printable -> System.err.println(printable.printString())));
+    reloadShell.setCurrentDelegate(newConfig);
+};
+reloadUsing.run();
+
+// Regular application class
+public class MyManager {
+
+  private final Config config;
+
+  public MyManager(Config config) {
+      this.config = config; 
+  }
+
+  public void doSomething() {
+      // Use config here
+  }
+}
+```
 
 ## Advanced
 

@@ -62,8 +62,6 @@ The default type liaisons cover:
 * Maps work similarly to collections. They detect the generic arguments for the key and the value, get a serializer for each type, and rely on the serializers as dependencies.
 * Configuration interfaces annotated with @SubSection. These are loaded like the rest of the configuration interface, and they automatically inherit liaisons from the parent configuration.
 
-TODO: In version 2, maps are not yet supported in the default liaisons.
-
 ## Skipped Methods
 
 ### Default Methods - @CallableFn
