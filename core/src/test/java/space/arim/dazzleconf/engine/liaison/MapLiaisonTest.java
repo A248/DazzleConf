@@ -19,14 +19,19 @@
 
 package space.arim.dazzleconf.engine.liaison;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf.Configuration;
+import space.arim.dazzleconf.ConfigurationDefinition;
 import space.arim.dazzleconf.DeveloperMistakeException;
+import space.arim.dazzleconf.LoadResult;
 import space.arim.dazzleconf.backend.DataEntry;
 import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.backend.DefaultKeyMapper;
+import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.UpdateListener;
 import space.arim.dazzleconf.engine.UpdateReason;
@@ -37,7 +42,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(MockitoExtension.class)
@@ -111,5 +118,60 @@ public class MapLiaisonTest {
         Configuration<Config<ClipOnSer, Integer>> definition = StringType.configuration(new TypeToken<>() {});
         assertDoesNotThrow(() -> definition.writeTo(okay, new DataTree.Mut()));
         assertThrows(DeveloperMistakeException.class, () -> definition.writeTo(withDuplicates, new DataTree.Mut()));
+    }
+
+    private <C> void verifySingleFailureNoUpdates(TypeToken<C> configType, DataTree.Mut dataTree,
+                                                  UpdateListener mockUpdateListener) {
+        Configuration<C> definition = Configuration.defaultBuilder(configType)
+                .addDefaultTypeLiaisons()
+                .build();
+        LoadResult<C> result = definition.readFrom(dataTree.intoImmut());
+        assertTrue(result.isFailure());
+        assertEquals(1, result.getErrorContexts().size());
+        result = definition.readWithUpdate(dataTree, new ConfigurationDefinition.ReadWithUpdateOptions() {
+            @Override
+            public @NonNull KeyMapper keyMapper() {
+                return new DefaultKeyMapper();
+            }
+
+            @Override
+            public @NonNull KeyPath keyPath() {
+                return KeyPath.empty();
+            }
+
+            @Override
+            public void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
+                mockUpdateListener.notifyUpdate(entryPath, updateReason);
+            }
+        });
+        assertTrue(result.isFailure());
+        assertEquals(1, result.getErrorContexts().size());
+        verifyNoInteractions(mockUpdateListener);
+    }
+
+    @Test
+    public void failureOnKey(@Mock UpdateListener updateListener) {
+        DataTree.Mut dataTree = new DataTree.Mut();
+        DataTree.Mut innerTree = new DataTree.Mut();
+        innerTree.put(1, new DataEntry("friends"));
+        innerTree.put(2, new DataEntry("are"));
+        innerTree.put("iuahbjnkz", new DataEntry("good"));
+        dataTree.put("values", new DataEntry(innerTree));
+        verifySingleFailureNoUpdates(
+                new TypeToken<Config<Integer, String>>() {}, dataTree, updateListener
+        );
+    }
+
+    @Test
+    public void failureOnValue(@Mock UpdateListener updateListener) {
+        DataTree.Mut dataTree = new DataTree.Mut();
+        DataTree.Mut innerTree = new DataTree.Mut();
+        innerTree.put("friends", new DataEntry(1));
+        innerTree.put("are", new DataEntry(2));
+        innerTree.put("good", new DataEntry("iasdzhiuas"));
+        dataTree.put("values", new DataEntry(innerTree));
+        verifySingleFailureNoUpdates(
+                new TypeToken<Config<String, Integer>>() {}, dataTree, updateListener
+        );
     }
 }

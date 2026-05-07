@@ -164,7 +164,7 @@ public final class MapLiaison implements TypeLiaison {
                     if (collectedErrors == null) {
                         collectedErrors = new ErrorContext[deser.maximumErrorCollect()];
                     }
-                    for (ErrorContext errorToAppend : keyResult.getErrorContexts()) {
+                    for (ErrorContext errorToAppend : valueResult.getErrorContexts()) {
                         // Append this error
                         collectedErrors[errorCount++] = errorToAppend;
                         // Check if maxed out
