@@ -270,7 +270,7 @@ public class ErrorPrintingTest {
     record SortedMethodMirror(MethodMirror methodMirror) implements MethodMirror {
 
         @Override
-        public @NonNull TypeWalker typeWalker(ReifiedType.@NonNull Annotated reifiedType) {
+        public @NonNull TypeWalker typeWalker(@NonNull ReifiedType reifiedType) {
             return new SortedTypeWalker(methodMirror.typeWalker(reifiedType));
         }
 
@@ -283,7 +283,7 @@ public class ErrorPrintingTest {
     record SortedTypeWalker(MethodMirror.TypeWalker delegate) implements MethodMirror.TypeWalker {
 
         @Override
-        public ReifiedType.@NonNull Annotated getEnclosingType() {
+        public @NonNull ReifiedType getEnclosingType() {
             return delegate.getEnclosingType();
         }
 

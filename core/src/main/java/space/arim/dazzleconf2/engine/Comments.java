@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -46,7 +46,13 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * <b>Usage on a class</b>
  * <p>
  * This annotation can also be applied to a class. If the annotated class is used as a configuration interface, the
- * comments specified will become top-level comments in the configuration definition (e.g., header and footer).
+ * comments specified will become top-level comments in the configuration definition, i.e. its header and footer. If
+ * the configuration interface is the actual {@code C} used with {@code Configuration<C>}, then this header and footer
+ * will become the document-level header and footer written to the backend.
+ * <p>
+ * Note that some configurations of backend may not support the header and footer on the outermost configuration
+ * interface. For example, using the HOCON backend with {@code HoconCommentMode.OMIT_HEADER} disables the document-level
+ * header and footer.
  */
 @Repeatable(Comments.Container.class)
 @Retention(RUNTIME)

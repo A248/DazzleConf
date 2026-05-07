@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -35,7 +35,7 @@ import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
-import static space.arim.dazzleconf2.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
+import static space.arim.dazzleconf2.reflect.ReifiedType.EMPTY_ARRAY;
 
 /**
  * Default implementation of {@link MethodMirror} using standard reflection.
@@ -50,29 +50,26 @@ final class DefaultMethodMirror implements MethodMirror {
     }
 
     @Override
-    public @NonNull TypeWalker typeWalker(ReifiedType.@NonNull Annotated reifiedType) {
+    public @NonNull TypeWalker typeWalker(@NonNull ReifiedType reifiedType) {
         return new Walker(reifiedType);
     }
 
     private static final class Walker implements TypeWalker {
 
-        private final ReifiedType.Annotated enclosingType;
-        private final GenericContext classGenerics;
+        private final ReifiedType enclosingType;
+        private final GenericCompute classGenerics;
 
-        private Walker(ReifiedType.Annotated enclosingType) {
+        private Walker(ReifiedType enclosingType) {
             this.enclosingType = enclosingType;
-            this.classGenerics = new GenericContext(enclosingType) {
-
-                @Override
-                ReifiedType.Annotated unknownVariable(String varName) {
-                    // Method-level type variables can be replaced by unannotated Object
-                    return ReifiedType.Annotated.unannotated(Object.class);
-                }
-            };
+            this.classGenerics = new GenericCompute(new GenericContext.OfType(
+                    enclosingType,
+                    // Method-level generic variables are not supported
+                    (methodLevelTypeVar) -> ReifiedType.rawUnannotated(Object.class)
+            ));
         }
 
         @Override
-        public ReifiedType.@NonNull Annotated getEnclosingType() {
+        public @NonNull ReifiedType getEnclosingType() {
             return enclosingType;
         }
 
@@ -84,7 +81,7 @@ final class DefaultMethodMirror implements MethodMirror {
                     .filter(method -> !Modifier.isStatic(method.getModifiers()))
                     .filter(method -> !method.isSynthetic() && !method.isBridge())
                     .map((method -> {
-                        ReifiedType.Annotated reifiedReturn = classGenerics.reify(method.getAnnotatedReturnType());
+                        ReifiedType reifiedReturn = classGenerics.reify(method.getAnnotatedReturnType());
 
                         AnnotatedType[] methodParameters = method.getAnnotatedParameterTypes();
                         ReifiedType[] reifiedParameters = (methodParameters.length == 0) ?

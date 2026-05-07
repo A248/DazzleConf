@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -23,10 +23,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -59,7 +55,7 @@ public final class MethodId {
 
     private final transient OpaqueCache opaqueCache;
     private final String name;
-    private final ReifiedType.Annotated returnType;
+    private final ReifiedType returnType;
     private final ReifiedType[] parameters;
     private final boolean isDefault;
 
@@ -71,7 +67,7 @@ public final class MethodId {
      * @param parameters the method parameters, excluding the receiver type
      * @param isDefault whether the method is implemented by default
      */
-    public MethodId(@NonNull String name, ReifiedType.@NonNull Annotated returnType,
+    public MethodId(@NonNull String name, @NonNull ReifiedType returnType,
                     @NonNull ReifiedType @NonNull [] parameters, boolean isDefault) {
         this.opaqueCache = null;
         this.name = Objects.requireNonNull(name, "name");
@@ -83,7 +79,7 @@ public final class MethodId {
         this.isDefault = isDefault;
     }
 
-    private MethodId(OpaqueCache opaqueCache, String name, ReifiedType.Annotated returnType,
+    private MethodId(OpaqueCache opaqueCache, String name, ReifiedType returnType,
                      ReifiedType[] parameters, boolean isDefault) {
         this.opaqueCache = opaqueCache;
         this.name = name;
@@ -138,45 +134,10 @@ public final class MethodId {
     }
 
     /**
-     * Gets the {@code java.lang.reflect.Method} for this object.
-     * <p>
-     * The declaring class must be either the original class which declared this method, or one of its sub-types.
-     * Behavior is undefined if this property is not upheld.
-     *
-     * @param declaringClass the containing class
-     * @return the method
-     * @throws IllegalArgumentException if the wrong class was specified
-     */
-    @NonNull Method getMethod(@NonNull Class<?> declaringClass) {
-        Class<?>[] rawParams = new Class[parameters.length];
-        for (int n = 0; n < parameters.length; n++) {
-            rawParams[n] = parameters[n].rawType();
-        }
-        try {
-            return declaringClass.getMethod(name, rawParams);
-        } catch (NoSuchMethodException ex) {
-            throw new IllegalArgumentException("Specified method does not exist on target class", ex);
-        }
-    }
-
-    @NonNull MethodHandle getMethodHandle(MethodHandles.@NonNull Lookup lookup, @NonNull Class<?> declaringClass)
-            throws IllegalAccessException {
-        Class<?>[] rawParams = new Class[parameters.length];
-        for (int n = 0; n < parameters.length; n++) {
-            rawParams[n] = parameters[n].rawType();
-        }
-        try {
-            return lookup.findVirtual(declaringClass, name, MethodType.methodType(returnType.rawType(), rawParams));
-        } catch (NoSuchMethodException ex) {
-            throw new IllegalArgumentException("Specified method does not exist on target class", ex);
-        }
-    }
-
-    /**
      * The return type
      * @return the return type
      */
-    public ReifiedType.@NonNull Annotated returnType() {
+    public @NonNull ReifiedType returnType() {
         return returnType;
     }
 
@@ -218,12 +179,12 @@ public final class MethodId {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (!(o instanceof MethodId)) return false;
 
         MethodId methodId = (MethodId) o;
         return isDefault == methodId.isDefault && name.equals(methodId.name)
-                && returnType.equals(methodId.returnType) && Arrays.equals(parameters, methodId.parameters);
+                && Arrays.equals(parameters, methodId.parameters) && returnType.equals(methodId.returnType);
     }
 
     @Override
@@ -236,7 +197,7 @@ public final class MethodId {
     }
 
     @Override
-    public String toString() {
+    public @NonNull String toString() {
         StringBuilder builder = new StringBuilder();
         if (isDefault) {
             builder.append("default ");

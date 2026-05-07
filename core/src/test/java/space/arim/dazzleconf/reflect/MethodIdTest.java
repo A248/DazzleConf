@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -33,9 +33,9 @@ public class MethodIdTest {
     private final Method sampleOne = Sample.class.getDeclaredMethod("sampleOne", String.class);
     private final Method sampleTwo = Sample.class.getDeclaredMethod("sampleTwo");
 
-    private final ReifiedType.Annotated voidType = ReifiedType.Annotated.unannotated(void.class);
-    private final ReifiedType.Annotated booleanType = ReifiedType.Annotated.unannotated(boolean.class);
-    private final ReifiedType.Annotated stringType = ReifiedType.Annotated.unannotated(String.class);
+    private final ReifiedType voidType = ReifiedType.rawUnannotated(void.class);
+    private final ReifiedType booleanType = ReifiedType.rawUnannotated(boolean.class);
+    private final ReifiedType stringType = ReifiedType.rawUnannotated(String.class);
 
     public MethodIdTest() throws NoSuchMethodException {}
 

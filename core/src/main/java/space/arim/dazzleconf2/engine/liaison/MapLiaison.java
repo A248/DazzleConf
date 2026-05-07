@@ -86,7 +86,7 @@ public final class MapLiaison implements TypeLiaison {
     @SideEffectFree
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
         if (typeToken.getRawType().equals(Map.class)) {
-            ReifiedType.Annotated reifiedType = typeToken.getReifiedType();
+            ReifiedType reifiedType = typeToken.getReifiedType();
             TypeToken<?> keyToken = new TypeToken<>(reifiedType.argumentAt(0));
             TypeToken<?> valueToken = new TypeToken<>(reifiedType.argumentAt(1));
             Agent<?> agentImpl = new AgentImpl<>(
@@ -164,7 +164,7 @@ public final class MapLiaison implements TypeLiaison {
                     if (collectedErrors == null) {
                         collectedErrors = new ErrorContext[deser.maximumErrorCollect()];
                     }
-                    for (ErrorContext errorToAppend : keyResult.getErrorContexts()) {
+                    for (ErrorContext errorToAppend : valueResult.getErrorContexts()) {
                         // Append this error
                         collectedErrors[errorCount++] = errorToAppend;
                         // Check if maxed out

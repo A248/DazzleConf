@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -20,102 +20,70 @@
 package space.arim.dazzleconf2.reflect;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf2.internals.ArrayType;
-
-import java.lang.reflect.AnnotatedArrayType;
-import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.AnnotatedType;
-import java.lang.reflect.AnnotatedTypeVariable;
-import java.lang.reflect.AnnotatedWildcardType;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 
-import static space.arim.dazzleconf2.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
-
 /**
- * A low level helper for reifying generic members within context of a generic class declaration.
- * <p>
- * Usage of this class ignores method-level generics. If method-level type variables are set, their usage is replaced
- * by {@link #unknownVariable(String)}.
+ * A concrete context where type variables are used. Provides the argument values of those type variables.
+ *
  */
-abstract class GenericContext {
-
-    private final ReifiedType.Annotated parent;
-    private final TypeVariable<?>[] typeVars;
+public interface GenericContext {
 
     /**
-     * Creates from a parent type.
-     * <p>
-     * This is the type that provides class-level type variables, and it will also be used in debug messages.
+     * Finds the argument value of a type variable with the given name
      *
-     * @param parent the parent type in which our operations are located
+     * @param varName the type variable name
+     * @return the type argument
+     * @throws RuntimeException any exceptions thrown by this method are thrown by the outer method that uses
+     * this type, for example {@link ReifiedType#computeFrom(AnnotatedType, GenericContext)}
      */
-    GenericContext(ReifiedType.@NonNull Annotated parent) {
-        this.parent = parent;
-        TypeVariable<?>[] typeVars = parent.rawType().getTypeParameters();
-        if (typeVars.length != parent.argumentCount()) {
-            throw new IllegalStateException("Malformed input type. Wrong number of arguments on " + parent);
-        }
-        this.typeVars = typeVars;
-    }
-
-    private ReifiedType.Annotated getTypeArgument(String varName) {
-        for (int n = 0; n < typeVars.length; n++) {
-            if (typeVars[n].getName().equals(varName)) {
-                return parent.argumentAt(n);
-            }
-        }
-        return unknownVariable(varName);
-    }
-
-    abstract ReifiedType.Annotated unknownVariable(String varName);
+    @NonNull ReifiedType resolveTypeVariable(@NonNull String varName);
 
     /**
-     * Reifies the given annotated type.
+     * A type-level generic context.
      * <p>
-     * This function assumes the given type is taken from a member within the parent type. If that is not the case,
-     * behavior is not defined.
+     * This represents the generic variable space of a Java class, interface, enum, record, etc. It will resolve
+     * input type variables to the type's generic arguments.
      *
-     * @param type the annotated type to reify
-     * @return the reified result
      */
-    ReifiedType.Annotated reify(AnnotatedType type) {
-        if (type instanceof AnnotatedParameterizedType) {
-            AnnotatedParameterizedType parameterizedType = (AnnotatedParameterizedType) type;
+    final class OfType implements GenericContext {
 
-            AnnotatedType[] sourceArgs = parameterizedType.getAnnotatedActualTypeArguments();
-            ReifiedType.Annotated[] reifiedArgs = new ReifiedType.Annotated[sourceArgs.length];
-            for (int n = 0; n < sourceArgs.length; n++) {
-                reifiedArgs[n] = reify(sourceArgs[n]);
+        private final ReifiedType type;
+        private final TypeVariable<?>[] typeVars;
+        private final GenericContext fallback;
+
+        /**
+         * Creates from a type.
+         * <p>
+         * Uses the provided fallback context if the input type variable doesn't match any of the type variables on the provided type.
+         *
+         * @param type the type, with its arguments
+         * @param fallback the fallback generic context
+         */
+        public OfType(@NonNull ReifiedType type, @NonNull GenericContext fallback) {
+            this.fallback = fallback;
+            this.type = type;
+            TypeVariable<?>[] typeVars = type.rawType().getTypeParameters();
+            if (typeVars.length != type.argumentCount()) {
+                // ReifiedType.of() prevents this by blocking arbitrary construction
+                throw new IllegalStateException("Malformed input type. Wrong number of arguments on " + type);
             }
-            Class<?> mainType = (Class<?>) ((ParameterizedType) parameterizedType.getType()).getRawType();
-            return new ReifiedType.Annotated(mainType, reifiedArgs, type);
+            this.typeVars = typeVars;
         }
-        if (type instanceof AnnotatedTypeVariable) {
-            return getTypeArgument(((TypeVariable<?>) type.getType()).getName());
-        }
-        if (type instanceof AnnotatedWildcardType) {
-            AnnotatedWildcardType wildcardType = (AnnotatedWildcardType) type;
 
-            return reify(wildcardType.getAnnotatedUpperBounds()[0]);
+        @Override
+        public @NonNull ReifiedType resolveTypeVariable(@NonNull String varName) {
+            for (int n = 0; n < typeVars.length; n++) {
+                if (typeVars[n].getName().equals(varName)) {
+                    return type.argumentAt(n);
+                }
+            }
+            return fallback.resolveTypeVariable(varName);
         }
-        if (type instanceof AnnotatedArrayType) {
-            AnnotatedArrayType arrayType = (AnnotatedArrayType) type;
 
-            // Use the component type as the source of annotations - discard annotations on the array
-            AnnotatedType annotatedComponent = arrayType.getAnnotatedGenericComponentType();
-            ReifiedType.Annotated reifiedComponent = reify(annotatedComponent);
-            return new ReifiedType.Annotated(
-                    ArrayType.arrayType(reifiedComponent.rawType()),
-                    reifiedComponent.arguments(),
-                    annotatedComponent
-            );
+        @Override
+        public String toString() {
+            return getClass().getSimpleName() + '{' + type + '}';
         }
-        Type rawType = type.getType();
-        if (rawType instanceof Class) {
-            return new ReifiedType.Annotated((Class<?>) rawType, EMPTY_ARRAY, type);
-        }
-        throw new IllegalStateException("Unable to reify type " + type + " within a method of " + parent);
     }
 }

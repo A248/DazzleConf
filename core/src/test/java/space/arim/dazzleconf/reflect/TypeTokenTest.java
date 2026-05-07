@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -34,14 +34,14 @@ public class TypeTokenTest {
     public void equality() throws NoSuchMethodException {
         EqualsVerifier
                 .forClass(TypeToken.class)
-                .withPrefabValues(ReifiedType[].class, ReifiedType.Annotated.EMPTY_ARRAY, new ReifiedType.Annotated[] {ReifiedType.Annotated.unannotated(void.class)})
+                .withPrefabValues(ReifiedType[].class, new ReifiedType[0], new ReifiedType[] {ReifiedType.rawUnannotated(Object.class)})
                 .withPrefabValues(AnnotatedElement.class, getClass().getConstructor(), getClass().getMethod("equality"))
                 .verify();
     }
 
     @Test
     public void toStringTest() {
-        ReifiedType.Annotated type = ReifiedType.Annotated.unannotated(getClass());
+        ReifiedType type = ReifiedType.rawUnannotated(getClass());
         assertTrue(new TypeToken<>(type).toString().contains(type.toString()));
     }
 }

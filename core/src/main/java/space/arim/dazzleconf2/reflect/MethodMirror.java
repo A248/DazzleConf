@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -54,7 +54,7 @@ public interface MethodMirror {
      * @param reifiedType the reified type being walked
      * @return the type walker
      */
-    @NonNull TypeWalker typeWalker(ReifiedType.@NonNull Annotated reifiedType);
+    @NonNull TypeWalker typeWalker(@NonNull ReifiedType reifiedType);
 
     /**
      * Controller for accessing the reflected methods of a given type
@@ -67,7 +67,7 @@ public interface MethodMirror {
          *
          * @return the type
          */
-        ReifiedType.@NonNull Annotated getEnclosingType();
+        @NonNull ReifiedType getEnclosingType();
 
         /**
          * Gets all accessible, non-inherited, instance methods declared in this type.

@@ -178,7 +178,7 @@ final class DefinitionScan {
                     boolean optional = methodId.returnType().rawType().equals(Optional.class);
 
                     // Find the target type, unpacking Optional if necessary
-                    ReifiedType.Annotated typeRequested;
+                    ReifiedType typeRequested;
                     if (optional) {
                         typeRequested = methodId.returnType().argumentAt(0);
                     } else {

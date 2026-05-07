@@ -91,7 +91,7 @@ final class Definition<C> implements ConfigurationDefinition<C> {
         return new Layout() {
 
             @Override
-            public ReifiedType.@NonNull Annotated getReifiedType() {
+            public @NonNull ReifiedType getReifiedType() {
                 return configType.getReifiedType();
             }
 

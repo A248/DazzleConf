@@ -43,7 +43,7 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
         Class<?> rawType = typeToken.getRawType();
         if (rawType.equals(primitiveType()) || rawType.equals(boxedType())) {
-            RANGE_ANNOTE rangeAnnote = typeToken.getReifiedType().getAnnotation(rangeAnnotation());
+            RANGE_ANNOTE rangeAnnote = typeToken.getReifiedType().annotations().getOne(rangeAnnotation());
             @SuppressWarnings("unchecked")
             Agent<V> casted = (Agent<V>) new AgentImpl(rangeAnnote);
             return casted;
@@ -81,9 +81,9 @@ abstract class BaseNumberLiaison<TYPE extends Number, DEF_ANNOTE extends Annotat
 
     private final class AgentImpl implements Agent<TYPE> {
 
-        private final RANGE_ANNOTE rangeAnnote;
+        private final @Nullable RANGE_ANNOTE rangeAnnote;
 
-        private AgentImpl(RANGE_ANNOTE rangeAnnote) {
+        private AgentImpl(@Nullable RANGE_ANNOTE rangeAnnote) {
             this.rangeAnnote = rangeAnnote;
         }
 
