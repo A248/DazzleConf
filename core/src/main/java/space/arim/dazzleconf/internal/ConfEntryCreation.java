@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -84,9 +84,9 @@ class ConfEntryCreation {
 			String confKeyValue = confKey.value();
 			if (!reader.options.dottedPathInConfKey() && confKeyValue.contains(".")) {
 				throw new IllDefinedConfigException(
-						"Using dotted key paths in @ConfKey is deprecated disabled by defalt in DazzleConf 1.3.0." +
-								"Please see the setting ConfigurationOptions.Builder#setDottedPathInConfKey if you" +
-								"need to restore compatibility."
+						"Using dotted key paths in @ConfKey is deprecated and disabled by default in DazzleConf 1.3.0." +
+								" Please use the setting ConfigurationOptions.Builder#setDottedPathInConfKey if you" +
+								" need to restore compatibility."
 				);
 			}
 			return confKeyValue;

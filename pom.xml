@@ -36,15 +36,14 @@
 	
 	<developers>
 		<developer>
-			<id>anandbeh</id>
-			<name>Anand Beh</name>
+			<id>a248</id>
+			<name>A248</name>
 			<email>a248-dev@tuta.io</email>
 			<url>https://github.com/A248</url>
 			<roles>
 				<role>creator</role>
 				<role>developer</role>
 			</roles>
-			<timezone>America/New_York</timezone>
 		</developer>
 	</developers>
 
