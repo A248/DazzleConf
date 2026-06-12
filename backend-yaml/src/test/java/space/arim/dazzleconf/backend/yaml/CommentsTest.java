@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class CommentsTest {
 
     private final StringRoot stringRoot = new StringRoot("");
-    private final YamlBackend yamlBackend = new YamlBackend(stringRoot);
+    private final YamlBackend backend = new YamlBackend(stringRoot);
     private final ErrorContext.Source errorSource = new TestingErrorSource().makeErrorSource();
 
     @BeforeEach
@@ -48,7 +48,7 @@ public class CommentsTest {
     @Test
     public void writeSimpleHeader() {
         CommentData header = CommentData.empty().setAt(CommentLocation.ABOVE, "Hello");
-        yamlBackend.write(new Backend.Document() {
+        backend.write(new Backend.Document() {
             @Override
             public @NonNull CommentData comments() {
                 return header;
@@ -70,7 +70,7 @@ public class CommentsTest {
                 .setAt(CommentLocation.ABOVE, "Hello", "There", "World")
                 .setAt(CommentLocation.INLINE, "INLINE ME WHERE?")
                 .setAt(CommentLocation.BELOW, "Below");
-        yamlBackend.write(new Backend.Document() {
+        backend.write(new Backend.Document() {
             @Override
             public @NonNull CommentData comments() {
                 return header;
@@ -91,7 +91,7 @@ public class CommentsTest {
         CommentData header = CommentData.empty()
                 .setAt(CommentLocation.ABOVE, "Hello", "There", "World")
                 .setAt(CommentLocation.BELOW, "Below");
-        yamlBackend.write(new Backend.Document() {
+        backend.write(new Backend.Document() {
             @Override
             public @NonNull CommentData comments() {
                 return header;
@@ -106,7 +106,7 @@ public class CommentsTest {
         });
         assertEquals("# Hello\n# There\n# World\n\noption: value\n\n# Below", stringRoot.readString().trim());
         assertEquals(
-                header, yamlBackend.read(errorSource).getOrThrow().comments(),
+                header, backend.read(errorSource).getOrThrow().comments(),
                 "Actual document: " + stringRoot.readString().trim()
         );
     }
@@ -117,7 +117,7 @@ public class CommentsTest {
                 .setAt(CommentLocation.ABOVE, "Watching you")
                 .setAt(CommentLocation.INLINE, "From")
                 .setAt(CommentLocation.BELOW, "Below!", "Haha");
-        yamlBackend.write(new Backend.Document() {
+        backend.write(new Backend.Document() {
             @Override
             public @NonNull CommentData comments() {
                 return CommentData.empty();
@@ -158,7 +158,7 @@ public class CommentsTest {
                 another: false""");
         CommentData commentsOnEntry;
         {
-            Backend.Document document = yamlBackend.read(errorSource).getOrThrow();
+            Backend.Document document = backend.read(errorSource).getOrThrow();
             assertNotNull(document);
             DataTree dataTree = document.data();
             DataEntry subEntry = dataTree.get("sub");
@@ -187,7 +187,7 @@ public class CommentsTest {
                 .setAt(CommentLocation.ABOVE, "On top", "Another on top")
                 .setAt(CommentLocation.INLINE, "Beside: where will it go?")
                 .setAt(CommentLocation.BELOW, "Below!");
-        yamlBackend.write(new Backend.Document() {
+        backend.write(new Backend.Document() {
             @Override
             public @NonNull CommentData comments() {
                 return CommentData.empty();
@@ -244,7 +244,7 @@ public class CommentsTest {
         CommentData commentsOnEntry;
         CommentData commentsOnSection;
         {
-            Backend.Document document = yamlBackend.read(errorSource).getOrThrow();
+            Backend.Document document = backend.read(errorSource).getOrThrow();
             assertNotNull(document);
             DataTree dataTree = document.data();
             DataEntry subEntry = dataTree.get("sub");
