@@ -131,12 +131,12 @@ The `ConfigurationSorter` interface has been removed. 1.x used this interface to
 
 In 2.x, we are aiming to do something better: maintain order at every step of the way, so that sorting later is unnecessary. However, this is a difficult effort. Thus, order is still something that version 2.0 is working on:
 
+* The reflection mechanism needs to provide consistent order. By default, this is `Class.getDeclaredMethods()`, which has undefined order. However, we have made the reflection mechanism swappable (ConfigurationBuilder#instantiator), so you could theoretically override this to provide order for returned methods.
 * The backend (YAML, HOCON, TOML) needs to provide consistent order.
   * YAML reliably preserves order both ways (reading + writing).
   * HOCON also preserves order while writing and reading. This is implemented in a semi-hacky (but stable) way, so please open an issue if you found any problems.
   * TOML does not (PRs welcome).
-* The reflection mechanism needs to provide consistent order. By default, this is `Class.getDeclaredMethods()`, which has undefined order. However, we have made the reflection mechanism swappable (ConfigurationBuilder#instantiator), so you could theoretically override this to provide order for returned methods.
 
-Thus, while `ConfigurationSorter` doesn't exist anymore, you could provide your own ordering by ensuring 1) you use YAML 2) you override the `Instantiator` used to scan configuration interfaces.
+Thus, while `ConfigurationSorter` doesn't exist anymore, you could provide your own ordering by ensuring 1) you use YAML or Hocon 2) you override the `Instantiator` used to scan configuration interfaces.
 
 Please see the class javadoc of 2.0's `Configuration` for more details on ordering.
