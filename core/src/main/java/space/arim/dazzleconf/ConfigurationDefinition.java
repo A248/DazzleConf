@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -74,7 +74,7 @@ public interface ConfigurationDefinition<C> {
          *
          * @return the type of the configuration interface
          */
-        ReifiedType.@NonNull Annotated getReifiedType();
+        @NonNull ReifiedType getReifiedType();
 
         /**
          * Gets the top level comments on the configuration interface.

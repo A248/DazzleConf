@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -24,6 +24,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.api.function.ThrowingSupplier;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf.engine.liaison.IntegerRange;
@@ -36,7 +38,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static space.arim.dazzleconf.Utilities.assertEqualsBothWays;
 import static space.arim.dazzleconf.Utilities.assertNotEqualsBothWays;
-import static space.arim.dazzleconf.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
+import static space.arim.dazzleconf.reflect.ReifiedType.EMPTY_ARRAY;
+import static space.arim.dazzleconf.reflect.ReifiedType.rawUnannotated;
 
 @ExtendWith(MockitoExtension.class)
 public class ReifiedTypeTest {
@@ -51,13 +54,13 @@ public class ReifiedTypeTest {
     private final Class<?> type = listClass;
     private final ReifiedType[] params = new ReifiedType[] {
             new ReifiedType(mapClass, new ReifiedType[] {
-                    new ReifiedType(stringClass, EMPTY_ARRAY), new ReifiedType(objectClass, EMPTY_ARRAY)
-            })
+                    ReifiedType.rawUnannotated(stringClass), ReifiedType.rawUnannotated(objectClass)
+            }, ReifiedAnnotations.empty())
     };
 
     @Test
     public void construct() {
-        ReifiedType sample = new ReifiedType(type, params);
+        ReifiedType sample = new ReifiedType(type, params, ReifiedAnnotations.empty());
         assertEquals(type, sample.rawType());
         assertArrayEquals(params, sample.arguments());
         assertEquals(1, sample.argumentCount());
@@ -66,19 +69,19 @@ public class ReifiedTypeTest {
 
     @Test
     public void equality() {
-        ReifiedType sample = new ReifiedType(type, params);
+        ReifiedType sample = new ReifiedType(type, params, ReifiedAnnotations.empty());
         assertEqualsBothWays(sample, sample);
-        assertEqualsBothWays(new ReifiedType(type, params), sample);
-        assertNotEqualsBothWays(new ReifiedType(type, EMPTY_ARRAY), sample);
+        assertEqualsBothWays(new ReifiedType(type, params, ReifiedAnnotations.empty()), sample);
+        assertNotEqualsBothWays(new ReifiedType(type, EMPTY_ARRAY, ReifiedAnnotations.empty()), sample);
         assertEqualsBothWays(
-                ReifiedType.Annotated.unannotated(objectClass),
+                ReifiedType.rawUnannotated(objectClass),
                 sample.argumentAt(0).argumentAt(1)
         );
     }
 
     @Test
     public void toStringTest() {
-        ReifiedType sample = new ReifiedType(type, params);
+        ReifiedType sample = new ReifiedType(type, params, ReifiedAnnotations.empty());
         assertTrue(sample.toString().contains("List"));
         assertTrue(sample.toString().contains("Map"));
     }
@@ -86,10 +89,8 @@ public class ReifiedTypeTest {
     @Nested
     public class AnnotatedTest {
 
-        private final Class<Nullable> nullableClass = Nullable.class;
-        private final AnnotatedElement annotatedNullable = ReifiedTypeTest.AnnotatedTest.class.getDeclaredMethod("annotatedNullable").getAnnotatedReturnType();
-        private final Class<NonNull> nonNullClass = NonNull.class;
-        private final AnnotatedElement annotatedNonNull = ReifiedTypeTest.AnnotatedTest.class.getDeclaredMethod("annotatedNonNull").getAnnotatedReturnType();
+        private final ReifiedAnnotations annotatedNullable = ReifiedAnnotations.computeFrom(ReifiedTypeTest.AnnotatedTest.class.getDeclaredMethod("annotatedNullable").getAnnotatedReturnType());
+        private final ReifiedAnnotations annotatedNonNull = ReifiedAnnotations.computeFrom(ReifiedTypeTest.AnnotatedTest.class.getDeclaredMethod("annotatedNonNull").getAnnotatedReturnType());
 
         @Nullable Object annotatedNullable() { return null; }
         @NonNull Object annotatedNonNull() { return new Object(); }
@@ -97,49 +98,93 @@ public class ReifiedTypeTest {
 
         // @Nullable List<Map<String, @NonNull Object>>
 
-        private final ReifiedType.Annotated[] annotatedParams = new ReifiedType.Annotated[] {
-                new ReifiedType.Annotated(mapClass, new ReifiedType.Annotated[] {
-                        ReifiedType.Annotated.unannotated(stringClass),
-                        new ReifiedType.Annotated(objectClass, EMPTY_ARRAY, annotatedNonNull)
-                }, ReifiedType.Annotated.unannotated())
+        private final ReifiedType[] annotatedParams = new ReifiedType[] {
+                new ReifiedType(mapClass, new ReifiedType[] {
+                        ReifiedType.rawUnannotated(stringClass),
+                        new ReifiedType(objectClass, EMPTY_ARRAY, annotatedNonNull)
+                }, ReifiedAnnotations.empty())
         };
 
         @Test
         public void annotations(@Mock AnnotatedElement annotations) {
-            ReifiedType.Annotated sample = new ReifiedType.Annotated(type, annotatedParams, annotatedNullable);
-            assertTrue(sample.isAnnotationPresent(Nullable.class));
-            assertFalse(sample.isAnnotationPresent(IntegerRange.class));
-            assertFalse(sample.isAnnotationPresent(NonNull.class)); // Even though it's present within an argument
-            assertNotNull(sample.getAnnotation(Nullable.class));
-            assertNull(sample.getAnnotation(NonNull.class));
-            assertArrayEquals(new Annotation[0], sample.getAnnotationsByType(NonNull.class));
-            assertEquals(1, sample.getAnnotationsByType(Nullable.class).length);
-            assertEquals(1, sample.getAnnotations().length);
-            assertNotNull(sample.getDeclaredAnnotation(Nullable.class));
-            assertNull(sample.getDeclaredAnnotation(NonNull.class));
-            assertArrayEquals(new Annotation[0], sample.getDeclaredAnnotationsByType(NonNull.class));
-            assertEquals(1, sample.getDeclaredAnnotationsByType(Nullable.class).length);
-            assertEquals(1, sample.getDeclaredAnnotations().length);
+            ReifiedType sample = new ReifiedType(type, annotatedParams, annotatedNullable);
+            assertTrue(sample.annotations().hasAny(Nullable.class));
+            assertFalse(sample.annotations().hasAny(IntegerRange.class));
+            assertFalse(sample.annotations().hasAny(NonNull.class)); // Even though it's present within an argument
+            assertNotNull(sample.annotations().getOne(Nullable.class));
+            assertNull(sample.annotations().getOne(NonNull.class));
+            assertArrayEquals(new Annotation[0], sample.annotations().getAll(NonNull.class));
+            assertEquals(1, sample.annotations().getAll(Nullable.class).length);
         }
 
         @Test
         public void equality() {
-            ReifiedType.Annotated onlyArgsAnnotated = new ReifiedType.Annotated(type, annotatedParams, ReifiedType.Annotated.unannotated());
+            ReifiedType onlyArgsAnnotated = new ReifiedType(type, annotatedParams, ReifiedAnnotations.empty());
             assertEqualsBothWays(onlyArgsAnnotated, onlyArgsAnnotated);
-            assertEqualsBothWays(new ReifiedType.Annotated(type, annotatedParams, ReifiedType.Annotated.unannotated()), onlyArgsAnnotated);
-            assertNotEqualsBothWays(new ReifiedType(type, params), onlyArgsAnnotated);
+            assertEqualsBothWays(new ReifiedType(type, annotatedParams, ReifiedAnnotations.empty()), onlyArgsAnnotated);
+            assertNotEqualsBothWays(new ReifiedType(type, params, ReifiedAnnotations.empty()), onlyArgsAnnotated);
 
-            ReifiedType.Annotated sample = new ReifiedType.Annotated(type, annotatedParams, annotatedNullable);
+            ReifiedType sample = new ReifiedType(type, annotatedParams, annotatedNullable);
             assertEqualsBothWays(sample, sample);
-            assertEqualsBothWays(new ReifiedType.Annotated(type, annotatedParams, annotatedNullable), sample);
-            assertNotEqualsBothWays(new ReifiedType(type, params), sample);
+            assertEqualsBothWays(new ReifiedType(type, annotatedParams, annotatedNullable), sample);
+            assertNotEqualsBothWays(new ReifiedType(type, params, ReifiedAnnotations.empty()), sample);
             assertNotEqualsBothWays(onlyArgsAnnotated, sample);
         }
 
         @Test
         public void toStringTest() {
-            ReifiedType sample = new ReifiedType.Annotated(type, annotatedParams, annotatedNullable);
+            ReifiedType sample = new ReifiedType(type, annotatedParams, annotatedNullable);
             assertTrue(sample.toString().contains("Nullable"));
+        }
+    }
+
+    @Nested
+    public class ConstructionTest {
+
+        private static void goodCtor(ThrowingSupplier<ReifiedType> supplier) {
+            ReifiedType reifiedType = assertDoesNotThrow(supplier);
+            assertNotNull(reifiedType);
+        }
+
+        private static void badCtor(Executable supplier) {
+            assertThrows(IllegalArgumentException.class, supplier);
+        }
+
+        @Test
+        public void argumentNumberMatch() {
+            goodCtor(() -> ReifiedType.of(Map.class, ReifiedAnnotations.empty(), rawUnannotated(String.class), rawUnannotated(Object.class)));
+            badCtor(() -> ReifiedType.of(Map.class, ReifiedAnnotations.empty(), rawUnannotated(String.class)));
+            goodCtor(() -> ReifiedType.of(Map.class, ReifiedAnnotations.empty()));
+            assertEqualsBothWays(rawUnannotated(Map.class), ReifiedType.of(Map.class, ReifiedAnnotations.empty()));
+        }
+
+        static class WackyBounds<T1 extends RuntimeException, T2 extends T1, T3 extends CharSequence> { }
+
+        @Test
+        public void satisfyBounds() {
+            goodCtor(() -> ReifiedType.of(WackyBounds.class, ReifiedAnnotations.empty(),
+                    rawUnannotated(IllegalArgumentException.class), rawUnannotated(IllegalArgumentException.class), rawUnannotated(String.class)));
+            // T1 must extend RuntimeException
+            badCtor(() -> ReifiedType.of(WackyBounds.class, ReifiedAnnotations.empty(),
+                    rawUnannotated(Exception.class), rawUnannotated(IllegalArgumentException.class), rawUnannotated(String.class)));
+            goodCtor(() -> ReifiedType.of(WackyBounds.class, ReifiedAnnotations.empty(),
+                    rawUnannotated(RuntimeException.class), rawUnannotated(IllegalArgumentException.class), rawUnannotated(String.class)));
+            // T2 also has erased bound of RuntimeException (T1 extension requirement not enforced)
+            badCtor(() -> ReifiedType.of(WackyBounds.class, ReifiedAnnotations.empty(),
+                    rawUnannotated(IllegalArgumentException.class), rawUnannotated(Exception.class), rawUnannotated(String.class)));
+            goodCtor(() -> ReifiedType.of(WackyBounds.class, ReifiedAnnotations.empty(),
+                    rawUnannotated(IllegalArgumentException.class), rawUnannotated(RuntimeException.class), rawUnannotated(String.class)));
+            // T3 interface bound erases to Object
+            goodCtor(() -> ReifiedType.of(WackyBounds.class, ReifiedAnnotations.empty(),
+                    rawUnannotated(IllegalArgumentException.class), rawUnannotated(IllegalArgumentException.class), rawUnannotated(CharSequence.class)));
+            goodCtor(() -> ReifiedType.of(WackyBounds.class, ReifiedAnnotations.empty(),
+                    rawUnannotated(IllegalArgumentException.class), rawUnannotated(IllegalArgumentException.class), rawUnannotated(Object.class)));
+
+            // Disallow TOCTOU
+            ReifiedType[] payload = new ReifiedType[] {rawUnannotated(IllegalArgumentException.class), rawUnannotated(IllegalArgumentException.class), rawUnannotated(String.class)};
+            ReifiedType target = ReifiedType.of(WackyBounds.class, ReifiedAnnotations.empty(), payload);
+            payload[0] = rawUnannotated(Object.class);
+            assertEquals(IllegalArgumentException.class, target.argumentAt(0).rawType());
         }
     }
 }

@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -50,12 +50,12 @@ import java.util.Objects;
  * <p>
  * <b>Keying and Usage</b>
  * <p>
- * This class doubles as an immutable store of a single {@link ReifiedType.Annotated}. This class represents that type
+ * This class doubles as an immutable store of a single {@link ReifiedType}. This class represents that type
  * and can be thought of as a higher-level wrapper for it. It contains that same information at runtime, while also
  * adding the source-level variable {@code V}.
  * <p>
  * Thus, in addition to extracting information upon subclass construction, this class can be used like any other POJO.
- * Callers can use the trusted constructor {@link TypeToken#TypeToken(ReifiedType.Annotated)}, and they are expected to
+ * Callers can use the trusted constructor {@link TypeToken#TypeToken(ReifiedType)}, and they are expected to
  * choose an appropriate type parameter based on their usage of this class.
  * <p>
  * Equality and hash code are defined based on the {@code ReifiedType.Annotated} this token represents. Subclases
@@ -66,7 +66,7 @@ import java.util.Objects;
  */
 public class TypeToken<V> {
 
-    private final ReifiedType.@NonNull Annotated reifiedType;
+    private final @NonNull ReifiedType reifiedType;
 
     /**
      * Creates from a reified type.
@@ -75,7 +75,7 @@ public class TypeToken<V> {
      *
      * @param reifiedType a reified type
      */
-    public TypeToken(ReifiedType.@NonNull Annotated reifiedType) {
+    public TypeToken(@NonNull ReifiedType reifiedType) {
         this.reifiedType = Objects.requireNonNull(reifiedType);
     }
 
@@ -95,16 +95,17 @@ public class TypeToken<V> {
      * @throws DeveloperMistakeException if type variables were used in the type declaration
      */
     protected TypeToken() {
-        AnnotatedType typeFromSubclass = extractTypeFromSubclass();
-        this.reifiedType = new GenericContext(ReifiedType.Annotated.unannotated(Object.class)) {
+        class EmptyGenericContext implements GenericContext {
 
             @Override
-            ReifiedType.Annotated unknownVariable(String varName) {
+            public @NonNull ReifiedType resolveTypeVariable(@NonNull String varName) {
                 throw new DeveloperMistakeException(
                         "Type variables are rejected in TypeToken construction. Found variable '" + varName + '\''
                 );
             }
-        }.reify(typeFromSubclass);
+        }
+        AnnotatedType typeFromSubclass = extractTypeFromSubclass();
+        this.reifiedType = ReifiedType.computeFrom(typeFromSubclass, new EmptyGenericContext());
     }
 
     /**
@@ -145,7 +146,7 @@ public class TypeToken<V> {
      * Gets the annotated reified type represented by this type token
      * @return the annotated reified type
      */
-    public final ReifiedType.@NonNull Annotated getReifiedType() {
+    public final @NonNull ReifiedType getReifiedType() {
         return reifiedType;
     }
 

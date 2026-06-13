@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -86,7 +86,7 @@ public final class MapLiaison implements TypeLiaison {
     @SideEffectFree
     public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
         if (typeToken.getRawType().equals(Map.class)) {
-            ReifiedType.Annotated reifiedType = typeToken.getReifiedType();
+            ReifiedType reifiedType = typeToken.getReifiedType();
             TypeToken<?> keyToken = new TypeToken<>(reifiedType.argumentAt(0));
             TypeToken<?> valueToken = new TypeToken<>(reifiedType.argumentAt(1));
             Agent<?> agentImpl = new AgentImpl<>(

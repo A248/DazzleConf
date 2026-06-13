@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -178,7 +178,7 @@ final class DefinitionScan {
                     boolean optional = methodId.returnType().rawType().equals(Optional.class);
 
                     // Find the target type, unpacking Optional if necessary
-                    ReifiedType.Annotated typeRequested;
+                    ReifiedType typeRequested;
                     if (optional) {
                         typeRequested = methodId.returnType().argumentAt(0);
                     } else {

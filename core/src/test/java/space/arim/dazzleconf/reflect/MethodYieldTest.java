@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MethodYieldTest {
 
-    private final MethodId sample = new MethodId("sample", ReifiedType.Annotated.unannotated(String.class), new ReifiedType[0], false);
+    private final MethodId sample = new MethodId("sample", ReifiedType.rawUnannotated(String.class), new ReifiedType[0], false);
 
     public String sample() {
         return "sample";
@@ -102,8 +102,8 @@ public class MethodYieldTest {
     @Test
     public void equality() {
         EqualsVerifier.forClass(MethodYield.class)
-                .withPrefabValues(MethodId.class, sample, new MethodId("equality", ReifiedType.Annotated.unannotated(void.class), new ReifiedType[0], true))
-                .withPrefabValues(ReifiedType[].class, ReifiedType.Annotated.EMPTY_ARRAY, new ReifiedType.Annotated[] {ReifiedType.Annotated.unannotated(void.class)})
+                .withPrefabValues(MethodId.class, sample, new MethodId("equality", ReifiedType.rawUnannotated(void.class), new ReifiedType[0], true))
+                .withPrefabValues(ReifiedType[].class, ReifiedType.EMPTY_ARRAY, new ReifiedType[] {ReifiedType.rawUnannotated(void.class)})
                 .verify();
     }
 

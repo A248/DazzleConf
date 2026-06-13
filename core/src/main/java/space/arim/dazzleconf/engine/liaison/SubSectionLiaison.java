@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -53,7 +53,7 @@ public final class SubSectionLiaison implements TypeLiaison {
     @Override
     @SideEffectFree
     public <V> @Nullable Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
-        if (typeToken.getReifiedType().getAnnotation(SubSection.class) != null) {
+        if (typeToken.getReifiedType().annotations().hasAny(SubSection.class)) {
             return new SectionAgent<>(handshake.getConfiguration(typeToken));
         }
         return null;

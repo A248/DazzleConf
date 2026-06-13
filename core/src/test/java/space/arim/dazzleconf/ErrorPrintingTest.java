@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -265,7 +265,7 @@ public class ErrorPrintingTest {
     record SortedMethodMirror(MethodMirror methodMirror) implements MethodMirror {
 
         @Override
-        public @NonNull TypeWalker typeWalker(ReifiedType.@NonNull Annotated reifiedType) {
+        public @NonNull TypeWalker typeWalker(@NonNull ReifiedType reifiedType) {
             return new SortedTypeWalker(methodMirror.typeWalker(reifiedType));
         }
 
@@ -278,7 +278,7 @@ public class ErrorPrintingTest {
     record SortedTypeWalker(MethodMirror.TypeWalker delegate) implements MethodMirror.TypeWalker {
 
         @Override
-        public ReifiedType.@NonNull Annotated getEnclosingType() {
+        public @NonNull ReifiedType getEnclosingType() {
             return delegate.getEnclosingType();
         }
 

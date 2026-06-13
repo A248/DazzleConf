@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -20,41 +20,35 @@
 package space.arim.dazzleconf.reflect;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.TypeVariable;
 import java.util.Arrays;
 import java.util.Objects;
 
-import static space.arim.dazzleconf.reflect.ReifiedType.Annotated.EMPTY_ARRAY;
-
 /**
- * A possibly generic type, with its arguments fully specified.
+ * A generic aware type, with its arguments fully specified.
  * <p>
  * This type is a runtime stand-in for fully reified generic information. Given that Java discards generic type data
  * at runtime, this type exists to retain that data. Lastly, while this class itself contains the raw generic data, it
  * is designed for low-level usage. See {@link TypeToken} for an ergonomic high-level version.
  * <p>
- * This class should be considered sealed and not subclassed. Equality is defined for any two reified types based
- * on whether the raw type and arguments match, or annotations if {@link ReifiedType.Annotated} is used.
- * <p>
- * This class and its subtype {@code ReifiedType.Annotated} are both immutable.
+ * This class is immutable.
  */
-// TODO Make this class sealed in a versions/17 multi-release directory
 public class ReifiedType {
 
     private final @NonNull Class<?> rawType;
     private final @NonNull ReifiedType @NonNull [] arguments;
+    private final @NonNull ReifiedAnnotations annotations;
 
-    /**
-     * Builds from nonnull input arguments.
-     *
-     * @param rawType the raw type
-     * @param arguments the arguments, which are copied to ensure immutability
-     */
-    public ReifiedType(@NonNull Class<?> rawType, @NonNull ReifiedType @NonNull [] arguments) {
+    static final ReifiedType[] EMPTY_ARRAY = new ReifiedType[0];
+
+    ReifiedType(@NonNull Class<?> rawType, @NonNull ReifiedType @NonNull [] arguments,
+                @NonNull ReifiedAnnotations annotations) {
         this.rawType = Objects.requireNonNull(rawType, "rawType");
-        this.arguments = arguments == EMPTY_ARRAY ? EMPTY_ARRAY : arguments.clone();
+        this.arguments = Objects.requireNonNull(arguments, "arguments");
+        this.annotations = Objects.requireNonNull(annotations, "annotations");
     }
 
     /**
@@ -94,40 +88,45 @@ public class ReifiedType {
         return arguments.clone();
     }
 
+    /**
+     * Gets the annotations on this type
+     *
+     * @return the annotations
+     */
+    public @NonNull ReifiedAnnotations annotations() {
+        return annotations;
+    }
+
     @Override
-    public final boolean equals(Object o) {
+    public final boolean equals(@Nullable Object o) {
         if (!(o instanceof ReifiedType)) return false;
 
         ReifiedType that = (ReifiedType) o;
-        return rawType.equals(that.rawType) && Arrays.equals(arguments, that.arguments) && annotationsEq(that);
-    }
-
-    boolean annotationsEq(ReifiedType that) {
-        if (that instanceof ReifiedType.Annotated) {
-            return ((Annotated) that).annotations.getAnnotations().length == 0;
-        }
-        return true;
+        return rawType.equals(that.rawType) && Arrays.equals(arguments, that.arguments) &&
+                annotations.equals(that.annotations);
     }
 
     @Override
     public final int hashCode() {
         int result = rawType.hashCode();
         result = 31 * result + Arrays.hashCode(arguments);
+        result = 31 * result + annotations.hashCode();
         return result;
     }
 
     @Override
-    public final String toString() {
+    public final @NonNull String toString() {
         StringBuilder builder = new StringBuilder();
         toString(builder);
         return builder.toString();
     }
 
     void toString(StringBuilder builder) {
-        toString(builder, null);
-    }
-
-    void toString(StringBuilder builder, AnnotatedElement annotations) {
+        annotations.forEachKnownAnnote(annotation -> {
+            builder.append('@');
+            builder.append(annotation.annotationType().getName());
+            builder.append(' ');
+        });
         builder.append(rawType().getName());
         if (arguments.length != 0) {
             builder.append('<');
@@ -139,143 +138,86 @@ public class ReifiedType {
             }
             builder.append('>');
         }
-        if (annotations != null) {
-            for (Annotation annotation : annotations.getAnnotations()) {
-                builder.append('@');
-                builder.append(annotation.annotationType().getName());
-            }
-        }
     }
 
     /**
-     * Annotation capable extension to a reified type.
+     * Creates with the following values.
+     * <p>
+     * The number of arguments of the type must be appropriate to the type itself. For example, it is impossible to
+     * parameterize a {@code java.util.Map} with only one type argument. This factory function checks for type argument
+     * compatibility as follows:
+     * <ul>
+     *     <li>The number of type arguments must match the number of type variables on {@code rawType}</li>
+     *     <li>The raw types of the type arguments must extend the erased bounds of the type variables on {@code rawType}</li>
+     *     <li>If the number of type arguments is {@code 0}, the previous two checks are skipped and the returned value
+     *     represents a raw type.</li>
+     * </ul>
+     * If the above conditions are not satisfied, throws {@code IllegalArgumentException}.
+     *
+     * @param rawType the main type
+     * @param annotations the annotations on the type
+     * @param arguments its generic arguments
+     * @return the reified type
+     * @throws IllegalArgumentException if the reified arguments are not empty, but they are incompatible with the
+     * number or bounds of the type variables on {@code rawType}
      */
-    public static final class Annotated extends ReifiedType implements AnnotatedElement {
-
-        private final AnnotatedElement annotations;
-
-        /**
-         * A reusable empty array for this type
-         */
-        public static final ReifiedType.Annotated[] EMPTY_ARRAY = new ReifiedType.Annotated[0];
-
-        /**
-         * Creates from nonnull input arguments
-         * <p>
-         * The provided {@code AnnotatedElement} must be immutable; it should return consistent results for consistent
-         * calls.
-         *
-         * @param rawType the raw type
-         * @param arguments, which are copied to ensure immutability
-         * @param annotations the annotations source, which is trusted as immutable
-         */
-        public Annotated(@NonNull Class<?> rawType, ReifiedType.@NonNull Annotated @NonNull [] arguments,
-                         @NonNull AnnotatedElement annotations) {
-            super(rawType, arguments);
-            this.annotations = Objects.requireNonNull(annotations, "annotations");
-        }
-
-        /**
-         * Creates an unparameterized, unannotated reified type for the following raw class.
-         *
-         * @param rawType the raw type
-         * @return a {@code ReifiedType.Annotated} with no annotations and no generic arguments (if relevant) for the
-         * provided raw type
-         */
-        public static @NonNull Annotated unannotated(@NonNull Class<?> rawType) {
-            return new Annotated(rawType, EMPTY_ARRAY, void.class);
-        }
-
-        /**
-         * Gets a dummy annotated element, containing no annotations. This method is provided as a convenience.
-         *
-         * @return an unannotated {@code AnnotatedElement} object
-         */
-        public static AnnotatedElement unannotated() {
-            return void.class;
-        }
-
-        /**
-         * Gets the argument at a certain index
-         *
-         * @param index the index
-         * @return the argument at it
-         * @throws IndexOutOfBoundsException if the index is out of range
-         */
-        @Override
-        public ReifiedType.@NonNull Annotated argumentAt(int index) {
-            return (ReifiedType.Annotated) super.argumentAt(index);
-        }
-
-        /**
-         * Gets all the arguments
-         *
-         * @return a copy of the arguments
-         */
-        @Override
-        public ReifiedType.@NonNull Annotated @NonNull [] arguments() {
-            return (Annotated[]) super.arguments();
-        }
-
-        @Override
-        boolean annotationsEq(ReifiedType that) {
-            if (that instanceof Annotated) {
-                Annotated thatAnnotated = (Annotated) that;
-                // Check for equality of annotations, but ignore declaration order
-                Annotation[] ours = annotations.getAnnotations();
-                Annotation[] theirs = thatAnnotated.annotations.getAnnotations();
-                if (ours.length != theirs.length) {
-                    return false;
-                }
-                for (Annotation ourAnnote : ours) {
-                    Annotation theirAnnote = thatAnnotated.getAnnotation(ourAnnote.annotationType());
-                    if (!ourAnnote.equals(theirAnnote)) {
-                        return false;
-                    }
-                }
-                return true;
+    public static @NonNull ReifiedType of(@NonNull Class<?> rawType, @NonNull ReifiedAnnotations annotations,
+                                          @NonNull ReifiedType @NonNull ... arguments) {
+        if (arguments.length == 0) {
+            arguments = EMPTY_ARRAY;
+        } else {
+            /*
+            Preconditions:
+            1. Arguments are non-null and array non-null
+            2. They are compatible with the type variables in length
+            3. They are compatible with the type variables in erased bounds
+            4. Make sure to prevent TOCTOU attacks
+             */
+            TypeVariable<?>[] typeVariables = rawType.getTypeParameters();
+            if (arguments.length != typeVariables.length) { // 2
+                throw new IllegalArgumentException(
+                        "Argument number mismatch; " + rawType + " cannot be parameterized with " +
+                                arguments.length + " arguments"
+                );
             }
-            return annotations.getAnnotations().length == 0;
+            arguments = arguments.clone(); // 4
+            for (int n = 0; n < arguments.length; n++) {
+                Class<?> rawArg = arguments[n].rawType; // 1
+                Class<?> bound = GenericCompute.eraseType(typeVariables[n]);
+                if (!bound.isAssignableFrom(rawArg)) { // 3
+                    throw new IllegalArgumentException(
+                            "Argument bound mismatch; argument " + n + " (" + rawArg.getName() + ") on " + rawType +
+                                    " must satisfy the type variable bound of " + bound.getName()
+                    );
+                }
+            }
         }
+        return new ReifiedType(rawType, arguments, annotations);
+    }
 
-        @Override
-        void toString(StringBuilder builder) {
-            toString(builder, annotations);
-        }
+    /**
+     * Creates an unparameterized, unannotated reified type for the following class.
+     *
+     * @param rawType the raw type
+     * @return a reified type with no annotations and no generic arguments (if relevant) for the provided raw type
+     */
+    public static @NonNull ReifiedType rawUnannotated(@NonNull Class<?> rawType) {
+        return new ReifiedType(rawType, EMPTY_ARRAY, ReifiedAnnotations.empty());
+    }
 
-        @Override
-        public boolean isAnnotationPresent(@NonNull Class<? extends Annotation> annotationClass) {
-            return annotations.isAnnotationPresent(annotationClass);
-        }
-
-        @Override
-        public <T extends Annotation> T getAnnotation(@NonNull Class<T> annotationClass) {
-            return annotations.getAnnotation(annotationClass);
-        }
-
-        @Override
-        public Annotation @NonNull [] getAnnotations() {
-            return annotations.getAnnotations();
-        }
-
-        @Override
-        public <T extends Annotation> T @NonNull [] getAnnotationsByType(@NonNull Class<T> annotationClass) {
-            return annotations.getAnnotationsByType(annotationClass);
-        }
-
-        @Override
-        public <T extends Annotation> T getDeclaredAnnotation(@NonNull Class<T> annotationClass) {
-            return annotations.getDeclaredAnnotation(annotationClass);
-        }
-
-        @Override
-        public <T extends Annotation> T @NonNull [] getDeclaredAnnotationsByType(@NonNull Class<T> annotationClass) {
-            return annotations.getDeclaredAnnotationsByType(annotationClass);
-        }
-
-        @Override
-        public Annotation @NonNull [] getDeclaredAnnotations() {
-            return annotations.getDeclaredAnnotations();
-        }
+    /**
+     * Extracts a reified type based on its type variable context of usage.
+     *
+     * @param annotatedType the annotated type from the JDK API
+     * @param genericContext the generic context of type variables
+     * @return the reified type
+     * @throws IllegalStateException if the {@link java.lang.reflect.AnnotatedType} subclass is not recognized
+     * @throws RuntimeException any exceptions thrown by the {@link GenericContext} are thrown to the caller here
+     */
+    public static @NonNull ReifiedType computeFrom(@NonNull AnnotatedType annotatedType,
+                                                   @NonNull GenericContext genericContext) {
+        Objects.requireNonNull(genericContext, "genericContext");
+        Objects.requireNonNull(annotatedType, "annotatedType");
+        return new GenericCompute(genericContext).reify(annotatedType);
     }
 }

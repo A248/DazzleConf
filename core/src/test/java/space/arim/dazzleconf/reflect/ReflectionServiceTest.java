@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -596,7 +596,7 @@ public abstract class ReflectionServiceTest {
 
         @Test
         public void typeWalker() {
-            ReifiedType.Annotated baseType = new TypeToken<Base>() {}.getReifiedType();
+            ReifiedType baseType = new TypeToken<Base>() {}.getReifiedType();
             MethodMirror.TypeWalker baseWalker = methodMirror.typeWalker(baseType);
             assertEquals(baseType, baseWalker.getEnclosingType(), "Return correct getEnclosingType()");
             assertEquals(
@@ -606,13 +606,13 @@ public abstract class ReflectionServiceTest {
             );
             Set<MethodId> expectedData = Set.of(
                     new MethodId(
-                            "anotherCall", ReifiedType.Annotated.unannotated(void.class), new ReifiedType[0], false
+                            "anotherCall", ReifiedType.rawUnannotated(void.class), new ReifiedType[0], false
                     ),
                     new MethodId(
                             "giveBack", new TypeToken<Object>() {}.getReifiedType(), new ReifiedType[] {new TypeToken<Supplier<Object>>() {}.getReifiedType()}, true
                     ),
                     new MethodId(
-                            "checkReflection", ReifiedType.Annotated.unannotated(void.class), new ReifiedType[] {new TypeToken<Consumer<Object>>() {}.getReifiedType()}, true
+                            "checkReflection", ReifiedType.rawUnannotated(void.class), new ReifiedType[] {new TypeToken<Consumer<Object>>() {}.getReifiedType()}, true
                     ),
                     new MethodId(
                             "giveArray", new TypeToken<String[]>() {}.getReifiedType(), new ReifiedType[0], true
