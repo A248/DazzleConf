@@ -73,11 +73,11 @@ The same document can be reparsed to an instance of the configuration interface.
 
 We offer multiple configuration formats depending on your preference. Simply depend on the artifact matching the format you want.
 
-| Format | Reference                                                            | Artifact           | Comment Support           |
-|--------|----------------------------------------------------------------------|--------------------|---------------------------|
-| HOCON  | [HOCON.md](https://github.com/lightbend/config/blob/master/HOCON.md) | `dazzleconf-hocon` | ✅ Round-trip minus header |
-| TOML   | [TOML 1.0 spec](https://toml.io/en/v1.0.0)                           | `dazzleconf-toml`  | Writing only              |
-| YAML   | [YAML 1.2 spec](https://yaml.org/spec/1.2.2/)                        | `dazzleconf-yaml`  | ✅💯 Round-trip            |
+| Format | Reference                                                            | Artifact           | Comment support           | Comment locations    |
+|--------|----------------------------------------------------------------------|--------------------|---------------------------|----------------------|
+| HOCON  | [HOCON.md](https://github.com/lightbend/config/blob/master/HOCON.md) | `dazzleconf-hocon` | ✅ Round-trip minus header | Above                |
+| TOML   | [TOML 1.0 spec](https://toml.io/en/v1.0.0)                           | `dazzleconf-toml`  | ✅ Round-trip minus header | Above                |     
+| YAML   | [YAML 1.2 spec](https://yaml.org/spec/1.2.2/)                        | `dazzleconf-yaml`  | ✅💯 Round-trip            | Above, inline, below |
 
 Check out this page to get started using the library: [Getting started](docs/Getting-Started.md). The documentation has many examples such as with setting up a reloadable configuration, automatically updating the configuration with the latest keys, and more.
 

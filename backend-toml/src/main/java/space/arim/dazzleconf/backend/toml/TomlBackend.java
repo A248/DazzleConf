@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -21,6 +21,7 @@ package space.arim.dazzleconf.backend.toml;
 
 import io.github.wasabithumb.jtoml.JToml;
 import io.github.wasabithumb.jtoml.JTomlServiceImpl;
+import io.github.wasabithumb.jtoml.comment.Comment;
 import io.github.wasabithumb.jtoml.comment.CommentPosition;
 import io.github.wasabithumb.jtoml.comment.Comments;
 import io.github.wasabithumb.jtoml.document.TomlDocument;
@@ -34,6 +35,7 @@ import io.github.wasabithumb.jtoml.value.TomlValue;
 import io.github.wasabithumb.jtoml.value.array.TomlArray;
 import io.github.wasabithumb.jtoml.value.primitive.TomlPrimitive;
 import io.github.wasabithumb.jtoml.value.table.TomlTable;
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf.DeveloperMistakeException;
@@ -58,6 +60,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -69,9 +72,17 @@ import static space.arim.dazzleconf.backend.Printable.preBuilt;
  * <p>
  * <b>Comments</b>
  * <p>
- * This backend supports writing comments, but not reading them. Although the backing library (which is not exposed)
- * is capable of reading comments, it does not provide enough information to reconstitute the correct location of
- * previously written comments.
+ * This backend supports writing comments. It can support reading comments, but at the cost of disabling below and
+ * inline comments, as well as the document header and footer.
+ * <p>
+ * The challenge is that the backing TOML library does not provide enough information to reconstitute the correct
+ * location of previously written comments. The TOML library exposes an unordered document tree, and it sets comments
+ * on values within that tree. This means we must trust in the TOML library to read comments where it thinks they are
+ * located, which in practice is above the entry.
+ * <p>
+ * Ergo, round-trip preservation of TOML comments is only possible for comments above each entry. Users of this backend
+ * can choose whether to write all comments (always) or to read and write only the comments above each entry. The
+ * default is {@link TomlCommentMode#WRITE_ALWAYS}, which can be changed by using the {@link TomlBackend.Builder}.
  * <p>
  * <b>Types</b>
  * <p>
@@ -85,8 +96,23 @@ public final class TomlBackend implements Backend {
 
     private final ReadableRoot dataRoot;
     private final URL syntaxLinter;
+    private final TomlCommentMode commentMode;
 
     private final JToml jToml;
+
+    private TomlBackend(ReadableRoot dataRoot, Builder builder) {
+        this.dataRoot = Objects.requireNonNull(dataRoot);
+        this.syntaxLinter = syntaxLinterOrDefault(builder);
+        this.commentMode = builder.commentMode;
+
+        JTomlOptions jTomlOptions = JTomlOptions.builder()
+                .set(JTomlOption.READ_COMMENTS, commentMode == TomlCommentMode.ROUND_TRIP_ABOVE_ONLY)
+                .set(JTomlOption.WRITE_EMPTY_TABLES, true)
+                .set(JTomlOption.WRITE_COMMENTS, true)
+                .build();
+        // Skip service loading and construct the provider directly
+        jToml = new JTomlServiceImpl().createInstance(jTomlOptions);
+    }
 
     /**
      * Creates from a readable data root. For example, to load from a file:
@@ -101,17 +127,12 @@ public final class TomlBackend implements Backend {
      * @param dataRoot the data root from which to read and write
      */
     public TomlBackend(@NonNull ReadableRoot dataRoot) {
-        this.dataRoot = Objects.requireNonNull(dataRoot);
-        this.syntaxLinter = defaultSyntaxLinter();
+        this(dataRoot, new Builder());
+    }
 
-        JTomlOptions jTomlOptions = JTomlOptions.builder()
-                // TODO: Be able to read comments in a way that preserves round-tripping
-                .set(JTomlOption.READ_COMMENTS, false)
-                .set(JTomlOption.WRITE_EMPTY_TABLES, true)
-                .set(JTomlOption.WRITE_COMMENTS, true)
-                .build();
-        // Skip service loading and construct the provider directly
-        jToml = new JTomlServiceImpl().createInstance(jTomlOptions);
+    private static URL syntaxLinterOrDefault(Builder builder) {
+        URL syntaxLinter = builder.syntaxLinter;
+        return syntaxLinter == null ? defaultSyntaxLinter() : syntaxLinter;
     }
 
     private static URL defaultSyntaxLinter() {
@@ -119,6 +140,61 @@ public final class TomlBackend implements Backend {
             return new URI("https", "toolbox.helpch.at", "/validators/toml", null).toURL();
         } catch (URISyntaxException | MalformedURLException ex) {
             throw new AssertionError(ex);
+        }
+    }
+
+    /**
+     * Builder for a TOML backend. Allows setting additional options.
+     *
+     */
+    public static final class Builder {
+
+        private URL syntaxLinter;
+        private TomlCommentMode commentMode = TomlCommentMode.WRITE_ALWAYS;
+
+        /**
+         * Creates the builder
+         */
+        public Builder() {}
+
+        /**
+         * Sets the syntax linter used by the backend.
+         * <p>
+         * <b>This is an experimental method.</b> See the {@code @API} annotation.
+         * <p>
+         * The argument URL may be provided to users in the form of error messages. It should point to a live website
+         * where end users can paste and validate their configuration file's syntax.
+         *
+         * @param syntaxLinter the syntax linter
+         * @return this builder
+         */
+        @API(status = API.Status.EXPERIMENTAL)
+        public @NonNull Builder syntaxLinter(@NonNull URL syntaxLinter) {
+            this.syntaxLinter = Objects.requireNonNull(syntaxLinter, "syntaxLinter");
+            return this;
+        }
+
+        /**
+         * Sets the comment mode used by the backend.
+         * <p>
+         * See the variants of the enum for more information. Defaults to {@link TomlCommentMode#WRITE_ALWAYS}
+         *
+         * @param commentMode the comment mode
+         * @return this builder
+         */
+        public @NonNull Builder commentMode(@NonNull TomlCommentMode commentMode) {
+            this.commentMode = Objects.requireNonNull(commentMode, "commentMode");
+            return this;
+        }
+
+        /**
+         * Builds into a backend. This can be called as many times as needed.
+         *
+         * @param dataRoot the data root from which to read and write
+         * @return the backend
+         */
+        public @NonNull TomlBackend build(@NonNull ReadableRoot dataRoot) {
+            return new TomlBackend(dataRoot, this);
         }
     }
 
@@ -166,7 +242,7 @@ public final class TomlBackend implements Backend {
         });
     }
 
-    private static final class ReadToml {
+    private final class ReadToml {
 
         private final ArrayDeque<String> keyPathStack = new ArrayDeque<>();
         private final ErrorContext.Source errorSource;
@@ -238,14 +314,25 @@ public final class TomlBackend implements Backend {
             if (error != null) {
                 return null;
             }
-            return new DataEntry(value);
+            DataEntry entry = new DataEntry(value);
+            if (commentMode == TomlCommentMode.ROUND_TRIP_ABOVE_ONLY) {
+                List<Comment> tomlComments = tomlValue.comments().get(CommentPosition.PRE);
+                List<String> comments = new ArrayList<>(tomlComments.size());
+                for (Comment tomlComment : tomlComments) {
+                    comments.add(tomlComment.content());
+                }
+                entry = entry.withComments(CommentLocation.ABOVE, comments);
+            }
+            return entry;
         }
     }
 
     @Override
     public void write(@NonNull Document document) {
         TomlTable tomlTable = dataTreeToToml(document.data());
-        setComments(tomlTable, document.comments());
+        if (commentMode != TomlCommentMode.ROUND_TRIP_ABOVE_ONLY) {
+            setComments(tomlTable, document.comments());
+        }
         try {
             dataRoot.openWriter(writer -> {
                 jToml.write(writer, tomlTable);
@@ -332,7 +419,14 @@ public final class TomlBackend implements Backend {
         return new Meta() {
             @Override
             public boolean supportsComments(boolean documentLevel, boolean reading, @NonNull CommentLocation location) {
-                return !reading;
+                switch (commentMode) {
+                    case WRITE_ALWAYS:
+                        return !reading;
+                    case ROUND_TRIP_ABOVE_ONLY:
+                        return !documentLevel && location == CommentLocation.ABOVE;
+                    default:
+                        throw new IncompatibleClassChangeError("Unknown comment mode " + commentMode);
+                }
             }
 
             @Override

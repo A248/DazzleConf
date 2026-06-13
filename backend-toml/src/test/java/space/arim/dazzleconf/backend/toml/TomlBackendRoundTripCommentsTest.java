@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -17,25 +17,15 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.engine;
+package space.arim.dazzleconf.backend.toml;
 
-/**
- * Where comments are located.
- * <p>
- * Not all locations may be supported by the {@link space.arim.dazzleconf.backend.Backend} or its particular settings.
- * For example, the HOCON format only supports the {@code ABOVE} location.
- */
-public enum CommentLocation {
-    /**
-     * Above the entry
-     */
-    ABOVE,
-    /**
-     * Inline to the entry. For example, "key: value # comment" is a valid inline comment in YAML.
-     */
-    INLINE,
-    /**
-     * Below the entry
-     */
-    BELOW
+import space.arim.dazzleconf.backend.Backend;
+import space.arim.dazzleconf.backend.BackendTest;
+import space.arim.dazzleconf.backend.ReadableRoot;
+
+public class TomlBackendRoundTripCommentsTest extends BackendTest {
+    @Override
+    protected Backend createBackend(ReadableRoot dataRoot) {
+        return new TomlBackend.Builder().commentMode(TomlCommentMode.ROUND_TRIP_ABOVE_ONLY).build(dataRoot);
+    }
 }

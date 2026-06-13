@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -23,9 +23,9 @@ import space.arim.dazzleconf.backend.Backend;
 import space.arim.dazzleconf.backend.BackendTest;
 import space.arim.dazzleconf.backend.ReadableRoot;
 
-public class HoconBackendOmitHeaderTest extends BackendTest {
+public class HoconBackendRoundTripCommentsTest extends BackendTest {
     @Override
     protected Backend createBackend(ReadableRoot dataRoot) {
-        return new HoconBackend.Builder().commentMode(HoconCommentMode.OMIT_HEADER).build(dataRoot);
+        return new HoconBackend.Builder().commentMode(HoconCommentMode.ROUND_TRIP_OMIT_HEADER).build(dataRoot);
     }
 }

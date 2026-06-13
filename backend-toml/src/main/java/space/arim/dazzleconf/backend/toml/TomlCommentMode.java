@@ -17,34 +17,33 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.backend.hocon;
-
-import space.arim.dazzleconf.engine.CommentLocation;
+package space.arim.dazzleconf.backend.toml;
 
 /**
- * Controls how comments should be managed by the {@link HoconBackend}.
+ * Controls how comments should be managed by the {@link TomlBackend}.
  * <p>
- * The choice of this enum is set using {@link HoconBackend.Builder#commentMode(HoconCommentMode)}. Regardless of
- * the choice, only comments above entries or documents can be supported, i.e. {@link CommentLocation#ABOVE}.
- *
+ * The choice of this enum is set using {@link TomlBackend.Builder#commentMode(TomlCommentMode)}.
  */
-public enum HoconCommentMode {
+public enum TomlCommentMode {
     /**
      * Instructs the backend to write comments, every time, but never to load or read them.
      * <ul>
-     *     <li>Advantage: Document header is written.</li>
+     *     <li>Advantage: All comments from the interface are written.</li>
      *     <li>Disadvantage: User comments are erased every time the configuration is rewritten to file.</li>
      * </ul>
      */
     WRITE_ALWAYS,
     /**
-     * Instructs the backend to read and write entry comments. Comments above each entry will thus be preserved after
-     * each read/write cycle ("round-trip"). The document header is unsupported and will be skipped.
+     * Instructs the backend to read and write comments above the entry. Comments above each entry will thus be
+     * preserved after each read/write cycle ("round-trip").
+     * <p>
+     * A few caveats apply. Comments in any other location are unsupported and will be skipped: namely the document
+     * header, inline comments, and below comments. Also, handling of comments on TOML tables is undefined if the TOML
+     * table is written in many pieces across the file.
      * <ul>
-     *     <li>Advantage: User comments are preserved when the configuration is loaded and rewritten.</li>
-     *     <li>Disadvantage: Document header must be skipped. {@link space.arim.dazzleconf.engine.Comments}, if applied
-     *     to the top-level configuration interface, will be ignored.</li>
+     *     <li>Advantage: User comments above entries are preserved when the configuration is loaded and rewritten.</li>
+     *     <li>Disadvantage: Document header, inline comments, and below comments must be skipped.</li>
      * </ul>
      */
-    ROUND_TRIP_OMIT_HEADER,
+    ROUND_TRIP_ABOVE_ONLY,
 }

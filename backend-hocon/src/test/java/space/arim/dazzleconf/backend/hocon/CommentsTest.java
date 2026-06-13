@@ -45,7 +45,9 @@ public class CommentsTest {
 
     @Test
     public void readComments() {
-        HoconBackend backend = new HoconBackend.Builder().commentMode(HoconCommentMode.OMIT_HEADER).build(stringRoot);
+        HoconBackend backend = new HoconBackend.Builder()
+                .commentMode(HoconCommentMode.ROUND_TRIP_OMIT_HEADER)
+                .build(stringRoot);
         stringRoot.writeString("""
                 # Comments on zeroth
                 zeroth-option = false

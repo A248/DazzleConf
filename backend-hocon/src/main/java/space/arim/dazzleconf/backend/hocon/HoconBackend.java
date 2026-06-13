@@ -68,15 +68,17 @@ import static space.arim.dazzleconf.backend.Printable.preBuilt;
  * <p>
  * <b>Comments</b>
  * <p>
- * The HOCON library is able to read and write comments. It supports only {@link CommentLocation#ABOVE}. However, there
- * is a caveat: reading back a document with comments cannot distinguish the document-level header from comments on the
- * first entry. Therefore, comments cannot be round-tripped if a document header exists (the header would be copied onto
- * the first entry, again and again, with every read/write cycle).
+ * The HOCON library is able to read and write comments. It supports only {@link CommentLocation#ABOVE}, comments above
+ * the entry or in the document header.
+ * <p>
+ * However, there is a caveat: reading back a document with comments cannot distinguish the document-level header from
+ * comments on the first entry. Therefore, comments cannot be round-tripped if a document header exists (the header
+ * would be copied onto the first entry, again and again, with every read/write cycle).
  * <p>
  * To tackle this problem, users of this backend have a choice by setting the {@link HoconCommentMode}. Either ignore
  * the document header entirely, which enables reading and writing of all entry comments. Or disable reading comments,
  * which will overwrite any user edits every time the configuration is written. The default is to disable reading
- * comments with {@link HoconCommentMode#REWRITE_ALWAYS}.
+ * comments with {@link HoconCommentMode#WRITE_ALWAYS}.
  * <p>
  * <b>Floats</b>
  * <p>
@@ -151,7 +153,7 @@ public final class HoconBackend implements Backend {
 
         private boolean useEnvironment = true;
         private URL syntaxLinter;
-        private HoconCommentMode commentMode = HoconCommentMode.REWRITE_ALWAYS;
+        private HoconCommentMode commentMode = HoconCommentMode.WRITE_ALWAYS;
 
         /**
          * Creates the builder
@@ -189,13 +191,15 @@ public final class HoconBackend implements Backend {
         }
 
         /**
-         * Sets the comment mode used by the backend. See the variants of {@link HoconCommentMode} for more information.
+         * Sets the comment mode used by the backend.
+         * <p>
+         * See the variants of the enum for more information. Defaults to {@link HoconCommentMode#WRITE_ALWAYS}
          *
          * @param commentMode the comment mode
          * @return this builder
          */
         public @NonNull Builder commentMode(@NonNull HoconCommentMode commentMode) {
-            this.commentMode = Objects.requireNonNull(commentMode);
+            this.commentMode = Objects.requireNonNull(commentMode, "commentMode");
             return this;
         }
 
@@ -267,7 +271,7 @@ public final class HoconBackend implements Backend {
         }
         ConfigOrigin origin = hoconValue.origin();
         DataEntry entry = new DataEntry(value);
-        if (commentMode == HoconCommentMode.OMIT_HEADER) {
+        if (commentMode == HoconCommentMode.ROUND_TRIP_OMIT_HEADER) {
             entry = entry.withComments(commentsFromHocon(origin.comments()));
         }
         // Add line number if set (unset is -1 in lightbend API)
@@ -292,7 +296,7 @@ public final class HoconBackend implements Backend {
                 new WriteHocon_Access(HoconBackend.class.getName())
         );
         ConfigObject hoconConfig = writeHocon.dataTreeToHocon(document.data());
-        if (commentMode != HoconCommentMode.OMIT_HEADER) {
+        if (commentMode != HoconCommentMode.ROUND_TRIP_OMIT_HEADER) {
             List<String> header = document.comments().getAt(CommentLocation.ABOVE);
             hoconConfig = hoconConfig.withOrigin(hoconConfig.origin().withComments(header));
         }
@@ -356,9 +360,9 @@ public final class HoconBackend implements Backend {
             @Override
             public boolean supportsComments(boolean documentLevel, boolean reading, @NonNull CommentLocation location) {
                 switch (commentMode) {
-                    case REWRITE_ALWAYS:
+                    case WRITE_ALWAYS:
                         return !reading && location == CommentLocation.ABOVE;
-                    case OMIT_HEADER:
+                    case ROUND_TRIP_OMIT_HEADER:
                         return !documentLevel && location == CommentLocation.ABOVE;
                     default:
                         throw new IncompatibleClassChangeError("Unknown comment mode: " + commentMode);
