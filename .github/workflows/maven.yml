@@ -37,7 +37,7 @@ jobs:
           distribution: 'zulu'
           cache: 'maven'
       - name: Deploy with Maven
-        run: mvn clean deploy -DskipTests -DskipPitest -Dinvoker.skip=true
+        run: mvn clean deploy -B -DskipTests -DskipPitest -Dinvoker.skip=true -Dgpg.skip=true
         env:
           MAVEN_USERNAME: ${{ secrets.SONATYPE_SNAPS_USER }}
           MAVEN_PASSWORD: ${{ secrets.SONATYPE_SNAPS_PASS }}
