@@ -36,6 +36,9 @@ jobs:
           java-version: 21
           distribution: 'zulu'
           cache: 'maven'
+          server-id: sonatype-snapshots
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
       - name: Deploy with Maven
         run: mvn clean deploy -B -DskipTests -DskipPitest -Dinvoker.skip=true -Dgpg.skip=true
         env:
