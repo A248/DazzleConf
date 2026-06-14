@@ -81,7 +81,7 @@ final class LiaisonCache {
         }
 
         TypeSkeleton.MethodNode<V> makeMethodNode(
-                MethodId methodId, boolean optional, AnnotatedElement methodAnnotations,
+                MethodId methodId, AnnotatedElement methodAnnotations,
                 TypeToken<?> interfaceToken, MethodMirror.Invoker defaultsInvoker
         ) {
             TypeLiaison.DefaultInit<V> defaultInit = new TypeLiaison.DefaultInit<V>() {
@@ -115,22 +115,12 @@ final class LiaisonCache {
                     if (defaultVal == null) {
                         throw new DeveloperMistakeException("Default method " + methodId + " returned null");
                     }
-                    // Unpack Optional as needed
-                    if (optional) {
-                        Optional<?> optDefaultVal = (Optional<?>) defaultVal;
-                        if (optDefaultVal.isPresent()) {
-                            defaultVal = optDefaultVal.get();
-                        } else {
-                            // That's okay, since optional entries don't need defaults
-                            return null;
-                        }
-                    }
                     return DefaultValues.simple(typeToken.cast(defaultVal));
                 }
             };
             DefaultValues<V> defaultValues = agent.loadDefaultValues(defaultInit);
             CommentData comments  = CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
-            return new TypeSkeleton.MethodNode<>(comments, optional, methodId, defaultValues, serializer);
+            return new TypeSkeleton.MethodNode<>(comments, methodId, defaultValues, serializer);
         }
     }
 }

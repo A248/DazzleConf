@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -20,11 +20,13 @@
 package space.arim.dazzleconf2.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf2.ConfigurationBuilder;
 import space.arim.dazzleconf2.DeveloperMistakeException;
 import space.arim.dazzleconf2.LoadResult;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.reflect.TypeToken;
+import space.arim.dazzleconf2.engine.liaison.OptionalLiaison;
 
 /**
  * A serializer.
@@ -55,6 +57,23 @@ import space.arim.dazzleconf2.reflect.TypeToken;
  * @param <V> the deserialized type
  */
 public interface SerializeDeserialize<V> {
+
+    /**
+     * Deserializes the semantic absence of the value.
+     * <p>
+     * The vast majority of serializers mandate a value to be present; they will return {@code null} from this method
+     * indicating that the lack of a value cannot be deserialized.
+     * <p>
+     * This method exists for special types which can meaningfully represent the absence of a value from its container.
+     * For example, the implementation of {@link OptionalLiaison} returns an empty optional.
+     *
+     * @param deser the context in which deserialization is taking place
+     * @return the deserialized "from thin air" value, or {@code null} if this serializer does not support conjuring
+     * an empty value to represent the absence of user data
+     */
+    default @Nullable V deserializeAbsent(@NonNull DeserializeContext deser) {
+        return null;
+    }
 
     /**
      * Deserializes using the given operable object.

@@ -23,29 +23,21 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
-import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.backend.Printable;
 import space.arim.dazzleconf2.engine.DeserializeInput;
-import space.arim.dazzleconf2.engine.UpdateReason;
 import space.arim.dazzleconf2.internals.lang.LibraryLang;
 
 import java.util.Objects;
 
-abstract class DeserInput extends LoadError.Factory implements DeserializeInput {
+abstract class DeserInput extends DeserContext implements DeserializeInput {
 
     private final DataEntry entry;
-    private final LibraryLang libraryLang;
-    private final ConfigurationDefinition.ReadOptions readOptions;
 
     DeserInput(DataEntry entry, LibraryLang libraryLang, ConfigurationDefinition.ReadOptions readOptions) {
-        Objects.requireNonNull(entry, "entry");
-        this.entry = entry;
-        this.libraryLang = libraryLang;
-        this.readOptions = readOptions;
+        super(libraryLang, readOptions);
+        this.entry = Objects.requireNonNull(entry, "entry");
     }
-
-    abstract KeyPath.Mut getPathContribution();
 
     @Override
     public @NonNull DataEntry entry() {
@@ -88,23 +80,6 @@ abstract class DeserInput extends LoadError.Factory implements DeserializeInput 
         }
     }
 
-    @Override
-    public @NonNull LibraryLang getLibraryLang() {
-        return libraryLang;
-    }
-
-    @Override
-    public @NonNull KeyPath keyPath() {
-        KeyPath.Mut path = readOptions.keyPath().intoMut();
-        path.addPath(KeyPath.SequenceBoundary.BACK, getPathContribution());
-        return path;
-    }
-
-    @Override
-    public @NonNull KeyMapper keyMapper() {
-        return readOptions.keyMapper();
-    }
-
     private <V> @NonNull LoadResult<@NonNull V> requireAs(Class<V> typeClass) {
         Object object = object();
         if (typeClass.isInstance(object)) {
@@ -129,13 +104,6 @@ abstract class DeserInput extends LoadError.Factory implements DeserializeInput 
     }
 
     @Override
-    public void notifyUpdate(@NonNull KeyPath keyPath, @NonNull UpdateReason updateReason) {
-        KeyPath.Mut keyPathMut = keyPath.intoMut();
-        keyPathMut.addPath(KeyPath.SequenceBoundary.FRONT, getPathContribution());
-        readOptions.notifyUpdate(keyPathMut, updateReason);
-    }
-
-    @Override
     // 2.0.0-M3: Remove this section
     public @NonNull DeserializeInput makeChild(@NonNull Object value) {
         return makeChild(new DataEntry(value), childIdx++);
@@ -150,14 +118,11 @@ abstract class DeserInput extends LoadError.Factory implements DeserializeInput 
 
     @Override
     public @NonNull ErrorContext buildError(@NonNull Printable message) {
-        LoadError loadError = new LoadError(message, libraryLang);
-        // Add entry path
-        loadError.addDetail(ErrorContext.ENTRY_PATH, keyPath());
-        // Add line number
+        ErrorContext errorContext = super.buildError(message);
         Integer lineNumber = entry.getLineNumber();
         if (lineNumber != null) {
-            loadError.addDetail(ErrorContext.LINE_NUMBER, lineNumber);
+            errorContext.addDetail(ErrorContext.LINE_NUMBER, lineNumber);
         }
-        return loadError;
+        return errorContext;
     }
 }

@@ -70,9 +70,8 @@ public interface TypeLiaison {
          * Default values are often extracted from annotations. Method-level annotations are available via the provided
          * {@link DefaultInit#methodAnnotations()}.
          * <p>
-         * Note that this function does <b>NOT</b> handle the use of default methods to provide default values. This
-         * function provides default values before a default method can possibly do so; this function returning a
-         * non-null value will override the result of the default method if one exists.
+         * This function can choose when to handle the use of default methods to provide default values. The default
+         * implementation of this method calls {@link DefaultInit#methodDefault()} simply.
          *
          * @param defaultInit the init context
          * @return the default values, or null if no defaults are available
@@ -155,8 +154,7 @@ public interface TypeLiaison {
         /**
          * Extracts default values from the default method if one exists.
          * <p>
-         * Returns {@code null} if there is no default method implementation. If the default method returns
-         * {@code Optional} and the optional was empty, this method also returns {@code null}.
+         * Returns {@code null} if there is no default method implementation
          *
          * @return the default values from the default method
          * @throws DeveloperMistakeException if the default method is implemented incorrectly. Liaison implementations

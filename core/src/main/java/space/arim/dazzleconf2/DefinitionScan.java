@@ -30,7 +30,6 @@ import space.arim.dazzleconf2.internals.lang.LibraryLang;
 import space.arim.dazzleconf2.reflect.Instantiator;
 import space.arim.dazzleconf2.reflect.MethodId;
 import space.arim.dazzleconf2.reflect.MethodMirror;
-import space.arim.dazzleconf2.reflect.ReifiedType;
 import space.arim.dazzleconf2.reflect.TypeToken;
 
 import java.lang.reflect.AnnotatedElement;
@@ -42,7 +41,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 final class DefinitionScan {
@@ -174,24 +172,15 @@ final class DefinitionScan {
                     if (methodId.parameterCount() != 0) {
                         throw new DeveloperMistakeException("Configuration method " + methodId + " cannot have parameters");
                     }
-                    // Check for Optional return
-                    boolean optional = methodId.returnType().rawType().equals(Optional.class);
-
-                    // Find the target type, unpacking Optional if necessary
-                    ReifiedType typeRequested;
-                    if (optional) {
-                        typeRequested = methodId.returnType().argumentAt(0);
-                    } else {
-                        typeRequested = methodId.returnType();
-                    }
+                    TypeToken<?> typeRequested = new TypeToken<>(methodId.returnType());
                     LiaisonCache.HandleType<?> handleType;
                     try {
-                        handleType = liaisonCache.requestToHandle(new TypeToken<>(typeRequested), new AsHandshake());
+                        handleType = liaisonCache.requestToHandle(typeRequested, new AsHandshake());
                     } catch (DeveloperMistakeException rethrow) {
                         throw new DeveloperMistakeException("Failed to make type agent for " + methodId, rethrow);
                     }
                     methodNodes.add(handleType.makeMethodNode(
-                            methodId, optional, methodAnnotations, typeToken, defaultsInvoker
+                            methodId, methodAnnotations, typeToken, defaultsInvoker
                     ));
                 }
                 return new TypeSkeleton(callableDefaultMethods, methodNodes);

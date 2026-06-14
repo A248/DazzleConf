@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -62,8 +62,8 @@ public interface DeserializeContext extends ConfigurationDefinition.ReadOptions,
      * Gets the absolute key path of the enclosing context.
      * <p>
      * This path will automatically include all key parts from the configuration root all the way until the current
-     * entry. It should be used for diagnostic purposes, as it has no functional meaning, and might include debug
-     * symbols (like "$0" for list entries).
+     * entry. It is user displayable and may be included in error messages, as it is meant to reflect an actual
+     * location within the document.
      *
      * @return the absolute key path
      */
@@ -74,8 +74,8 @@ public interface DeserializeContext extends ConfigurationDefinition.ReadOptions,
      * Signals that the data could use an update with respect to this object. For example, this might happen if
      * missing options were filled in with default values, and those default values need to be written to the backend.
      * <p>
-     * This function does not <b>actually</b> perform any updating. It is merely a notification that this object
-     * (or a part within it) is updatable. For actual in-place updates, make sure to implement
+     * This function does not actually perform any updating. It is merely a notification that this object (or a part
+     * within it) is updatable. For actual in-place updates, make sure to implement
      * {@link SerializeDeserialize#deserializeUpdate(DeserializeInput, SerializeOutput)} and submit an updated value
      * to the {@code SerializeOutput} in the same place as where you call this method.
      * <p>

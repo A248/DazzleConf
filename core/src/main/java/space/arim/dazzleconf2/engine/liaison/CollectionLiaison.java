@@ -29,6 +29,7 @@ import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.NoOutput;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 import space.arim.dazzleconf2.engine.TypeLiaison;
@@ -130,7 +131,7 @@ public final class CollectionLiaison implements TypeLiaison {
 
         abstract @NonNull BUILD_COLL makeMutableOutput(int sizeHint);
 
-        abstract void addToMutableOutput(@NonNull BUILD_COLL output, int index, @NonNull E value);
+        abstract boolean addToMutableOutput(@NonNull BUILD_COLL output, int index, @NonNull E value);
 
         abstract @NonNull COLL buildThenCast(@NonNull BUILD_COLL output);
 
@@ -146,6 +147,7 @@ public final class CollectionLiaison implements TypeLiaison {
             D input = impl.prepare(dataListResult.getOrThrow());
             // Output collection, an Object[] for List/Collection or LinkedHashSet for Set
             BUILD_COLL output = makeMutableOutput(input.size());
+            boolean changedFromUniqueness = false;
             // Error handling - get a certain maximum before quitting, becomes non-null if we find at least 1 error
             ErrorContext[] collectedErrors = null;
             int errorCount = 0;
@@ -170,7 +172,8 @@ public final class CollectionLiaison implements TypeLiaison {
                     // Record update wish if necessary
                     impl.updateIfDesired(input, inputEntry, n);
 
-                    addToMutableOutput(output, n, elemResult.getOrThrow());
+                    boolean added = addToMutableOutput(output, n, elemResult.getOrThrow());
+                    changedFromUniqueness = changedFromUniqueness || !added;
                 }
             }
             // Error handling
@@ -179,10 +182,9 @@ public final class CollectionLiaison implements TypeLiaison {
             }
             // Success - construct result
             COLL built = buildThenCast(output);
-            // Finish recording updates - check if size changed for Set, to handle notifications or updates
-            if (built.size() != input.size()) {
-                // Note that size-related updates can't happen during iteration itself (concurrent modification)
-                impl.updateSizeShrunk(deser, built);
+            // Finish recording updates - check if changed from Set element uniqueness
+            if (changedFromUniqueness) {
+                impl.updateElementOverlap(deser, built);
             } else {
                 impl.updateMaybeOtherwise(deser, input);
             }
@@ -197,7 +199,7 @@ public final class CollectionLiaison implements TypeLiaison {
 
             void updateIfDesired(D updatableInput, DataEntry existingEntry, int idx);
 
-            void updateSizeShrunk(DeserializeInput deser, COLL built);
+            void updateElementOverlap(DeserializeInput deser, COLL built);
 
             void updateMaybeOtherwise(DeserializeInput deser, D updatableInput);
 
@@ -220,8 +222,7 @@ public final class CollectionLiaison implements TypeLiaison {
                 public void updateIfDesired(DataList updatableInput, DataEntry existingEntry, int idx) {}
 
                 @Override
-                public void updateSizeShrunk(DeserializeInput deser,
-                                             COLL built) {
+                public void updateElementOverlap(DeserializeInput deser, COLL built) {
                     deser.notifyUpdate(KeyPath.empty(), UpdateReason.OTHER);
                 }
 
@@ -256,14 +257,14 @@ public final class CollectionLiaison implements TypeLiaison {
                 }
 
                 @Override
-                public void updateSizeShrunk(DeserializeInput deser, COLL built) {
-                    deser.notifyUpdate(KeyPath.empty(), UpdateReason.OTHER);
+                public void updateElementOverlap(DeserializeInput deser, COLL built) {
+                    UpdateReason reason = updated ? UpdateReason.UPDATED : UpdateReason.OTHER;
+                    deser.notifyUpdate(KeyPath.empty(), reason);
                     serialize(built, updateTo); // Reserialize the whole collection
                 }
 
                 @Override
                 public void updateMaybeOtherwise(DeserializeInput deser, DataList.Mut updatableInput) {
-                    // If the size didn't shrink, then perform our update if applicable
                     if (updated) {
                         deser.notifyUpdate(KeyPath.empty(), UpdateReason.UPDATED);
                         updateTo.outDataList(updatableInput);
@@ -284,7 +285,9 @@ public final class CollectionLiaison implements TypeLiaison {
                             "Element serializer " + elementSerializer + " did not produce output"
                     );
                 }
-                output.add(new DataEntry(elemOutput));
+                if (elemOutput != NoOutput.INSTANCE) {
+                    output.add(new DataEntry(elemOutput));
+                }
             }
             ser.outDataList(output);
         }
@@ -302,8 +305,9 @@ public final class CollectionLiaison implements TypeLiaison {
         }
 
         @Override
-        void addToMutableOutput(Object @NonNull [] output, int index, @NonNull E value) {
+        boolean addToMutableOutput(Object @NonNull [] output, int index, @NonNull E value) {
             output[index] = value;
+            return true;
         }
 
         @Override
@@ -325,8 +329,9 @@ public final class CollectionLiaison implements TypeLiaison {
         }
 
         @Override
-        void addToMutableOutput(Object @NonNull [] output, int index, @NonNull E value) {
+        boolean addToMutableOutput(Object @NonNull [] output, int index, @NonNull E value) {
             output[index] = value;
+            return true;
         }
 
         @Override
@@ -348,8 +353,8 @@ public final class CollectionLiaison implements TypeLiaison {
         }
 
         @Override
-        void addToMutableOutput(@NonNull LinkedHashSet<E> output, int index, @NonNull E value) {
-            output.add(value);
+        boolean addToMutableOutput(@NonNull LinkedHashSet<E> output, int index, @NonNull E value) {
+            return output.add(value);
         }
 
         @Override

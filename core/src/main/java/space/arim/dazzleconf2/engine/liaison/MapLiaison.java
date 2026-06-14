@@ -29,6 +29,7 @@ import space.arim.dazzleconf2.backend.DataEntry;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyPath;
 import space.arim.dazzleconf2.engine.DeserializeInput;
+import space.arim.dazzleconf2.engine.NoOutput;
 import space.arim.dazzleconf2.engine.SerializeDeserialize;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 import space.arim.dazzleconf2.engine.TypeLiaison;
@@ -128,6 +129,7 @@ public final class MapLiaison implements TypeLiaison {
             int errorCount = 0;
 
             Map<K, V> built = new LinkedHashMap<>();
+            boolean changedFromKeyOverlap = false;
 
             for (Object inputKey : input.keySet()) {
                 // Deserialize the key
@@ -178,16 +180,18 @@ public final class MapLiaison implements TypeLiaison {
                 Object valueUpdate = implDeserialize.getUpdateFromDeserializeCall();
                 implDeserialize.updateIfDesired(input, inputKey, inputEntry, keyUpdate, valueUpdate);
 
-                built.put(key, value);
+                V previous = built.put(key, value);
+                if (previous != null) {
+                    changedFromKeyOverlap = true;
+                }
             }
             // Error handling
             if (collectedErrors != null) {
                 return LoadResult.failure(Arrays.copyOf(collectedErrors, errorCount));
             }
-            // Finish recording updates - check if size changed
-            if (input.size() != built.size()) {
-                // Note that size-related updates can't happen during iteration itself (concurrent modification)
-                implDeserialize.updateSizeShrunk(deser, built);
+            // Finish recording updates - check if changed from key uniqueness
+            if (changedFromKeyOverlap) {
+                implDeserialize.updateKeyOverlap(deser, built);
             } else {
                 implDeserialize.updateMaybeOtherwise(deser, input);
             }
@@ -205,7 +209,7 @@ public final class MapLiaison implements TypeLiaison {
             void updateIfDesired(D updatableInput, Object inputKey, DataEntry inputEntry,
                                  @Nullable Object keyUpdate, @Nullable Object valueUpdate);
 
-            void updateSizeShrunk(DeserializeInput deser, Map<K, V> built);
+            void updateKeyOverlap(DeserializeInput deser, Map<K, V> built);
 
             void updateMaybeOtherwise(DeserializeInput deser, D updatableInput);
 
@@ -233,7 +237,7 @@ public final class MapLiaison implements TypeLiaison {
                                             @Nullable Object keyUpdate, @Nullable Object valueUpdate) {}
 
                 @Override
-                public void updateSizeShrunk(DeserializeInput deser, Map<K, V> built) {
+                public void updateKeyOverlap(DeserializeInput deser, Map<K, V> built) {
                     deser.notifyUpdate(KeyPath.empty(), UpdateReason.OTHER);
                 }
 
@@ -268,31 +272,35 @@ public final class MapLiaison implements TypeLiaison {
                     boolean updateKey = keyUpdate != null && !inputKey.equals(keyUpdate);
                     boolean updateValue = valueUpdate != null && !inputEntry.getValue().equals(valueUpdate);
                     if (updateKey || updateValue) {
-                        DataEntry entry;
-                        if (updateValue) {
-                            entry = inputEntry.withValue(valueUpdate);
-                        } else {
-                            entry = inputEntry;
-                        }
-                        if (updateKey) {
+                        if (keyUpdate == NoOutput.INSTANCE || valueUpdate == NoOutput.INSTANCE) {
                             updatableInput.remove(inputKey);
-                            updatableInput.put(keyUpdate, entry);
                         } else {
-                            updatableInput.put(inputKey, entry);
+                            DataEntry entry;
+                            if (updateValue) {
+                                entry = inputEntry.withValue(valueUpdate);
+                            } else {
+                                entry = inputEntry;
+                            }
+                            if (updateKey) {
+                                updatableInput.remove(inputKey);
+                                updatableInput.put(keyUpdate, entry);
+                            } else {
+                                updatableInput.put(inputKey, entry);
+                            }
                         }
                         updated = true;
                     }
                 }
 
                 @Override
-                public void updateSizeShrunk(DeserializeInput deser, Map<K, V> built) {
-                    deser.notifyUpdate(KeyPath.empty(), UpdateReason.OTHER);
+                public void updateKeyOverlap(DeserializeInput deser, Map<K, V> built) {
+                    UpdateReason reason = updated ? UpdateReason.UPDATED : UpdateReason.OTHER;
+                    deser.notifyUpdate(KeyPath.empty(), reason);
                     serialize(built, updateTo); // Reserialize the whole map
                 }
 
                 @Override
                 public void updateMaybeOtherwise(DeserializeInput deser, DataTree.Mut updatableInput) {
-                    // If the size didn't shrink, then perform our update if applicable
                     if (updated) {
                         deser.notifyUpdate(KeyPath.empty(), UpdateReason.UPDATED);
                         updateTo.outDataTree(updatableInput);
@@ -316,6 +324,9 @@ public final class MapLiaison implements TypeLiaison {
                 Object valueOutput = ser.getAndClearLastOutput();
                 if (valueOutput == null) {
                     throw new DeveloperMistakeException("Value serializer " + valueSerializer + " did not produce output");
+                }
+                if (keyOutput == NoOutput.INSTANCE || valueOutput == NoOutput.INSTANCE) {
+                    continue;
                 }
                 DataEntry previousValue = output.put(keyOutput, new DataEntry(valueOutput));
                 if (previousValue != null) {

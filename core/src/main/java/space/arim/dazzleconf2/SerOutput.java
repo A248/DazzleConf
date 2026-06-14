@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -25,6 +25,7 @@ import space.arim.dazzleconf2.backend.DataList;
 import space.arim.dazzleconf2.backend.DataTree;
 import space.arim.dazzleconf2.backend.KeyMapper;
 import space.arim.dazzleconf2.engine.CommentLocation;
+import space.arim.dazzleconf2.engine.NoOutput;
 import space.arim.dazzleconf2.engine.SerializeOutput;
 
 import java.util.Objects;
@@ -103,6 +104,11 @@ final class SerOutput implements SerializeOutput {
     @Override
     public void outDataList(@NonNull DataList value) {
         output = Objects.requireNonNull(value);
+    }
+
+    @Override
+    public void outNone() {
+        output = NoOutput.INSTANCE;
     }
 
     @Override
