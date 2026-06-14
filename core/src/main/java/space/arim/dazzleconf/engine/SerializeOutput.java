@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -36,8 +36,8 @@ import space.arim.dazzleconf.backend.DataTree;
  * <b>Advanced usage</b>
  * <p>
  * This {@code SerializeOutput} stores the last object output to it. Calling more than one "out" method will overwrite
- * the value stored in this instance, which will in turn change the return value of this method. This output can be
- * extracted (and simultaneously cleared) by calling {@link #getAndClearLastOutput()}.
+ * the value stored in this instance, which will in turn change the returned output. The output is extracted (and
+ * simultaneously cleared) by calling {@link #getAndClearLastOutput()}.
  *
  */
 public interface SerializeOutput extends SerializeContext {
@@ -120,12 +120,25 @@ public interface SerializeOutput extends SerializeContext {
     void outDataList(@NonNull DataList value);
 
     /**
+     * Outputs the explicit absence of a type.
+     * <p>
+     * This method will store {@link NoOutput#INSTANCE} as the output object..
+     *
+     */
+    void outNone();
+
+    /**
      * Outputs the given object.
      * <p>
      * This function should not be used in normal circumstances. It is a low-level means of setting the output
      * object, intended for when the caller has a ready object but does not know its exact type.
      * <p>
-     * The caller guarantees that the passed object is valid according to {@link DataEntry#validateValue(Object)}.
+     * The caller guarantees either:
+     * <ol>
+     *     <li>The passed object is valid according to {@link DataEntry#validateValue(Object)}. That is, a primitive
+     *     value, string, {@code DataList}, or {@code DataTree}.</li>
+     *     <li>Or the object is {@link NoOutput#INSTANCE}.</li>
+     * </ol>
      * If this condition is not met, behavior is <b>not defined</b> and an exception may be thrown at a later point.
      *
      * @param value the object
@@ -135,9 +148,16 @@ public interface SerializeOutput extends SerializeContext {
     /**
      * Gets the last output, clears it in this {@code SerializeOutput}, and returns it to the caller.
      * <p>
-     * Any one of the "out" methods on this type will affect the return value of this method. Whichever was called
-     * last will be yielded here, or {@code null} if none were called. Because this method also clears the stored
-     * value, calling it twice will always yield {@code null}.
+     * One of the following can be returned by this method:
+     * <ul>
+     *     <li>Primitive values (boxed)</li>
+     *     <li>{@code java.lang.String}</li>
+     *     <li>{@link DataList}</li>
+     *     <li>{@link DataTree}</li>
+     *     <li>{@link NoOutput#INSTANCE} to represent explicit lack of output</li>
+     *     <li>{@code null} if none of the "out" methods on this type was called, since the output was last cleared.</li>
+     * </ul>
+     * Because this method also clears the stored value, calling it twice will always yield {@code null}.
      *
      * @return the last object output, or null if there is none
      */

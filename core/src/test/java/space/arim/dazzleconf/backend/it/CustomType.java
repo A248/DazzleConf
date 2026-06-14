@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -20,13 +20,10 @@
 package space.arim.dazzleconf.backend.it;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf.Configuration;
 import space.arim.dazzleconf.LoadResult;
-import space.arim.dazzleconf.OptionalTest;
 import space.arim.dazzleconf.engine.DeserializeInput;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.SerializeOutput;
-import space.arim.dazzleconf.reflect.TypeToken;
 
 public final class CustomType {
 

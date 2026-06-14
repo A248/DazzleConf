@@ -27,6 +27,7 @@ import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.backend.Printable;
 import space.arim.dazzleconf.engine.DeserializeInput;
+import space.arim.dazzleconf.engine.NoOutput;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.SerializeOutput;
 import space.arim.dazzleconf.engine.UpdateReason;
@@ -42,7 +43,6 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 final class Definition<C> implements ConfigurationDefinition<C> {
 
@@ -192,31 +192,36 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             @NonNull HowToUpdate<DT> howToUpdate
     ) {
 
-        Object value;
-        V missingValue;
+        V value;
         String mappedKey = readOptions.keyMapper().labelToKey(methodNode.methodId.name()).toString();
         DataEntry dataEntry = dataTree.get(mappedKey);
         if (dataEntry == null) {
 
-            // Missing value. Three possibilities for the method:
-            // 1. Optional -> okay
+            // Absent entry. Three possibilities for the method:
+            // 1. Absence acceptable -> get absent value
             // 2. Mandatory, so fill in the missing value -> okay, signal updated path
             // 3. Mandatory, and no missing value -> error
 
-            if (methodNode.optional) {
+            DeserContext deserContext = new DeserContext.Standalone(libraryLang, readOptions, mappedKey);
+            V absentValue = methodNode.serializer.deserializeAbsent(deserContext);
+            V missingValue;
+            if (absentValue != null) {
                 // 1.
-                value = Optional.empty();
+                value = absentValue;
             } else if ((value = missingValue = methodNode.makeMissingValue(currentType)) != null) {
                 // 2.
+                /*
+                Note that if the value serializes to null in #insertMissingValue, we still signal an update here. If so,
+                we are dealing with a rogue liaison that cannot accept absent values but nonetheless outputs absent
+                values. To maintain symmetry across read/read-update operations, notifyUpdate(..., UpdateReason.MISSING)
+                is always called.
+                 */
                 readOptions.notifyUpdate(new KeyPath.Mut(mappedKey), UpdateReason.MISSING);
                 howToUpdate.insertMissingValue(dataTree, mappedKey, methodNode, missingValue);
             } else {
                 // 3.
-                LoadError loadError = new LoadError(Printable.preBuilt(libraryLang.missingValue()), libraryLang);
-                KeyPath.Mut entryPath = new KeyPath.Mut(readOptions.keyPath());
-                entryPath.addBack(mappedKey);
-                loadError.addDetail(ErrorContext.ENTRY_PATH, entryPath);
-                return new ErrorContext[] {loadError};
+                ErrorContext errorContext = deserContext.buildError(Printable.preBuilt(libraryLang.missingValue()));
+                return new ErrorContext[] {errorContext};
             }
         } else {
             //
@@ -236,7 +241,6 @@ final class Definition<C> implements ConfigurationDefinition<C> {
 
             // No errors - all good
             value = valueResult.getOrThrow();
-            if (methodNode.optional) value = Optional.of(value);
         }
         methodYieldFor.returnValue(methodNode.methodId, value);
         return null;
@@ -283,8 +287,10 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             @Override
             public <V> void insertMissingValue(DataTree.Mut dataTree, String mappedKey,
                                                TypeSkeleton.MethodNode<V> methodNode, V missingValue) {
-                DataEntry serializedMissingValue = methodNode.serialize(missingValue, outputForUpdate);
-                dataTree.put(mappedKey, serializedMissingValue.withComments(methodNode.comments));
+                DataEntry serializedMissing = methodNode.serialize(missingValue, outputForUpdate);
+                if (serializedMissing != null) {
+                    dataTree.put(mappedKey, serializedMissing.withComments(methodNode.comments));
+                }
             }
 
             @Override
@@ -297,9 +303,15 @@ final class Definition<C> implements ConfigurationDefinition<C> {
                                         TypeSkeleton.MethodNode<?> methodNode) {
                 boolean changed = false;
                 Object update = outputForUpdate.getAndClearLastOutput();
-                if (update != null && !sourceEntry.getValue().equals(update)) {
-                    sourceEntry = sourceEntry.withValue(update);
-                    changed = true;
+                if (update != null) {
+                    if (update == NoOutput.INSTANCE) {
+                        dataTree.remove(mappedKey);
+                        return;
+                    }
+                    if (!sourceEntry.getValue().equals(update)) {
+                        sourceEntry = sourceEntry.withValue(update);
+                        changed = true;
+                    }
                 }
                 if (modifyComments.isAnyLocationEnabled()) {
                     sourceEntry = modifyComments.applyTo(sourceEntry, methodNode.comments);

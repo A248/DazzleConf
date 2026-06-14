@@ -212,7 +212,7 @@ public class ReifiedType {
      * @param genericContext the generic context of type variables
      * @return the reified type
      * @throws IllegalStateException if the {@link java.lang.reflect.AnnotatedType} subclass is not recognized
-     * @throws RuntimeException any exceptions thrown by the {@link GenericContext} are thrown to the caller here
+     * @throws RuntimeException any exceptions thrown by the {@link GenericContext} are propagated here
      */
     public static @NonNull ReifiedType computeFrom(@NonNull AnnotatedType annotatedType,
                                                    @NonNull GenericContext genericContext) {

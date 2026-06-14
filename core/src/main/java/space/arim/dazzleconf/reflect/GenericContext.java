@@ -35,7 +35,7 @@ public interface GenericContext {
      *
      * @param varName the type variable name
      * @return the type argument
-     * @throws RuntimeException any exceptions thrown by this method are thrown by the outer method that uses
+     * @throws RuntimeException any exceptions thrown by this method are propagated to the outer method that uses
      * this type, for example {@link ReifiedType#computeFrom(AnnotatedType, GenericContext)}
      */
     @NonNull ReifiedType resolveTypeVariable(@NonNull String varName);

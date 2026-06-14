@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -21,6 +21,7 @@ package space.arim.dazzleconf.reflect;
 
 import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf.internals.ImmutableCollections;
 
 import java.util.HashMap;
@@ -52,7 +53,7 @@ public final class MethodYield {
         this(new HashMap<>());
     }
 
-    private MethodYield(Map<Class<?>, Map<MethodId, Object>> backing) {
+    private MethodYield(@NonNull Map<Class<?>, Map<MethodId, Object>> backing) {
         this.backing = backing;
     }
 
@@ -65,7 +66,7 @@ public final class MethodYield {
      * @param implementable the interface being implemented
      * @return a handler to attach return values for it
      */
-    public ForImplementable forImplementable(@NonNull Class<?> implementable) {
+    public @NonNull ForImplementable forImplementable(@NonNull Class<?> implementable) {
         Objects.requireNonNull(implementable, "implementable");
         if (backing.containsKey(implementable)) {
             throw new IllegalStateException("Called already for " + implementable);
@@ -236,7 +237,7 @@ public final class MethodYield {
         }
 
         @Override
-        public Entry next() {
+        public @NonNull Entry next() {
             if (currentMap == null || !currentMap.hasNext()) {
                 Map.Entry<Class<?>, Map<MethodId, Object>> nextMap = backing.next();
                 currentType = nextMap.getKey();
@@ -265,7 +266,7 @@ public final class MethodYield {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (!(o instanceof MethodYield)) return false;
 
         MethodYield that = (MethodYield) o;
@@ -278,7 +279,7 @@ public final class MethodYield {
     }
 
     @Override
-    public String toString() {
+    public @NonNull String toString() {
         return getClass().getSimpleName() + '{' + backing + '}';
     }
 }

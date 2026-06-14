@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -36,6 +36,7 @@ import space.arim.dazzleconf.engine.liaison.FloatLiaison;
 import space.arim.dazzleconf.engine.liaison.IntegerLiaison;
 import space.arim.dazzleconf.engine.liaison.LongLiaison;
 import space.arim.dazzleconf.engine.liaison.MapLiaison;
+import space.arim.dazzleconf.engine.liaison.OptionalLiaison;
 import space.arim.dazzleconf.engine.liaison.ShortLiaison;
 import space.arim.dazzleconf.engine.liaison.SimpleTypeLiaison;
 import space.arim.dazzleconf.engine.liaison.StringLiaison;
@@ -153,7 +154,7 @@ public final class ConfigurationBuilder<C> {
      * Adds type liaisons for primitives and <code>String</code> to this builder.
      * <p>
      * These type liaisons are part of the default set. However, unlike {@link #addDefaultTypeLiaisons()}, enum types,
-     * collections, and configuration subsections are not covered by this method.
+     * collections, optionals, and configuration subsections are not covered by this method.
      * <p>
      * <b>Types Handled</b>
      * <p>
@@ -202,7 +203,8 @@ public final class ConfigurationBuilder<C> {
      * <p>
      * The full list of types handled by this method: boolean/Boolean, char/Character, byte/Byte, short/Short,
      * int/Integer, long/Long, float/Float, double/Double, String, types for which <code>Class#isEnum</code> is true,
-     * Collection, List, Set, Map, and interface types where the type usage is annotated with {@link SubSection}.
+     * Collection, List, Set, Map, Optional, OptionalInt, OptionalLong, OptionalDouble, and interface types where the
+     * type usage is annotated with {@link SubSection}.
      * <p>
      * <b>Notable annotations</b>
      * <p>
@@ -228,7 +230,7 @@ public final class ConfigurationBuilder<C> {
      */
     public @This @NonNull ConfigurationBuilder<C> addDefaultTypeLiaisons() {
         return addPrimitiveTypeLiaisons().addTypeLiaisons(
-                new CollectionLiaison(), new MapLiaison(), new EnumLiaison(), new SubSectionLiaison()
+                new CollectionLiaison(), new MapLiaison(), new EnumLiaison(), new OptionalLiaison(), new SubSectionLiaison()
         );
     }
 

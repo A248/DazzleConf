@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -19,11 +19,11 @@
 
 package space.arim.dazzleconf;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.DataEntry;
 import space.arim.dazzleconf.engine.DefaultValues;
+import space.arim.dazzleconf.engine.NoOutput;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.SerializeOutput;
 import space.arim.dazzleconf.reflect.MethodId;
@@ -33,7 +33,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Defines a single interface supertype which has not yet been instantiated
@@ -57,15 +56,13 @@ final class TypeSkeleton {
     static final class MethodNode<V> {
 
         final CommentData comments;
-        final boolean optional;
         final MethodId methodId;
-        private final DefaultValues<V> defaultValues; // Can be null if optional, or if defaults unconfigured
+        private final @Nullable DefaultValues<V> defaultValues; // Can be null if defaults unconfigured
         final SerializeDeserialize<V> serializer;
 
-        MethodNode(CommentData comments, boolean optional, MethodId methodId, DefaultValues<V> defaultValues,
+        MethodNode(CommentData comments, MethodId methodId, @Nullable DefaultValues<V> defaultValues,
                    SerializeDeserialize<V> serializer) {
             this.comments = comments;
-            this.optional = optional;
             this.methodId = Objects.requireNonNull(methodId, "methodId");
             this.defaultValues = defaultValues;
             this.serializer = Objects.requireNonNull(serializer, "serializer");
@@ -81,9 +78,6 @@ final class TypeSkeleton {
          */
         Object makeDefaultValue(Class<?> inType) {
             if (defaultValues == null) {
-                if (optional) {
-                    return Optional.empty();
-                }
                 throw new DeveloperMistakeException(
                         "No default values configured for " +  inType.getName() + '#' + methodId.name() + ". " +
                                 "To use Configuration#loadDefaults, default values must be set for every option."
@@ -100,7 +94,7 @@ final class TypeSkeleton {
                         "DefaultValues#defaultValue returned null for " + inType.getName() + '#' + methodId.name()
                 );
             }
-            return optional ? Optional.of(defaultVal) : defaultVal;
+            return defaultVal;
         }
 
         /**
@@ -113,8 +107,6 @@ final class TypeSkeleton {
          * @throws DeveloperMistakeException if {@link DefaultValues#ifMissing()} is wrongly implemented
          */
         V makeMissingValue(Class<?> inType) {
-            assert !optional : "handled elsewhere";
-
             if (defaultValues == null) {
                 return null;
             }
@@ -139,15 +131,12 @@ final class TypeSkeleton {
                         "Configuration method " + methodId + " must not return null"
                 );
             }
-            if (optional && (value = ((Optional<?>) value).orElse(null)) == null) {
-                return null;
-            }
             @SuppressWarnings("unchecked")
             V castValue = (V) value;
             return serialize(castValue, ser);
         }
 
-        @NonNull DataEntry serialize(V value, SerializeOutput ser) {
+        @Nullable DataEntry serialize(V value, SerializeOutput ser) {
             serializer.serialize(value, ser);
 
             Object output = ser.getAndClearLastOutput();
@@ -155,6 +144,9 @@ final class TypeSkeleton {
                 throw new DeveloperMistakeException(
                         "Serializer " + serializer + " did not produce any output for " + value
                 );
+            }
+            if (output == NoOutput.INSTANCE) {
+                return null;
             }
             return new DataEntry(output);
         }
