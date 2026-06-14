@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -40,7 +40,8 @@ public interface ReloadShell<C> {
      *
      * @param delegate the delegate value
      * @throws IllegalArgumentException if the argument to {@code delegate} is the shell itself, or creates a cycle
-     * (such as with other {@code ReloadShell}s) pointing to the shell
+     * (such as with other {@code ReloadShell}s) pointing to the shell. Note that cycle detection is implemented on a
+     * best effort basis, and it must not be relied upon for correctness.
      */
     void setCurrentDelegate(@Nullable C delegate);
 

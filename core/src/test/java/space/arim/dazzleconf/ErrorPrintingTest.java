@@ -28,14 +28,16 @@ import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.backend.Printable;
 import space.arim.dazzleconf.backend.KebabCaseKeyMapper;
+import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.UpdateReason;
 import space.arim.dazzleconf.engine.liaison.SubSection;
 import space.arim.dazzleconf.reflect.DefaultReflectionService;
-import space.arim.dazzleconf.reflect.Instantiator;
 import space.arim.dazzleconf.reflect.MethodId;
-import space.arim.dazzleconf.reflect.MethodMirror;
+import space.arim.dazzleconf.reflect.MethodYield;
 import space.arim.dazzleconf.reflect.ReflectionService;
+import space.arim.dazzleconf.reflect.ReflectionProvider;
 import space.arim.dazzleconf.reflect.ReifiedType;
+import space.arim.dazzleconf.reflect.TypeToken;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.AnnotatedElement;
@@ -95,6 +97,11 @@ public class ErrorPrintingTest {
                     @Override
                     public @NonNull KeyPath keyPath() {
                         return new KeyPath.Immut();
+                    }
+
+                    @Override
+                    public @NonNull Interprocessor getInterprocessor() {
+                        return new Interprocessor.Builder().build();
                     }
 
                     @Override
@@ -247,35 +254,56 @@ public class ErrorPrintingTest {
                   sub-section.super-nested-bools.1.2: This value is not chosen correctly. The value < NA > is of type text/string, but it should be true/false value.""");
     }
 
-    // Delegate to default MethodMirror, but sort returned methods
+    // Delegate to default service, but sort returned methods in TypeWalker
 
     record SortedReflectionService(ReflectionService defaultService) implements ReflectionService {
 
         @Override
-        public @NonNull Instantiator makeInstantiator(MethodHandles.@NonNull Lookup lookup) {
-            return defaultService.makeInstantiator(lookup);
+        public @NonNull <I> ReflectionProvider<I> newProvider(Class<I> type, MethodHandles.@NonNull Lookup lookup) {
+            return new SortedReflectionProvider<>(defaultService.newProvider(type, lookup));
         }
 
         @Override
-        public @NonNull MethodMirror makeMethodMirror(MethodHandles.@NonNull Lookup lookup) {
-            return new SortedMethodMirror(defaultService.makeMethodMirror(lookup));
+        public boolean hasProduced(@NonNull Object instance) {
+            return defaultService.hasProduced(instance);
         }
     }
 
-    record SortedMethodMirror(MethodMirror methodMirror) implements MethodMirror {
+    record SortedReflectionProvider<I>(ReflectionProvider<I> defaultProvider) implements ReflectionProvider<I> {
+
+        @Override
+        public @NonNull MethodYield newMethodYield() {
+            return defaultProvider.newMethodYield();
+        }
+
+        @Override
+        public @NonNull I generate(@NonNull MethodYield methodYield) {
+            return defaultProvider.generate(methodYield);
+        }
+
+        @Override
+        public @NonNull ReloadShell<I> generateShell() {
+            return defaultProvider.generateShell();
+        }
+
+        @Override
+        public @NonNull I generateEmpty() {
+            return defaultProvider.generateEmpty();
+        }
 
         @Override
         public @NonNull TypeWalker typeWalker(@NonNull ReifiedType reifiedType) {
-            return new SortedTypeWalker(methodMirror.typeWalker(reifiedType));
+            return new SortedTypeWalker(defaultProvider.typeWalker(reifiedType));
         }
 
         @Override
-        public @NonNull Invoker makeInvoker(@NonNull Object receiver, @NonNull Class<?> enclosingType) {
-            return methodMirror.makeInvoker(receiver, enclosingType);
+        public @NonNull <R> Invoker<R> makeInvoker(@NonNull I receiver, TypeToken<R> enclosingType) {
+            return defaultProvider.makeInvoker(receiver, enclosingType);
         }
+
     }
 
-    record SortedTypeWalker(MethodMirror.TypeWalker delegate) implements MethodMirror.TypeWalker {
+    record SortedTypeWalker(ReflectionProvider.TypeWalker delegate) implements ReflectionProvider.TypeWalker {
 
         @Override
         public @NonNull ReifiedType getEnclosingType() {
@@ -293,8 +321,8 @@ public class ErrorPrintingTest {
         }
 
         @Override
-        public MethodMirror.@NonNull TypeWalker @NonNull [] getSuperTypes() {
-            MethodMirror.TypeWalker[] superTypes = delegate.getSuperTypes();
+        public ReflectionProvider.@NonNull TypeWalker @NonNull [] getSuperTypes() {
+            ReflectionProvider.TypeWalker[] superTypes = delegate.getSuperTypes();
             for (int n = 0; n < superTypes.length; n++) {
                 superTypes[n] = new SortedTypeWalker(superTypes[n]);
             }

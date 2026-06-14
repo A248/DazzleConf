@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -38,7 +38,7 @@ abstract class ProxyHandler<I> implements InvocationHandler {
     }
 
     @Override
-    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    public final Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         if (method.getDeclaringClass().equals(Object.class)) {
             switch (method.getName()) {
                 case "equals":
@@ -68,14 +68,14 @@ abstract class ProxyHandler<I> implements InvocationHandler {
                     return null;
             }
         }
-        return implInvoke(method, args);
+        return implInvoke(proxy, method, args);
     }
 
     Object fastPathNoParams(String methodName) {
         return null;
     }
 
-    abstract Object implInvoke(Method method, Object[] args) throws Throwable;
+    abstract Object implInvoke(Object proxy, Method method, Object[] args) throws Throwable;
 
     abstract boolean implEquals(Object proxy, Object other, ProxyHandler<?> otherHandler);
 

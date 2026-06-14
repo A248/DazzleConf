@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -59,7 +59,7 @@ public class MigrationTest {
 
     public interface Destination {
 
-        @StringDefault(value = "goodbye", ifMissing = "goodbye-default-if-missing")
+        @StringDefault("goodbye")
         String hello();
 
         default char affirmative() {

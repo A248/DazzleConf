@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -26,18 +26,15 @@ import space.arim.dazzleconf.backend.DataList;
 import space.arim.dazzleconf.backend.DataTree;
 
 /**
- * An object from a data tree, that is being processed for deserialization. See {@link DataTree}.
+ * An object from a data tree, that is being processed for deserialization.
  * <p>
  * The object itself is provided by {@link #object()}.
  * <p>
- * <b>Implementation</b>
+ * <b>Library implementor</b>
  * <p>
- * Instances of this type are implemented by the library and supplied to {@link SerializeDeserialize} implementations.
- * Equality is not defined, and no thread safety is provided.
- * <p>
- * This type should not be implemented by library consumers. New methods may be added in the future, and this interface
- * should be considered sealed. If library consumers decide to implement this interface, they might expose themselves
- * to {@code NoSuchMethodError}s if they pass their implementation to more up-to-date liaisons.
+ * Instances of this type are implemented by the library and supplied where relevant. It must not be implemented by
+ * library consumers, as new methods may be added in the future, and user implementations might expose themselves to
+ * {@code NoSuchMethodError}s if they interoperate with more up-to-date code.
  */
 public interface DeserializeInput extends DeserializeContext {
 
@@ -85,23 +82,6 @@ public interface DeserializeInput extends DeserializeContext {
     @NonNull LoadResult<@NonNull DataList> requireDataList();
 
     /**
-     * Makes a child and prepares it for deserialization.
-     * <p>
-     * The child value is supposed to be taken "from" this object. For example, an element in a list would be a child
-     * object of the list. The child value is checked to conform to {@link DataEntry#validateValue(Object)}.
-     *
-     * @param value the child value to wrap
-     * @return deserializable input
-     * @throws IllegalArgumentException if {@code DataEntry.validateValue(value)} returns false
-     * @deprecated This method will be removed in 2.0 in favor of {@link #makeChild(DataEntry, Object)}. That method
-     * requires the caller to supply the child value's location, so to replicate this method's behavior, you would
-     * need to number your calls to this method and pass {@code "$" + idx} as the location.
-     */
-    @Deprecated
-    // 2.0.0-M3: Remove this and all its remnants
-    @NonNull DeserializeInput makeChild(@NonNull Object value);
-
-    /**
      * Makes a child at the given subkey and prepares it for deserialization.
      * <p>
      * The child entry is supposed to be taken "from" this object. For example, an element in a list would be a child
@@ -111,9 +91,13 @@ public interface DeserializeInput extends DeserializeContext {
      * For example, list items can provide the index of the element.
      *
      * @param entry the child entry to wrap
-     * @param locIdentiier an identifier for the child entry's location, based on {@code toString()}
+     * @param locIdentifier an identifier for the child entry's location, based on {@code toString()}
      * @return deserializable input
+     * @deprecated Use {@link #newInputAt(Object, DataEntry)} instead, by swapping the same arguments to this function
      */
-    @NonNull DeserializeInput makeChild(@NonNull DataEntry entry, @NonNull Object locIdentiier);
+    @Deprecated
+    default @NonNull DeserializeInput makeChild(@NonNull DataEntry entry, @NonNull Object locIdentifier) {
+        return newInputAt(locIdentifier, entry);
+    }
 
 }

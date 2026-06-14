@@ -24,12 +24,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf.ConfigurationDefinition;
 import space.arim.dazzleconf.LoadResult;
+import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
-import space.arim.dazzleconf.engine.CommentLocation;
 import space.arim.dazzleconf.engine.DefaultValues;
 import space.arim.dazzleconf.engine.DeserializeInput;
+import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.SerializeOutput;
 import space.arim.dazzleconf.engine.TypeLiaison;
@@ -88,6 +89,12 @@ public final class SubSectionLiaison implements TypeLiaison {
         }
 
         @Override
+        public @NonNull CommentData loadComments(@NonNull CommentInit commentInit) {
+            return configuration.getDefinedLayout().getComments()
+                    .append(Agent.super.loadComments(commentInit));
+        }
+
+        @Override
         @SideEffectFree
         public @NonNull SerializeDeserialize<V> makeSerializer() {
             return new SerDer();
@@ -103,7 +110,7 @@ public final class SubSectionLiaison implements TypeLiaison {
                     return LoadResult.failure(dataTreeResult.getErrorContexts());
                 }
                 DataTree dataTree = dataTreeResult.getOrThrow();
-                return configuration.readFrom(dataTree, deser /* implements ReadOptions */);
+                return configuration.readFrom(dataTree, deser);
             }
 
             @Override
@@ -114,19 +121,11 @@ public final class SubSectionLiaison implements TypeLiaison {
                 if (requireDataTree.isFailure()) {
                     return LoadResult.failure(requireDataTree.getErrorContexts());
                 }
-                DataTree.Mut updatableTree = requireDataTree.getOrThrow().intoMut();
+                DataTree originalTree = requireDataTree.getOrThrow();
+                DataTree.Mut updatableTree = originalTree.intoMut();
 
-                class RecordUpdates {
+                class RecordUpdates implements ConfigurationDefinition.ReadWithUpdateOptions {
                     private boolean updated;
-                }
-                RecordUpdates recordUpdates = new RecordUpdates();
-
-                LoadResult<V> result = configuration.readWithUpdate(updatableTree, new ConfigurationDefinition.ReadWithUpdateOptions() {
-                    @Override
-                    public void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
-                        recordUpdates.updated = true;
-                        deser.notifyUpdate(entryPath, updateReason);
-                    }
 
                     @Override
                     public @NonNull KeyMapper keyMapper() {
@@ -139,16 +138,19 @@ public final class SubSectionLiaison implements TypeLiaison {
                     }
 
                     @Override
-                    public int maximumErrorCollect() {
-                        return deser.maximumErrorCollect();
+                    public @NonNull Interprocessor getInterprocessor() {
+                        return deser.getInterprocessor();
                     }
 
                     @Override
-                    public boolean writeEntryComments(@NonNull CommentLocation location) {
-                        return updateTo.writeEntryComments(location);
+                    public void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
+                        updated = true;
+                        deser.notifyUpdate(entryPath, updateReason);
                     }
-                });
-                if (result.isSuccess() && recordUpdates.updated) {
+                }
+                RecordUpdates recordUpdates = new RecordUpdates();
+                LoadResult<V> result = configuration.readWithUpdate(updatableTree, recordUpdates);
+                if (result.isSuccess() && (recordUpdates.updated || originalTree != updatableTree)) {
                     // No need to call deser.notifyUpdate(), since it will already have been called for child paths
                     updateTo.outDataTree(updatableTree);
                 }
@@ -158,19 +160,7 @@ public final class SubSectionLiaison implements TypeLiaison {
             @Override
             public void serialize(@NonNull V value, @NonNull SerializeOutput ser) {
                 DataTree.Mut dataTreeMut = new DataTree.Mut();
-                configuration.writeTo(value, dataTreeMut, new ConfigurationDefinition.WriteOptions() {
-
-                    @Override
-                    public @NonNull KeyMapper keyMapper() {
-                        return ser.keyMapper();
-                    }
-
-                    @Override
-                    public boolean writeEntryComments(@NonNull CommentLocation location) {
-                        // TODO: Improve this API: return an object instead of having this function here
-                        return ser.writeEntryComments(location);
-                    }
-                });
+                configuration.writeTo(value, dataTreeMut, ser);
                 ser.outDataTree(dataTreeMut);
             }
         }

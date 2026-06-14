@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -50,7 +50,7 @@ public class InterfaceMethodDependentTest {
 
     private interface LoadDefaults {
 
-        DefaultValues<Integer> loadDefaultValues(TypeLiaison.DefaultInit defaultInit);
+        DefaultValues<Integer> loadDefaultValues(TypeLiaison.DefaultInit<Integer> defaultInit);
 
     }
 
@@ -74,7 +74,7 @@ public class InterfaceMethodDependentTest {
             }
 
             @Override
-            public @Nullable DefaultValues<Integer> loadDefaultValues(@NonNull DefaultInit defaultInit) {
+            public @Nullable DefaultValues<Integer> loadDefaultValues(@NonNull DefaultInit<Integer> defaultInit) {
                 return loadDefaults.loadDefaultValues(defaultInit);
             }
 
@@ -107,6 +107,25 @@ public class InterfaceMethodDependentTest {
         loadConfigType(configType, loadDefaults);
         verify(loadDefaults).loadDefaultValues(argThat(argument -> argument.enclosingType().equals(configType)));
     }
+
+    /*
+    @Test
+    public void declaringSourceTypeMatch(@Mock LoadDefaults loadDefaults) {
+        when(loadDefaults.loadDefaultValues(any())).thenReturn(null);
+        TypeToken<Config> configType = new TypeToken<>() {};
+        loadConfigType(configType, loadDefaults);
+        verify(loadDefaults).loadDefaultValues(argThat(argument -> argument.declaringSourceType().equals(configType.getReifiedType())));
+    }
+
+    @Test
+    public void declaringSourceTypeMatchExtended(@Mock LoadDefaults loadDefaults) {
+        when(loadDefaults.loadDefaultValues(any())).thenReturn(null);
+        TypeToken<ConfigExtend> configType = new TypeToken<>() {};
+        loadConfigType(configType, loadDefaults);
+        ReifiedType sourceType = ReifiedType.rawUnannotated(Config.class);
+        verify(loadDefaults).loadDefaultValues(argThat(argument -> argument.declaringSourceType().equals(sourceType)));
+    }
+     */
 
     @Test
     public void labelMatch(@Mock LoadDefaults loadDefaults) {

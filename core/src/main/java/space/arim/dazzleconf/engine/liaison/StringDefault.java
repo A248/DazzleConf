@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -18,8 +18,6 @@
  */
 
 package space.arim.dazzleconf.engine.liaison;
-
-import space.arim.dazzleconf.engine.DefaultValues;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -43,15 +41,5 @@ public @interface StringDefault {
      * @return the string value
      */
     String value();
-
-    /**
-     * The string value to provide as an "if missing" default. See {@link DefaultValues#ifMissing()} for
-     * considerations.
-     * <p>
-     * If unset, this falls back to {@link #value()}
-     *
-     * @return the value to provide when missing
-     */
-    String ifMissing() default StringLiaison.IF_MISSING_STAND_IN;
 
 }

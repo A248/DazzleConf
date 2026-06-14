@@ -30,6 +30,7 @@ import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.DefaultKeyMapper;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
+import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.UpdateReason;
 
 import java.util.Optional;
@@ -205,6 +206,11 @@ public class OptionalLiaisonTest {
             @Override
             public @NonNull KeyPath keyPath() {
                 return KeyPath.empty();
+            }
+
+            @Override
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
             }
         };
         LoadResult<Config> loadResult = config.readWithUpdate(dataTree, readUpdateOptions);

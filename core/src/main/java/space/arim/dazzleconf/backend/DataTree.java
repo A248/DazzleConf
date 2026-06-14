@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -59,8 +59,12 @@ import java.util.function.BiConsumer;
  * <p>
  * <b>Mutability</b>
  * <p>
- * Mutability of this class is <b>not defined</b>. Please use {@link Mut} or {@link Immut} if you need
- * mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
+ * Mutability of this class is <b>not defined</b>. Please use {@link Mut} or {@link Immut} if you need mutable or
+ * immutable versions, and please read the package documentation regarding the mutability model and thread safety of
+ * these types.
+ * <p>
+ * Note that {@code instanceof} is not a reliable way to determine mutability or lack thereof. This class may
+ * support additional subclasses for different purposes, such as lazy evaluation or alternative internal representations.
  * <p>
  * <b>Equality</b>
  * <p>
@@ -76,7 +80,7 @@ public abstract class DataTree {
 
     @NonNull LinkedHashMap<Object, DataEntry> data;
 
-    DataTree(LinkedHashMap<Object, DataEntry> data) {
+    DataTree(@NonNull LinkedHashMap<Object, DataEntry> data) {
         this.data = data;
     }
 
@@ -102,8 +106,12 @@ public abstract class DataTree {
 
     /**
      * Gets all the keys in this data tree.
+     * <p>
+     * Note that if this data tree is mutable, then mutating it while iterating over the returned set may cause
+     * concurrent modification exceptions.
      *
-     * @return the key set, which may be immutable
+     * @return the key set, which reflects at least the state of the data tree when this method is called. It may be a
+     * mutable copy, an immutable copy, a mutable view, or an immutable view.
      */
     @SideEffectFree
     public @NonNull Set<@NonNull Object> keySet() {
@@ -135,10 +143,16 @@ public abstract class DataTree {
     /**
      * Gets this data tree as an immutable one.
      * <p>
-     * The data contained within this {@code DataTree} is moved to an immutable instance. The old instance may still be
-     * used, but the implementation of this method may be optimized for the case that it is not.
+     * The data contained within this {@code DataTree} is copied to an immutable instance. Because {@link Immut}
+     * requires deep immutability, any entries will be made immutable if they were not already, as they are copied to
+     * the new instance.
      * <p>
-     * If this instance is already {@code DataTree.Immut}, then it may be returned without changes.
+     * If this instance is already an {@code DataTree.Immut}, then it may be returned without changes.
+     * <p>
+     * <b>Implementation Notes</b>
+     * <p>
+     * The receiver of this method is unaffected according to visible side effects. If mutable, it may still be used.
+     * However, the implementation of this method is optimized for the case that it is not used anymore.
      *
      * @return an immutable data tree
      */
@@ -146,13 +160,13 @@ public abstract class DataTree {
     public abstract @NonNull Immut intoImmut();
 
     /**
-     * Gets this data tree as a mutable one.
+     * Gets this data list as a mutable one.
      * <p>
      * If not mutable, the data is copied to a new tree, which will be made deeply mutable. That is, this function will
-     * also be called on any {@code DataTree}s encountered in this tree's entries, and {@link DataList#intoMut()} on any
-     * data lists likewise.
+     * also be called on any {@code DataTree}s encountered in this tree's entries, and {@link DataList#intoMut()} will
+     * be used on any copied lists likewise.
      * <p>
-     * If this instance is already {@code DataTree.Mut}, then it may be returned without changes.
+     * If this instance is already {@code DataTree.Immut}, then it may be returned without changes.
      *
      * @return this tree if mutable, or a mutable copy if needed
      */
@@ -192,10 +206,13 @@ public abstract class DataTree {
         return DataToString.implToString(this);
     }
 
-    void toString(DataToString.Scope output) {
-        output.append(getClass().getSimpleName());
+    void dataToString(DataToString.Scope output) {
         output.mapToString(data);
     }
+
+    abstract void setAllIn(Mut destination);
+
+    abstract void putAllInNonEmpty(Mut destination);
 
     /**
      * A data tree which is immutable.
@@ -205,9 +222,6 @@ public abstract class DataTree {
      */
     public static final class Immut extends DataTree {
 
-        // If this Immut was created by intoImmut(), it needs to guarantee deep immutability
-        private boolean needDeepCopy;
-
         /**
          * Creates an empty data tree
          */
@@ -215,32 +229,17 @@ public abstract class DataTree {
             super(new LinkedHashMap<>(1, 0.99f));
         }
 
-        Immut(LinkedHashMap<Object, DataEntry> data) {
+        Immut(@NonNull LinkedHashMap<Object, DataEntry> data) {
             super(data);
         }
 
         @Override
         public @Nullable DataEntry get(@NonNull Object key) {
-            DataEntry entry = data.get(key);
-            if (needDeepCopy && entry != null) {
-                Object value = entry.getValue();
-                if (value instanceof DataTree.Mut || value instanceof DataList.Mut) {
-                    // Preserve deep immutability of copied entries
-                    makeDeepCopy();
-                    needDeepCopy = false;
-                    entry = data.get(key);
-                }
-            }
-            return entry;
+            return data.get(key);
         }
 
         @Override
         public void forEach(BiConsumer<? super @NonNull Object, ? super @NonNull DataEntry> action) {
-            // Preserve deep immutability of copied entries
-            if (needDeepCopy) {
-                makeDeepCopy();
-                needDeepCopy = false;
-            }
             data.forEach(action);
         }
 
@@ -251,15 +250,26 @@ public abstract class DataTree {
 
         @Override
         public @NonNull Mut intoMut() {
-            Mut mutCopy = new Mut(data);
-            mutCopy.state = Mut.FROZEN_COMING_FROM_IMMUT;
-            return mutCopy;
+            Mut mut = new Mut(data);
+            mut.state = Mut.FROZEN_SHARED_IMMUT_SHALLOW;
+            return mut;
         }
 
-        private void makeDeepCopy() {
-            LinkedHashMap<Object, DataEntry> newData = new LinkedHashMap<>(data.size());
-            data.forEach((key, entry) -> newData.put(key, entry.intoImmutDeep()));
-            data = newData;
+        @Override
+        void setAllIn(Mut destination) {
+            if (destination.state == Mut.FROZEN_SHARED_MUT) {
+                destination.sharedMut.state = Mut.NORMAL;
+                destination.sharedMut.sharedMut = null;
+                destination.sharedMut = null;
+            }
+            destination.data = data;
+            destination.state = Mut.FROZEN_SHARED_IMMUT_SHALLOW;
+        }
+
+        @Override
+        void putAllInNonEmpty(Mut destination) {
+            destination.ensureMutable();
+            destination.data.putAll(data);
         }
     }
 
@@ -276,12 +286,17 @@ public abstract class DataTree {
     public static final class Mut extends DataTree {
 
         // If the data in this Mut is shared with an Immut, it should not be modified
-        // If this Mut was created by intoMut(), it needs to provide deep mutability
+        // If this Mut was created by intoMut(), it needs to provide deep mutability (FROZEN_SHARED_IMMUT_SHALLOW)
         private int state;
+        private DataTree.Mut sharedMut;
 
         private static final int NORMAL = 0;
-        private static final int FROZEN_COMING_FROM_IMMUT = 1;
-        private static final int FROZEN_GOING_TO_IMMUT = 2;
+        // Created by intoMut(), must stay immutable then transform into deep mutability
+        private static final int FROZEN_SHARED_IMMUT_SHALLOW = 1;
+        // Shared with an Immut, must stay immutable simply
+        private static final int FROZEN_SHARED_IMMUT_AS_IS = 2;
+        // Shared with the Mut in sharedMut
+        private static final int FROZEN_SHARED_MUT = 3;
 
         /**
          * Creates
@@ -290,14 +305,14 @@ public abstract class DataTree {
             super(new LinkedHashMap<>());
         }
 
-        Mut(LinkedHashMap<Object, DataEntry> data) {
+        Mut(@NonNull LinkedHashMap<Object, DataEntry> data) {
             super(data);
         }
 
         @Override
         public @Nullable DataEntry get(@NonNull Object key) {
             DataEntry entry = data.get(key);
-            if (state == FROZEN_COMING_FROM_IMMUT && entry != null) {
+            if (state == FROZEN_SHARED_IMMUT_SHALLOW && entry != null) {
                 Object value = entry.getValue();
                 if (value instanceof DataTree.Immut || value instanceof DataList.Immut) {
                     // Preserve deep mutability of copied entries
@@ -310,7 +325,7 @@ public abstract class DataTree {
 
         @Override
         public void forEach(BiConsumer<? super @NonNull Object, ? super @NonNull DataEntry> action) {
-            if (state == FROZEN_COMING_FROM_IMMUT) {
+            if (state == FROZEN_SHARED_IMMUT_SHALLOW) {
                 // Preserve deep mutability of copied entries
                 ensureMutable();
             }
@@ -319,11 +334,20 @@ public abstract class DataTree {
 
         @Override
         public @NonNull Immut intoImmut() {
-            // Setting the state prevents future modifications
-            if (state == NORMAL) state = FROZEN_GOING_TO_IMMUT;
-            Immut immut = new Immut(data);
-            immut.needDeepCopy = true;
-            return immut;
+            switch (state) {
+                case FROZEN_SHARED_IMMUT_SHALLOW:
+                case FROZEN_SHARED_IMMUT_AS_IS:
+                    return new Immut(data);
+                case NORMAL:
+                case FROZEN_SHARED_MUT:
+                default:
+                    break;
+            }
+            LinkedHashMap<Object, DataEntry> immutData = new LinkedHashMap<>();
+            data.forEach((key, entry) -> {
+                immutData.put(key, entry.intoImmutDeep());
+            });
+            return new Immut(immutData);
         }
 
         @Override
@@ -333,18 +357,71 @@ public abstract class DataTree {
 
         private void ensureMutable() {
             switch (state) {
-                case FROZEN_GOING_TO_IMMUT:
-                    data = new LinkedHashMap<>(data);
-                    break;
-                case FROZEN_COMING_FROM_IMMUT:
+                case FROZEN_SHARED_IMMUT_SHALLOW:
                     LinkedHashMap<Object, DataEntry> newData = new LinkedHashMap<>(data.size());
                     data.forEach((key, entry) -> newData.put(key, entry.intoMutDeep()));
                     data = newData;
+                    break;
+                case FROZEN_SHARED_MUT:
+                    sharedMut.state = NORMAL;
+                    sharedMut.sharedMut = null;
+                    sharedMut = null; // FT
+                case FROZEN_SHARED_IMMUT_AS_IS:
+                    data = new LinkedHashMap<>(data);
                     break;
                 default:
                     break;
             }
             state = NORMAL;
+        }
+
+        /**
+         * Sets this data tree to be <i>exactly equal</i> to an existing one.
+         * <p>
+         * All data from the argument tree is copied into this one, and all data present in this tree is overwritten
+         * or cleared.
+         * <p>
+         * If the argument is equal to {@code this}, this call is a no-op. Otherwise, it is equivalent to clearing this
+         * data tree then setting all its entries from the argument.
+         *
+         * @param dataTree the tree to set from
+         */
+        public void setAll(@NonNull DataTree dataTree) {
+            if (dataTree == this) {
+                return;
+            }
+            dataTree.setAllIn(this);
+        }
+
+        @Override
+        void setAllIn(Mut destination) {
+            if (destination.state == FROZEN_SHARED_MUT) {
+                if (destination.sharedMut == this) {
+                    // Hooray
+                    return;
+                }
+                destination.sharedMut.state = NORMAL;
+                destination.sharedMut.sharedMut = null;
+            }
+            switch (state) {
+                case FROZEN_SHARED_IMMUT_SHALLOW:
+                case FROZEN_SHARED_IMMUT_AS_IS:
+                    destination.data = data;
+                    destination.state = state;
+                    return;
+                case FROZEN_SHARED_MUT:
+                    destination.data = new LinkedHashMap<>(data);
+                    destination.state = NORMAL;
+                    return;
+                case NORMAL:
+                default:
+                    break;
+            }
+            destination.data = data;
+            destination.state = FROZEN_SHARED_MUT;
+            destination.sharedMut = this;
+            sharedMut = destination;
+            state = FROZEN_SHARED_MUT;
         }
 
         /**
@@ -365,25 +442,68 @@ public abstract class DataTree {
         }
 
         /**
+         * Puts multiple entries into this data tree, from another one
+         *
+         * @param dataTree the tree to put from
+         */
+        public void putAll(@NonNull DataTree dataTree) {
+            if (dataTree == this) {
+                return;
+            }
+            if (isEmpty()) {
+                dataTree.setAllIn(this);
+            } else {
+                dataTree.putAllInNonEmpty(this);
+            }
+        }
+
+        @Override
+        void putAllInNonEmpty(Mut destination) {
+            switch (state) {
+                case FROZEN_SHARED_IMMUT_SHALLOW:
+                    ensureMutable(); // FT
+                case NORMAL:
+                case FROZEN_SHARED_IMMUT_AS_IS:
+                case FROZEN_SHARED_MUT:
+                    destination.ensureMutable();
+                    destination.data.putAll(data);
+                    break;
+            }
+        }
+
+        /**
          * Clears any entry at the specified key
          *
          * @param key the key
+         * @return the previous entry that was at the key, or null if there is none
          * @throws IllegalArgumentException if the provided key is not a valid canonical type
          */
-        public void remove(@NonNull Object key) {
+        public @Nullable DataEntry remove(@NonNull Object key) {
             if (!validateKey(key)) {
                 throw new IllegalArgumentException("Not a canonical key: " + key);
             }
             ensureMutable();
-            data.remove(key);
+            return data.remove(key);
         }
 
         /**
          * Clears all data
          */
         public void clear() {
-            ensureMutable();
-            data.clear();
+            switch (state) {
+                case NORMAL:
+                    data.clear();
+                    break;
+                case FROZEN_SHARED_MUT:
+                    sharedMut.state = NORMAL;
+                    sharedMut.sharedMut = null;
+                    sharedMut = null; // FT
+                case FROZEN_SHARED_IMMUT_SHALLOW:
+                case FROZEN_SHARED_IMMUT_AS_IS:
+                    data = new LinkedHashMap<>();
+                    state = NORMAL;
+                    break;
+            }
         }
 
         /**

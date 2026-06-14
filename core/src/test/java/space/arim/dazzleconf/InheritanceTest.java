@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -20,6 +20,7 @@
 package space.arim.dazzleconf;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,14 +36,19 @@ import space.arim.dazzleconf.backend.DefaultKeyMapper;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.CallableFn;
-import space.arim.dazzleconf.engine.CommentLocation;
+import space.arim.dazzleconf.engine.DefinedLayout;
+import space.arim.dazzleconf.engine.DefinedNode;
+import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.UpdateListener;
 import space.arim.dazzleconf.engine.UpdateReason;
 import space.arim.dazzleconf.engine.liaison.IntegerDefault;
+import space.arim.dazzleconf.reflect.ReifiedType;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -53,6 +59,10 @@ import static org.mockito.Mockito.verify;
 public class InheritanceTest {
 
     public interface Grandparent {
+
+        default String stayWithGrandpa() {
+            return "yay";
+        }
 
         boolean trueDefault();
 
@@ -168,6 +178,7 @@ public class InheritanceTest {
         assertInstanceOf(type, defaults);
 
         // Check that it worked fully
+        assertEquals("yay", defaults.stayWithGrandpa());
         assertTrue(defaults.trueDefault());
         assertEquals("usable", defaults.usableWhenOveridden());
         assertEquals(Set.of("hi", "there"), defaults.setWhenOveridden());
@@ -208,8 +219,8 @@ public class InheritanceTest {
             }
 
             @Override
-            public boolean writeEntryComments(@NonNull CommentLocation location) {
-                return true;
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
             }
         }).getOrThrow();
         assertEquals("usable", readWithUpdate.usableWhenOveridden());
@@ -219,4 +230,30 @@ public class InheritanceTest {
         verify(updateListener).notifyUpdate(new KeyPath.Mut("setWhenOveridden"), UpdateReason.OTHER);
     }
 
+    @Test
+    public void walkLayout() {
+        Configuration<Parent> configuration = Configuration.defaultBuilder(Parent.class).build();
+        DefinedLayout<Parent> layout = configuration.getDefinedLayout();
+        var branches = layout.getBranches();
+        assertEquals(
+                Set.of(ReifiedType.rawUnannotated(Grandparent.class), ReifiedType.rawUnannotated(Parent.class)),
+                branches.stream().map(b -> b.getType().getReifiedType()).collect(Collectors.toSet())
+        );
+        for (DefinedLayout.Branch<?> branch : branches) {
+            if (branch.getType().getRawType().equals(Grandparent.class)) {
+                assertBranchNodes(1, 0, branch);
+            } else {
+                assert branch.getType().getRawType().equals(Parent.class);
+                assertBranchNodes(5, 2, branch);
+            }
+        }
+        Set<DefinedLayout.Branch<?>> collectFromCallback = new HashSet<>();
+        layout.forEachBranch(collectFromCallback::add);
+        assertEquals(collectFromCallback, new HashSet<>(branches));
+    }
+
+    private static void assertBranchNodes(int expectedVals, int expectedCallables, DefinedLayout.Branch<?> branch) {
+        assertEquals(expectedVals, branch.getNodes().stream().filter(node -> node instanceof DefinedNode.Value).count(), () -> "was " + branch.getNodes());
+        assertEquals(expectedCallables, branch.getNodes().stream().filter(node -> node instanceof DefinedNode.Callable).count(), () -> "was " + branch.getNodes());
+    }
 }

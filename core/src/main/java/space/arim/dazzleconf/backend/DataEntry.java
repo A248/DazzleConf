@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -197,8 +197,7 @@ public final class DataEntry {
         return DataToString.implToString(this);
     }
 
-    void toString(DataToString.Scope output) {
-        output.append(getClass().getSimpleName());
+    void dataToString(DataToString.Scope output) {
         output.append('{');
         output.append("value=");
         output.valueToString(value);

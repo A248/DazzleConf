@@ -36,7 +36,7 @@ import java.util.Objects;
  * <p>
  * This class is immutable.
  */
-public class ReifiedType {
+public final class ReifiedType {
 
     private final @NonNull Class<?> rawType;
     private final @NonNull ReifiedType @NonNull [] arguments;
@@ -61,7 +61,10 @@ public class ReifiedType {
     }
 
     /**
-     * Gets the argument at a certain index
+     * Gets the argument at a certain index.
+     * <p>
+     * See {@link #arguments()}. The argument at any given index will satisfy the erased bound for the type variable it
+     * fills in for.
      *
      * @param index the index
      * @return the argument at it
@@ -72,7 +75,11 @@ public class ReifiedType {
     }
 
     /**
-     * The argument count
+     * The argument count.
+     * <p>
+     * If this type is a raw type, the argument count will be zero. Otherwise, it will be equal to the number of type
+     * variables that exist for the type.
+     *
      * @return the argument count
      */
     public int argumentCount() {
@@ -80,7 +87,10 @@ public class ReifiedType {
     }
 
     /**
-     * Gets all the arguments
+     * Gets all the arguments.
+     * <p>
+     * If this type is a raw type, the returned array will be empty. Otherwise, there will be one argument for each of
+     * the type's type variables, and the argument will satisfy the erased bound for that type variable.
      *
      * @return a copy of the arguments
      */
@@ -98,7 +108,7 @@ public class ReifiedType {
     }
 
     @Override
-    public final boolean equals(@Nullable Object o) {
+    public boolean equals(@Nullable Object o) {
         if (!(o instanceof ReifiedType)) return false;
 
         ReifiedType that = (ReifiedType) o;
@@ -107,7 +117,7 @@ public class ReifiedType {
     }
 
     @Override
-    public final int hashCode() {
+    public int hashCode() {
         int result = rawType.hashCode();
         result = 31 * result + Arrays.hashCode(arguments);
         result = 31 * result + annotations.hashCode();
@@ -115,7 +125,7 @@ public class ReifiedType {
     }
 
     @Override
-    public final @NonNull String toString() {
+    public @NonNull String toString() {
         StringBuilder builder = new StringBuilder();
         toString(builder);
         return builder.toString();
@@ -132,7 +142,7 @@ public class ReifiedType {
             builder.append('<');
             for (int n = 0; n < arguments.length; n++) {
                 if (n != 0) {
-                    builder.append(',');
+                    builder.append(", ");
                 }
                 arguments[n].toString(builder);
             }
@@ -203,6 +213,31 @@ public class ReifiedType {
      */
     public static @NonNull ReifiedType rawUnannotated(@NonNull Class<?> rawType) {
         return new ReifiedType(rawType, EMPTY_ARRAY, ReifiedAnnotations.empty());
+    }
+
+    /**
+     * Creates an unannotated reified type.
+     * <p>
+     * The arguments of the reified type will be the erased upper bound of each type variable. If a bound is annotated,
+     * its annotations will carry over to the resulting type's annotated argument.
+     * <p>
+     * Note that the arguments will otherwise be <i>raw</i>, having no arguments of themselves. This is necessary to
+     * prevent infinite recursion on self-referential type variable bounds. For example, consider the type declaration
+     * {@code Builder<B extends Builder<B>>}; its erasure is {@code Builder<Builder>} as computed by this method.
+     *
+     * @param rawType the raw type
+     * @return a reified type with no annotations, whose arguments are set to the bounds of the type's type variables
+     */
+    public static @NonNull ReifiedType erasedUnannotated(@NonNull Class<?> rawType) {
+        TypeVariable<?>[] typeVariables = rawType.getTypeParameters();
+        ReifiedType[] arguments = new ReifiedType[typeVariables.length];
+        for (int n = 0; n < typeVariables.length; n++) {
+            TypeVariable<?> typeVariable = typeVariables[n];
+            arguments[n] = new ReifiedType(
+                    GenericCompute.eraseType(typeVariable), EMPTY_ARRAY, ReifiedAnnotations.computeFrom(typeVariable)
+            );
+        }
+        return new ReifiedType(rawType, arguments, ReifiedAnnotations.empty());
     }
 
     /**

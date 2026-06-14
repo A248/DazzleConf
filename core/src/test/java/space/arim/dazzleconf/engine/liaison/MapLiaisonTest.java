@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -33,19 +33,22 @@ import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.DefaultKeyMapper;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
+import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.UpdateListener;
 import space.arim.dazzleconf.engine.UpdateReason;
 import space.arim.dazzleconf.reflect.TypeToken;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class MapLiaisonTest {
@@ -140,6 +143,11 @@ public class MapLiaisonTest {
             }
 
             @Override
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
+            }
+
+            @Override
             public void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
                 mockUpdateListener.notifyUpdate(entryPath, updateReason);
             }
@@ -172,6 +180,58 @@ public class MapLiaisonTest {
         dataTree.put("values", new DataEntry(innerTree));
         verifySingleFailureNoUpdates(
                 new TypeToken<Config<String, Integer>>() {}, dataTree, updateListener
+        );
+    }
+
+    @Test
+    public void updateReplace() {
+        DataTree.Mut dataTree = new DataTree.Mut();
+        DataTree.Mut innerTree = new DataTree.Mut();
+        innerTree.put("regular", new DataEntry("stay"));
+        innerTree.put("trim-me", new DataEntry("     trim "));
+        innerTree.put("another-trim-me", new DataEntry(" \n  trim2 "));
+        innerTree.put("good", new DataEntry("b"));
+        dataTree.put("values", new DataEntry(innerTree));
+
+        Configuration<Config<String, TrimOnDeser>> configuration = StringType.configuration(new TypeToken<>() {});
+        Set<Map.Entry<KeyPath, UpdateReason>> updates = new HashSet<>();
+        ConfigurationDefinition.ReadWithUpdateOptions options = new ConfigurationDefinition.ReadWithUpdateOptions() {
+            @Override
+            public @NonNull KeyMapper keyMapper() {
+                return new DefaultKeyMapper();
+            }
+
+            @Override
+            public @NonNull KeyPath keyPath() {
+                return KeyPath.empty();
+            }
+
+            @Override
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
+            }
+
+            @Override
+            public void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
+                updates.add(Map.entry(entryPath, updateReason));
+            }
+        };
+        Config<String, TrimOnDeser> config = assertDoesNotThrow(() ->
+                configuration.readWithUpdate(dataTree, options).getOrThrow());
+        assertEquals(
+                new HashSet<>(Arrays.asList(
+                        Map.entry(new KeyPath.Immut("values", "trim-me"), UpdateReason.UPDATED),
+                        Map.entry(new KeyPath.Immut("values", "another-trim-me"), UpdateReason.UPDATED)
+                )), updates
+        );
+        assertEquals(
+                Map.of(
+                        "regular", "stay", "trim-me", "trim",
+                        "another-trim-me", "trim2", "good", "b"
+                ).entrySet(),
+                config.values().entrySet().stream()
+                        .map(entry -> Map.entry(entry.getKey(), entry.getValue().value()))
+                        .collect(Collectors.toSet())
         );
     }
 }

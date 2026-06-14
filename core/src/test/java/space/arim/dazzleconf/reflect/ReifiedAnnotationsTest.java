@@ -32,6 +32,7 @@ import static space.arim.dazzleconf.Utilities.assertEqualsBothWays;
 import static space.arim.dazzleconf.Utilities.assertNotEqualsBothWays;
 import static space.arim.dazzleconf.reflect.ReifiedAnnotations.computeFrom;
 
+@SuppressWarnings("EmptyClass") // note: Retention = SOURCE
 public class ReifiedAnnotationsTest {
 
     @Retention(RUNTIME)
@@ -113,10 +114,11 @@ public class ReifiedAnnotationsTest {
         assertEqualsBothWays(1, onlyOneCont.getAll(Repeat.class).length);
         // See what works with the container
         assertTrue(curious.hasAny(RepeatCont.class));
-        assertTrue(onlyOne.hasAny(RepeatCont.class));
         assertNotNull(curious.getOne(RepeatCont.class));
         // This behavior is surprising but technically correct
+        assertFalse(onlyOne.hasAny(RepeatCont.class));
         assertNull(onlyOne.getOne(RepeatCont.class));
+        assertTrue(onlyOneCont.hasAny(RepeatCont.class));
         assertNotNull(onlyOneCont.getOne(RepeatCont.class));
     }
 
@@ -167,9 +169,86 @@ public class ReifiedAnnotationsTest {
         assertEqualsBothWays(1, onlyOne.getAll(RepeatInherit.class).length);
         // See what works with the container
         assertTrue(curious.hasAny(RepeatInheritCont.class));
-        assertTrue(onlyOne.hasAny(RepeatInheritCont.class));
         assertNotNull(curious.getOne(RepeatInheritCont.class));
         // This behavior is surprising but technically correct
+        assertFalse(onlyOne.hasAny(RepeatInheritCont.class));
         assertNull(onlyOne.getOne(RepeatInheritCont.class));
+    }
+
+    @Test
+    public void setOne() {
+        @RepeatCont({})
+        class WithRepeatCont {}
+        @Repeat
+        @Repeat
+        class WithRepeat {}
+        RepeatCont repeatCont = WithRepeatCont.class.getAnnotation(RepeatCont.class);
+        Repeat[] repeats = WithRepeat.class.getAnnotationsByType(Repeat.class);
+        Repeat firstRepeat = repeats[0];
+
+        ReifiedAnnotations empty = ReifiedAnnotations.empty();
+        ReifiedAnnotations withRepeatCont = empty.setOne(RepeatCont.class, repeatCont);
+        assertNotNull(withRepeatCont.getOne(RepeatCont.class));
+        assertNull(withRepeatCont.getOne(Repeat.class));
+        assertEquals(1, withRepeatCont.getAll(RepeatCont.class).length);
+        assertEquals(0, withRepeatCont.getAll(Repeat.class).length);
+        assertEqualsBothWays(ReifiedAnnotations.empty(), empty); // immutable
+        assertSame(withRepeatCont, withRepeatCont.setOne(RepeatCont.class, repeatCont), "no-op set => same object");
+        assertEqualsBothWays(computeFrom(WithRepeatCont.class), withRepeatCont); // equal to direct computation
+
+        ReifiedAnnotations withFirstRepeat = empty.setOne(Repeat.class, firstRepeat);
+        ReifiedAnnotations withFirstRepeatClone = withRepeatCont.setOne(Repeat.class, firstRepeat);
+        assertEqualsBothWays(withFirstRepeat, withFirstRepeatClone);
+        assertEqualsBothWays(computeFrom(WithRepeatCont.class), withRepeatCont); // immutable
+        for (ReifiedAnnotations verify : new ReifiedAnnotations[] {withFirstRepeat, withFirstRepeatClone}) {
+            assertTrue(verify.hasAny(Repeat.class));
+            assertNotNull(verify.getOne(Repeat.class));
+            assertEquals(1, verify.getAll(Repeat.class).length);
+            assertFalse(verify.hasAny(RepeatCont.class));
+            assertNull(verify.getOne(RepeatCont.class));
+            assertEquals(0, verify.getAll(RepeatCont.class).length);
+        }
+    }
+
+    @Test
+    public void setAll() {
+        @RepeatCont({})
+        class WithRepeatCont {}
+        @Repeat
+        @Repeat
+        class WithRepeat {}
+        RepeatCont emptyRepeatCont = WithRepeatCont.class.getAnnotation(RepeatCont.class);
+        Repeat[] repeats = WithRepeat.class.getAnnotationsByType(Repeat.class);
+        RepeatCont fullRepeatCont = WithRepeat.class.getAnnotation(RepeatCont.class);
+
+        ReifiedAnnotations empty = ReifiedAnnotations.empty();
+        assertEqualsBothWays(ReifiedAnnotations.empty(), empty.setAll(Repeat.class)); // no-op setAll
+        assertEqualsBothWays(ReifiedAnnotations.empty(), empty.setAll(RepeatCont.class)); // no-op setAll
+
+        ReifiedAnnotations withEmptyRepeatCont = empty.setAll(RepeatCont.class, emptyRepeatCont);
+        assertEqualsBothWays(ReifiedAnnotations.empty(), empty); // immutable
+        assertEqualsBothWays(withEmptyRepeatCont, computeFrom(WithRepeatCont.class));
+        ReifiedAnnotations withRepeatAlone = empty.setAll(Repeat.class, repeats);
+        assertEqualsBothWays(ReifiedAnnotations.empty(), empty); // immutable
+        ReifiedAnnotations withRepeatContained = computeFrom(WithRepeat.class);
+
+        assertArrayEquals(new Repeat[0], withEmptyRepeatCont.getAll(Repeat.class));
+        assertArrayEquals(repeats, withRepeatAlone.getAll(Repeat.class));
+        assertArrayEquals(repeats, withRepeatContained.getAll(Repeat.class));
+        assertEqualsBothWays(withRepeatAlone, withRepeatContained);
+
+        // See what works with the container
+        assertTrue(withEmptyRepeatCont.hasAny(RepeatCont.class));
+        assertEquals(emptyRepeatCont, withEmptyRepeatCont.getOne(RepeatCont.class));
+        assertArrayEquals(new RepeatCont[] {emptyRepeatCont}, withEmptyRepeatCont.getAll(RepeatCont.class));
+        assertFalse(withRepeatAlone.hasAny(RepeatCont.class));
+        assertNull(withRepeatAlone.getOne(RepeatCont.class));
+        assertArrayEquals(new RepeatCont[0], withRepeatAlone.getAll(RepeatCont.class));
+        assertTrue(withRepeatContained.hasAny(RepeatCont.class));
+        assertEquals(fullRepeatCont, withRepeatContained.getOne(RepeatCont.class));
+        assertArrayEquals(
+                new RepeatCont[] {fullRepeatCont},
+                withRepeatContained.getAll(RepeatCont.class)
+        );
     }
 }

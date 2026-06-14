@@ -19,233 +19,77 @@
 
 package space.arim.dazzleconf.reflect;
 
-import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf.internals.ImmutableCollections;
-
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Consumer;
+import space.arim.dazzleconf.DeveloperMistakeException;
 
 /**
  * Bank of values yielded when calling an instantiated proxy.
  * <p>
- * This class is mutable: it is designed to be passed from its producer to its consumer. If defensive copies are
- * needed, see {@link #copy()}.
+ * A {@code MethodYield} can only be used with the reflection provider that produced it. Its lifetime exists from the
+ * moment of production to when it is closed or consumed by {@link ReflectionProvider#generate(MethodYield)}. It
+ * is mutable, not thread safe, and not designed to be long-lasting. However, if multiple copies are needed, see
+ * {@link #copy()}.
  */
-@API(status = API.Status.MAINTAINED)
-public final class MethodYield {
-
-    /// To make iteration simpler, we avoid adding empty submaps
-    private final @NonNull Map<Class<?>, Map<MethodId, Object>> backing;
-    private transient int sizeEstimate;
-    /// The current type for which a ForImplementable exists
-    private transient Class<?> currentImplementable;
-    private static final InvokeDefaultFunction INVOKE_DEFAULT_FUNCTION = new InvokeDefaultFunction();
+public interface MethodYield extends AutoCloseable {
 
     /**
-     * Creates an empty yield.
-     */
-    public MethodYield() {
-        this(new HashMap<>());
-    }
-
-    private MethodYield(@NonNull Map<Class<?>, Map<MethodId, Object>> backing) {
-        this.backing = backing;
-    }
-
-    /**
-     * Begins adding yield values for the given interface.
+     * Gets the subset of this method yield that can add values for the given interface.
      * <p>
-     * The returned {@link ForImplementable} must be used, and closed, before this method can be called again.
-     * Additionally, this method cannot be used more than once with the same {@code implementable} argument.
+     * When the returned {@code ForImplementable} is done being used, it must be closed. Only one
+     * {@code ForImplementable} per implementor class can exist at any given time. However, after closing it, this
+     * method can be called again with the same implementor class.
      *
      * @param implementable the interface being implemented
-     * @return a handler to attach return values for it
+     * @return a handler to attach instructions for it
+     * @throws IllegalStateException if the {@code implementable} already has a {@code ForImplementable} open for it,
+     * or if this {@code MethodYield} is already consumed. This exception can also be thrown by methods on the returned
+     * object if these conditions are realized later.
      */
-    public @NonNull ForImplementable forImplementable(@NonNull Class<?> implementable) {
-        Objects.requireNonNull(implementable, "implementable");
-        if (backing.containsKey(implementable)) {
-            throw new IllegalStateException("Called already for " + implementable);
-        }
-        if (currentImplementable != null) {
-            throw new IllegalStateException("Existing handler must be closed");
-        }
-        currentImplementable = implementable;
-        return new ForImplementable();
-    }
+    @NonNull ForImplementable forImplementable(@NonNull Class<?> implementable);
 
     /**
-     * Builder of return value instructions, given an implementable class. When the caller is finished calling methods
-     * to add return values, they must close this object.
-     *
+     * Builder of return value instructions within an implementable type.
+     * <p>
+     * Each function on this interface allows adding instructions for methods that exist within the implementable type.
+     * Using methods from other places or implementations can cause {@link DeveloperMistakeException} to be thrown.
+     * <p>
+     * A target method can have an instruction added only once. After adding one or more instructions, this
+     * {@code ForImplementable} must be closed.
      */
-    public final class ForImplementable implements AutoCloseable {
-
-        private final Map<MethodId, Object> methodMap = new HashMap<>();
+    interface ForImplementable extends AutoCloseable {
 
         /**
-         * Specifies to return the given value. If the given method already has an instruction, it is replaced.
-         * <p>
-         * If the given method is a covariant override of a method in a parent class, this function should be called
-         * twice, with appropriately different {@code MethodId}s.
+         * Specifies to return a fixed value. If the given method already has an instruction, it is replaced.
          *
-         * @param method        a method within that interface
-         * @param value         the value to return
+         * @param methodId a method within the type
+         * @param value the value to return, or the boxed value if primitive
+         * @throws IllegalStateException if the given method already has an instruction
          */
-        public void returnValue(@NonNull MethodId method, @NonNull Object value) {
-            Objects.requireNonNull(method, "method");
-            Objects.requireNonNull(value, "value");
-            methodMap.put(method, value);
-        }
+        void returnValue(@NonNull MethodId methodId, @NonNull Object value);
 
         /**
-         * Specifies to invoke the default implementation. If the given method already has an instruction, it is
-         * replaced.
-         * <p>
-         * If the given method exists in the current implementable class but was also overidden by a subclass,
-         * this method should be used for both classes.
+         * Specifies to invoke the default implementation.
          *
-         * @param method        a method within that interface
+         * @param methodId        a method within the type
+         * @throws IllegalArgumentException if the method is not default
+         * @throws IllegalStateException if the given method already has an instruction
          */
-        public void callDefaultImpl(@NonNull MethodId method) {
-            Objects.requireNonNull(method, "method");
-            methodMap.put(method, INVOKE_DEFAULT_FUNCTION);
-        }
+        void callDefault(@NonNull MethodId methodId);
 
+        /**
+         * Closes this {@code ForImplementable}.
+         *
+         */
         @Override
-        public void close() {
-            if (currentImplementable == null) {
-                return; // Closed already
-            }
-            if (!methodMap.isEmpty()) {
-                backing.put(currentImplementable, methodMap);
-                sizeEstimate += methodMap.size();
-            }
-            currentImplementable = null;
-        }
+        void close();
     }
 
     /**
      * Clears all added values and starts over again
-     */
-    public void clear() {
-        backing.clear();
-        sizeEstimate = 0;
-    }
-
-    /**
-     * Gets the yieldable values
      *
-     * @param implementable the interface being implemented
-     * @return the values for method calls on that interface's methods, immutable
+     * @throws IllegalStateException if this {@code MethodYield} is already consumed
      */
-    public Map<@NonNull MethodId, @NonNull Object> valuesFor(@NonNull Class<?> implementable) {
-        return backing.getOrDefault(implementable, ImmutableCollections.emptyMap());
-    }
-
-    /**
-     * Gets all entries added. Each entry represents a single return value instruction
-     *
-     * @return the iterable entries
-     */
-    public @NonNull Iterable<@NonNull Entry> entries() {
-        return new Iterable<Entry>() {
-            @Override
-            public @NonNull Iterator<Entry> iterator() {
-                return new Iter(backing.entrySet().iterator());
-            }
-
-            @Override
-            public void forEach(Consumer<? super Entry> action) {
-                backing.forEach((implementable, methodMap) -> {
-                    methodMap.entrySet().forEach(methodAndValue -> {
-                        action.accept(new Entry(implementable, methodAndValue));
-                    });
-                });
-            }
-        };
-    }
-
-    /**
-     * Gets the estimated number of entries
-     *
-     * @return the estimated size of this {@code MethodYield}
-     */
-    public int sizeEstimate() {
-        return sizeEstimate;
-    }
-
-    /**
-     * An entry added to the method yield
-     *
-     */
-    public static final class Entry {
-
-        private final Class<?> implementable;
-        private final Map.Entry<MethodId, Object> methodAndValue;
-
-        Entry(Class<?> implementable, Map.Entry<MethodId, Object> methodAndValue) {
-            this.implementable = implementable;
-            this.methodAndValue = methodAndValue;
-        }
-
-        /**
-         * Gets the interface being implemented
-         *
-         * @return the interface
-         */
-        public @NonNull Class<?> implementable() {
-            return implementable;
-        }
-
-        /**
-         * Gets the method
-         *
-         * @return the method
-         */
-        public @NonNull MethodId method() {
-            return methodAndValue.getKey();
-        }
-
-        /**
-         * Gets the return value for the method, or {@link InvokeDefaultFunction} to call the default implementation
-         *
-         * @return the return value; primitive values will be boxed
-         */
-        public @NonNull Object returnValue() {
-            return methodAndValue.getValue();
-        }
-    }
-
-    private static final class Iter implements Iterator<Entry> {
-
-        private final Iterator<Map.Entry<Class<?>, Map<MethodId, Object>>> backing;
-        private Class<?> currentType;
-        private Iterator<Map.Entry<MethodId, Object>> currentMap;
-
-        private Iter(Iterator<Map.Entry<Class<?>, Map<MethodId, Object>>> backing) {
-            this.backing = backing;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return (currentMap != null && currentMap.hasNext()) || backing.hasNext();
-        }
-
-        @Override
-        public @NonNull Entry next() {
-            if (currentMap == null || !currentMap.hasNext()) {
-                Map.Entry<Class<?>, Map<MethodId, Object>> nextMap = backing.next();
-                currentType = nextMap.getKey();
-                currentMap = nextMap.getValue().entrySet().iterator();
-            }
-            return new Entry(currentType, currentMap.next());
-        }
-    }
+    void clear();
 
     /**
      * Returns a deep copy of this method yield's contents.
@@ -254,32 +98,15 @@ public final class MethodYield {
      * mutating the copy will not affect this instance.
      *
      * @return a copy of this method yield's contents
+     * @throws IllegalStateException if this {@code MethodYield} is already consumed
      */
-    public @NonNull MethodYield copy() {
-        Map<Class<?>, Map<MethodId, Object>> copyBacking = new HashMap<>(this.backing.size());
-        backing.forEach((clazz, values) -> {
-            copyBacking.put(clazz, new HashMap<>(values));
-        });
-        MethodYield copy = new MethodYield(copyBacking);
-        copy.sizeEstimate = sizeEstimate;
-        return copy;
-    }
+    @NonNull MethodYield copy();
 
+    /**
+     * Closes this method yield
+     *
+     */
     @Override
-    public boolean equals(@Nullable Object o) {
-        if (!(o instanceof MethodYield)) return false;
+    void close();
 
-        MethodYield that = (MethodYield) o;
-        return backing.equals(that.backing);
-    }
-
-    @Override
-    public int hashCode() {
-        return backing.hashCode();
-    }
-
-    @Override
-    public @NonNull String toString() {
-        return getClass().getSimpleName() + '{' + backing + '}';
-    }
 }

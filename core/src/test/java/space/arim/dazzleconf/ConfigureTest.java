@@ -20,6 +20,7 @@
 package space.arim.dazzleconf;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,7 +32,13 @@ import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.DefaultKeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.CommentLocation;
+import space.arim.dazzleconf.engine.DefaultValues;
+import space.arim.dazzleconf.engine.DeserializeInput;
+import space.arim.dazzleconf.engine.SerializeDeserialize;
+import space.arim.dazzleconf.engine.SerializeOutput;
+import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.engine.UpdateReason;
+import space.arim.dazzleconf.reflect.TypeToken;
 
 import java.util.List;
 
@@ -42,6 +49,7 @@ import static org.mockito.Mockito.*;
 public class ConfigureTest {
 
     private final Backend backend;
+    private Configuration<Config> config;
 
     public ConfigureTest(@Mock Backend backend) {
         this.backend = backend;
@@ -80,18 +88,58 @@ public class ConfigureTest {
                 return false;
             }
         });
+        config = Configuration.defaultBuilder(Config.class)
+                .addTypeLiaisons(new TypeLiaison() {
+                    @Override
+                    public @Nullable <V> Agent<V> makeAgent(@NonNull TypeToken<V> typeToken, @NonNull Handshake handshake) {
+                        return Agent.matchOnToken(typeToken, String.class, () -> new Agent<String>() {
+                            @Override
+                            public @Nullable DefaultValues<String> loadDefaultValues(@NonNull DefaultInit<String> defaultInit) {
+                                DefaultValues<String> fromMethod = defaultInit.methodDefault();
+                                if (fromMethod == null) {
+                                    return null;
+                                }
+                                return new DefaultValues<String>() {
+                                    @Override
+                                    public @NonNull String defaultValue() {
+                                        return fromMethod.defaultValue();
+                                    }
+
+                                    @Override
+                                    public @NonNull String ifMissing() {
+                                        return fromMethod.ifMissing() + "-if-missing";
+                                    }
+                                };
+                            }
+
+                            @Override
+                            public @NonNull SerializeDeserialize<String> makeSerializer() {
+                                return new SerializeDeserialize<String>() {
+                                    @Override
+                                    public @NonNull LoadResult<String> deserialize(@NonNull DeserializeInput deser) {
+                                        return deser.requireString();
+                                    }
+
+                                    @Override
+                                    public void serialize(@NonNull String value, @NonNull SerializeOutput ser) {
+                                        ser.outString(value);
+                                    }
+                                };
+                            }
+                        });
+                    }
+                })
+                .build();
     }
 
     @Test
     public void nullKeyMapper() {
-        Configuration<Config> config = Configuration.defaultBuilder(Config.class).build();
         when(backend.recommendKeyMapper()).thenReturn(null);
         assertThrows(NullPointerException.class, () -> config.configureWith(backend));
     }
 
     @Test
     public void erroredOut(@Mock ErrorContext errorContext) {
-        Configuration<Config> config = Configuration.defaultBuilder(Config.class).build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
         when(backend.read(any())).thenReturn(LoadResult.failure(errorContext));
         LoadResult<Config> configureWith = config.configureWith(backend);
@@ -101,12 +149,9 @@ public class ConfigureTest {
 
     @Test
     public void loadDefaults(@Mock ConfigureListener configureListener) {
-        Configuration<MigrationTest.Destination> config = Configuration
-                .defaultBuilder(MigrationTest.Destination.class)
-                .build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
         when(backend.read(any())).thenReturn(LoadResult.of(null));
-        MigrationTest.Destination defaultValues = config.configureWith(backend, configureListener).getOrThrow();
+        Config defaultValues = config.configureWith(backend, configureListener).getOrThrow();
         assertEquals("goodbye", defaultValues.hello());
         assertEquals('y', defaultValues.affirmative());
 
@@ -123,13 +168,10 @@ public class ConfigureTest {
 
     @Test
     public void loadMissingValue(@Mock ConfigureListener configureListener) {
-        Configuration<MigrationTest.Destination> config = Configuration
-                .defaultBuilder(MigrationTest.Destination.class)
-                .build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
         when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(new DataTree.Immut())));
-        MigrationTest.Destination withMissing = config.configureWith(backend, configureListener).getOrThrow();
-        assertEquals("goodbye-default-if-missing", withMissing.hello());
+        Config withMissing = config.configureWith(backend, configureListener).getOrThrow();
+        assertEquals("goodbye-if-missing", withMissing.hello());
         assertEquals('y', withMissing.affirmative());
 
         // Check update listener
@@ -139,21 +181,18 @@ public class ConfigureTest {
 
         // Check the data that was written back
         DataTree.Mut expectedWriteBack = new DataTree.Mut();
-        expectedWriteBack.put("hello", new DataEntry("goodbye-default-if-missing"));
+        expectedWriteBack.put("hello", new DataEntry("goodbye-if-missing"));
         expectedWriteBack.put("affirmative", new DataEntry('y'));
         verify(backend).write(argThat(new MatchDocumentData(expectedWriteBack)));
     }
 
     @Test
     public void loadPartialMissingValue(@Mock ConfigureListener configureListener) {
-        Configuration<MigrationTest.Destination> config = Configuration
-                .defaultBuilder(MigrationTest.Destination.class)
-                .build();
         when(backend.recommendKeyMapper()).thenReturn(new DefaultKeyMapper());
         DataTree.Mut dataTree = new DataTree.Mut();
         dataTree.put("hello", new DataEntry("present"));
         when(backend.read(any())).thenReturn(LoadResult.of(Backend.Document.simple(dataTree)));
-        MigrationTest.Destination withMissing = config.configureWith(backend, configureListener).getOrThrow();
+        Config withMissing = config.configureWith(backend, configureListener).getOrThrow();
         assertEquals("present", withMissing.hello());
         assertEquals('y', withMissing.affirmative());
 

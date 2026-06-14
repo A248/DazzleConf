@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -17,15 +17,20 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.reflect;
+package space.arim.dazzleconf.backend.mutmodel;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.jupiter.api.Test;
+import java.util.List;
+import java.util.function.BiConsumer;
 
-public class InvokeDefaultFunctionTest {
+public final class ModifyAction<S, M, A> extends Action<A> {
 
-    @Test
-    public void equality() {
-        EqualsVerifier.forClass(InvokeDefaultFunction.class).verify();
+    final BiConsumer<S, A> modify;
+    final BiConsumer<M, A> modifyModel;
+
+    public ModifyAction(String signature, List<A> argumentUniverse, BiConsumer<S, A> modify, BiConsumer<M, A> modifyModel) {
+        super(signature, argumentUniverse);
+        this.modify = modify;
+        this.modifyModel = modifyModel;
     }
+
 }

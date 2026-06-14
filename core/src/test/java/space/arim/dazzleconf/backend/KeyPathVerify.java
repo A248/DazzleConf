@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -32,6 +32,8 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public final class KeyPathVerify {
 
@@ -53,8 +55,22 @@ public final class KeyPathVerify {
                     (BiConsumer<KeyPath, String[]>) (keyPath, content) -> assertEquals(String.join(".", content), keyPath.toString()),
                     (keyPath, content) -> assertArrayEquals(content, keyPath.intoParts()),
                     (keyPath, content) -> assertEquals(List.of(content), keyPath.intoPartsList()),
-                    (keyPath, content) -> assertEquals(content[0], keyPath.getLeading(KeyPath.SequenceBoundary.FRONT)),
-                    (keyPath, content) -> assertEquals(content[content.length - 1], keyPath.getLeading(KeyPath.SequenceBoundary.BACK)),
+                    (keyPath, content) -> {
+                        CharSequence leading = keyPath.getLeading(KeyPath.SequenceBoundary.FRONT);
+                        if (content.length == 0) {
+                            assertNull(leading);
+                        } else {
+                            assertEquals(content[0], leading);
+                        }
+                    },
+                    (keyPath, content) -> {
+                        CharSequence trailing = keyPath.getLeading(KeyPath.SequenceBoundary.BACK);
+                        if (content.length == 0) {
+                            assertNull(trailing);
+                        } else {
+                            assertEquals(content[content.length - 1], trailing);
+                        }
+                    },
                     (keyPath, content) -> {
                         List<CharSequence> output = new ArrayList<>();
                         keyPath.forEach(output::add);

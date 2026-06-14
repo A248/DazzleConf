@@ -20,11 +20,9 @@
 package space.arim.dazzleconf.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf.Configuration;
 import space.arim.dazzleconf.ConfigurationDefinition;
 import space.arim.dazzleconf.ErrorContext;
-import space.arim.dazzleconf.backend.Backend;
-import space.arim.dazzleconf.backend.KeyMapper;
+import space.arim.dazzleconf.backend.DataEntry;
 import space.arim.dazzleconf.backend.KeyPath;
 
 /**
@@ -33,42 +31,47 @@ import space.arim.dazzleconf.backend.KeyPath;
  * This context identifies the location where deserialization is taking place, as well as global settings like the key
  * mapper. It extends {@link ConfigurationDefinition.ReadOptions} and can be immediately used as such.
  * <p>
- * <b>Implementation</b>
+ * <b>Library implementor</b>
  * <p>
- * Instances of this type are implemented by the library and supplied during type deserialization handling. Equality
- * is not defined, and no thread safety is provided.
- * <p>
- * This type should not be implemented by library consumers. New methods may be added in the future, and this interface
- * should be considered sealed. If library consumers decide to implement this interface, they might expose themselves
- * to {@code NoSuchMethodError}s if they pass their implementation to more up-to-date liaisons.
+ * Instances of this type are implemented by the library and supplied where relevant. It must not be implemented by
+ * library consumers, as new methods may be added in the future, and user implementations might expose themselves to
+ * {@code NoSuchMethodError}s if they interoperate with more up-to-date code.
  */
-public interface DeserializeContext extends ConfigurationDefinition.ReadOptions, ErrorContext.Source {
+public interface DeserializeContext extends ConfigurationDefinition.ReadOptions, ErrorContext.Source, OperationContext<DeserializeContext> {
 
     /**
-     * Gets the key mapper.
+     * Creates a child context at the given key, with an object prepared for deserialization there.
      * <p>
-     * The key mapper is whichever key mapper is being used for the read operation.
+     * This is the standard method for obtaining a deserialiation input when, logically, an object that is "from" the
+     * current one must be deserialized as well. For example, elements of a list should call this method once for each
+     * element, with the list index as the {@code locIdentifier}.
      * <p>
-     * If using {@link Configuration#configureWith(Backend)}, the key mapper may have been recommended by
-     * {@link Backend#recommendKeyMapper()} even if no key mapper was set on the configuration. It is provided here
-     * for purposes of deserializing child options in configuration subsections.
+     * This method is equivalent to:
+     * <pre>
+     *     {@code
+     *         deriveContext(locIdentifier).newInputHere(entry);
+     *     }
+     * </pre>
      *
-     * @return the key mapper
+     * @param locIdentifier an identifier for the child input's location, based on {@code toString()}
+     * @param entry the entry to prepare to deserialize
+     * @return the deserialize input
      */
-    @Override
-    @NonNull KeyMapper keyMapper();
+    default @NonNull DeserializeInput newInputAt(@NonNull Object locIdentifier, @NonNull DataEntry entry) {
+        return deriveContext(locIdentifier).newInputHere(entry);
+    }
 
     /**
-     * Gets the absolute key path of the enclosing context.
+     * Prepares another object for deserialization.
      * <p>
-     * This path will automatically include all key parts from the configuration root all the way until the current
-     * entry. It is user displayable and may be included in error messages, as it is meant to reflect an actual
-     * location within the document.
+     * Before calling this method, it is <b>almost always</b> needed to create a child context via
+     * {@link #deriveContext(Object)}. Otherwise, the object will be deserialized at the same key as the current
+     * context, which can create confusing error messages.
      *
-     * @return the absolute key path
+     * @param entry the entry to prepare for deserialization
+     * @return the deserialize input
      */
-    @Override
-    @NonNull KeyPath keyPath();
+    @NonNull DeserializeInput newInputHere(@NonNull DataEntry entry);
 
     /**
      * Signals that the data could use an update with respect to this object. For example, this might happen if

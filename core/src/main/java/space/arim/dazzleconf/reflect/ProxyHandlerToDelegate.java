@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -35,15 +35,17 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler<I> {
 
     private volatile I delegate;
     private final MethodHandles.Lookup lookup;
-    private volatile boolean needLookup;
+    private boolean needLookup;
+    private final ReflectHandleCache reflectHandleCache;
 
-    ProxyHandlerToDelegate(Class<I> iface, MethodHandles.Lookup lookup) {
+    ProxyHandlerToDelegate(Class<I> iface, MethodHandles.Lookup lookup, ReflectHandleCache reflectHandleCache) {
         super(iface);
         this.lookup = lookup;
+        this.reflectHandleCache = reflectHandleCache;
     }
 
     @Override
-    Object implInvoke(Method method, Object[] args) throws Throwable {
+    Object implInvoke(Object proxy, Method method, Object[] args) throws Throwable {
         I delegate = this.delegate;
         if (delegate == null) {
             throw new NullPointerException("delegate");
@@ -63,14 +65,9 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler<I> {
                 }
             }
         }
-        // The java.lang.reflect.Proxy API is just not suited to this case
-        MethodHandle methodHandle;
-        try {
-            methodHandle = lookup.unreflect(method);
-        } catch (IllegalAccessException ex) {
-            throw new IllegalStateException(ex);
-        }
-        return methodHandle.bindTo(delegate).invokeWithArguments(args);
+        MethodHandle methodHandle = reflectHandleCache.forType(lookup, method.getDeclaringClass())
+                .getOrComputeHandle(method);
+        return methodHandle.invokeExact((Object) delegate, args);
     }
 
     @Override
@@ -107,13 +104,13 @@ final class ProxyHandlerToDelegate<I> extends ProxyHandler<I> {
             ProxyHandlerToDelegate.this.delegate = delegate;
         }
 
-        // Nothing we can do to stop race conditions
+        // Nothing we can do to stop race conditions, or cicles with other ReloadShell implementations
         private void checkNotShell(Object arg) {
             if (arg == null) {
                 return;
             }
             if (shell == arg) {
-                throw new IllegalArgumentException("Cannot set the delegate to the shell itself");
+                throw new IllegalArgumentException("Cannot set the delegate to the shell itself, or circularly");
             }
             if (Proxy.isProxyClass(arg.getClass())) {
                 InvocationHandler argHandler = Proxy.getInvocationHandler(arg);

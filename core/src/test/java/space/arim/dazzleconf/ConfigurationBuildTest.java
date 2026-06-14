@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -25,15 +25,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import space.arim.dazzleconf.backend.DefaultKeyMapper;
 import space.arim.dazzleconf.backend.KeyMapper;
+import space.arim.dazzleconf.engine.DefinedLayout;
 import space.arim.dazzleconf.reflect.DefaultReflectionService;
 import space.arim.dazzleconf.reflect.ReflectionService;
+import space.arim.dazzleconf.reflect.ReflectionProvider;
 import space.arim.dazzleconf.reflect.TypeToken;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -64,16 +67,15 @@ public class ConfigurationBuildTest {
     }
 
     @Test
-    public void reflectionService(@Mock ReflectionService reflectionService) {
-        DefaultReflectionService defaultReflectionService = new DefaultReflectionService();
-        when(reflectionService.makeInstantiator(any())).thenReturn(defaultReflectionService.makeInstantiator(MethodHandles.lookup()));
-        when(reflectionService.makeMethodMirror(any())).thenReturn(defaultReflectionService.makeMethodMirror(MethodHandles.lookup()));
-        ConfigurationBuilder<?> builder = Configuration.defaultBuilder(configType).reflectionService(reflectionService);
-        Configuration.Layout layout = assertDoesNotThrow(builder::build).getLayout();
-        assertNotNull(layout.getInstantiator());
-        assertNotNull(layout.getMethodMirror());
-        verify(reflectionService).makeInstantiator(any());
-        verify(reflectionService).makeMethodMirror(any());
+    public void reflectionService(@Mock ReflectionService service) {
+        ReflectionProvider<Config<String>> provider = new DefaultReflectionService().newProvider(
+                configType.getRawType(), MethodHandles.lookup()
+        );
+        when(service.newProvider(eq(Config.class), notNull())).thenAnswer(i -> provider);
+        ConfigurationBuilder<?> builder = Configuration.defaultBuilder(configType).reflectionService(service);
+        DefinedLayout<?> layout = assertDoesNotThrow(builder::build).getDefinedLayout();
+        assertSame(provider, layout.getReflectionProvider());
+        verify(service).newProvider(eq(Config.class), notNull());
     }
 
     @Test

@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -36,6 +36,7 @@ import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.backend.KebabCaseKeyMapper;
 import space.arim.dazzleconf.engine.CommentLocation;
 import space.arim.dazzleconf.engine.Comments;
+import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.UpdateListener;
 import space.arim.dazzleconf.engine.UpdateReason;
 import space.arim.dazzleconf.engine.liaison.SubSection;
@@ -85,11 +86,12 @@ public class ConfigurationMechanicsTest {
 
         StandardCopyOption smallEnum();
 
+        @Comments("Comment on key only")
         @Comments(value = "Comments placed on subsection key", location = CommentLocation.INLINE)
         @SubSection Section subSection();
 
-        // Should be ignored because not the top level
         @Comments(value = "Comments placed on subsection declaration", location = CommentLocation.INLINE)
+        @Comments(value = "More comments on subsection declaration", location = CommentLocation.BELOW)
         interface Section {
 
             boolean enabled();
@@ -111,7 +113,7 @@ public class ConfigurationMechanicsTest {
     public void getTopLevelComments() {
         assertEquals(
                 CommentData.empty().setAt(CommentLocation.ABOVE, "Comment header expected"),
-                configuration.getLayout().getComments()
+                configuration.getDefinedLayout().getComments()
         );
     }
 
@@ -158,6 +160,11 @@ public class ConfigurationMechanicsTest {
             @Override
             public @NonNull KeyPath keyPath() {
                 return new KeyPath.Immut();
+            }
+
+            @Override
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
             }
         });
         assertTrue(loadResult.isSuccess());
@@ -241,7 +248,22 @@ public class ConfigurationMechanicsTest {
 
         };
         DataTree.Mut dataTree = new DataTree.Mut();
-        configuration.writeTo(config, dataTree, () -> keyMapper);
+        configuration.writeTo(config, dataTree, new ConfigurationDefinition.WriteOptions() {
+            @Override
+            public @NonNull KeyMapper keyMapper() {
+                return keyMapper;
+            }
+
+            @Override
+            public @NonNull KeyPath keyPath() {
+                return KeyPath.empty();
+            }
+
+            @Override
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
+            }
+        });
 
         assertEquals(new DataEntry(inherited), dataTree.get("inherited"));
         {
@@ -260,7 +282,10 @@ public class ConfigurationMechanicsTest {
         DataEntry subEntry = dataTree.get("sub-section");
         assertNotNull(subEntry);
         assertEquals(
-                CommentData.empty().setAt(CommentLocation.INLINE, "Comments placed on subsection key"),
+                CommentData.empty()
+                        .setAt(CommentLocation.ABOVE, "Comment on key only")
+                        .setAt(CommentLocation.INLINE, "Comments placed on subsection declaration", "Comments placed on subsection key")
+                        .setAt(CommentLocation.BELOW, "More comments on subsection declaration"),
                 subEntry.getComments()
         );
         DataTree.Mut subTree = assertInstanceOf(DataTree.class, subEntry.getValue()).intoMut();
@@ -301,7 +326,7 @@ public class ConfigurationMechanicsTest {
         dataTree.put("small-enum", new DataEntry(smallEnum.name()));
         DataTree.Mut subTree = new DataTree.Mut();
         dataTree.put("sub-section", new DataEntry(subTree)
-                .withComments(CommentLocation.INLINE, List.of("Comments placed on subsection declaration")));
+                .withComments(CommentLocation.INLINE, List.of("Minimal comments placed on subsection declaration")));
         subTree.put("enabled", new DataEntry(updatableValues ? String.valueOf(enabled) : enabled));
         subTree.put("message", new DataEntry(message));
         subTree.put("big-enum", new DataEntry(bigEnum.name()));
@@ -323,17 +348,24 @@ public class ConfigurationMechanicsTest {
             }
 
             @Override
-            public boolean writeEntryComments(@NonNull CommentLocation location) {
-                return false;
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
             }
         });
         assertTrue(loadResult.isSuccess());
+        Config config = loadResult.getOrThrow();
         if (updatableValues) {
             verify(updateListener).notifyUpdate(new KeyPath.Mut("sub-section", "enabled"), UpdateReason.UPDATED);
             verifyNoMoreInteractions(updateListener);
         } else {
             verifyNoInteractions(updateListener);
         }
+        assertEquals('k', config.keyPress());
+        assertEquals(matrix, config.matrix());
+        assertEquals(smallEnum, config.smallEnum());
+        assertEquals(enabled, config.subSection().enabled());
+        assertEquals(message, config.subSection().message());
+        assertEquals(bigEnum, config.subSection().bigEnum());
 
         assertEquals(new DataEntry(inherited), dataTree.get("inherited"));
         assertEquals(new DataEntry(keyPress), dataTree.get("key-press"));
@@ -352,7 +384,7 @@ public class ConfigurationMechanicsTest {
 
         DataEntry subEntry = dataTree.get("sub-section");
         assertNotNull(subEntry);
-        assertEquals(CommentData.empty().setAt(CommentLocation.INLINE, "Comments placed on subsection declaration"), subEntry.getComments());
+        assertEquals(CommentData.empty().setAt(CommentLocation.INLINE, "Minimal comments placed on subsection declaration"), subEntry.getComments());
         subTree = assertInstanceOf(DataTree.class, subEntry.getValue()).intoMut();
         assertEquals(new DataEntry(enabled), subTree.get("enabled"));
         {

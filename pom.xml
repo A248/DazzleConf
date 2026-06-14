@@ -1,6 +1,6 @@
 <!--
   ~ DazzleConf
-  ~ Copyright © 2025 Anand Beh
+  ~ Copyright © 2026 Anand Beh
   ~
   ~ DazzleConf is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU Lesser General Public License as published by
@@ -224,10 +224,15 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
-					<version>3.5.3</version>
+					<version>3.5.5</version>
 					<configuration>
 						<argLine>-XX:TieredStopAtLevel=1 -XX:-TieredCompilation</argLine>
 					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-failsafe-plugin</artifactId>
+					<version>3.5.5</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>

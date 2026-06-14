@@ -24,61 +24,44 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.DataEntry;
 import space.arim.dazzleconf.backend.DataTree;
-import space.arim.dazzleconf.backend.KeyPath;
-import space.arim.dazzleconf.backend.Printable;
+import space.arim.dazzleconf.engine.DefinedLayout;
+import space.arim.dazzleconf.engine.DeserializeContext;
 import space.arim.dazzleconf.engine.DeserializeInput;
 import space.arim.dazzleconf.engine.NoOutput;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.SerializeOutput;
-import space.arim.dazzleconf.engine.UpdateReason;
 import space.arim.dazzleconf.internals.lang.LibraryLang;
-import space.arim.dazzleconf.reflect.Instantiator;
-import space.arim.dazzleconf.reflect.MethodId;
-import space.arim.dazzleconf.reflect.MethodMirror;
 import space.arim.dazzleconf.reflect.MethodYield;
-import space.arim.dazzleconf.reflect.ReifiedType;
+import space.arim.dazzleconf.reflect.ReflectionProvider;
 import space.arim.dazzleconf.reflect.TypeToken;
 
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 final class Definition<C> implements ConfigurationDefinition<C> {
 
     private final TypeToken<C> configType;
     private final CommentData topLevelComments;
+    final LibraryLang libraryLang;
+    private final ReflectionProvider<C> reflectionProvider;
+    private final TypeSkeleton<?>[] typeSkeletons;
 
-    private final LibraryLang libraryLang;
-    private final Instantiator instantiator;
-    private final MethodMirror methodMirror;
-
-    /**
-     * Includes both this type and all its super types. These arrays have equal length
-     */
-    private final Class<?>[] superTypesArray;
-    private final TypeSkeleton[] skeletonArray;
-
-    Definition(TypeToken<C> configType, CommentData topLevelComments,
-               LinkedHashMap<Class<?>, TypeSkeleton> typeSkeletons, LibraryLang libraryLang,
-               Instantiator instantiator, MethodMirror methodMirror) {
+    Definition(TypeToken<C> configType, CommentData topLevelComments, List<TypeSkeleton<?>> typeSkeletons,
+               LibraryLang libraryLang, ReflectionProvider<C> reflectionProvider) {
         this.configType = Objects.requireNonNull(configType);
         this.topLevelComments = Objects.requireNonNull(topLevelComments);
         this.libraryLang = Objects.requireNonNull(libraryLang);
-        this.instantiator = Objects.requireNonNull(instantiator);
-        this.methodMirror = Objects.requireNonNull(methodMirror);
+        this.reflectionProvider = Objects.requireNonNull(reflectionProvider);
 
-        int numberOfSkeletons = typeSkeletons.size();
-        Class<?>[] superTypesArray = new Class[numberOfSkeletons];
-        TypeSkeleton[] skeletonArray = new TypeSkeleton[numberOfSkeletons];
-        // Start from the back: This means we read/write parent types first
-        int index = numberOfSkeletons;
-        for (Map.Entry<Class<?>, TypeSkeleton> typeEntry : typeSkeletons.entrySet()) {
-            superTypesArray[--index] = typeEntry.getKey();
-            skeletonArray[index] = typeEntry.getValue();
+        // Sort skeletons from the back: This means we read/write parent types first
+        TypeSkeleton<?>[] skeletonsArray = new TypeSkeleton[typeSkeletons.size()];
+        for (int n = 0; n < skeletonsArray.length; n++) {
+            skeletonsArray[n] = typeSkeletons.get(skeletonsArray.length - n - 1);
         }
-        this.superTypesArray = superTypesArray;
-        this.skeletonArray = skeletonArray;
+        this.typeSkeletons = skeletonsArray;
     }
 
     @Override
@@ -87,12 +70,11 @@ final class Definition<C> implements ConfigurationDefinition<C> {
     }
 
     @Override
-    public @NonNull Layout getLayout() {
-        return new Layout() {
-
+    public @NonNull DefinedLayout<C> getDefinedLayout() {
+        class DefinedLayoutImpl implements DefinedLayout<C> {
             @Override
-            public @NonNull ReifiedType getReifiedType() {
-                return configType.getReifiedType();
+            public @NonNull TypeToken<C> getType() {
+                return configType;
             }
 
             @Override
@@ -101,251 +83,159 @@ final class Definition<C> implements ConfigurationDefinition<C> {
             }
 
             @Override
-            public @NonNull Instantiator getInstantiator() {
-                return instantiator;
+            public @NonNull ReflectionProvider<C> getReflectionProvider() {
+                return reflectionProvider;
             }
 
             @Override
-            public @NonNull MethodMirror getMethodMirror() {
-                return methodMirror;
+            public @NonNull Collection<@NonNull ? extends Branch<?>> getBranches() {
+                return Collections.unmodifiableList(Arrays.asList(typeSkeletons));
             }
-        };
+
+            @Override
+            public void forEachBranch(@NonNull BranchCallback<C> branchCallback) {
+                for (TypeSkeleton<?> typeSkeleton : typeSkeletons) {
+                    @SuppressWarnings("unchecked")
+                    TypeSkeleton<? super C> castSkeleton = (TypeSkeleton<? super C>) typeSkeleton;
+                    branchCallback.runFor(castSkeleton);
+                }
+            }
+        }
+        return new DefinedLayoutImpl();
     }
 
     @Override
     public @NonNull C loadDefaults() {
-        MethodYield methodYield = new MethodYield();
-        for (int n = 0; n < superTypesArray.length; n++) {
-            Class<?> currentType = superTypesArray[n];
-            TypeSkeleton typeSkeleton = skeletonArray[n];
-
-            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(currentType)) {
-                // Add callable default methods
-                for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
-                    methodYieldFor.callDefaultImpl(callableMethod);
-                }
-                // Add default values
-                for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
-                    Object defaultValue = methodNode.makeDefaultValue(currentType);
-                    methodYieldFor.returnValue(methodNode.methodId, defaultValue);
-                }
+        try (MethodYield methodYield = reflectionProvider.newMethodYield()) {
+            for (TypeSkeleton<?> typeSkeleton : typeSkeletons) {
+                typeSkeleton.implLoadDefaults(methodYield);
             }
+            return reflectionProvider.generate(methodYield);
         }
-        return instantiator.generate(configType.getRawType(), methodYield);
     }
 
-    private <DT extends DataTree> @NonNull LoadResult<@NonNull C> readingNexus(
-            @NonNull DT dataTree, @NonNull ReadOptions readOptions, @NonNull HowToUpdate<DT> howToUpdate
+    private <UPD, DT extends DataTree> @NonNull LoadResult<@NonNull C> readingNexus(
+            @NonNull DT dataTree, @NonNull ReadOptions readOptions, TypeSkeleton.@NonNull HowToUpdate<UPD, DT> howToUpdate
     ) {
-        // Output goes here
-        MethodYield methodYield = new MethodYield();
-
         // Collected errors - get a certain maximum before quitting, becomes non-null if we find at least 1 error
         ErrorContext[] collectedErrors = null;
         int errorCount = 0;
-
-        // For each type in the hierarchy
-        for (int n = 0; n < superTypesArray.length; n++) {
-
-            Class<?> currentType = superTypesArray[n];
-            TypeSkeleton typeSkeleton = skeletonArray[n];
-
-            try (MethodYield.ForImplementable methodYieldFor = methodYield.forImplementable(currentType)) {
-                // Add callable default methods
-                for (MethodId callableMethod : typeSkeleton.callableDefaultMethods) {
-                    methodYieldFor.callDefaultImpl(callableMethod);
-                }
-
-                // Add values for each method
-                for (TypeSkeleton.MethodNode<?> methodNode : typeSkeleton.methodNodes) {
-
-                    ErrorContext[] errorContexts = readingNexusForEntry(
-                            methodYieldFor, currentType, methodNode, dataTree, readOptions, howToUpdate
-                    );
-                    if (errorContexts != null) {
-                        if (collectedErrors == null) {
-                            collectedErrors = new ErrorContext[readOptions.maximumErrorCollect()];
-                        }
-                        for (ErrorContext errorToAppend : errorContexts) {
-                            // Append this error
-                            collectedErrors[errorCount++] = errorToAppend;
-                            // Check if maxed out
-                            if (errorCount == collectedErrors.length) {
-                                return LoadResult.failure(collectedErrors);
-                            }
-                        }
-                    }
+        try (MethodYield methodYield = reflectionProvider.newMethodYield()) {
+            for (TypeSkeleton<?> typeSkeleton : typeSkeletons) {
+                TypeSkeleton<?>.ImplRead<UPD, DT> implRead = typeSkeleton.new ImplRead<>(
+                        dataTree, howToUpdate, readOptions, this
+                );
+                implRead.collectedErrors = collectedErrors;
+                implRead.errorCount = errorCount;
+                implRead.readNodes(methodYield);
+                collectedErrors = implRead.collectedErrors;
+                errorCount = implRead.errorCount;
+                if (collectedErrors != null && errorCount == collectedErrors.length) {
+                    return LoadResult.failure(collectedErrors);
                 }
             }
-        }
-        // Error handling
-        if (collectedErrors != null) {
-            return LoadResult.failure(Arrays.copyOf(collectedErrors, errorCount));
-        }
-        // No errors - success
-        return LoadResult.of(instantiator.generate(configType.getRawType(), methodYield));
-    }
-
-    private <DT extends DataTree, V> @NonNull ErrorContext @Nullable [] readingNexusForEntry(
-            MethodYield.@NonNull ForImplementable methodYieldFor, @NonNull Class<?> currentType,
-            TypeSkeleton.@NonNull MethodNode<V> methodNode, @NonNull DT dataTree, @NonNull ReadOptions readOptions,
-            @NonNull HowToUpdate<DT> howToUpdate
-    ) {
-
-        V value;
-        String mappedKey = readOptions.keyMapper().labelToKey(methodNode.methodId.name()).toString();
-        DataEntry dataEntry = dataTree.get(mappedKey);
-        if (dataEntry == null) {
-
-            // Absent entry. Three possibilities for the method:
-            // 1. Absence acceptable -> get absent value
-            // 2. Mandatory, so fill in the missing value -> okay, signal updated path
-            // 3. Mandatory, and no missing value -> error
-
-            DeserContext deserContext = new DeserContext.Standalone(libraryLang, readOptions, mappedKey);
-            V absentValue = methodNode.serializer.deserializeAbsent(deserContext);
-            V missingValue;
-            if (absentValue != null) {
-                // 1.
-                value = absentValue;
-            } else if ((value = missingValue = methodNode.makeMissingValue(currentType)) != null) {
-                // 2.
-                /*
-                Note that if the value serializes to null in #insertMissingValue, we still signal an update here. If so,
-                we are dealing with a rogue liaison that cannot accept absent values but nonetheless outputs absent
-                values. To maintain symmetry across read/read-update operations, notifyUpdate(..., UpdateReason.MISSING)
-                is always called.
-                 */
-                readOptions.notifyUpdate(new KeyPath.Mut(mappedKey), UpdateReason.MISSING);
-                howToUpdate.insertMissingValue(dataTree, mappedKey, methodNode, missingValue);
-            } else {
-                // 3.
-                ErrorContext errorContext = deserContext.buildError(Printable.preBuilt(libraryLang.missingValue()));
-                return new ErrorContext[] {errorContext};
-            }
-        } else {
-            //
-            // Main deserialization route - most cases go here
-            //
-
-            // Deserialization
-            LoadResult<V> valueResult = howToUpdate.deserialize(
-                    methodNode.serializer, new DeserInput.Base(dataEntry, libraryLang, readOptions, mappedKey)
-            );
             // Error handling
-            if (valueResult.isFailure()) {
-                return valueResult.getErrorContexts().toArray(new ErrorContext[0]);
+            if (collectedErrors != null) {
+                return LoadResult.failure(Arrays.copyOf(collectedErrors, errorCount));
             }
-            // Update if desired
-            howToUpdate.updateIfDesired(dataTree, mappedKey, dataEntry, methodNode);
-
-            // No errors - all good
-            value = valueResult.getOrThrow();
+            // No errors - success
+            return LoadResult.of(reflectionProvider.generate(methodYield));
         }
-        methodYieldFor.returnValue(methodNode.methodId, value);
-        return null;
-    }
-
-    private interface HowToUpdate<DT extends DataTree> {
-
-        <V> void insertMissingValue(DT dataTree, String mappedKey, TypeSkeleton.MethodNode<V> methodNode, V missingValue);
-
-        <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser);
-
-        void updateIfDesired(DT dataTree, String mappedKey, DataEntry sourceEntry,
-                             TypeSkeleton.MethodNode<?> methodNode);
-
     }
 
     @Override
     public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree, @NonNull ReadOptions readOptions) {
-        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree>() {
+        return readingNexus(dataTree, readOptions, new TypeSkeleton.HowToUpdate<@Nullable Void, DataTree>() {
             @Override
-            public <V> void insertMissingValue(DataTree dataTree, String mappedKey,
-                                               TypeSkeleton.MethodNode<V> methodNode, V missingValue) {}
+            public @Nullable Void makeUpdater(String mappedKey) {
+                return null;
+            }
 
             @Override
-            public <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser) {
+            public <V, B> void insertMissingValue(DataTree dataTree, String mappedKey, SkeletonNode.Val<V, B> valNode,
+                                                  V missingValue, DefinedLayout.Branch<B> branchOfNode) {}
+
+            @Override
+            public <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser,
+                                                 @Nullable Void updater) {
                 return serializeDeserialize.deserialize(deser);
             }
 
             @Override
-            public void updateIfDesired(DataTree dataTree, String mappedKey, DataEntry sourceEntry,
-                                        TypeSkeleton.MethodNode<?> methodNode) {}
+            public <B> void updateIfDesired(DataTree dataTree, String mappedKey, DataEntry sourceEntry,
+                                            SkeletonNode.Val<?, B> valNode, DeserializeContext deserContext,
+                                            DefinedLayout.Branch<B> branchOfNode, @Nullable Void updater) {}
         });
     }
 
     @Override
-    public @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadWithUpdateOptions readOptions) {
-
-        // Updating comments, based on read options, usually depends on whether the backend needs it
-        ModifyComments modifyComments = new ModifyComments(readOptions);
-        // Updating values is based on calls to deserializeUpdate
-        SerializeOutput outputForUpdate = new SerOutput(readOptions.keyMapper(), modifyComments);
-
-        return readingNexus(dataTree, readOptions, new HowToUpdate<DataTree.Mut>() {
+    public @NonNull LoadResult<@NonNull C> readWithUpdate(DataTree.@NonNull Mut dataTree, @NonNull ReadWithUpdateOptions readUpdateOptions) {
+        DefinedLayout<C> definedLayout = getDefinedLayout();
+        LoadResult<@NonNull C> result = readingNexus(dataTree, readUpdateOptions, new TypeSkeleton.HowToUpdate<SerializeOutput, DataTree.Mut>() {
             @Override
-            public <V> void insertMissingValue(DataTree.Mut dataTree, String mappedKey,
-                                               TypeSkeleton.MethodNode<V> methodNode, V missingValue) {
-                DataEntry serializedMissing = methodNode.serialize(missingValue, outputForUpdate);
-                if (serializedMissing != null) {
-                    dataTree.put(mappedKey, serializedMissing.withComments(methodNode.comments));
+            public SerializeOutput makeUpdater(String mappedKey) {
+                return new SerContext.AtKey(readUpdateOptions, mappedKey).newOutput();
+            }
+
+            @Override
+            public <V, B> void insertMissingValue(DataTree.Mut dataTree, String mappedKey, SkeletonNode.Val<V, B> valNode,
+                                                  V missingValue, DefinedLayout.Branch<B> branchOfNode) {
+                SerializeOutput missingOutput = makeUpdater(mappedKey);
+                DataEntry newEntry = valNode.serialize(missingValue, missingOutput);
+                newEntry = readUpdateOptions.getInterprocessor().getHook(DefinedLayout.WRITE_STRUCTURED_ENTRY)
+                        .writeNew(newEntry, missingOutput, definedLayout, valNode, branchOfNode);
+                if (newEntry != null) {
+                    dataTree.put(mappedKey, newEntry);
                 }
             }
 
             @Override
-            public <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser) {
-                return serializeDeserialize.deserializeUpdate(deser, outputForUpdate);
+            public <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser,
+                                                 SerializeOutput updater) {
+                return serializeDeserialize.deserializeUpdate(deser, updater);
             }
 
             @Override
-            public void updateIfDesired(DataTree.Mut dataTree, String mappedKey, DataEntry sourceEntry,
-                                        TypeSkeleton.MethodNode<?> methodNode) {
-                boolean changed = false;
-                Object update = outputForUpdate.getAndClearLastOutput();
-                if (update != null) {
-                    if (update == NoOutput.INSTANCE) {
-                        dataTree.remove(mappedKey);
-                        return;
-                    }
-                    if (!sourceEntry.getValue().equals(update)) {
-                        sourceEntry = sourceEntry.withValue(update);
-                        changed = true;
-                    }
+            public <B> void updateIfDesired(DataTree.Mut dataTree, String mappedKey, DataEntry sourceEntry,
+                                            SkeletonNode.Val<?, B> valNode, DeserializeContext deserContext,
+                                            DefinedLayout.Branch<B> branchOfNode, SerializeOutput updater) {
+                Object update = updater.getAndClearLastOutput();
+                if (update == null) {
+                    return;
                 }
-                if (modifyComments.isAnyLocationEnabled()) {
-                    sourceEntry = modifyComments.applyTo(sourceEntry, methodNode.comments);
-                    changed = true;
+                DataEntry newEntry;
+                if (update == NoOutput.INSTANCE) {
+                    newEntry = null;
+                } else if (sourceEntry.getValue().equals(update)) {
+                    return;
+                } else {
+                    newEntry = sourceEntry.withValue(update);
                 }
-                if (changed) {
-                    dataTree.put(mappedKey, sourceEntry);
+                newEntry = readUpdateOptions.getInterprocessor()
+                        .getHook(DefinedLayout.UPDATE_STRUCTURED_ENTRY)
+                        .insertUpdate(newEntry, sourceEntry, deserContext, updater, definedLayout, valNode, branchOfNode);
+                if (newEntry == null) {
+                    dataTree.remove(mappedKey);
+                } else {
+                    dataTree.put(mappedKey, newEntry);
                 }
             }
         });
+        if (result.isSuccess()) {
+            readUpdateOptions.getInterprocessor().getHook(DefinedLayout.WRITE_STRUCTURED_TREE)
+                    .writeTree(dataTree, new SerContext.Standalone(readUpdateOptions), definedLayout);
+        }
+        return result;
     }
 
     @Override
     public void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree, @NonNull WriteOptions writeOptions) {
-
-        ModifyComments modifyComments = new ModifyComments(writeOptions);
-        SerializeOutput serOutput = new SerOutput(writeOptions.keyMapper(), modifyComments);
-
-        for (int n = 0; n < superTypesArray.length; n++) {
-            MethodMirror.Invoker invoker = methodMirror.makeInvoker(config, superTypesArray[n]);
-
-            for (TypeSkeleton.MethodNode<?> methodNode : skeletonArray[n].methodNodes) {
-                String mappedKey = writeOptions.keyMapper().labelToKey(methodNode.methodId.name()).toString();
-                DataEntry entry = methodNode.serialize(invoker, serOutput);
-                if (entry == null) {
-                    // Empty optional value
-                    dataTree.remove(mappedKey);
-                } else {
-                    if (modifyComments.isAnyLocationEnabled()) {
-                        entry = modifyComments.applyTo(entry, methodNode.comments);
-                    }
-                    dataTree.put(mappedKey, entry);
-                }
-            }
-        }
+        DefinedLayout<C> definedLayout = getDefinedLayout();
+        definedLayout.forEachBranch(branch -> {
+            TypeSkeleton<? super C> typeSkeleton = (TypeSkeleton<? super C>) branch;
+            typeSkeleton.implWriteNodes(reflectionProvider, config, definedLayout, writeOptions, dataTree);
+        });
+        writeOptions.getInterprocessor().getHook(DefinedLayout.WRITE_STRUCTURED_TREE)
+                .writeTree(dataTree, new SerContext.Standalone(writeOptions), definedLayout);
     }
 }

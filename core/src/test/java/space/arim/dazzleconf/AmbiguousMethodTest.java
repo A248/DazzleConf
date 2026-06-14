@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -26,10 +26,8 @@ import space.arim.dazzleconf.backend.DataEntry;
 import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.engine.CallableFn;
 import space.arim.dazzleconf.reflect.MethodId;
-import space.arim.dazzleconf.reflect.MethodMirror;
+import space.arim.dazzleconf.reflect.ReflectionProvider;
 import space.arim.dazzleconf.reflect.TypeToken;
-
-import java.lang.reflect.InvocationTargetException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -66,7 +64,7 @@ public class AmbiguousMethodTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    public void invokeTrouble(boolean fromData) throws InvocationTargetException {
+    public void invokeTrouble(boolean fromData) throws Throwable {
         Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
         Config config;
         if (fromData) {
@@ -76,9 +74,9 @@ public class AmbiguousMethodTest {
         } else {
             config = configuration.loadDefaults();
         }
-        MethodMirror methodMirror = configuration.getLayout().getMethodMirror();
-        MethodMirror.Invoker invoker = methodMirror.makeInvoker(config, Config.class);
-        MethodMirror.TypeWalker configTypeWalk = methodMirror.typeWalker(new TypeToken<Config>() {}.getReifiedType());
+        ReflectionProvider<Config> reflectionService = configuration.getDefinedLayout().getReflectionProvider();
+        ReflectionProvider.Invoker<Config> invoker = reflectionService.makeInvoker(config, configuration.getType());
+        ReflectionProvider.TypeWalker configTypeWalk = reflectionService.typeWalker(new TypeToken<Config>() {}.getReifiedType());
 
         MethodId troublePlain = configTypeWalk.getViableMethods().filter(methodId -> methodId.parameterCount() == 0).findAny().orElseThrow();
         assertEquals(fromData ? -2 : -1, invoker.invokeMethod(troublePlain));
@@ -88,7 +86,7 @@ public class AmbiguousMethodTest {
     }
 
     @Test
-    public void invokeTroubleNonProxyInstance() throws InvocationTargetException {
+    public void invokeTroubleNonProxyInstance() throws Throwable {
         Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
         Config config = new Config() {
             @Override
@@ -101,9 +99,9 @@ public class AmbiguousMethodTest {
                 return ret * 2;
             }
         };
-        MethodMirror methodMirror = configuration.getLayout().getMethodMirror();
-        MethodMirror.Invoker invoker = methodMirror.makeInvoker(config, Config.class);
-        MethodMirror.TypeWalker configTypeWalk = methodMirror.typeWalker(new TypeToken<Config>() {}.getReifiedType());
+        ReflectionProvider<Config> reflectionService = configuration.getDefinedLayout().getReflectionProvider();
+        ReflectionProvider.Invoker<Config> invoker = reflectionService.makeInvoker(config, configuration.getType());
+        ReflectionProvider.TypeWalker configTypeWalk = reflectionService.typeWalker(new TypeToken<Config>() {}.getReifiedType());
 
         MethodId troublePlain = configTypeWalk.getViableMethods().filter(methodId -> methodId.parameterCount() == 0).findAny().orElseThrow();
         assertEquals(-4, invoker.invokeMethod(troublePlain));

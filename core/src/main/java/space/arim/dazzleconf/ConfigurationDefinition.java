@@ -19,25 +19,37 @@
 
 package space.arim.dazzleconf;
 
-import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import space.arim.dazzleconf.backend.Backend;
-import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
-import space.arim.dazzleconf.engine.CommentLocation;
+import space.arim.dazzleconf.engine.DefinedLayout;
 import space.arim.dazzleconf.engine.DeserializeInput;
+import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.UpdateListener;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.SerializeOutput;
-import space.arim.dazzleconf.reflect.Instantiator;
-import space.arim.dazzleconf.reflect.MethodMirror;
-import space.arim.dazzleconf.reflect.ReifiedType;
 import space.arim.dazzleconf.reflect.TypeToken;
 
 /**
- * Provides the minimal methods for reading and writing configurations from data trees
+ * Provides the methods for reading and writing configurations from data trees.
+ * <p>
+ * <b>Preservation of order</b>
+ * <p>
+ * Writing and updating data trees in place takes reasonable steps to preserve order of the defined interface's methods,
+ * without compromising efficiency.
+ * <p>
+ * In particular:
+ * <ul>
+ *     <li>Writing to a data tree writes in order. Existing data in the output tree may be overwritten, and if so,
+ *     existing entries will keep their existing tree order ({@link DataTree} uses a linked map).</li>
+ *     <li>Reading and updating data tree in place, such as through {@link #readWithUpdate}, keeps the order of
+ *     existing entries. New entries that are inserted because they were missing will be added to the end of the data
+ *     tree.</li>
+ * </ul>
+ * Ordering considerations related to different backends and the reflection mechanism are documented in
+ * {@link Configuration}. Thus, even if operations that manipulate data trees preserve order, it is possible that other
+ * library areas may destroy it.
  *
  * @param <C> the configuration type
  */
@@ -51,56 +63,11 @@ public interface ConfigurationDefinition<C> {
     @NonNull TypeToken<C> getType();
 
     /**
-     * Gets the layout of the configuration interface
+     * Gets the low-level layout of the configuration interface (or type)
      *
-     * @return the scanned layout of the configuration interface
+     * @return the scanned layout of the configuration interface (or type)
      */
-    @API(status = API.Status.MAINTAINED)
-    @NonNull Layout getLayout();
-
-    /**
-     * The layout of a configuration definition.
-     * <p>
-     * This layout includes all of a scanned interface's components, as well as reflective services used to access
-     * those components.
-     */
-    @API(status = API.Status.MAINTAINED)
-    interface Layout {
-
-        /**
-         * Gets the type of the configuration interface.
-         * <p>
-         * This is always the same type as {@link ConfigurationDefinition#getType()}.
-         *
-         * @return the type of the configuration interface
-         */
-        @NonNull ReifiedType getReifiedType();
-
-        /**
-         * Gets the top level comments on the configuration interface.
-         * <p>
-         * These are the comments that exist at the global level and are not tied to any specific entry. If none are
-         * set, an empty {@code Comments} is returned.
-         *
-         * @return the top level comments, which may be empty if not set
-         */
-        @NonNull CommentData getComments();
-
-        /**
-         * Gets the instantiator used to generate interface implementations.
-         *
-         * @return the instantiator
-         */
-        @NonNull Instantiator getInstantiator();
-
-        /**
-         * Gets the method mirror used to invoke methods
-         *
-         * @return the method mirror
-         */
-        @NonNull MethodMirror getMethodMirror();
-
-    }
+    @NonNull DefinedLayout<C> getDefinedLayout();
 
     /**
      * Loads the default configuration.
@@ -158,10 +125,10 @@ public interface ConfigurationDefinition<C> {
     void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree, @NonNull WriteOptions writeOptions);
 
     /**
-     * Parameters for reading a configuration from a tree
+     * Base interface for read, write, and read-with-update options.
      *
      */
-    interface ReadOptions extends UpdateListener {
+    interface OperationOptions {
 
         /**
          * The key mapper to use
@@ -171,16 +138,42 @@ public interface ConfigurationDefinition<C> {
         @NonNull KeyMapper keyMapper();
 
         /**
-         * Gets the absolute key path at which the configuration is being read.
+         * Gets the absolute key path at which the operation is taking place.
          * <p>
-         * This path is intended as a debug value and might be used in error messages, such as by using it to prefi
-         * sub-paths within this configuration. The implementor of this method can return an empty path to represent
-         * the root configuration or if the path prefix is unknown.
+         * The implementor of this method can return an empty path to represent the root configuration or if the path
+         * prefix is unknown.
          *
-         * @return the path at which the configuration is read, or an empty {@code KeyPath} if none. It is recommended
-         * to return a {@code KeyPath.Immut}, since the caller might modify this return value
+         * @return the path at which the configuration is read or written, or an empty {@code KeyPath} if none. It is
+         * recommended to return a {@code KeyPath.Immut}, since the caller might modify this return value
          */
         @NonNull KeyPath keyPath();
+
+        /**
+         * Gets the interprocessor. This can be used for adding hooks in various places, including but not limited to:
+         * data tree sorting, custom logic for comment copying, and low-level aggregate listening.
+         *
+         * @return the interprocessor
+         */
+        @NonNull Interprocessor getInterprocessor();
+
+    }
+
+    /**
+     * Parameters for reading a configuration from a tree
+     *
+     */
+    interface ReadOptions extends UpdateListener, OperationOptions {
+
+        /**
+         * Gets the interprocessor.
+         * <p>
+         * Currently, reading a configuration <i>without updates</i> does not use interprocessor hooks in any places,
+         * but this may change in the future. Note that {@link ReadWithUpdateOptions} <i>does</i> use this object.
+         *
+         * @return the interprocessor
+         */
+        @Override
+        @NonNull Interprocessor getInterprocessor();
 
         /**
          * The maximum number of errors to collect before exiting. Must be greater than 0.
@@ -188,10 +181,10 @@ public interface ConfigurationDefinition<C> {
          * If reading the configuration failed, the size of {@link LoadResult#getErrorContexts()} will be at most this
          * number.
          *
-         * @return the maximum number of errors to collect, default 12. Must be greater than 0
+         * @return the maximum number of errors to collect, default 8. Must be greater than 0
          */
         default int maximumErrorCollect() {
-            return 12;
+            return 8;
         }
 
     }
@@ -203,24 +196,17 @@ public interface ConfigurationDefinition<C> {
     interface ReadWithUpdateOptions extends ReadOptions, WriteOptions {
 
         /**
-         * Controls whether comments on existing data entries are refreshed.
-         * <p>
-         * Newly-added entries (due to missing values) will always have comments set. This setting controls whether
-         * existing entries in the data tree will have their comments refreshed at the given location: i.e., by setting
-         * the comments anew on the entry.
-         * <p>
-         * This function can be used, for example, to continually write comments on entries, if the backend supports
-         * writing but not reading comments. Use {@link Backend.Meta#supportsComments(boolean, boolean, CommentLocation)}
-         * to check the extent of backend support.
+         * Gets the interprocessor. Reading a configuration with updates uses interprocessor hooks in a few places:
+         * <ul>
+         *     <li>When new data entries are written to the tree, because they were missing: {@link DefinedLayout#WRITE_STRUCTURED_ENTRY}</li>
+         *     <li>When existing data entries are updated: {@link DefinedLayout#UPDATE_STRUCTURED_ENTRY}</li>
+         *     <li>When the tree itself is ready: {@link DefinedLayout#WRITE_STRUCTURED_TREE}</li>
+         * </ul>
          *
-         * @param location the location of comments with respect to the entry
-         * @return whether refreshing should take place for entry comments there
+         * @return the interprocessor
          */
         @Override
-        @API(status = API.Status.EXPERIMENTAL)
-        default boolean writeEntryComments(@NonNull CommentLocation location) {
-            return false;
-        }
+        @NonNull Interprocessor getInterprocessor();
 
     }
 
@@ -228,33 +214,20 @@ public interface ConfigurationDefinition<C> {
      * Parameters for writing a configuration to a tree
      *
      */
-    interface WriteOptions {
+    interface WriteOptions extends OperationOptions {
 
         /**
-         * The key mapper to use
+         * Gets the interprocessor. Writing a configuration, in particular, uses interprocessor hooks in two places:
+         * <ul>
+         *     <li>When data entries are written to the tree: {@link DefinedLayout#WRITE_STRUCTURED_ENTRY}</li>
+         *     <li>When the tree itself is ready: {@link DefinedLayout#WRITE_STRUCTURED_TREE}</li>
+         * </ul>
          *
-         * @return the key mapper
+         * @return the interprocessor
          */
-        @NonNull KeyMapper keyMapper();
+        @Override
+        @NonNull Interprocessor getInterprocessor();
 
-        /**
-         * Controls whether comments are written to data entries.
-         * <p>
-         * If enabled (the default), comment data is copied from the configuration definition to entries in the output
-         * data tree. If disabled, written {@code DataEntry}s will be without comments.
-         * <p>
-         * <b>Backend support</b>
-         * <p>
-         * Note that even if this function returns true, the backend is not guaranteed to support writing comments.
-         * Please consult the documentation of the {@link Backend} regarding comment support.
-         *
-         * @param location the location of the entry comments being written
-         * @return whether data entries should be written with comments here, default true
-         */
-        @API(status = API.Status.EXPERIMENTAL)
-        default boolean writeEntryComments(@NonNull CommentLocation location) {
-            return true;
-        }
     }
 
 }

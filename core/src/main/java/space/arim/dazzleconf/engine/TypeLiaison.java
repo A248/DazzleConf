@@ -21,12 +21,14 @@ package space.arim.dazzleconf.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.Pure;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf.ConfigurationDefinition;
 import space.arim.dazzleconf.DeveloperMistakeException;
+import space.arim.dazzleconf.backend.CommentData;
+import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.reflect.TypeToken;
 
-import java.lang.reflect.AnnotatedElement;
 import java.util.function.Supplier;
 
 /**
@@ -62,16 +64,18 @@ public interface TypeLiaison {
     interface Agent<V> {
 
         /**
-         * Gets default values.
+         * Gets default values for a method node.
          * <p>
          * This function is called for the return type of each configuration interface method, on the agent
          * corresponding to that return type.
          * <p>
-         * Default values are often extracted from annotations. Method-level annotations are available via the provided
-         * {@link DefaultInit#methodAnnotations()}.
+         * <b>Sources of default values</b>
          * <p>
-         * This function can choose when to handle the use of default methods to provide default values. The default
-         * implementation of this method calls {@link DefaultInit#methodDefault()} simply.
+         * Default values are sometimes extracted from annotations. Method-level annotations are available via the
+         * provided {@link DefaultInit#methodAnnotations()}.
+         * <p>
+         * Additionally, a function can choose when to handle the use of default methods to provide default values. The
+         * default implementation of this method calls {@link DefaultInit#methodDefault()} simply.
          *
          * @param defaultInit the init context
          * @return the default values, or null if no defaults are available
@@ -80,6 +84,22 @@ public interface TypeLiaison {
         @SideEffectFree
         default @Nullable DefaultValues<V> loadDefaultValues(@NonNull DefaultInit<V> defaultInit) {
             return defaultInit.methodDefault();
+        }
+
+        /**
+         * Loads comments on a method node.
+         * <p>
+         * The default implementation of this method gathers annotations of {@link Comments}.
+         *
+         * @param commentInit the init context
+         * @return the comments on a method node
+         * @throws DeveloperMistakeException if a library usage failure happened
+         */
+        default @NonNull CommentData loadComments(@NonNull CommentInit commentInit) {
+            CommentData comments  = CommentData.buildFrom(
+                    commentInit.methodAnnotations().getAnnotationsByType(Comments.class)
+            );
+            return comments;
         }
 
         /**
@@ -124,32 +144,7 @@ public interface TypeLiaison {
      *
      * @param <V> the type of the configuration object
      */
-    interface DefaultInit<V> {
-
-        /**
-         * The interface type where the method is located, after computing inheritance.
-         * <p>
-         * In particular, this is the configuration interface passed to the library. This is <b>not</b> the source code
-         * location, which means that if the configuration type extends one or more parent interfaces, the
-         * main interface will always be returned (and never a parent interface).
-         *
-         * @return the interface type
-         */
-        @NonNull TypeToken<?> enclosingType();
-
-        /**
-         * The label for the entry, typically the method name
-         *
-         * @return the label
-         */
-        @NonNull String label();
-
-        /**
-         * Gets method level annotations for the entry being initialized
-         *
-         * @return the method level annotations
-         */
-        @NonNull AnnotatedElement methodAnnotations();
+    interface DefaultInit<V> extends ProtoDefinedNode.Value {
 
         /**
          * Extracts default values from the default method if one exists.
@@ -165,19 +160,41 @@ public interface TypeLiaison {
     }
 
     /**
-     * Callback interface allowing {@link Agent} to access certain resources
+     * Provides relevant resources for comment initialization
+     */
+    interface CommentInit extends ProtoDefinedNode.Value {}
+
+    /**
+     * Allows an {@link Agent} under construction to access certain resources.
+     * <p>
+     * A {@code Handshake} is designed to be implemented only by the library. It should not be stored, but rather used
+     * only during a call to {@link TypeLiaison#makeAgent(TypeToken, Handshake)}.
      */
     interface Handshake {
 
         /**
-         * Gets another serializer. This function allows serializers to "depend" on each other by using instances of
+         * Gets another agent. This function allows agents to depend on each other.
+         * <p>
+         * Note: If you only need the serializer, prefer using {@link #getOtherSerializer(TypeToken)}.
+         *
+         * @param other the type being requested
+         * @return an agent for it
+         * @param <U> the type requested
+         * @throws DeveloperMistakeException if no liaison handles the requested type, or if a cyclic loop is detected
+         * with the requested type
+         */
+        @SideEffectFree
+        <U> @NonNull Agent<U> getOtherAgent(@NonNull TypeToken<U> other);
+
+        /**
+         * Gets another serializer. This function allows serializers to depend on each other by using instances of
          * other serializers.
          *
          * @param other the type being requested
          * @return a serializer for it
          * @param <U> the type requested
-         * @throws DeveloperMistakeException if no liaison handles the requested type
-         * @throws IllegalStateException if a cyclic loop is detected with the other liaison
+         * @throws DeveloperMistakeException if no liaison handles the requested type, or if a cyclic loop is detected
+         * with the requested type
          */
         @SideEffectFree
         <U> @NonNull SerializeDeserialize<U> getOtherSerializer(@NonNull TypeToken<U> other);
@@ -189,11 +206,39 @@ public interface TypeLiaison {
          * @param other the type whose definition is requested
          * @return a configuration which can be read or written
          * @param <U> the type requested
-         * @throws DeveloperMistakeException if the type requested is improperly declared or has broken settings
-         * @throws IllegalStateException if a cyclic loop is detected with the requested type
+         * @throws DeveloperMistakeException if the type requested is improperly declared or has broken settings, or
+         * if a cyclic loop is detected with the requested type
          */
         @SideEffectFree
         <U> @NonNull ConfigurationDefinition<U> getConfiguration(@NonNull TypeToken<U> other);
+
+        /**
+         * Gets label path at which the agent is being requested.
+         * <p>
+         * Note that <i>labels</i> are not the same as <i>entry paths</i>. Not all arrangements of agents and liaisons
+         * will use separate labels; the label represents a source code location and does <b>not</b> match user
+         * configuration data. Think of it as where the agent exists, from the developer's perspective.
+         * <p>
+         * It is almost always inappropriate to use the label path to influence the behavior of the agent. A rare
+         * example of acceptable usage would be implementing keyed translations that are stored externally.
+         *
+         * @return the label path
+         */
+        @Pure
+        KeyPath.@NonNull Immut labelPath();
+
+        /**
+         * Simulates this handshake existing at a different {@link #labelPath()}.
+         * <p>
+         * The returned handshake will function identically to this one, but it will report the argument label path.
+         * Just like this instance, <b>it should not be stored anywhere</b> but only used for the duration of the call
+         * to {@link TypeLiaison#makeAgent(TypeToken, Handshake)}.
+         *
+         * @param labelPath the new label path
+         * @return the new handshake
+         */
+        @SideEffectFree
+        @NonNull Handshake atLabelPath(KeyPath.@NonNull Immut labelPath);
 
     }
 }

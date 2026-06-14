@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -26,6 +26,7 @@ import space.arim.dazzleconf.LoadResult;
 import space.arim.dazzleconf.backend.Backend;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
+import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.UpdateReason;
 import space.arim.dazzleconf.internals.ImmutableCollections;
 
@@ -86,6 +87,11 @@ public final class MigrateFromConfiguration<C> implements MigrateSource<C> {
                 @Override
                 public @NonNull KeyPath keyPath() {
                     return KeyPath.empty();
+                }
+
+                @Override
+                public @NonNull Interprocessor getInterprocessor() {
+                    return Interprocessor.DEFAULT;
                 }
             });
         }).flatMap(loaded -> {

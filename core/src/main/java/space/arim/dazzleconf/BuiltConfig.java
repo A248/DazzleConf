@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -23,12 +23,18 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf.backend.Backend;
 import space.arim.dazzleconf.backend.CommentData;
+import space.arim.dazzleconf.backend.DataEntry;
 import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.DefaultKeyMapper;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.backend.Printable;
 import space.arim.dazzleconf.engine.CommentLocation;
+import space.arim.dazzleconf.engine.DefinedLayout;
+import space.arim.dazzleconf.engine.DefinedNode;
+import space.arim.dazzleconf.engine.DeserializeContext;
+import space.arim.dazzleconf.engine.Interprocessor;
+import space.arim.dazzleconf.engine.SerializeContext;
 import space.arim.dazzleconf.engine.UpdateListener;
 import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.engine.UpdateReason;
@@ -86,8 +92,8 @@ final class BuiltConfig<C> implements Configuration<C> {
     }
 
     @Override
-    public @NonNull Layout getLayout() {
-        return definition.getLayout();
+    public @NonNull DefinedLayout<C> getDefinedLayout() {
+        return definition.getDefinedLayout();
     }
 
     @Override
@@ -117,6 +123,25 @@ final class BuiltConfig<C> implements Configuration<C> {
         definition.writeTo(config, dataTree, writeOptions);
     }
 
+    private void writeWithKeyMapper(@NonNull C config, DataTree.@NonNull Mut dataTree, @NonNull KeyMapper keyMapper) {
+        writeTo(config, dataTree, new WriteOptions() {
+            @Override
+            public @NonNull KeyMapper keyMapper() {
+                return keyMapper;
+            }
+
+            @Override
+            public @NonNull KeyPath keyPath() {
+                return KeyPath.empty();
+            }
+
+            @Override
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
+            }
+        });
+    }
+
     @Override
     public @NonNull LoadResult<@NonNull C> readFrom(@NonNull DataTree dataTree) {
         return readFrom(dataTree, (entryPath, updateReason) -> {});
@@ -140,13 +165,18 @@ final class BuiltConfig<C> implements Configuration<C> {
             public @NonNull KeyPath keyPath() {
                 return KeyPath.empty();
             }
+
+            @Override
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
+            }
         });
     }
 
     @Override
     public void writeTo(@NonNull C config, DataTree.@NonNull Mut dataTree) {
         KeyMapper keyMapper = this.keyMapper != null ? this.keyMapper : new DefaultKeyMapper();
-        writeTo(config, dataTree, () -> keyMapper);
+        writeWithKeyMapper(config, dataTree, keyMapper);
     }
 
     @Override
@@ -272,7 +302,7 @@ final class BuiltConfig<C> implements Configuration<C> {
     private LoadResult<C> implConfigureWith(@NonNull CachedBackend backend, ErrorContext.@NonNull Source errorSource,
                                             @NonNull ConfigureListener configureListener) {
         // 0. Setup
-        Layout layout = getLayout();
+        DefinedLayout<C> layout = getDefinedLayout();
         KeyMapper keyMapper = (this.keyMapper != null) ? this.keyMapper : backend.recommendKeyMapper();
         Objects.requireNonNull(keyMapper, "Backend returned null key mapper");
         // 1. Try to migrate if possible
@@ -303,7 +333,7 @@ final class BuiltConfig<C> implements Configuration<C> {
                     C migrated = attempt.getOrThrow();
                     // Update the backend with the migrated value
                     DataTree.Mut migratedData = new DataTree.Mut();
-                    writeTo(migrated, migratedData, () -> keyMapper);
+                    writeWithKeyMapper(migrated, migratedData, keyMapper);
                     backend.write(new Backend.Document() {
                         @Override
                         public @NonNull CommentData comments() {
@@ -335,7 +365,7 @@ final class BuiltConfig<C> implements Configuration<C> {
             // 3. Write defaults if necessary
             C defaults = loadDefaults();
             DataTree.Mut defaultData = new DataTree.Mut();
-            writeTo(defaults, defaultData, () -> keyMapper);
+            writeWithKeyMapper(defaults, defaultData, keyMapper);
             backend.write(new Backend.Document() {
                 @Override
                 public @NonNull CommentData comments() {
@@ -350,11 +380,12 @@ final class BuiltConfig<C> implements Configuration<C> {
             configureListener.wroteDefaults();
             return LoadResult.of(defaults);
         }
+        CommentLocation[] commentLocations = CommentLocation.values();
+        Interprocessor interprocessor = new Interprocessor.Builder()
+                .addHook(DefinedLayout.UPDATE_STRUCTURED_ENTRY, commentRefreshUpdater(commentLocations, backend))
+                .addHook(DefinedLayout.WRITE_STRUCTURED_TREE, dataTreeResorter(backend.meta))
+                .build();
         DataTree.Mut updatableTree = document.data().intoMut();
-        if (!backend.meta().preservesOrder(true) && backend.meta().preservesOrder(false)) {
-            // TODO in future release: Implement sorting here
-            // By re-sorting the data tree, we can rely on the backend to write ordered data
-        }
         class ReadWithUpdateOpts implements ReadWithUpdateOptions {
             boolean updated;
 
@@ -375,8 +406,8 @@ final class BuiltConfig<C> implements Configuration<C> {
             }
 
             @Override
-            public boolean writeEntryComments(@NonNull CommentLocation location) {
-                return backend.shouldRefreshComments(false, location);
+            public @NonNull Interprocessor getInterprocessor() {
+                return interprocessor;
             }
         }
         ReadWithUpdateOpts readWithUpdateOpts = new ReadWithUpdateOpts();
@@ -387,9 +418,9 @@ final class BuiltConfig<C> implements Configuration<C> {
                 // Preserve comments if possible, or refresh them from the layout
                 @Override
                 public @NonNull CommentData comments() {
-                    CommentData fromLayout = getLayout().getComments();
+                    CommentData fromLayout = layout.getComments();
                     CommentData current = document.comments();
-                    for (CommentLocation location : CommentLocation.values()) {
+                    for (CommentLocation location : commentLocations) {
                         if (backend.shouldRefreshComments(true, location)) {
                             current = current.setAt(location, fromLayout.getAt(location));
                         }
@@ -404,6 +435,91 @@ final class BuiltConfig<C> implements Configuration<C> {
             });
         }
         return loadResult;
+    }
+
+    private static DefinedLayout.@NonNull OnUpdateStructuredEntry commentRefreshUpdater(
+            CommentLocation[] commentLocations, CachedBackend backend
+    ) {
+        boolean[] refreshCommentsOnEntry = new boolean[commentLocations.length];
+        boolean anywhere = false;
+        boolean anywhereNot = false;
+        for (int n = 0; n < commentLocations.length; n++) {
+            refreshCommentsOnEntry[n] = backend.shouldRefreshComments(false, commentLocations[n]);
+            anywhere |= refreshCommentsOnEntry[n];
+            anywhereNot |= !refreshCommentsOnEntry[n];
+        }
+        if (!anywhere) { // nowhere
+            return DefinedLayout.UPDATE_STRUCTURED_ENTRY.defaultValue();
+        }
+        if (!anywhereNot) { // everywhere
+            return new DefinedLayout.OnUpdateStructuredEntry() {
+                @Override
+                public @Nullable <R, B> DataEntry insertUpdate(@Nullable DataEntry entry, @NonNull DataEntry oldEntry,
+                                                               @NonNull DeserializeContext deserializeContext,
+                                                               @NonNull SerializeContext serializeContext,
+                                                               @NonNull DefinedLayout<?> definedLayout,
+                                                               DefinedNode.@NonNull Value<R, B> valueNode,
+                                                               DefinedLayout.@NonNull Branch<B> branchOfNode) {
+                    if (entry != null) {
+                        entry = entry.withComments(valueNode.comments());
+                    }
+                    return entry;
+                }
+            };
+        }
+        return new DefinedLayout.OnUpdateStructuredEntry() {
+            @Override
+            public @Nullable <R, B> DataEntry insertUpdate(@Nullable DataEntry entry, @NonNull DataEntry oldEntry,
+                                                           @NonNull DeserializeContext deserializeContext,
+                                                           @NonNull SerializeContext serializeContext,
+                                                           @NonNull DefinedLayout<?> definedLayout,
+                                                           DefinedNode.@NonNull Value<R, B> valueNode,
+                                                           DefinedLayout.@NonNull Branch<B> branchOfNode) {
+                if (entry != null) {
+                    CommentData nodeComments = valueNode.comments();
+                    if (!nodeComments.isEmpty()) {
+                        CommentData entryComments = entry.getComments();
+                        for (CommentLocation refreshLocation : commentLocations) {
+                            if (refreshCommentsOnEntry[refreshLocation.ordinal()]) {
+                                entryComments = entryComments.setAt(refreshLocation, nodeComments.getAt(refreshLocation));
+                            }
+                        }
+                        entry = entry.withComments(entryComments);
+                    }
+                }
+                return entry;
+            }
+        };
+    }
+
+    private static DefinedLayout.@NonNull OnWriteStructuredTree dataTreeResorter(Backend.Meta meta) {
+        if (!meta.preservesOrder(true) && meta.preservesOrder(false)) {
+            // By re-sorting the data tree, we can rely on the backend to write ordered data
+            return new DefinedLayout.OnWriteStructuredTree() {
+                @Override
+                public void writeTree(DataTree.@NonNull Mut dataTree, @NonNull SerializeContext treeContext,
+                                      @NonNull DefinedLayout<?> definedLayout) {
+                    DataTree.Mut sorted = new DataTree.Mut();
+                    definedLayout.forEachBranch(branch -> {
+                        for (DefinedNode<?, ?> node : branch.getNodes()) {
+                            if (!(node instanceof DefinedNode.Value)) {
+                                continue;
+                            }
+                            DefinedNode.Value<?, ?> valueNode = (DefinedNode.Value<?, ?>) node;
+                            String mappedKey = treeContext.keyMapper().labelToKey(valueNode.label()).toString();
+                            DataEntry entry = dataTree.remove(mappedKey);
+                            if (entry != null) {
+                                sorted.put(mappedKey, entry);
+                            }
+                        }
+                    });
+                    // Remaining entries (unsorted, not connected to definition) get pushed to the end
+                    sorted.putAll(dataTree);
+                    dataTree.setAll(sorted);
+                }
+            };
+        }
+        return DefinedLayout.WRITE_STRUCTURED_TREE.defaultValue();
     }
 
     @Override
@@ -427,7 +543,7 @@ final class BuiltConfig<C> implements Configuration<C> {
 
     @Override
     public @NonNull ReloadShell<C> makeReloadShell(@Nullable C initialValue) {
-        ReloadShell<C> reloadShell = getLayout().getInstantiator().generateShell(getType().getRawType());
+        ReloadShell<C> reloadShell = getDefinedLayout().getReflectionProvider().generateShell();
         reloadShell.setCurrentDelegate(initialValue);
         return reloadShell;
     }
@@ -445,5 +561,17 @@ final class BuiltConfig<C> implements Configuration<C> {
                 return libraryLang;
             }
         };
+    }
+
+    @Override
+    public String toString() {
+        return "BuiltConfig{" +
+                "definition=" + definition +
+                ", locale=" + locale +
+                ", libraryLang=" + libraryLang +
+                ", typeLiaisons=" + typeLiaisons +
+                ", keyMapper=" + keyMapper +
+                ", migrations=" + migrations +
+                '}';
     }
 }

@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -24,6 +24,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 final class DataToString {
 
@@ -38,7 +39,8 @@ final class DataToString {
         StringBuilder output = new StringBuilder();
         DataToString.Scope topScope = new DataToString(output).new Scope(0);
         if (implementor instanceof DataEntry) {
-            ((DataEntry) implementor).toString(topScope);
+            topScope.printClassName(DataEntry.class);
+            ((DataEntry) implementor).dataToString(topScope);
         } else {
             topScope.valueToString(implementor);
         }
@@ -56,38 +58,42 @@ final class DataToString {
         private void writeNewLine() {
             output.append('\n');
             for (int n = 0; n < indent; n++) {
-                output.append(' ');
+                output.append("  ");
+            }
+        }
+
+        private void printClassName(Class<?> maybeInner) {
+            Class<?> declaredIn = maybeInner.getDeclaringClass();
+            if (declaredIn != null) {
+                printClassName(declaredIn);
+                output.append('.');
+            }
+            output.append(maybeInner.getSimpleName());
+        }
+
+        private <C> void containerToString(C container, BiConsumer<C, Scope> dataToString) {
+            printClassName(container.getClass());
+            output.append('@');
+            output.append(Integer.toHexString(System.identityHashCode(container)));
+            output.append(' ');
+            if (parentContainers.add(container)) {
+                try {
+                    dataToString.accept(container, this);
+                } finally {
+                    parentContainers.remove(container);
+                }
+            } else {
+                output.append("(circular)");
             }
         }
 
         void valueToString(Object value) {
             if (value instanceof String) {
                 new EscapeString((String) value).printTo(output);
-
             } else if (value instanceof DataList) {
-                DataList dataList = (DataList) value;
-                if (parentContainers.add(dataList)) {
-                    try {
-                        dataList.toString(this);
-                    } finally {
-                        parentContainers.remove(dataList);
-                    }
-                } else {
-                    output.append("<circular list>");
-                }
-
+                containerToString((DataList) value, DataList::dataToString);
             } else if (value instanceof DataTree) {
-                DataTree dataTree = (DataTree) value;
-                if (parentContainers.add(dataTree)) {
-                    try {
-                        dataTree.toString(this);
-                    } finally {
-                        parentContainers.remove(dataTree);
-                    }
-                } else {
-                    output.append("<circular map>");
-                }
-
+                containerToString((DataTree) value, DataTree::dataToString);
             } else {
                 output.append(value);
             }
@@ -96,7 +102,7 @@ final class DataToString {
         void listToString(List<DataEntry> list) {
             output.append('[');
             if (!list.isEmpty()) {
-                new Scope(indent + 2).listElementsToString(list);
+                new Scope(indent + 1).listElementsToString(list);
                 writeNewLine();
             }
             output.append(']');
@@ -105,7 +111,7 @@ final class DataToString {
         private void listElementsToString(List<DataEntry> list) {
             for (DataEntry elem : list) {
                 writeNewLine();
-                elem.toString(this);
+                elem.dataToString(this);
                 output.append(',');
             }
         }
@@ -113,7 +119,7 @@ final class DataToString {
         void mapToString(Map<Object, DataEntry> map) {
             output.append('{');
             if (!map.isEmpty()) {
-                new Scope(indent + 2).mapElementsToString(map);
+                new Scope(indent + 1).mapElementsToString(map);
                 writeNewLine();
             }
             output.append('}');
@@ -127,7 +133,7 @@ final class DataToString {
                 writeNewLine();
                 output.append(key);
                 output.append('=');
-                entry.toString(this);
+                entry.dataToString(this);
                 output.append(',');
             }
         }

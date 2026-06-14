@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -17,31 +17,11 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.reflect;
+package space.arim.dazzleconf.engine.liaison;
 
-import org.apiguardian.api.API;
-
-/**
- * A marker value used for {@link MethodYield} that instructs the {@link Instantiator} to call the default method.
- * <p>
- * Equality on this object is not specified. Usage should test for it using <code>instanceof</code> checks.
- *
- */
-@API(status = API.Status.MAINTAINED)
-public final class InvokeDefaultFunction {
-
-    /**
-     * Creates
-     */
-    public InvokeDefaultFunction() {}
-
+public record RemoveIfEmpty(String fromValue) implements StringType {
     @Override
-    public boolean equals(Object other) {
-        return other instanceof InvokeDefaultFunction;
-    }
-
-    @Override
-    public int hashCode() {
-        return InvokeDefaultFunction.class.hashCode();
+    public String value() {
+        return fromValue.isEmpty() ? null : fromValue;
     }
 }

@@ -22,20 +22,20 @@ package space.arim.dazzleconf;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf.backend.CommentData;
-import space.arim.dazzleconf.engine.Comments;
+import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.DefaultValues;
+import space.arim.dazzleconf.engine.ProtoDefinedNode;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.reflect.MethodId;
-import space.arim.dazzleconf.reflect.MethodMirror;
+import space.arim.dazzleconf.reflect.ReflectionProvider;
 import space.arim.dazzleconf.reflect.TypeToken;
 
 import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 final class LiaisonCache {
 
@@ -64,14 +64,16 @@ final class LiaisonCache {
             }
         }
         throw new DeveloperMistakeException(
-                "Failed to resolve agent for " + typeToken + ". Please add a TypeLiaison or serializer for this type."
+                "Failed to resolve agent for " + typeToken + ". Please add a TypeLiaison that covers this type." +
+                        "\nAvailable liaisons: " + Arrays.toString(typeLiaisons) +
+                        "\nWays to add new liaisons: ConfigurationBuilder#addTypeLiaisons, ConfigurationBuilder#addSimpleSerializer."
         );
     }
 
     static final class HandleType<V> {
 
         private final TypeToken<V> typeToken;
-        private final TypeLiaison.Agent<V> agent;
+        final TypeLiaison.Agent<V> agent;
         final SerializeDeserialize<V> serializer;
 
         private HandleType(TypeToken<V> typeToken, TypeLiaison.Agent<V> agent, SerializeDeserialize<V> serializer) {
@@ -80,25 +82,35 @@ final class LiaisonCache {
             this.serializer = serializer;
         }
 
-        TypeSkeleton.MethodNode<V> makeMethodNode(
-                MethodId methodId, AnnotatedElement methodAnnotations,
-                TypeToken<?> interfaceToken, MethodMirror.Invoker defaultsInvoker
+        <C> SkeletonNode.Val<V, C> makeValueNode(
+                MethodId methodId, AnnotatedElement annotations, KeyPath.Immut labelPath,
+                TypeToken<?> interfaceToken, ReflectionProvider.Invoker<C> defaultsInvoker
         ) {
-            TypeLiaison.DefaultInit<V> defaultInit = new TypeLiaison.DefaultInit<V>() {
+            class ProtoNodeBase implements ProtoDefinedNode.Value {
+
                 @Override
                 public @NonNull TypeToken<?> enclosingType() {
                     return interfaceToken;
                 }
 
                 @Override
-                public @NonNull String label() {
-                    return methodId.name();
+                public @NonNull AnnotatedElement methodAnnotations() {
+                    return annotations;
                 }
 
                 @Override
-                public @NonNull AnnotatedElement methodAnnotations() {
-                    return methodAnnotations;
+                public KeyPath.@NonNull Immut labelPath() {
+                    return labelPath;
                 }
+
+                @Override
+                public @NonNull String label() {
+                    // If we ever allow custom label settings, need to update LiaisonCache/DefinitionScan
+                    return methodId.name();
+                }
+            }
+            class CommentInitImpl extends ProtoNodeBase implements TypeLiaison.CommentInit { }
+            class DefaultInitImpl extends ProtoNodeBase implements TypeLiaison.DefaultInit<V> {
 
                 @Override
                 public @Nullable DefaultValues<V> methodDefault() {
@@ -109,7 +121,9 @@ final class LiaisonCache {
                     Object defaultVal;
                     try {
                         defaultVal = defaultsInvoker.invokeMethod(methodId);
-                    } catch (InvocationTargetException ex) {
+                    } catch (Error ex) {
+                        throw ex;
+                    } catch (Throwable ex) {
                         throw new DeveloperMistakeException("Default method threw an exception", ex);
                     }
                     if (defaultVal == null) {
@@ -117,10 +131,10 @@ final class LiaisonCache {
                     }
                     return DefaultValues.simple(typeToken.cast(defaultVal));
                 }
-            };
-            DefaultValues<V> defaultValues = agent.loadDefaultValues(defaultInit);
-            CommentData comments  = CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
-            return new TypeSkeleton.MethodNode<>(comments, methodId, defaultValues, serializer);
+            }
+            CommentData comments = agent.loadComments(new CommentInitImpl());
+            DefaultValues<V> defaultValues = agent.loadDefaultValues(new DefaultInitImpl());
+            return new SkeletonNode.Val<>(methodId, comments, defaultValues, serializer);
         }
     }
 }

@@ -38,7 +38,12 @@ import space.arim.dazzleconf.backend.DataTree;
  * This {@code SerializeOutput} stores the last object output to it. Calling more than one "out" method will overwrite
  * the value stored in this instance, which will in turn change the returned output. The output is extracted (and
  * simultaneously cleared) by calling {@link #getAndClearLastOutput()}.
- *
+ * <p>
+ * <b>Library implementor</b>
+ * <p>
+ * Instances of this type are implemented by the library and supplied where relevant. It must not be implemented by
+ * library consumers, as new methods may be added in the future, and user implementations might expose themselves to
+ * {@code NoSuchMethodError}s if they interoperate with more up-to-date code.
  */
 public interface SerializeOutput extends SerializeContext {
 

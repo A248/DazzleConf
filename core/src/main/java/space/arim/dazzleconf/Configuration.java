@@ -24,10 +24,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf.backend.Backend;
 import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.KeyMapper;
-import space.arim.dazzleconf.engine.DefaultValues;
 import space.arim.dazzleconf.engine.UpdateListener;
 import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.migration.Migration;
+import space.arim.dazzleconf.reflect.ReflectionProvider;
 import space.arim.dazzleconf.reflect.ReifiedType;
 import space.arim.dazzleconf.reflect.TypeToken;
 
@@ -51,13 +51,16 @@ import java.util.Locale;
  *     }
  * </pre>
  * <p>
+ * We will now describe how this interface fits into the broader library.
+ * <p>
  * <b>Obtaining</b>
  * <p>
- * The factory methods {@code defaultBuilder} provide configuration builders. The builder lets the library user add
- * type liaisons, change the locale for error messages, add migrations, and change advanced settings. Use
- * {@link ConfigurationBuilder#build()} to get an instance of this interface.
+ * A configuration is obtained from its builder, i.e. {@link ConfigurationBuilder#build()}. The factory methods on this
+ * class called {@code defaultBuilder} provide configuration builders with the default liaisons. The builder also lets
+ * the library user change the locale for error messages, add migrations, and modify other settings. Its purpose is
+ * to obtain this interface.
  * <p>
- * <b>Usage</b>
+ * <b>Configuration</b>
  * <p>
  * The main point of usage is the {@link #configureWith(Backend)} method. This method performs many of the main features
  * of this library, and it will be suitable for many users. At the same time, this method is purely implemented using
@@ -67,20 +70,30 @@ import java.util.Locale;
  * <p>
  * <b>Preservation of order</b>
  * <p>
- * Throughout the library, order is preserved from start to finish. From the moment the data is loaded from
- * the backend, to the moment it is written back, order stays consistent.
+ * The library seeks to match the order of entries in a data tree to the order of methods in the interface definition.
+ * However, this goal cannot always be accomplished. Sometimes external factors prevent stable ordering. Other times,
+ * the end user edits the configuration file. Therefore, the library adopts a holistic approach to maintaining order.
  * <p>
- * That said, there are three reasons why the order of entries in a data tree would appear differently:
+ * If the {@code Backend} implementation cannot write ordered entries, nothing can be done. This behavior is checked by
+ * querying {@link Backend.Meta#preservesOrder(boolean)}. For example, TOML cannot write ordered data because the TOML
+ * backend's underlying library does not support it.
+ * <p>
+ * Otherwise, the library's strategy is to match the order of the configuration definition. Note that the default
+ * {@link ReflectionProvider} does not scan interface methods in a consistent order: the
+ * Java reflections API defines no order for {@link Class#getDeclaredMethods()}. This means the configuration's entries
+ * will have a stable, arbitrary order defined when it is created.
+ * <p>
+ * Thereafter, order support is implemented realistically:
  * <ul>
- *     <li>1. The {@code Backend} implementation does not preserve order. If the backend does not preserve order, then
- *     order is undefined. Callers can inquire about this behavior using {@link Backend.Meta#preservesOrder(boolean)}.
- *     </li>
- *     <li>2. The {@code Instantiator} does not scan a configuration interface (i.e., its methods) in a consistent order.
- *     For example, the Java reflections API defines no order for {@link Class#getDeclaredMethods()}</li>
- *     <li>3. If the user deletes existing entries, the library may attempt to add them back. Adding back the missing
- *     entries will succeed if substitute values exist (see {@link DefaultValues#ifMissing()}), however, those missing
- *     entries will be added at the back of existing data trees.
- *     </li>
+ *     <li>Writing to a data tree writes in order. Existing data in the output tree may be overwritten, and if so,
+ *     existing entries will keep their existing tree order ({@link DataTree} uses a linked map).</li>
+ *     <li>Reading and updating data tree in place, such as through {@link #readWithUpdate}, keeps the order of
+ *     existing entries. New entries that are inserted because they were missing will be added to the end of the data
+ *     tree.</li>
+ *     <li>Using the {@code configureWith} or {@code configureOrFallback} methods detects the ordering support from the
+ *     backend. If the backend supports order, data trees are sorted based on the configuration definition before
+ *     writing. Note that if the configuration is already up-to-date (no missing entries and no update notifications),
+ *     it will not be resorted and rewritten.</li>
  * </ul>
  *
  * @param <C> the configuration type
@@ -178,12 +191,20 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
     }
 
     /**
-     * A simple, stateless read from a data tree.
+     * A simple read from a data tree.
      * <p>
-     * This function loads from the data tree without modifying it, and it does not use migrations. The configuration
-     * is instantiated and returned upon success.
+     * This function loads from the data tree without modifying it. Missing values are substituted as appropriate, and
+     * the configuration is instantiated and returned upon success. Fails if the deserialization for a particular type
+     * rejected that value, or if the value is missing and missing/default values do not exist for the method node.
      * <p>
      * The key mapper used is either the one set during construction, or the default (no-op) key mapper.
+     * <p>
+     * Note that the following features are not supported by this function:
+     * <ul>
+     *     <li>Key mapper provision from the backend, if the key mapper is not set at construction.</li>
+     *     <li>Migrations.</li>
+     * </ul>
+     * These features are implemented by the {@code configureWith} and {@code configureOrFallback} methods.
      *
      * @param dataTree the data tree to read from
      * @return the loaded configuration
@@ -193,10 +214,12 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
     /**
      * A simple, stateless read from a data tree.
      * <p>
-     * This function loads from the data tree without modifying it, and it does not use migrations. The configuration
-     * is instantiated and returned upon success.
+     * This function loads from the data tree without modifying it. Missing values are substituted as appropriate, and
+     * the configuration is instantiated and returned upon success. Fails if the deserialization for a particular type
+     * rejected that value, or if the value is missing and missing/default values do not exist for the method node.
      * <p>
      * The key mapper used is either the one set during construction, or the default (no-op) key mapper.
+     * See {@link #readFrom(DataTree, ReadOptions)} for a list of features that this method <i>does not</i> support.
      *
      * @param dataTree the data tree to read from
      * @param updateListener a listener which informs the caller if certain events happened
@@ -224,7 +247,10 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * This "all-in-one" function leverages multiple of this library's best features. It checks for migrations and
      * updates the config as necessary, up to the latest version. If the config was on the latest version, loads it
      * and substitutes missing values as necessary. Lastly, if any of these operations produced a change, writes the
-     * config back to the backend. Yields the instantiated configuration.
+     * data back to the backend. Yields the instantiated configuration.
+     * <p>
+     * The full operational steps are described in {@link #configureWith(Backend, ConfigureListener)}. See that method
+     * for full documentation and features implemented.
      *
      * @param backend the format backend
      * @return the loaded configuration
@@ -239,6 +265,43 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * updates the config as necessary, up to the latest version. If the config was on the latest version, loads it
      * and substitutes missing values as necessary. Lastly, if any of these operations produced a change, writes the
      * config back to the backend. Yields the instantiated configuration.
+     * <p>
+     * <b>Features supported by this method and related overloads</b>
+     * <p>
+     * The following features are provided by this function and its associated family ({@code configureWith} and
+     * {@code configureOrFallback} overloads).
+     * <ul>
+     *     <li>Key mapper provision based on the backend, if no key mapper was set on this configuration during
+     *     construction of this {@code Configuration}.</li>
+     *     <li>Migrations.</li>
+     *     <li>Re-sorting of the configuration, if the backend supports order on writing but not reading.</li>
+     *     <li>Detection and application of comment support, based on the backend.</li>
+     * </ul>
+     * <p>
+     * As you can see, this method provides a backend-aware read-and-update operation. Other methods on this interface
+     * like {@link #readFrom(DataTree)} do not have such an awareness. Because of this, this method is recommended for
+     * most developers.
+     * <p>
+     * <b>Algorithm</b>
+     * <p>
+     * The full procedure of this function is as follows:
+     * <ol>
+     *     <li>If the file does not exist, write the defaults and return them.</li>
+     *     <li>Try to apply any migrations. If a migration matched, write the new configuration and return it.</li>
+     *     <li>Read and update the configuration
+     *     <ul>
+     *         <li>Use {@link #readWithUpdate(DataTree.Mut, ReadWithUpdateOptions)} to perform the operation. Use the
+     *         key mapper from the backend or this object. Notify the provided {@code configureListener} of any updates
+     *         </li>
+     *         <li>If the backend supports writing comments, include comments on new entries that are inserted</li>
+     *         <li>If the backend supports writing but not reading comments, regenerate comments on existing entries.</li>
+     *         <li>If needed, deep sort the data tree based on the configuration layout. A need exists when the backend
+     *         supports writing sorted data but not reading sorted data, or if the backend supports reading and writing
+     *         ordered data and new entries were inserted at the back of the data tree.</li>
+     *     </ul>
+     *     </li>
+     *     <li>If any updates occurred, write the configuration back to the file.</li>
+     * </ol>
      *
      * @param backend the format backend
      * @param configureListener a listener which informs the caller if certain events happened
@@ -254,7 +317,7 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * This "all-in-one" function leverages multiple of this library's best features. It checks for migrations and
      * updates the config as necessary, up to the latest version. If the config was on the latest version, loads it
      * and substitutes missing values as necessary. Lastly, if any of these operations produced a change, writes the
-     * config back to the backend. Yields the instantiated configuration.
+     * data back to the backend. Yields the instantiated configuration.
      * <p>
      * This function is similar to {@link #configureWith(Backend)} but with error handling layered on top. That error
      * handling is simple: upon failure, print the error and return default configuration. The backend itself is left
@@ -274,7 +337,7 @@ public interface Configuration<C> extends ConfigurationDefinition<C> {
      * This "all-in-one" function leverages multiple of this library's best features. It checks for migrations and
      * updates the config as necessary, up to the latest version. If the config was on the latest version, loads it
      * and substitutes missing values as necessary. Lastly, if any of these operations produced a change, writes the
-     * config back to the backend. Yields the instantiated configuration.
+     * data back to the backend. Yields the instantiated configuration.
      * <p>
      * This function is similar to {@link #configureWith(Backend)} but with error handling layered on top. That error
      * handling is simple: upon failure, print the error and return default configuration. The backend itself is left

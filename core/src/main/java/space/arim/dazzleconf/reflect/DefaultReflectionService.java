@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -22,13 +22,14 @@ package space.arim.dazzleconf.reflect;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Proxy;
+import java.util.Objects;
 
 /**
  * The default implementation of {@link ReflectionService}.
  * <p>
  * It uses standard reflection to find and call methods, and {@code java.lang.reflect.Proxy} to generate classes
- * implementing the configuration interface.
- *
+ * implementing a configuration interface. Only interface types are supported.
  */
 public final class DefaultReflectionService implements ReflectionService {
 
@@ -38,12 +39,19 @@ public final class DefaultReflectionService implements ReflectionService {
     public DefaultReflectionService() {}
 
     @Override
-    public @NonNull Instantiator makeInstantiator(MethodHandles.@NonNull Lookup lookup) {
-        return new DefaultInstantiator(lookup);
+    public @NonNull <I> ReflectionProvider<I> newProvider(Class<I> type, MethodHandles.@NonNull Lookup lookup) {
+        Objects.requireNonNull(lookup, "lookup");
+        if (!type.isInterface()) {
+            throw new UnsupportedOperationException(
+                    "This library's main implementation works exclusively with interfaces. " +
+                            type + " is not an interface."
+            );
+        }
+        return new DefaultReflectionProvider<>(type, lookup);
     }
 
     @Override
-    public @NonNull MethodMirror makeMethodMirror(MethodHandles.@NonNull Lookup lookup) {
-        return new DefaultMethodMirror(lookup);
+    public boolean hasProduced(@NonNull Object instance) {
+        return Proxy.isProxyClass(instance.getClass()) && Proxy.getInvocationHandler(instance) instanceof ProxyHandler;
     }
 }

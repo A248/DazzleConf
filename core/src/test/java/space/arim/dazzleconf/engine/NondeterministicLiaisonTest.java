@@ -49,16 +49,11 @@ public class NondeterministicLiaisonTest {
         VANISH;
 
         @Nullable Criminal rotate() {
-            switch (this) {
-                case INCONSPICUOUS:
-                    return CRIME;
-                case CRIME:
-                    return VANISH;
-                case VANISH:
-                    return null;
-                default:
-                    throw new IncompatibleClassChangeError();
-            }
+            return switch (this) {
+                case INCONSPICUOUS -> CRIME;
+                case CRIME -> VANISH;
+                case VANISH -> null;
+            };
         }
     }
 
@@ -160,6 +155,11 @@ public class NondeterministicLiaisonTest {
             }
 
             @Override
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
+            }
+
+            @Override
             public void notifyUpdate(@NonNull KeyPath entryPath, @NonNull UpdateReason updateReason) {
                 updateListener.notifyUpdate(entryPath, updateReason);
             }
@@ -183,6 +183,11 @@ public class NondeterministicLiaisonTest {
             @Override
             public @NonNull KeyPath keyPath() {
                 return KeyPath.empty();
+            }
+
+            @Override
+            public @NonNull Interprocessor getInterprocessor() {
+                return Interprocessor.DEFAULT;
             }
 
             @Override

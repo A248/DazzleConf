@@ -25,6 +25,7 @@ import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf.DeveloperMistakeException;
 import space.arim.dazzleconf.ErrorContext;
 import space.arim.dazzleconf.LoadResult;
+import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.DataEntry;
 import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.KeyPath;
@@ -131,6 +132,8 @@ public final class MapLiaison implements TypeLiaison {
             Map<K, V> built = new LinkedHashMap<>();
             boolean changedFromKeyOverlap = false;
 
+            // Protect against concurrent modification
+            //Object[] inputKeysSnapshot = input.keySet().toArray();
             for (Object inputKey : input.keySet()) {
                 // Deserialize the key
                 DataEntry inputEntry = input.get(inputKey);
@@ -140,7 +143,8 @@ public final class MapLiaison implements TypeLiaison {
                     );
                 }
                 LoadResult<K> keyResult = implDeserialize.deserialize(
-                        keySerializer, deser.makeChild(inputEntry.withValue(inputKey), inputKey)
+                        // Preserve comments and line number while deserializing key
+                        keySerializer, deser.newInputAt(inputKey, inputEntry.withValue(inputKey))
                 );
                 if (keyResult.isFailure()) {
                     if (collectedErrors == null) {
@@ -160,7 +164,8 @@ public final class MapLiaison implements TypeLiaison {
                 Object keyUpdate = implDeserialize.getUpdateFromDeserializeCall();
 
                 LoadResult<V> valueResult = implDeserialize.deserialize(
-                        valueSerializer, deser.makeChild(inputEntry, inputKey)
+                        // Don't set comments on the value: the key entry already exposed them
+                        valueSerializer, deser.newInputAt(inputKey, inputEntry.withComments(CommentData.empty()))
                 );
                 if (valueResult.isFailure()) {
                     if (collectedErrors == null) {
@@ -294,15 +299,14 @@ public final class MapLiaison implements TypeLiaison {
 
                 @Override
                 public void updateKeyOverlap(DeserializeInput deser, Map<K, V> built) {
-                    UpdateReason reason = updated ? UpdateReason.UPDATED : UpdateReason.OTHER;
-                    deser.notifyUpdate(KeyPath.empty(), reason);
+                    deser.notifyUpdate(KeyPath.empty(), UpdateReason.OTHER);
                     serialize(built, updateTo); // Reserialize the whole map
                 }
 
                 @Override
                 public void updateMaybeOtherwise(DeserializeInput deser, DataTree.Mut updatableInput) {
                     if (updated) {
-                        deser.notifyUpdate(KeyPath.empty(), UpdateReason.UPDATED);
+                        // Skip notifyUpdate() for the map itself; rely on entries to signal updates instead
                         updateTo.outDataTree(updatableInput);
                     }
                 }

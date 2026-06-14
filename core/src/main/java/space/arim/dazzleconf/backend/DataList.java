@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -42,8 +42,12 @@ import java.util.function.Consumer;
  * <p>
  * <b>Mutability</b>
  * <p>
- * Mutability of this class is <b>not defined</b>. Please use {@link Mut} or {@link Immut} if you need
- * mutable or immutable versions, or see the package javadoc for more information on the mutability model we use.
+ * Mutability of this class is <b>not defined</b>. Please use {@link Mut} or {@link Immut} if you need mutable or
+ * immutable versions, and please read the package documentation regarding the mutability model and thread safety of
+ * these types.
+ * <p>
+ * Note that {@code instanceof} is not a reliable way to determine mutability or lack thereof. This class may
+ * support additional subclasses for different purposes, such as lazy evaluation or alternative internal representations.
  * <p>
  * <b>Equality</b>
  * <p>
@@ -72,12 +76,18 @@ public abstract class DataList {
     /**
      * Gets this data tree as an immutable one.
      * <p>
-     * The data contained within this {@code DataTree} is moved to an immutable instance. The old instance may still be
-     * used, but the implementation of this method may be optimized for the case that it is not.
+     * The data contained within this {@code DataList} is copied to an immutable instance. Because {@link Immut}
+     * requires deep immutability, any entries will be made immutable if they were not already, as they are copied to
+     * the new instance.
      * <p>
-     * If this instance is already {@code DataList.Immut}, then it may be returned without changes.
+     * If this instance is already an {@code DataList.Immut}, then it may be returned without changes.
+     * <p>
+     * <b>Implementation Notes</b>
+     * <p>
+     * The receiver of this method is unaffected according to visible side effects. If mutable, it may still be used.
+     * However, the implementation of this method is optimized for the case that it is not used anymore.
      *
-     * @return an immutable data tree
+     * @return an immutable data list
      */
     @SideEffectFree
     public abstract @NonNull Immut intoImmut();
@@ -86,8 +96,8 @@ public abstract class DataList {
      * Gets this data list as a mutable one.
      * <p>
      * If not mutable, the data is copied to a new list, which will be made deeply mutable. That is, this function will
-     * also be called on any {@code DataList}s encountered in this list's entries, and {@link DataTree#intoMut()} on any
-     * data trees likewise.
+     * also be called on any {@code DataList}s encountered in this list's entries, and {@link DataTree#intoMut()} will
+     * be used on any copied trees likewise.
      * <p>
      * If this instance is already {@code DataList.Immut}, then it may be returned without changes.
      *
@@ -135,15 +145,14 @@ public abstract class DataList {
         return DataToString.implToString(this);
     }
 
-    void toString(DataToString.Scope output)  {
-        output.append(getClass().getSimpleName());
+    void dataToString(DataToString.Scope output)  {
         output.listToString(readOnlyList());
     }
 
     /**
      * A data list which is immutable.
      * <p>
-     * This type guarantees that all of its elements are immutable (deep immutability). That is, {@code DataTree}s and
+     * This type guarantees that all of its elements are immutable (deep immutability). That is, {@link DataTree}s and
      * {@code DataList}s contained within this list's element entries will always be immutable.
      */
     public static final class Immut extends DataList {

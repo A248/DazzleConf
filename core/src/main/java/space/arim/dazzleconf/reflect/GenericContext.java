@@ -56,16 +56,20 @@ public interface GenericContext {
         /**
          * Creates from a type.
          * <p>
-         * Uses the provided fallback context if the input type variable doesn't match any of the type variables on the provided type.
+         * Uses the provided fallback context if the input type variable doesn't match any of the type variables on the
+         * provided type.
          *
          * @param type the type, with its arguments
          * @param fallback the fallback generic context
+         * @throws IllegalArgumentException if the {@code type} provided is a raw type
          */
         public OfType(@NonNull ReifiedType type, @NonNull GenericContext fallback) {
             this.fallback = fallback;
             this.type = type;
             TypeVariable<?>[] typeVars = type.rawType().getTypeParameters();
-            if (typeVars.length != type.argumentCount()) {
+            if (typeVars.length != 0 && type.argumentCount() == 0) {
+                throw new IllegalArgumentException("Raw types rejected as generic context");
+            } else if (typeVars.length != type.argumentCount()) {
                 // ReifiedType.of() prevents this by blocking arbitrary construction
                 throw new IllegalStateException("Malformed input type. Wrong number of arguments on " + type);
             }

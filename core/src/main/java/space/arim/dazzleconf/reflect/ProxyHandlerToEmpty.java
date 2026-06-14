@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -23,22 +23,20 @@ import space.arim.dazzleconf.DeveloperMistakeException;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
+import java.util.Map;
 
 final class ProxyHandlerToEmpty<I> extends ProxyHandler<I> {
 
-    private DefaultMethodMap defaultMethodMap;
+    private final Map<Method, MethodHandle> defaultMethods;
 
-    ProxyHandlerToEmpty(Class<I> iface) {
+    ProxyHandlerToEmpty(Class<I> iface, Map<Method, MethodHandle> defaultMethods) {
         super(iface);
-    }
-
-    void init(DefaultMethodMap defaultMethodMap) {
-        this.defaultMethodMap = defaultMethodMap;
+        this.defaultMethods = defaultMethods;
     }
 
     @Override
-    Object implInvoke(Method method, Object[] args) throws Throwable {
-        MethodHandle methodHandle = defaultMethodMap.getHandleWithBoundReceiver(method);
+    Object implInvoke(Object proxy, Method method, Object[] args) throws Throwable {
+        MethodHandle methodHandle = defaultMethods.get(method);
         if (methodHandle == null) {
             if (method.isDefault()) {
                 throw new IllegalStateException();
@@ -46,7 +44,7 @@ final class ProxyHandlerToEmpty<I> extends ProxyHandler<I> {
                 throw new DeveloperMistakeException("Cannot call non-default configuration methods pre-initialization");
             }
         }
-        return methodHandle.invokeWithArguments(args);
+        return methodHandle.invokeExact(proxy, args);
     }
 
     @Override

@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -34,9 +34,12 @@ public interface KeyMapper {
      * Turns the argument into a key.
      * <p>
      * The argument is usually a method name, and as such, it should follow lowerCamelCase convention.
+     * <p>
+     * The return value must not be empty. It may be used as an argument to methods like
+     * {@link KeyPath.Mut#addBack(CharSequence)} that require non-empty sequences.
      *
      * @param label the method name
-     * @return the key part
+     * @return the key part, must not be empty
      */
     @NonNull CharSequence labelToKey(@NonNull CharSequence label);
 

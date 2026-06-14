@@ -155,7 +155,7 @@ public final class CollectionLiaison implements TypeLiaison {
             for (int n = 0; n < input.size(); n++) {
                 // Deserialize element
                 DataEntry inputEntry = input.get(n);
-                LoadResult<E> elemResult = impl.deserialize(elementSerializer, deser.makeChild(inputEntry, n));
+                LoadResult<E> elemResult = impl.deserialize(elementSerializer, deser.newInputAt(n, inputEntry));
                 if (elemResult.isFailure()) {
                     if (collectedErrors == null) {
                         collectedErrors = new ErrorContext[deser.maximumErrorCollect()];

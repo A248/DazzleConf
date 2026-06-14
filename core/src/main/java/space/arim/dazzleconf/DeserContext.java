@@ -20,12 +20,19 @@
 package space.arim.dazzleconf;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import space.arim.dazzleconf.backend.DataEntry;
+import space.arim.dazzleconf.backend.DataList;
+import space.arim.dazzleconf.backend.DataTree;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.backend.Printable;
 import space.arim.dazzleconf.engine.DeserializeContext;
+import space.arim.dazzleconf.engine.DeserializeInput;
+import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.UpdateReason;
 import space.arim.dazzleconf.internals.lang.LibraryLang;
+
+import java.util.Objects;
 
 abstract class DeserContext extends LoadError.Factory implements DeserializeContext {
 
@@ -37,26 +44,16 @@ abstract class DeserContext extends LoadError.Factory implements DeserializeCont
         this.readOptions = readOptions;
     }
 
-    static final class Standalone extends DeserContext {
-
-        private final String mappedKey;
-
-        Standalone(LibraryLang libraryLang, ConfigurationDefinition.ReadOptions readOptions, String mappedKey) {
-            super(libraryLang, readOptions);
-            this.mappedKey = mappedKey;
-        }
-
-        @Override
-        KeyPath.Mut getPathContribution() {
-            return new KeyPath.Mut(mappedKey);
-        }
-    }
-
     abstract KeyPath.Mut getPathContribution();
 
     @Override
     public @NonNull LibraryLang getLibraryLang() {
         return libraryLang;
+    }
+
+    @Override
+    public @NonNull KeyMapper keyMapper() {
+        return readOptions.keyMapper();
     }
 
     @Override
@@ -67,8 +64,8 @@ abstract class DeserContext extends LoadError.Factory implements DeserializeCont
     }
 
     @Override
-    public @NonNull KeyMapper keyMapper() {
-        return readOptions.keyMapper();
+    public @NonNull Interprocessor getInterprocessor() {
+        return readOptions.getInterprocessor();
     }
 
     @Override
@@ -83,5 +80,100 @@ abstract class DeserContext extends LoadError.Factory implements DeserializeCont
         LoadError loadError = new LoadError(message, libraryLang);
         loadError.addDetail(ErrorContext.ENTRY_PATH, keyPath());
         return loadError;
+    }
+
+    @Override
+    public @NonNull DeserializeContext deriveContext(@NonNull Object locIdentifier) {
+        return new ChildContext(locIdentifier);
+    }
+
+    @Override
+    public @NonNull DeserializeInput newInputHere(@NonNull DataEntry entry) {
+        return new AsInput(entry);
+    }
+
+    static final class AtKey extends DeserContext {
+
+        private final String mappedKey;
+
+        AtKey(LibraryLang libraryLang, ConfigurationDefinition.ReadOptions readOptions, String mappedKey) {
+            super(libraryLang, readOptions);
+            this.mappedKey = mappedKey;
+        }
+
+        @Override
+        KeyPath.Mut getPathContribution() {
+            return new KeyPath.Mut(mappedKey);
+        }
+    }
+
+    final class ChildContext extends DeserContext {
+
+        private final Object locIdentifier;
+
+        ChildContext(Object locIdentifier) {
+            super(DeserContext.this.libraryLang, DeserContext.this.readOptions);
+            this.locIdentifier = Objects.requireNonNull(locIdentifier, "locIdentifier");
+        }
+
+        @Override
+        KeyPath.Mut getPathContribution() {
+            KeyPath.Mut path = DeserContext.this.getPathContribution();
+            path.addBack(locIdentifier.toString());
+            return path;
+        }
+    }
+
+    final class AsInput extends DeserContext implements DeserializeInput {
+
+        private final DataEntry entry;
+
+        AsInput(DataEntry entry) {
+            super(DeserContext.this.libraryLang, DeserContext.this.readOptions);
+            this.entry = Objects.requireNonNull(entry, "entry");
+        }
+
+        @Override
+        KeyPath.Mut getPathContribution() {
+            return DeserContext.this.getPathContribution();
+        }
+
+        @Override
+        public @NonNull DataEntry entry() {
+            return entry;
+        }
+
+        private <V> @NonNull LoadResult<@NonNull V> requireAs(Class<V> typeClass) {
+            Object object = object();
+            if (typeClass.isInstance(object)) {
+                return LoadResult.of(typeClass.cast(object));
+            }
+            return throwError(libraryLang.wrongTypeForValue(object, typeClass));
+        }
+
+        @Override
+        public @NonNull LoadResult<@NonNull String> requireString() {
+            return requireAs(String.class);
+        }
+
+        @Override
+        public @NonNull LoadResult<@NonNull DataTree> requireDataTree() {
+            return requireAs(DataTree.class);
+        }
+
+        @Override
+        public @NonNull LoadResult<@NonNull DataList> requireDataList() {
+            return requireAs(DataList.class);
+        }
+
+        @Override
+        public @NonNull ErrorContext buildError(@NonNull Printable message) {
+            ErrorContext errorContext = super.buildError(message);
+            Integer lineNumber = entry.getLineNumber();
+            if (lineNumber != null) {
+                errorContext.addDetail(ErrorContext.LINE_NUMBER, lineNumber);
+            }
+            return errorContext;
+        }
     }
 }

@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -25,22 +25,27 @@ import space.arim.dazzleconf.engine.CommentLocation;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DataToStringTest {
+
+    private static String showHash(Object obj) {
+        return '@' + Integer.toHexString(System.identityHashCode(obj));
+    }
 
     @Test
     public void simpleTrees() {
         DataTree.Mut dataTree = new DataTree.Mut();
         dataTree.put("hi", new DataEntry(1));
         dataTree.put("newliner", new DataEntry("line:\n"));
-        dataTree.put("subtree", new DataEntry(new DataTree.Immut()));
-        assertEquals("""
-                Mut{
-                  hi=DataEntry{value=1},
-                  newliner=DataEntry{value="line:\\n"},
-                  subtree=DataEntry{value=Immut{}},
-                }""", dataTree.toString());
+        DataTree.Immut emptyImmut = new DataTree.Immut();
+        dataTree.put("subtree", new DataEntry(emptyImmut));
+        assertEquals("DataTree.Mut" + showHash(dataTree) + " {\n" +
+                "  hi={value=1},\n" +
+                "  newliner={value=\"line:\\n\"},\n" +
+                "  subtree={value=DataTree.Immut" + showHash(emptyImmut) + " {}},\n" +
+                "}", dataTree.toString());
     }
 
     @Test
@@ -48,14 +53,14 @@ public class DataToStringTest {
         DataList.Mut entryList = new DataList.Mut();
         entryList.add(new DataEntry(false));
         entryList.add(new DataEntry("hello").withLineNumber(5));
-        entryList.add(new DataEntry(new DataList.Immut()));
+        DataList.Immut emptyImmut = new DataList.Immut();
+        entryList.add(new DataEntry(emptyImmut));
         DataEntry topEntry = new DataEntry(entryList);
-        assertEquals("""
-                DataEntry{value=Mut[
-                  DataEntry{value=false},
-                  DataEntry{value="hello", lineNumber=5},
-                  DataEntry{value=Immut[]},
-                ]}""", topEntry.toString());
+        assertEquals("DataEntry{value=DataList.Mut" + showHash(entryList) + " [\n" +
+                "  {value=false},\n" +
+                "  {value=\"hello\", lineNumber=5},\n" +
+                "  {value=DataList.Immut" + showHash(emptyImmut) + " []},\n" +
+                "]}", topEntry.toString());
     }
 
     @Test
@@ -77,21 +82,37 @@ public class DataToStringTest {
         subTree.put("escape-value", new DataEntry("\u007F"));
         dataTree.put("subtree", new DataEntry(subTree));
         List<DataEntry> entryList = new ArrayList<>();
+        DataList.Mut insideEntryList = new DataList.Mut();
         entryList.add(new DataEntry(false));
-        entryList.add(new DataEntry(new DataList.Mut()));
-        dataTree.put("list", new DataEntry(new DataList.Immut(entryList)));
+        entryList.add(new DataEntry(insideEntryList));
+        DataList.Immut immutList = new DataList.Immut(entryList);
+        dataTree.put("list", new DataEntry(immutList));
 
-        assertEquals("""
-                Mut{
-                  hi=DataEntry{value=1},
-                  subtree=DataEntry{value=Mut{
-                    subkey=DataEntry{value=true, lineNumber=10},
-                    escape-value=DataEntry{value="\\u007f"},
-                  }},
-                  list=DataEntry{value=Immut[
-                    DataEntry{value=false},
-                    DataEntry{value=Mut[]},
-                  ]},
-                }""", dataTree.toString());
+        assertEquals("DataTree.Mut" + showHash(dataTree) + " {\n" +
+                "  hi={value=1},\n" +
+                "  subtree={value=DataTree.Mut" + showHash(subTree) + " {\n" +
+                "    subkey={value=true, lineNumber=10},\n" +
+                "    escape-value={value=\"\\u007f\"},\n" +
+                "  }},\n" +
+                "  list={value=DataList.Immut" + showHash(immutList) + " [\n" +
+                "    {value=false},\n" +
+                "    {value=DataList.Mut" + showHash(insideEntryList) + " []},\n" +
+                "  ]},\n" +
+                "}", dataTree.toString());
+    }
+
+    @Test
+    public void cyclic() {
+        DataTree.Mut cyclicTree = new DataTree.Mut();
+        cyclicTree.put("simple", new DataEntry("value"));
+        cyclicTree.put("self", new DataEntry(cyclicTree));
+        String output = assertDoesNotThrow(cyclicTree::toString);
+        assertEquals(
+                "DataTree.Mut" + showHash(cyclicTree) + " {\n" +
+                        "  simple={value=\"value\"},\n" +
+                        "  self={value=DataTree.Mut" + showHash(cyclicTree) + " (circular)},\n" +
+                        "}",
+                output
+        );
     }
 }

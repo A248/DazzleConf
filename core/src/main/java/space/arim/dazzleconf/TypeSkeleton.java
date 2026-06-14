@@ -19,136 +19,224 @@
 
 package space.arim.dazzleconf;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-import space.arim.dazzleconf.backend.CommentData;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import space.arim.dazzleconf.backend.DataEntry;
-import space.arim.dazzleconf.engine.DefaultValues;
-import space.arim.dazzleconf.engine.NoOutput;
+import space.arim.dazzleconf.backend.DataTree;
+import space.arim.dazzleconf.backend.KeyMapper;
+import space.arim.dazzleconf.backend.KeyPath;
+import space.arim.dazzleconf.backend.Printable;
+import space.arim.dazzleconf.engine.DefinedLayout;
+import space.arim.dazzleconf.engine.DefinedNode;
+import space.arim.dazzleconf.engine.DeserializeContext;
+import space.arim.dazzleconf.engine.DeserializeInput;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.SerializeOutput;
-import space.arim.dazzleconf.reflect.MethodId;
-import space.arim.dazzleconf.reflect.MethodMirror;
+import space.arim.dazzleconf.engine.UpdateReason;
+import space.arim.dazzleconf.reflect.MethodYield;
+import space.arim.dazzleconf.reflect.ReflectionProvider;
+import space.arim.dazzleconf.reflect.TypeToken;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collection;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Defines a single interface supertype which has not yet been instantiated
  */
-final class TypeSkeleton {
+final class TypeSkeleton<B> implements DefinedLayout.Branch<B> {
 
-    /**
-     * Functions annotated with @Callable
-     */
-    final MethodId[] callableDefaultMethods;
-    /**
-     * Functions whose return values are supplied by us
-     */
-    final MethodNode<?>[] methodNodes;
+    private final TypeToken<B> typeToken;
+    private final SkeletonNode.Val<?, B>[] valNodes;
+    private final SkeletonNode.Callable<?, B>[] callableNodes;
 
-    TypeSkeleton(Collection<MethodId> callableDefaultMethods, List<MethodNode<?>> methodNodes) {
-        this.callableDefaultMethods = callableDefaultMethods.toArray(new MethodId[0]);
-        this.methodNodes = methodNodes.toArray(new MethodNode[0]);
+    @SuppressWarnings("unchecked")
+    TypeSkeleton(TypeToken<B> typeToken,
+                 List<SkeletonNode.Val<?, B>> valNodes, List<SkeletonNode.Callable<?, B>> callableNodes) {
+        this.typeToken = typeToken;
+        this.valNodes = valNodes.toArray(new SkeletonNode.Val[0]);
+        this.callableNodes = callableNodes.toArray(new SkeletonNode.Callable[0]);
     }
 
-    static final class MethodNode<V> {
+    void implLoadDefaults(MethodYield methodYield) {
+        Class<B> currentType = typeToken.getRawType();
+        try (MethodYield.ForImplementable yieldForType = methodYield.forImplementable(currentType)) {
+            for (SkeletonNode.Val<?, B> valNode : valNodes) {
+                Object defaultValue = valNode.makeDefaultValue(currentType);
+                yieldForType.returnValue(valNode.methodId(), defaultValue);
+            }
+            for (SkeletonNode.Callable<?, B> callable : callableNodes) {
+                yieldForType.callDefault(callable.methodId());
+            }
+        }
+    }
 
-        final CommentData comments;
-        final MethodId methodId;
-        private final @Nullable DefaultValues<V> defaultValues; // Can be null if defaults unconfigured
-        final SerializeDeserialize<V> serializer;
+    interface HowToUpdate<UPD, DT extends DataTree> {
 
-        MethodNode(CommentData comments, MethodId methodId, @Nullable DefaultValues<V> defaultValues,
-                   SerializeDeserialize<V> serializer) {
-            this.comments = comments;
-            this.methodId = Objects.requireNonNull(methodId, "methodId");
-            this.defaultValues = defaultValues;
-            this.serializer = Objects.requireNonNull(serializer, "serializer");
+        UPD makeUpdater(String mappedKey);
+
+        <V, B> void insertMissingValue(DT dataTree, String mappedKey, SkeletonNode.Val<V, B> valNode, V missingValue,
+                                       DefinedLayout.Branch<B> branchOfNode);
+
+        <V> LoadResult<V> deserialize(SerializeDeserialize<V> serializeDeserialize, DeserializeInput deser, UPD updater);
+
+        <B> void updateIfDesired(DT dataTree, String mappedKey, DataEntry sourceEntry, SkeletonNode.Val<?, B> valNode,
+                                 DeserializeContext deserContext, DefinedLayout.Branch<B> branchOfNode, UPD updater);
+
+    }
+
+    final class ImplRead<UPD, DT extends DataTree> {
+
+        private final @NonNull DT dataTree;
+        private final @NonNull HowToUpdate<UPD, DT> howToUpdate;
+        private final ConfigurationDefinition.@NonNull ReadOptions readOptions;
+        private final Definition<?> definition;
+
+        ErrorContext[] collectedErrors;
+        int errorCount;
+
+        ImplRead(@NonNull DT dataTree, @NonNull HowToUpdate<UPD, DT> howToUpdate,
+                 ConfigurationDefinition.@NonNull ReadOptions readOptions, Definition<?> definition) {
+            this.dataTree = dataTree;
+            this.howToUpdate = howToUpdate;
+            this.readOptions = readOptions;
+            this.definition = definition;
         }
 
-        /**
-         * Makes the return value for this method, representing the "default value"
-         *
-         * @param inType the type enclosing this method
-         * @return the default value
-         * @throws DeveloperMistakeException if no default value was configured for this method, or
-         * {@link DefaultValues#defaultValue()} is wrongly implemented
-         */
-        Object makeDefaultValue(Class<?> inType) {
-            if (defaultValues == null) {
-                throw new DeveloperMistakeException(
-                        "No default values configured for " +  inType.getName() + '#' + methodId.name() + ". " +
-                                "To use Configuration#loadDefaults, default values must be set for every option."
-                );
+        void readNodes(MethodYield methodYield) {
+            try (MethodYield.ForImplementable yieldForType = methodYield.forImplementable(typeToken.getRawType())) {
+                // Add method values
+                for (SkeletonNode.Val<?, B> valNode : valNodes) {
+                    readNode(yieldForType, valNode);
+                    if (collectedErrors != null && errorCount == collectedErrors.length) {
+                        return;
+                    }
+                }
+                if (collectedErrors == null) {
+                    // Add callable default methods
+                    for (SkeletonNode.Callable<?, B> callable : callableNodes) {
+                        yieldForType.callDefault(callable.methodId());
+                    }
+                }
             }
-            V defaultVal;
-            try {
-                defaultVal = defaultValues.defaultValue();
-            } catch (RuntimeException ex) {
-                throw new DeveloperMistakeException("DefaultValues#defaultValue threw an exception", ex);
-            }
-            if (defaultVal == null) {
-                throw new DeveloperMistakeException(
-                        "DefaultValues#defaultValue returned null for " + inType.getName() + '#' + methodId.name()
-                );
-            }
-            return defaultVal;
         }
 
-        /**
-         * Makes the return value for this method, representing the "missing value".
-         * <p>
-         * Should not be used if this method node is optional.
-         *
-         * @param inType the type enclosing this method
-         * @return the missing value, or null if no missing value can be made
-         * @throws DeveloperMistakeException if {@link DefaultValues#ifMissing()} is wrongly implemented
-         */
-        V makeMissingValue(Class<?> inType) {
-            if (defaultValues == null) {
-                return null;
-            }
-            V defaultVal = defaultValues.ifMissing();
-            if (defaultVal == null) {
-                throw new DeveloperMistakeException(
-                        "DefaultValues#missingValue returned null for " + inType.getName() + '#' + methodId.name()
-                );
-            }
-            return defaultVal;
-        }
+        private <V> void readNode(
+                MethodYield.ForImplementable yieldForType, SkeletonNode.@NonNull Val<V, B> valNode
+        ) {
+            V value;
+            String mappedKey = readOptions.keyMapper().labelToKey(valNode.label()).toString();
+            DataEntry dataEntry = dataTree.get(mappedKey);
+            if (dataEntry == null) {
 
-        @Nullable DataEntry serialize(MethodMirror.Invoker invoker, SerializeOutput ser) {
-            Object value;
-            try {
-                value = invoker.invokeMethod(methodId);
-            } catch (InvocationTargetException ex) {
-                throw new DeveloperMistakeException("Configuration methods must not throw exceptions", ex);
-            }
-            if (value == null) {
-                throw new DeveloperMistakeException(
-                        "Configuration method " + methodId + " must not return null"
-                );
-            }
-            @SuppressWarnings("unchecked")
-            V castValue = (V) value;
-            return serialize(castValue, ser);
-        }
+                // Absent entry. Three possibilities for the method:
+                // 1. Absence acceptable -> get absent value
+                // 2. Mandatory, so fill in the missing value -> okay, signal updated path
+                // 3. Mandatory, and no missing value -> error
 
-        @Nullable DataEntry serialize(V value, SerializeOutput ser) {
-            serializer.serialize(value, ser);
+                DeserContext deserContext = new DeserContext.AtKey(definition.libraryLang, readOptions, mappedKey);
+                V absentValue = valNode.serializeDeserialize().deserializeAbsent(deserContext);
+                V missingValue;
+                if (absentValue != null) {
+                    // 1.
+                    value = absentValue;
+                } else if ((missingValue = valNode.makeMissingValue(typeToken.getRawType())) != null) {
+                    // 2.
+                    /*
+                    Note that if the value serializes to null in #insertMissingValue, we still signal an update here.
+                    If so, we are dealing with a rogue liaison that cannot accept absent values but nonetheless outputs
+                    absent values. To maintain symmetry across read/read-update operations,
+                    notifyUpdate(..., UpdateReason.MISSING) is always called.
+                     */
+                    readOptions.notifyUpdate(new KeyPath.Mut(mappedKey), UpdateReason.MISSING);
+                    howToUpdate.insertMissingValue(dataTree, mappedKey, valNode, missingValue, TypeSkeleton.this);
+                    value = missingValue;
+                } else {
+                    // 3.
+                    ErrorContext errorContext = deserContext.buildError(Printable.preBuilt(definition.libraryLang.missingValue()));
+                    // Append this error
+                    if (collectedErrors == null) {
+                        collectedErrors = new ErrorContext[readOptions.maximumErrorCollect()];
+                    }
+                    collectedErrors[errorCount++] = errorContext;
+                    return;
+                }
+            } else {
+                //
+                // Main deserialization route - most cases go here
+                //
 
-            Object output = ser.getAndClearLastOutput();
-            if (output == null) {
-                throw new DeveloperMistakeException(
-                        "Serializer " + serializer + " did not produce any output for " + value
+                // Deserialization
+                UPD updater = howToUpdate.makeUpdater(mappedKey);
+                DeserContext deserContext = new DeserContext.AtKey(definition.libraryLang, readOptions, mappedKey);
+                LoadResult<V> valueResult = howToUpdate.deserialize(
+                        valNode.serializeDeserialize(), deserContext.newInputHere(dataEntry), updater
                 );
+                // Error handling
+                if (valueResult.isFailure()) {
+                    if (collectedErrors == null) {
+                        collectedErrors = new ErrorContext[readOptions.maximumErrorCollect()];
+                    }
+                    for (ErrorContext errorToAppend : valueResult.getErrorContexts()) {
+                        // Append this error
+                        collectedErrors[errorCount++] = errorToAppend;
+                        // Check if maxed out
+                        if (errorCount == collectedErrors.length) {
+                            break;
+                        }
+                    }
+                    return;
+                }
+                // Update if desired
+                howToUpdate.updateIfDesired(
+                        dataTree, mappedKey, dataEntry, valNode, deserContext, TypeSkeleton.this, updater
+                );
+                // No errors - all good
+                value = valueResult.getOrThrow();
             }
-            if (output == NoOutput.INSTANCE) {
-                return null;
-            }
-            return new DataEntry(output);
+            yieldForType.returnValue(valNode.methodId(), value);
         }
+    }
+
+    <C extends B> void implWriteNodes(
+            ReflectionProvider<C> reflectionProvider, C config, DefinedLayout<C> definedLayout,
+            ConfigurationDefinition.WriteOptions writeOptions, DataTree.Mut dataTree
+    ) {
+        ReflectionProvider.Invoker<B> invoker = reflectionProvider.makeInvoker(config, typeToken);
+        KeyMapper keyMapper = writeOptions.keyMapper();
+        DefinedLayout.OnWriteStructuredEntry onWriteStructuredEntry = writeOptions.getInterprocessor()
+                .getHook(DefinedLayout.WRITE_STRUCTURED_ENTRY);
+        for (SkeletonNode.Val<?, B> valNode : valNodes) {
+            String mappedKey = keyMapper.labelToKey(valNode.label()).toString();
+            SerializeOutput serOutput = new SerContext.AtKey(writeOptions, mappedKey).newOutput();
+            DataEntry entry = valNode.serialize(invoker, serOutput);
+            entry = onWriteStructuredEntry.writeNew(entry, serOutput, definedLayout, valNode, this);
+            if (entry == null) {
+                dataTree.remove(mappedKey); // Empty optional value
+            } else {
+                dataTree.put(mappedKey, entry);
+            }
+        }
+    }
+
+    @Override
+    public @NonNull TypeToken<B> getType() {
+        return typeToken;
+    }
+
+    @Override
+    public @NonNull List<@NonNull ? extends DefinedNode<?, B>> getNodes() {
+        @SuppressWarnings("unchecked")
+        DefinedNode<?, B>[] array = new DefinedNode[callableNodes.length + valNodes.length];
+        System.arraycopy(valNodes, 0, array, 0, valNodes.length);
+        System.arraycopy(callableNodes, 0, array, valNodes.length, callableNodes.length);
+        return Arrays.asList(array);
+    }
+
+    @Override
+    public String toString() {
+        return "TypeSkeleton{" +
+                "typeToken=" + typeToken +
+                ", valNodes=" + Arrays.toString(valNodes) +
+                ", callableNodes=" + Arrays.toString(callableNodes) +
+                '}';
     }
 }

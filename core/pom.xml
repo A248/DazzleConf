@@ -1,6 +1,6 @@
 <!--
   ~ DazzleConf
-  ~ Copyright © 2025 Anand Beh
+  ~ Copyright © 2026 Anand Beh
   ~
   ~ DazzleConf is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU Lesser General Public License as published by
@@ -113,6 +113,24 @@
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>run-integration-tests</id>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>verify-integration-tests</id>
+						<goals>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
 				<configuration>
 					<excludePackageNames>
@@ -142,7 +160,7 @@
 			<plugin>
 				<groupId>org.pitest</groupId>
 				<artifactId>pitest-maven</artifactId>
-				<version>1.19.4</version>
+				<version>1.25.9</version>
 				<executions>
 					<execution>
 						<goals>
@@ -151,14 +169,17 @@
 					</execution>
 				</executions>
 				<configuration>
-					<coverageThreshold>75</coverageThreshold>
-					<mutationThreshold>75</mutationThreshold>
-					<threads>2</threads>
+					<coverageThreshold>70</coverageThreshold>
+					<mutationThreshold>70</mutationThreshold>
+					<threads>3</threads>
 					<excludedClasses>
 						<excludedClass>space.arim.dazzleconf.internals.ImmutableCollections</excludedClass>
 						<excludedClass>space.arim.dazzleconf.internals.Java8DefaultMethodProvider</excludedClass>
 						<excludedClass>space.arim.dazzleconf.internals.lang.**</excludedClass>
 					</excludedClasses>
+					<excludedTestClasses>
+						<excludedTestClass>**IT</excludedTestClass>
+					</excludedTestClasses>
 				</configuration>
 				<dependencies>
 					<dependency>

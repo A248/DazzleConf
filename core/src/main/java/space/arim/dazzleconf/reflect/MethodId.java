@@ -32,18 +32,23 @@ import java.util.Objects;
  * This class is immutable. Compared to the standard reflection API, this class provides constructability, generic type
  * reification, and a more lightweight form.
  * <p>
+ * A method ID can only be invoked with the help of the implementor that created it, i.e. the reflection service.
+ * <p>
  * <b>Usage</b>
  * <p>
  * A {@code MethodId} is not coupled to a declaring class; in fact, it does not verify the existence of a real method
  * with its details. This means that callers can construct arbitrary instances.
  * <p>
- * This comes with the drawback that a {@code MethodId} is not itself invocable. Instead, the {@link MethodMirror} is
- * tasked with calling methods on it.
+ * This comes with the drawback that a {@code MethodId} is not itself invocable. Only method IDs produced through a
+ * reflection service are invokable. The reflection service is tasked with implementing this capability for its own
+ * method IDs through {@link ReflectionProvider#makeInvoker(Object, TypeToken)}.
  * <p>
- * To assist the {@code MethodMirror} implementation, it can store an opaque object (invisible to callers) to attach
+ * <b>Implementation</b>
+ * <p>
+ * To assist the reflection service implementation, it can store an opaque object (invisible to callers) to attach
  * cache information. This cache information is returned by {@link #getOpaqueCache()}. Importantly, the method mirror
  * can depend on the preservation of this information, since external callers are forbidden from using method ID
- * instances except those produced by the mirror itself.
+ * instances except those produced by the service itself.
  * <p>
  * <b>Equality</b>
  * <p>
@@ -107,8 +112,8 @@ public final class MethodId {
     /**
      * Gets the opaque cache attached to this method ID, if one exists.
      * <p>
-     * Most library users will have no need of calling this function. It is intended to help {@code MethodMirror}
-     * implementations store data inside a {@code MethodId}, to speed up calling actual methods.
+     * Most library users will have no need of calling this function. It is intended to enable the reflection service
+     * to implement calling the method.
      *
      * @return the opaque cache, or null
      */
@@ -120,7 +125,7 @@ public final class MethodId {
     /**
      * A marker interface for cache data appended to a {@code MethodId}.
      * <p>
-     * Callers should check if cache data is an instance of their specific implementation of this interface.
+     * Reflection service implementors should check if the cache object is an instance of their specific storage.
      *
      */
     public interface OpaqueCache {}

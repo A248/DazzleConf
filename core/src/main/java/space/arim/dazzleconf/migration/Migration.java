@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -34,14 +34,14 @@ import java.util.Objects;
 public final class Migration<C_OLD, C_NEW> {
 
     private final MigrateSource<C_OLD> migrateSource;
-    private final Transition<C_OLD, C_NEW> transition;
+    private final Transition<? super C_OLD, ? extends C_NEW> transition;
 
     /**
      * Creates from a source and transition
      * @param migrateSource the migration source
      * @param transition the transition
      */
-    public Migration(@NonNull MigrateSource<C_OLD> migrateSource, @NonNull Transition<C_OLD, C_NEW> transition) {
+    public Migration(@NonNull MigrateSource<C_OLD> migrateSource, @NonNull Transition<? super C_OLD, ? extends C_NEW> transition) {
         this.migrateSource = Objects.requireNonNull(migrateSource, "migrateSource");
         this.transition = Objects.requireNonNull(transition, "transition");
     }

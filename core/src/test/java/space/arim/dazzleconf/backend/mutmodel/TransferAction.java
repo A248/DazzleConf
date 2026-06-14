@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -17,16 +17,19 @@
  * and navigate to version 3 of the GNU Lesser General Public License.
  */
 
-package space.arim.dazzleconf.reflect;
+package space.arim.dazzleconf.backend.mutmodel;
 
-import java.lang.reflect.Method;
+import java.util.function.BiConsumer;
 
-final class MethodCache implements MethodId.OpaqueCache {
+public final class TransferAction<S, M> extends Action<Void> {
 
-    final Method method;
+    final BiConsumer<S, S> transfer;
+    final BiConsumer<M, M> transferModel;
 
-    MethodCache(Method method) {
-        this.method = method;
+    public TransferAction(String signature, BiConsumer<S, S> transfer, BiConsumer<M, M> transferModel) {
+        super(signature, Action.NULL_ARG);
+        this.transfer = transfer;
+        this.transferModel = transferModel;
     }
 
 }

@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -29,8 +29,9 @@ interface StringType {
 
     static <V> Configuration<V> configuration(TypeToken<V> configType) {
         return Configuration.defaultBuilder(configType)
-                .addTypeLiaisons(new StringTypeLiaison<>(TrimOnDeser.class, TrimOnDeser::new))
                 .addTypeLiaisons(new StringTypeLiaison<>(ClipOnSer.class, ClipOnSer::new))
+                .addTypeLiaisons(new StringTypeLiaison<>(RemoveIfEmpty.class, RemoveIfEmpty::new))
+                .addTypeLiaisons(new StringTypeLiaison<>(TrimOnDeser.class, TrimOnDeser::new))
                 .lookup(MethodHandles.lookup())
                 .build();
     }

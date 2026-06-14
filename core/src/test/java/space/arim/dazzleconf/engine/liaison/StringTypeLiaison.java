@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -22,11 +22,13 @@ package space.arim.dazzleconf.engine.liaison;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf.LoadResult;
+import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.DefaultValues;
 import space.arim.dazzleconf.engine.DeserializeInput;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.SerializeOutput;
 import space.arim.dazzleconf.engine.TypeLiaison;
+import space.arim.dazzleconf.engine.UpdateReason;
 import space.arim.dazzleconf.reflect.TypeToken;
 
 import java.util.function.Function;
@@ -40,8 +42,8 @@ record StringTypeLiaison<T extends StringType>(Class<T> type, Function<String, T
     private final class AgentImpl implements Agent<T> {
 
         @Override
-        public @Nullable DefaultValues<T> loadDefaultValues(@NonNull DefaultInit defaultInit) {
-            return null;
+        public @Nullable DefaultValues<T> loadDefaultValues(@NonNull DefaultInit<T> defaultInit) {
+            return defaultInit.methodDefault();
         }
 
         @Override
@@ -53,8 +55,27 @@ record StringTypeLiaison<T extends StringType>(Class<T> type, Function<String, T
                 }
 
                 @Override
+                public @NonNull LoadResult<@NonNull T> deserializeUpdate(@NonNull DeserializeInput deser,
+                                                                         @NonNull SerializeOutput outputForUpdate) {
+                    return deser.requireString().map(inputVal -> {
+                        T val = ctor.apply(inputVal);
+                        String reser = val.value();
+                        if (!inputVal.equals(reser)) {
+                            deser.notifyUpdate(KeyPath.empty(), UpdateReason.UPDATED);
+                            serialize(val, outputForUpdate);
+                        }
+                        return val;
+                    });
+                }
+
+                @Override
                 public void serialize(@NonNull T value, @NonNull SerializeOutput ser) {
-                    ser.outString(value.value());
+                    String outValue = value.value();
+                    if (outValue == null) {
+                        ser.outNone();
+                    } else {
+                        ser.outString(outValue);
+                    }
                 }
             };
         }

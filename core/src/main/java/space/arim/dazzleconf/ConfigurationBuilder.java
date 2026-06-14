@@ -24,6 +24,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.common.returnsreceiver.qual.This;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf.backend.KeyMapper;
+import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.engine.liaison.BooleanLiaison;
@@ -46,7 +47,6 @@ import space.arim.dazzleconf.internals.ImmutableCollections;
 import space.arim.dazzleconf.internals.lang.LibraryLang;
 import space.arim.dazzleconf.migration.Migration;
 import space.arim.dazzleconf.reflect.DefaultReflectionService;
-import space.arim.dazzleconf.reflect.Instantiator;
 import space.arim.dazzleconf.reflect.ReflectionService;
 import space.arim.dazzleconf.reflect.TypeToken;
 
@@ -289,13 +289,13 @@ public final class ConfigurationBuilder<C> {
      * Passing the lookup object allows library users to transmit their own privileged access to the library for
      * reflective purposes. In return, the library promises it will not expose this lookup in a public interface.
      * <p>
-     * This lookup may be used for reflective access to the configuration interface and its methods. Also, the lookup
-     * is passed to methods on {@link Instantiator}, meaning it might be used for class generation. Accordingly, the
+     * This lookup may be used for reflective access to the configuration interface and its methods, via the reflection
+     * service. Depending on the reflection service, it might also be used for class generation. Accordingly, the
      * lookup should have full privileged access, such that it is usable with {@code MethodHandles.privateLookupIn}.
      * <p>
      * If this method is never called, the library will use its own lookup object. If running on the module path, the
      * library lookup may be limited by the access granted to the library module, requiring library users to declare
-     * {@code opens <theirpackage> to space.arim.dazzleconf} in their JPMS module descriptor.
+     * {@code opens <their_package> to space.arim.dazzleconf} in their JPMS module descriptor.
      *
      * @param lookup the privileged lookup. For most library users, {@code MethodHandles.lookup()} will suffice. Note
      *               that the lookup <i>must</i> have full privileged access
@@ -371,8 +371,7 @@ public final class ConfigurationBuilder<C> {
 
         // Load reflection (caller-sensitive)
         MethodHandles.Lookup lookup = (this.lookup == null) ? MethodHandles.lookup() : this.lookup;
-        ReflectionService reflectionService = (this.reflectionService == null) ?
-                new DefaultReflectionService() : this.reflectionService;
+        ReflectionService reflectionService = (this.reflectionService == null) ? new DefaultReflectionService() : this.reflectionService;
 
         // Load language (locale-sensitive)
         Locale locale = (this.locale == null) ? Locale.getDefault() : this.locale;
@@ -380,9 +379,8 @@ public final class ConfigurationBuilder<C> {
 
         // Scan and build definition
         ConfigurationDefinition<C> definition = new DefinitionScan(
-                libraryLang, new LiaisonCache(typeLiaisons),
-                reflectionService.makeInstantiator(lookup), reflectionService.makeMethodMirror(lookup)
-        ).new Run<>(configType).read();
+                libraryLang, new LiaisonCache(typeLiaisons), new DefinitionScan.Reflection(reflectionService, lookup)
+        ).new Run<>(new KeyPath.Immut(), configType).read();
 
         // Yield final
         return new BuiltConfig<>(definition, locale, libraryLang, typeLiaisons, keyMapper, migrations);

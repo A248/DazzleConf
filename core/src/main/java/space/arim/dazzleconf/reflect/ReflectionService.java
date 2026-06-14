@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -19,65 +19,96 @@
 
 package space.arim.dazzleconf.reflect;
 
-import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.lang.invoke.MethodHandles;
 
 /**
- * A low-level service responsible for generating, instantiating, and invoking methods on arbitrary interface
- * implementations.
+ * A low-level service responsible for reflective access to arbitrary types.
  * <p>
- * This service provides two APIs, the {@link Instantiator} and the {@link MethodMirror}. The purpose of separating
- * these interfaces is to make it easy for different reflection service implementations to re-share one or the other
- * object.
+ * This interface is responsible to create the {@link ReflectionProvider} for a given type. Both this and that interface
+ * will together be referred to as the "reflection implementor" in their documentation, or simply "implementor."
+ * <p>
+ * <b>Type support</b>
+ * <p>
+ * Note that not all types must be supported by a particular implementation; for example, a reflection service
+ * could limit itself to interface types, or to record types. One implementation could be combined with others to
+ * support a broader range of types.
  * <p>
  * <b>API status</b>
  * <p>
- * Because of this API's status as a service provider, it may require updating to keep in sync with the library's
- * minor versions. Some minor versions might offer new features, which would need to be implemented by this interface
- * and its {@code Instantiator}/{@code MethodMirror} implementations.
- * <p>
- * If implementations of {@code ReflectionService} are not updated, they will still be compatible with the library in a
- * strict sense. Existing code will never break. However, newer features may be disabled or refuse to work.
- * <p>
- * <b>Lookup</b>
- * <p>
- * Both the methods on this interface take a {@code lookup} parameter. By default, ths library will pass a lookup
- * representing its own {@code space.arim.dazzleconf} module. If the library user specifies another lookup, it will be
- * passed instead.
- * <p>
- * Implementors can rely on this lookup having full privileged access, however. Thus, the implementor may rely on it
- * for reflective access to an interface that is to be implemented, <i>invokespecial</i> on one of its methods, or for
- * loading or defining classes implementing that interface.
- *
+ * Because of this interface's role as a service provider, implementors may require updating to newer minor versions of
+ * the library. New minor versions might leverage the reflection implementor in new ways, to support newer library
+ * features. If implementors are not updated, they will still be compatible with the library in a strict sense, as
+ * existing code will not break. However, newer features may be disabled or refuse to work.
  */
-@API(status = API.Status.MAINTAINED)
 public interface ReflectionService {
 
     /**
-     * Gets the instantiator this service provides.
+     * Creates a provider for the given type, accessed with the provided lookup.
      * <p>
-     * The instantiator is responsible for generating and instantiating implementations of the configuration
-     * interface.
+     * <b>Lookup</b>
+     * <p>
+     * A reflection implementor uses the lookup to enable privileged reflection, where needed. For all intents and
+     * purposes, implementors can rely on this lookup having full privileged access. For example, the implementor may
+     * use it to see the type, <i>invokespecial</i> on one of its methods, or loading or defining classes implementing
+     * the type as an interface.
+     * <p>
+     * By default, the library will pass a lookup representing its own {@code space.arim.dazzleconf} module. If this is
+     * not sufficient, the library user is responsible with specifying a custom lookup. A custom lookup will be passed
+     * through to this method call by the library.
+     * <p>
+     * <b>Idempotence</b>
+     * <p>
+     * Calls to this method with the same {@code type} and {@code lookup} must be functionally idempotent. Furthermore,
+     * calls with lookups that are all sufficiently privileged, must also be functionally idempotent.
+     * <p>
+     * Idempotence holds created providers must behave identically with respect to their methods, including through the
+     * equality semantics of instances they generate. This idempotence property means that the reflection provider must
+     * be implemented equivalently regardless of the type's generic arguments and the unused privileges of the lookup.
+     * <p>
+     * To understand an example, consider an empty interface like {@link java.util.RandomAccess}. All lookups have
+     * access to this type (it is public and in an exposed module). The reflection provider returned from this method
+     * must, for all calls to {@link ReflectionProvider#generateEmpty()}, generate instances which are equal according
+     * to {@code equals}, including for instances from providers returned by repeated calls to this method.
+     * <pre>
+     *     {@code
+     *         ReflectionService service = new DefaultReflectionService();
+     *         ReflectionProvider<RandomAccess> provider1 = service.newProvider(RandomAccess.class, MethodHandles.lookup());
+     *         ReflectionProvider<RandomAccess> provider2 = service.newProvider(RandomAccess.class, MethodHandles.lookup());
+     *         ReflectionProvider<RandomAccess> provider3 = service.newProvider(RandomAccess.class, MethodHandles.publicLookup());
+     *         RandomAccess instance = provider1.generateEmpty();
+     *         assert instance.equals(provider2.generateEmpty());
+     *         assert instance.equals(provider3.generateEmpty());
+     *         // For an empty interface, using an empty method yield is the same as generateEmpty()
+     *         try (MethodYield yield = provider1.newMethodYield()) {
+     *             assert instance.equals(provider1.generate(yield));
+     *         }
+     *     }
+     * </pre>
      *
+     * @param type the type on which to reflect. Note that unlike other areas of the API, only the raw type is passed.
+     *             This ensures that service implementors generate instances based on erased types.
      * @param lookup the lookup to use for privileged access
-     * @return an instantiator
+     * @return the reflection provider
+     * @throws UnsupportedOperationException if this reflection service does not support the type
      */
-    @NonNull Instantiator makeInstantiator(MethodHandles.@NonNull Lookup lookup);
+    <I> @NonNull ReflectionProvider<I> newProvider(Class<I> type, MethodHandles.@NonNull Lookup lookup);
 
     /**
-     * Gets the {@link MethodMirror} this service provides.
+     * Checks whether this reflection implementor produced the specified object.
      * <p>
-     * The method mirror is responsible for
+     * Reflection implementors are encouraged to mark the instances they generate using some unique method. This could
+     * be as simple as implementing a local interface as a marker.
      * <p>
-     * The method mirror is supplied by this function, and it may share resources and techniques with the instantiator.
-     * In particular, {@link MethodMirror#makeInvoker(Object, Class)} can be more efficient when used with objects
-     * generated by the same instantiator in {@link #makeInstantiator(MethodHandles.Lookup)}.
+     * Note that the <i>instance</i> of this reflection service is not considered, which means that different instances
+     * of the same reflection service may return {@code true} for objects produced by each other. It is the
+     * implementation <i>mechanism</i> that is relevant to this method.
      *
-     * @param lookup the lookup to use for privileged access
-     * @return a method mirror
+     * @param instance the object
+     * @return true if the reflection implementor produced it, false otherwise
+     * @throws UnsupportedOperationException if the reflection implementor does not track its generation
      */
-    @NonNull MethodMirror makeMethodMirror(MethodHandles.@NonNull Lookup lookup);
+    boolean hasProduced(@NonNull Object instance);
 
 }

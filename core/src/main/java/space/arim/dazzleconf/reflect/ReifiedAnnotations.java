@@ -30,7 +30,9 @@ import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * All the reified annotations on the use of a type.
@@ -79,7 +81,7 @@ public final class ReifiedAnnotations {
     /*
     We cannot, in fact, always know the contained type given an arbitrary container. To solve this, we store the
     container type as map key. The map is populated by checking each type and storing repeatable annotations according
-    to their map key.
+    to their container key.
 
     Each entry follows one of three states:
     1. Non-repeatable annotation: container is not null and holds the instance
@@ -87,10 +89,11 @@ public final class ReifiedAnnotations {
     3. Repeatable annotation, stored container: container is not null, containedValue may be not null if cached
      */
 
-    private interface EntryLike extends Comparable<EntryLike> {
+    interface EntryLike extends Comparable<EntryLike> {
         Class<?> containerAnnote();
     }
 
+    @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
     private static final class EntryKey implements EntryLike {
 
         private final Class<?> containerAnnote;
@@ -110,11 +113,11 @@ public final class ReifiedAnnotations {
         }
     }
 
-    private static final class Entry implements EntryLike {
+    static final class Entry implements EntryLike {
 
         private final Class<? extends Annotation> containerAnnote;
         private final Annotation container;
-        // Being a lazily computed value, this does not have to be volatile
+        // Being a lazily computed value (generation idempotent), this does not have to be volatile
         private Annotation[] containedValue;
 
         private Entry(Class<? extends Annotation> containerAnnote, Annotation container) {
@@ -197,8 +200,8 @@ public final class ReifiedAnnotations {
         }
     }
 
-    // Use a memory-lightweight binary map
-    private final Entry[] containersToValues;
+    // Use a memory-lightweight binary map - package-private for testing
+    final Entry[] containersToValues;
 
     private static final ReifiedAnnotations EMPTY = new ReifiedAnnotations(new Entry[0]);
 
@@ -250,7 +253,7 @@ public final class ReifiedAnnotations {
             } else {
                 // Key according to the container type (repeatable.value())
                 Entry entry = new Entry(repeatable.value(), null);
-                entry.containedValue = element.getAnnotationsByType(annotationType);;
+                entry.containedValue = element.getAnnotationsByType(annotationType);
                 containersToValues[n] = entry;
             }
         }
@@ -289,8 +292,13 @@ public final class ReifiedAnnotations {
         }
     }
 
+    private int binarySearchEntry(Class<?> lookForContainerType) {
+        EntryLike[] containersToValues = this.containersToValues;
+        return Arrays.binarySearch(containersToValues, new EntryKey(lookForContainerType));
+    }
+
     private Entry getMatchingEntry(Class<?> lookForContainerType) {
-        int idx = Arrays.binarySearch(containersToValues, new EntryKey(lookForContainerType));
+        int idx = binarySearchEntry(lookForContainerType);
         return idx >= 0 ? containersToValues[idx] : null;
     }
 
@@ -307,9 +315,7 @@ public final class ReifiedAnnotations {
         if (entry == null) {
             return false;
         }
-        // If non-repeatable, it definitely exists.
-        // Otherwise, need to check that the container is non-empty
-        return repeatable == null || entry.getOrComputeContainedValue().length != 0;
+        return repeatable == null ? entry.container != null : entry.getOrComputeContainedValue().length != 0;
     }
 
     /**
@@ -343,7 +349,7 @@ public final class ReifiedAnnotations {
         if (repeatable == null) {
             @SuppressWarnings("unchecked")
             A cast = (A) entry.container;
-            return cast;
+            return cast; // can be null (okay)
         }
         Annotation[] containedValue = entry.getOrComputeContainedValue();
         switch (containedValue.length) {
@@ -368,25 +374,194 @@ public final class ReifiedAnnotations {
      * @return all such annotations of this type (inherited or repeatable), or an empty array if none exist
      * @param <A> the annotation type
      */
+    @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
     public <A extends Annotation> @NonNull A @NonNull [] getAll(@NonNull Class<A> annotationClass) {
-        @SuppressWarnings("unchecked")
-        A[] cast = (A[]) getAllErased(annotationClass);
-        return cast;
-    }
-
-    private Object[] getAllErased(Class<?> annotationClass) {
         Repeatable repeatable = annotationClass.getDeclaredAnnotation(Repeatable.class);
         Class<?> lookFor = (repeatable == null) ? annotationClass : repeatable.value();
         Entry entry = getMatchingEntry(lookFor);
-        if (entry == null) {
-            return (Object[]) Array.newInstance(annotationClass, 0);
+        if (entry != null) {
+            if (repeatable != null) {
+                return (A[]) entry.getOrComputeContainedValue();
+            } else if (entry.container != null) {
+                Annotation[] ret = (Annotation[]) Array.newInstance(annotationClass, 1);
+                ret[0] = entry.container;
+                return (A[]) ret;
+            }
         }
+        return (A[]) Array.newInstance(annotationClass, 0);
+    }
+
+    private ReifiedAnnotations expandAndAdd(int insertIdx, Entry newEntry) {
+        Entry[] newContainersToValues = new Entry[containersToValues.length + 1];
+        System.arraycopy(containersToValues, 0, newContainersToValues, 0, insertIdx);
+        System.arraycopy(containersToValues, insertIdx, newContainersToValues, insertIdx + 1, containersToValues.length - insertIdx);
+        newContainersToValues[insertIdx] = newEntry;
+        return new ReifiedAnnotations(newContainersToValues);
+    }
+
+    /**
+     * Sets the argument annotation and returns a new instance.
+     * <p>
+     * This object is not modified. A new {@code ReifiedAnnotations} is built, having the provided annotation. If one
+     * or multiple of this annotation existed previously, they are replaced.
+     * <p>
+     * If the argument annotation is repeatable, <b>its container annotation</b> will be removed, if there was one.
+     *
+     * @param annotationClass the annotation class
+     * @param annotation the annotation to set
+     * @return the new reified annotations, or the same object if nothing would change
+     * @param <A> the annotation type
+     */
+    public <A extends Annotation> @NonNull ReifiedAnnotations setOne(@NonNull Class<A> annotationClass, @NonNull A annotation) {
+        Objects.requireNonNull(annotation, "annotation");
+        Repeatable repeatable = annotationClass.getDeclaredAnnotation(Repeatable.class);
+        Class<?> lookFor = (repeatable == null) ? annotationClass : repeatable.value();
+        int idx = binarySearchEntry(lookFor);
+        if (idx < 0) {
+            // Not found. Expand and add
+            int insertIdx = -(idx + 1);
+            Entry newEntry;
+            if (repeatable == null) {
+                newEntry = new Entry(annotationClass, annotation);
+            } else {
+                newEntry = new Entry(repeatable.value(), null);
+                newEntry.containedValue = (Annotation[]) Array.newInstance(annotationClass, 1);
+                newEntry.containedValue[0] = annotation;
+            }
+            return expandAndAdd(insertIdx, newEntry);
+        }
+        // Found!
+        Entry oldEntry = containersToValues[idx];
+        Entry newEntry;
         if (repeatable == null) {
-            Object[] ret = (Object[]) Array.newInstance(annotationClass, 1);
-            ret[0] = entry.container;
-            return ret;
+            if (oldEntry.container == annotation) {
+                return this;
+            }
+            newEntry = new Entry(annotationClass, annotation);
+        } else {
+            assert repeatable.value().equals(oldEntry.containerAnnote);
+            if (oldEntry.container == null && oldEntry.containedValue.length == 1 && oldEntry.containedValue[0].equals(annotation)) {
+                return this;
+            }
+            newEntry = new Entry(oldEntry.containerAnnote, null);
+            newEntry.containedValue = (Annotation[]) Array.newInstance(annotationClass, 1);
+            newEntry.containedValue[0] = annotation;
         }
-        return entry.getOrComputeContainedValue();
+        Entry[] newContainersToValues = containersToValues.clone();
+        newContainersToValues[idx] = newEntry;
+        return new ReifiedAnnotations(newContainersToValues);
+    }
+
+    /**
+     * Removes the provided annotation type if it matches the argument predicate.
+     * <p>
+     * If the annotation type is repeatable and some of them are removed, the remainder will be kept and the container
+     * will be cleared. The container will be kept only if none of the contained value are wanted for removal.
+     * <p>
+     * If the argument annotation is itself the container for a repeatable annotation, then instances of the repeatable
+     * annotation will also be cleared if the container is cleared.
+     *
+     * @param annotationClass the annotation class
+     * @param removeIf the test for whether an annotation should be removed
+     * @return the new reified annotations, or the same object if nothing would change
+     * @param <A> the annotation type
+     */
+    public <A extends Annotation> @NonNull ReifiedAnnotations removeIf(@NonNull Class<A> annotationClass,
+                                                                       @NonNull Predicate<@NonNull A> removeIf) {
+        Objects.requireNonNull(removeIf, "removeIf");
+        Repeatable repeatable = annotationClass.getDeclaredAnnotation(Repeatable.class);
+        Class<?> lookFor = (repeatable == null) ? annotationClass : repeatable.value();
+        int idx = binarySearchEntry(lookFor);
+        if (idx < 0) {
+            // Not found anywhere
+            return this;
+        }
+        if (repeatable != null) {
+            // Repeatable. See if any of the existing annotations last
+            Entry oldEntry = containersToValues[idx];
+            assert repeatable.value().equals(oldEntry.containerAnnote);
+            @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
+            A[] original = (A[]) oldEntry.getOrComputeContainedValue();
+            @SuppressWarnings("unchecked")
+            A[] passed = (A[]) Array.newInstance(annotationClass, original.length);
+            int passedCount = 0;
+            boolean removeAny = false;
+            for (A candidate : original) {
+                if (removeIf.test(candidate)) {
+                    removeAny = true;
+                } else {
+                    passed[passedCount++] = candidate;
+                }
+            }
+            if (!removeAny) {
+                return this;
+            }
+            if (passedCount != 0) {
+                passed = Arrays.copyOf(passed, passedCount);
+                Entry[] newContainersToValues = containersToValues.clone();
+                Entry newEntry = new Entry(oldEntry.containerAnnote, null);
+                newEntry.containedValue = passed;
+                newContainersToValues[idx] = newEntry;
+                return new ReifiedAnnotations(newContainersToValues);
+            }
+        }
+        Entry[] newContainersToValues = new Entry[containersToValues.length - 1];
+        System.arraycopy(containersToValues, 0, newContainersToValues, 0, idx);
+        System.arraycopy(containersToValues, idx + 1, newContainersToValues, idx, containersToValues.length - 1 - idx);
+        return new ReifiedAnnotations(newContainersToValues);
+    }
+
+    /**
+     * Sets the argument annotations and returns a new instance.
+     * <p>
+     * This object is not modified. A new {@code ReifiedAnnotations} is built, having exactly the instances of the
+     * provided annotations. If one or multiple of this annotation existed previously, they are replaced.
+     * <p>
+     * If the argument annotation type is repeatable, <b>its container annotation</b> will be removed if there was one,
+     * unless the argument array is exactly equal to the container's existing value. If the argument annotation type is
+     * <i>not</i> repeatable, then trying to install multiple annotations will fail with an exception.
+     *
+     * @param annotationClass the annotation class
+     * @param annotations the annotations to set
+     * @return the new reified annotations, or the same object if nothing would change
+     * @param <A> the annotation type
+     * @throws IllegalArgumentException if the annotation is not repeatable, but two or more annotations are in the
+     * argument array
+     */
+    public <A extends Annotation> @NonNull ReifiedAnnotations setAll(@NonNull Class<A> annotationClass,
+                                                                     @NonNull A @NonNull ... annotations) {
+        switch (annotations.length) {
+            case 0:
+                return removeIf(annotationClass, (a) -> true);
+            case 1:
+                return setOne(annotationClass, annotations[0]);
+            default:
+                break;
+        }
+        Repeatable repeatable = annotationClass.getDeclaredAnnotation(Repeatable.class);
+        if (repeatable == null) {
+            throw new IllegalArgumentException("Cannot set multiple annotations for a non-repeatable annotation");
+        }
+        annotations = annotations.clone();
+        for (A annotation : annotations) {
+            Objects.requireNonNull(annotation, "annotation in array");
+        }
+        Class<? extends Annotation> containerAnnote = repeatable.value();
+        int idx = binarySearchEntry(containerAnnote);
+        Entry oldEntry;
+        if (idx >= 0 && (oldEntry = containersToValues[idx]).container == null && Arrays.equals(annotations, oldEntry.containedValue)) {
+            return this;
+        }
+        Entry newEntry = new Entry(containerAnnote, null);
+        newEntry.containedValue = annotations;
+        if (idx < 0) {
+            // Not found. Expand and add
+            int insertIdx = -(idx + 1);
+            return expandAndAdd(insertIdx, newEntry);
+        }
+        Entry[] newContainersToValues = containersToValues.clone();
+        newContainersToValues[idx] = newEntry;
+        return new ReifiedAnnotations(newContainersToValues);
     }
 
     @Override

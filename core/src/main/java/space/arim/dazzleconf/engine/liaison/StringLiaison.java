@@ -1,6 +1,6 @@
 /*
  * DazzleConf
- * Copyright © 2025 Anand Beh
+ * Copyright © 2026 Anand Beh
  *
  * DazzleConf is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -31,13 +31,9 @@ import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.reflect.TypeToken;
 
 /**
- * Liaison for strings. Handles the unannotated {@code String}
- *
+ * Liaison for strings. Handles any {@code String} value, ignoring annotations.
  */
 public final class StringLiaison implements TypeLiaison {
-
-    // Come on, seriously. Is anyone going to troll us by saying they want to use this string for real?
-    static final String IF_MISSING_STAND_IN = "ausutfyguhibgvftrdfyguhijnbhvgfxserrftgyuhinbgvfcrxszeretfygubna";
 
     /**
      * Creates
@@ -56,24 +52,7 @@ public final class StringLiaison implements TypeLiaison {
         public @Nullable DefaultValues<String> loadDefaultValues(@NonNull DefaultInit<String> defaultInit) {
             StringDefault stringDefault = defaultInit.methodAnnotations().getAnnotation(StringDefault.class);
             if (stringDefault != null) {
-                String defaultValue = stringDefault.value();
-                String ifMissing = stringDefault.ifMissing();
-                // Micro-optimize: make the DefaultValues hold 1 field only if ifMissing is not set
-                if (ifMissing.equals(IF_MISSING_STAND_IN)) {
-                    return DefaultValues.simple(defaultValue);
-                } else {
-                    return new DefaultValues<String>() {
-                        @Override
-                        public @NonNull String defaultValue() {
-                            return defaultValue;
-                        }
-
-                        @Override
-                        public @NonNull String ifMissing() {
-                            return ifMissing;
-                        }
-                    };
-                }
+                return DefaultValues.simple(stringDefault.value());
             }
             return defaultInit.methodDefault();
         }
