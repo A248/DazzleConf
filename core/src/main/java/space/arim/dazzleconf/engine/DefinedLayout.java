@@ -61,7 +61,7 @@ public interface DefinedLayout<C> {
      * <p>
      * The default value of this hook is a no-op.
      */
-    Interprocessor.HookKey<OnWriteStructuredTree> WRITE_STRUCTURED_TREE = new Interprocessor.HookKey<OnWriteStructuredTree>() {
+    Interprocessor.@NonNull HookKey<OnWriteStructuredTree> WRITE_STRUCTURED_TREE = new Interprocessor.HookKey<OnWriteStructuredTree>() {
         @Override
         public @NonNull OnWriteStructuredTree defaultValue() {
             return new OnWriteStructuredTree() {
@@ -76,7 +76,7 @@ public interface DefinedLayout<C> {
      * <p>
      * The default value of this hook attaches comments to entries by copying the node's comments.
      */
-    Interprocessor.HookKey<OnWriteStructuredEntry> WRITE_STRUCTURED_ENTRY = new Interprocessor.HookKey<OnWriteStructuredEntry>() {
+    Interprocessor.@NonNull HookKey<OnWriteStructuredEntry> WRITE_STRUCTURED_ENTRY = new Interprocessor.HookKey<OnWriteStructuredEntry>() {
         @Override
         public @NonNull OnWriteStructuredEntry defaultValue() {
             return new OnWriteStructuredEntry() {
@@ -99,7 +99,7 @@ public interface DefinedLayout<C> {
      * <p>
      * The default value of this hook is a no-op.
      */
-    Interprocessor.HookKey<OnUpdateStructuredEntry> UPDATE_STRUCTURED_ENTRY = new Interprocessor.HookKey<OnUpdateStructuredEntry>() {
+    Interprocessor.@NonNull HookKey<OnUpdateStructuredEntry> UPDATE_STRUCTURED_ENTRY = new Interprocessor.HookKey<OnUpdateStructuredEntry>() {
         @Override
         public @NonNull OnUpdateStructuredEntry defaultValue() {
             return new OnUpdateStructuredEntry() {

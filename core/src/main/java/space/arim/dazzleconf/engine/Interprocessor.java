@@ -21,6 +21,7 @@ package space.arim.dazzleconf.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
@@ -65,6 +66,7 @@ public final class Interprocessor {
      * @return the hook, which may be the default hook value if none was explicitly set
      * @param <H> the hook type
      */
+    @SideEffectFree
     public <H> @NonNull H getHook(@NonNull HookKey<H> hookKey) {
         H hook = getHookIfPresent(hookKey);
         return hook == null ? hookKey.defaultValue() : hook;
@@ -77,6 +79,7 @@ public final class Interprocessor {
      * @return the hook, or null if not set
      * @param <H> the hook type
      */
+    @SideEffectFree
     public <H> @Nullable H getHookIfPresent(@NonNull HookKey<H> hookKey) {
         return hookKey.getFromMap(hookMap);
     }
@@ -299,6 +302,7 @@ public final class Interprocessor {
          *
          * @return the built interprocessor
          */
+        @SideEffectFree
         public @NonNull Interprocessor build() {
             return new Interprocessor(Arrays.copyOf(hookMap, hookMapLen));
         }
@@ -312,6 +316,7 @@ public final class Interprocessor {
      *
      * @return the builder
      */
+    @SideEffectFree
     public @NonNull Builder toBuilder() {
         return new Builder(hookMap.clone());
     }

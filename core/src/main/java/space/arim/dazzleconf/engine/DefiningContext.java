@@ -20,6 +20,7 @@
 package space.arim.dazzleconf.engine;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.dataflow.qual.Pure;
 import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.KeyPath;
 
@@ -40,7 +41,7 @@ public interface DefiningContext {
      *     <li>Otherwise, {@link Comments} if it exists.</li>
      * </ol>
      */
-    Interprocessor.HookKey<LoadNodeComments> LOAD_NODE_COMMENTS = new Interprocessor.HookKey<LoadNodeComments>() {
+    Interprocessor.@NonNull HookKey<LoadNodeComments> LOAD_NODE_COMMENTS = new Interprocessor.HookKey<LoadNodeComments>() {
         @Override
         public @NonNull LoadNodeComments defaultValue() {
             return new LoadNodeComments() {
@@ -74,6 +75,7 @@ public interface DefiningContext {
      * @return the interprocessor used to help define the configuration. Serializers should not store this
      * object, but rather make use of {@link OperationContext#getInterprocessor()} during reading and writing.
      */
+    @Pure
     @NonNull Interprocessor getDefiningInterprocessor();
 
     /**
@@ -81,6 +83,7 @@ public interface DefiningContext {
      *
      * @return the translation resolve
      */
+    @Pure
     @NonNull TranslationResolve getTranslationResolve();
 
     /**
