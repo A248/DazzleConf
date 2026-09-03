@@ -33,7 +33,6 @@ import java.util.stream.Stream;
  * <p>
  * Implementing this interface correctly requires a number of considerations. It is recommended to check the library
  * source code as a reference implementation.
- * <p>
  * <h2>Usage</h2>
  * <p>
  * The purposes of this interface are mutually related, and some parts are logically prerequisite to using other parts.

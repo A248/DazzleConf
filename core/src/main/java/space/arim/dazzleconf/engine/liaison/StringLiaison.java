@@ -23,12 +23,16 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf.LoadResult;
+import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.DefaultValues;
 import space.arim.dazzleconf.engine.DeserializeInput;
+import space.arim.dazzleconf.engine.LangDefault;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.SerializeOutput;
 import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.reflect.TypeToken;
+
+import java.lang.reflect.AnnotatedElement;
 
 /**
  * Liaison for strings. Handles any {@code String} value, ignoring annotations.
@@ -50,7 +54,16 @@ public final class StringLiaison implements TypeLiaison {
         @Override
         @SideEffectFree
         public @Nullable DefaultValues<String> loadDefaultValues(@NonNull DefaultInit<String> defaultInit) {
-            StringDefault stringDefault = defaultInit.methodAnnotations().getAnnotation(StringDefault.class);
+            AnnotatedElement methodAnnotations = defaultInit.methodAnnotations();
+            LangDefault langDefault = methodAnnotations.getAnnotation(LangDefault.class);
+            if (langDefault != null) {
+                KeyPath translationKey = KeyPath.parse(langDefault.value());
+                String fromLangDefault = defaultInit.translationResolve().resolveStringValue(translationKey);
+                if (fromLangDefault != null) {
+                    return DefaultValues.simple(fromLangDefault);
+                }
+            }
+            StringDefault stringDefault = methodAnnotations.getAnnotation(StringDefault.class);
             if (stringDefault != null) {
                 return DefaultValues.simple(stringDefault.value());
             }

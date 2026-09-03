@@ -105,10 +105,8 @@ public final class LibraryLang implements LanguageMessages {
             // to help identify missing translations and encourage contributions.
             //
             // Codebase: upon exiting the preview phase, make the following changes:
-            // 1. Make Locale configurable using ConfigurationBuilder#locale, and re-enable the test for it
-            // 2. Remove this System.out message
-            // 3. Remove the proofing for System.out usage in LibraryLangTest.java
-
+            // 1. Remove this System.out message
+            // 2. Remove the proofing for System.out usage in LibraryLangTest.java
 
             // Non-matched locale. If you've arrived here, this is your opportunity to contribute a PR
             System.out.println(

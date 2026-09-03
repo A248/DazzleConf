@@ -23,6 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
 import org.checkerframework.dataflow.qual.SideEffectFree;
+import space.arim.dazzleconf.DeveloperMistakeException;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -265,6 +266,24 @@ public abstract class KeyPath implements Printable {
     }
 
     abstract ArrayDeque<String> partsForImmut();
+
+    /**
+     * Parses a key path from its representation
+     *
+     * @param dotted a sequence of key path parts separated by the period ({@code "."}) character
+     * @return the key path
+     * @throws DeveloperMistakeException if the dotted value cannot be parsed as a key path
+     */
+    public static @NonNull Mut parse(@NonNull String dotted) {
+        String[] parts = dotted.split("\\.", -1);
+        Mut mut;
+        try {
+            mut = new Mut(parts);
+        } catch (IllegalArgumentException ex) {
+            throw new DeveloperMistakeException("Failed to parse '" + dotted + '\'', ex);
+        }
+        return mut;
+    }
 
     static abstract class Base<E extends CharSequence> extends KeyPath {
 

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import space.arim.dazzleconf.DeveloperMistakeException;
 
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -119,6 +120,20 @@ public class KeyPathTest {
         secondTry.addBack(sneaky);
         sneaky.delegate = "";
         assertThrows(IllegalArgumentException.class, () -> new KeyPath.Immut(secondTry));
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(KeyPathVerify.Provider.class)
+    public void parse(KeyPathVerify verify) {
+        KeyPath.Mut keyPath = KeyPath.parse("my.hello.message");
+        verify.assertEq(keyPath, "my", "hello", "message");
+    }
+
+    @Test
+    public void parseRejectEmpty() {
+        assertThrows(DeveloperMistakeException.class, () -> KeyPath.parse("hello.a."));
+        assertThrows(DeveloperMistakeException.class, () -> KeyPath.parse("hello..ab"));
+        assertThrows(DeveloperMistakeException.class, () -> KeyPath.parse(".hello.ab"));
     }
 
     @ParameterizedTest

@@ -50,6 +50,13 @@ public interface ProtoDefinedNode {
     @NonNull AnnotatedElement methodAnnotations();
 
     /**
+     * Gets the translation resolver provided by the library user
+     *
+     * @return the translation resolve
+     */
+    @NonNull TranslationResolve translationResolve();
+
+    /**
      * A {@link DefinedNode.Value} before it is constructed.
      *
      */

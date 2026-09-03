@@ -176,6 +176,7 @@ final class DefinitionScan {
                 blockReadDefLoop.exit(typeToken);
             }
             // 3. Extract top-level comments and build final definition
+            // TODO: Support translated comments using @LangComment
             CommentData topLevelComments = CommentData.buildFrom(
                     typeToken.getRawType().getAnnotationsByType(Comments.class)
             );

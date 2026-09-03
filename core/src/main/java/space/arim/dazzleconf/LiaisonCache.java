@@ -26,6 +26,7 @@ import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.DefaultValues;
 import space.arim.dazzleconf.engine.ProtoDefinedNode;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
+import space.arim.dazzleconf.engine.TranslationResolve;
 import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.reflect.MethodId;
 import space.arim.dazzleconf.reflect.ReflectionProvider;
@@ -41,9 +42,11 @@ final class LiaisonCache {
 
     private final Map<TypeToken<?>, HandleType<?>> cachedAgents = new HashMap<>();
     private final TypeLiaison[] typeLiaisons;
+    private final TranslationResolve translationResolve;
 
-    LiaisonCache(List<TypeLiaison> typeLiaisons) {
+    LiaisonCache(List<TypeLiaison> typeLiaisons, TranslationResolve translationResolve) {
         this.typeLiaisons = typeLiaisons.toArray(new TypeLiaison[0]);
+        this.translationResolve = translationResolve;
     }
 
     <V> HandleType<V> requestToHandle(TypeToken<V> typeToken, TypeLiaison.Handshake handshake) {
@@ -70,7 +73,7 @@ final class LiaisonCache {
         );
     }
 
-    static final class HandleType<V> {
+    final class HandleType<V> {
 
         private final TypeToken<V> typeToken;
         final TypeLiaison.Agent<V> agent;
@@ -96,6 +99,11 @@ final class LiaisonCache {
                 @Override
                 public @NonNull AnnotatedElement methodAnnotations() {
                     return annotations;
+                }
+
+                @Override
+                public @NonNull TranslationResolve translationResolve() {
+                    return translationResolve;
                 }
 
                 @Override

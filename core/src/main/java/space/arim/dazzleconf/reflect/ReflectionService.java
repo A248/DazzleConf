@@ -87,6 +87,7 @@ public interface ReflectionService {
      *     }
      * </pre>
      *
+     * @param <I> the type
      * @param type the type on which to reflect. Note that unlike other areas of the API, only the raw type is passed.
      *             This ensures that service implementors generate instances based on erased types.
      * @param lookup the lookup to use for privileged access

@@ -29,6 +29,7 @@ import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.reflect.TypeToken;
 
+import java.lang.reflect.AnnotatedElement;
 import java.util.function.Supplier;
 
 /**
@@ -89,17 +90,23 @@ public interface TypeLiaison {
         /**
          * Loads comments on a method node.
          * <p>
-         * The default implementation of this method gathers annotations of {@link Comments}.
+         * The default implementation of this method gathers comments using {@link LangComments} and {@link Comments}.
          *
          * @param commentInit the init context
          * @return the comments on a method node
          * @throws DeveloperMistakeException if a library usage failure happened
          */
         default @NonNull CommentData loadComments(@NonNull CommentInit commentInit) {
-            CommentData comments  = CommentData.buildFrom(
-                    commentInit.methodAnnotations().getAnnotationsByType(Comments.class)
-            );
-            return comments;
+            AnnotatedElement methodAnnotations = commentInit.methodAnnotations();
+            LangComments langComments = methodAnnotations.getAnnotation(LangComments.class);
+            if (langComments != null) {
+                KeyPath translationKey = KeyPath.parse(langComments.value());
+                CommentData fromLangComments = commentInit.translationResolve().resolveComments(translationKey);
+                if (fromLangComments != null) {
+                    return fromLangComments;
+                }
+            }
+            return CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
         }
 
         /**

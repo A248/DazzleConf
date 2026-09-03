@@ -19,6 +19,7 @@
 
 package space.arim.dazzleconf;
 
+import org.apiguardian.api.API;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.common.returnsreceiver.qual.This;
@@ -26,6 +27,7 @@ import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
+import space.arim.dazzleconf.engine.TranslationResolve;
 import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.engine.liaison.BooleanLiaison;
 import space.arim.dazzleconf.engine.liaison.ByteLiaison;
@@ -56,6 +58,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * A builder for {@link Configuration}. The builder allows changing how the configuration is defined, read,
@@ -89,6 +92,7 @@ public final class ConfigurationBuilder<C> {
 
     // Settings
     private @Nullable Locale locale;
+    private @Nullable Function<@NonNull Locale, @NonNull TranslationResolve> translation;
     private final List<TypeLiaison> typeLiaisons = new ArrayList<>();
     private @Nullable KeyMapper keyMapper;
     private MethodHandles.@Nullable Lookup lookup;
@@ -108,17 +112,38 @@ public final class ConfigurationBuilder<C> {
     }
 
     /**
-     * Sets the locale for displaying error messages. <b>Version 2 preview: this method is currently a no-op, except
-     * when assertions are enabled, until DazzleConf enters full release.</b>
+     * Sets the locale for communicating with the server administrator.
      * <p>
-     * If not set, defaults to the system locale.
+     * This locale is used:
+     * <ul>
+     *     <li>For displaying error messages (e.g. invalid syntax, wrong type).</li>
+     *     <li>For resolving comments and default values dependent on the {@link space.arim.dazzleconf.engine.TranslationResolve}.</li>
+     * </ul>
+     * <p>
+     * If not set, defaults to the system locale ({@code Locale.getDefault()}). When the configuration is built, the
+     * locale will be passed to the construction function provided to {@link #translation(Function)} to create the
+     * translation resolver.
      *
      * @param locale the locale, nonnull
      * @return this builder
      */
     public @This @NonNull ConfigurationBuilder<C> locale(@NonNull Locale locale) {
-        // See LibraryLang for when to remove this - DON'T FORGET THE JAVADOC
-        assert (this.locale = locale) != null : "null locale";
+        this.locale = Objects.requireNonNull(locale, "locale");
+        return this;
+    }
+
+    /**
+     * Sets the translation resolver used to define various configuration elements.
+     * <p>
+     * The locale is passed to the construction function; however, the caller is not strictly required to use this
+     * locale and may want to determine their selected translations in some other way.
+     *
+     * @param translation the constructor for the {@link TranslationResolve}
+     * @return this builder
+     */
+    @API(status = API.Status.EXPERIMENTAL)
+    public @This @NonNull ConfigurationBuilder<C> translation(@NonNull Function<@NonNull Locale, @NonNull TranslationResolve> translation) {
+        this.translation = Objects.requireNonNull(translation, "translation");
         return this;
     }
 
@@ -375,11 +400,15 @@ public final class ConfigurationBuilder<C> {
 
         // Load language (locale-sensitive)
         Locale locale = (this.locale == null) ? Locale.getDefault() : this.locale;
+        TranslationResolve translationResolve = (this.translation == null) ? TranslationResolve.DEFAULT :
+                this.translation.apply(locale);
         LibraryLang libraryLang = LibraryLang.loadLang(locale);
 
         // Scan and build definition
         ConfigurationDefinition<C> definition = new DefinitionScan(
-                libraryLang, new LiaisonCache(typeLiaisons), new DefinitionScan.Reflection(reflectionService, lookup)
+                libraryLang,
+                new LiaisonCache(typeLiaisons, translationResolve),
+                new DefinitionScan.Reflection(reflectionService, lookup)
         ).new Run<>(new KeyPath.Immut(), configType).read();
 
         // Yield final
