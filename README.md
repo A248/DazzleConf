@@ -12,12 +12,12 @@ Documentation is in the [/docs/](docs) folder.
 * Extensible and user-friendly. All types use the same framework, and library users can easily add new types.
 * Type safety. Configuration is an immutable interface.
 * Automatically update old configurations with the latest keys. No need to version config files.
-* No NULLs. No public mutable fields. No stringly-typed spaghetti such as `getString("key")`, and no type-unsafe calls like `getInt("maybe-not-really-an-integer")`.
+* No nulls. No public mutable fields. No stringly-typed spaghetti such as `getString("key")`, and no type-unsafe calls like `getInt("maybe-not-really-an-integer")`.
 * Informative, helpful error reports. Messages that human beings (even non-programmers!) can understand. Reports key path and line number, and library error messages can even be translated depending on the locale.
 
 ### Introduction
 
-DazzleConf is a clean, well-tested library to meet your configuration needs. It's quick to get running, and all you need to do is provide an interface:
+DazzleConf is a comprehensive, well-tested library to meet your configuration needs. It's quick to get running, and all you need to do is provide an interface:
 
 ```java
 Configuration<AppConfig> configuration = Configuration.defaultBuilder(AppConfig.class).build();
@@ -69,6 +69,8 @@ more-stuff:
 
 The same document can be reparsed to an instance of the configuration interface. Type and constraint validation is performed when the configuration is loaded, *not* when the methods are called - having an instance of the config interface is enough to ensure the configuration is valid.
 
+## Features
+
 ### Configuration formats
 
 We offer multiple configuration formats depending on your preference. Simply depend on the artifact matching the format you want.
@@ -81,7 +83,13 @@ We offer multiple configuration formats depending on your preference. Simply dep
 
 Check out this page to get started using the library: [Getting started](docs/Getting-Started.md). The documentation has many examples such as with setting up a reloadable configuration, automatically updating the configuration with the latest keys, and more.
 
-### Full Feature List
+### Zero bugs policy
+
+The library seeks to eliminate bugs. No new features can be added while bugs exist.
+
+Users who discovered bugs include @alowave223, @Sprax-Dev. If you find a bug, report it and we'll add your username here.
+
+### API feature list
 
 * Serializers can depend on each other.
 * Full generics support. Support for infinitely nested generics, collections, configuration subsections, etc.
@@ -120,14 +128,7 @@ Check out this page to get started using the library: [Getting started](docs/Get
   * Can read and write comments if the backend supports it, including document-level header and footer.
   * Comments can be placed above, below, or inline.
 
-Not yet implemented:
-* Streaming API for more efficient read/write.
-  * Would make I/O more efficient.
-  * Could skip intermediate structures like unnecessary maps and lists, and have them created in an on-demand basis.
-* Greater communication between backend format and configuration definition, where the configuration interface gives the backend hints about which basic types (e.g., string or integer) and type structures (scalar/map/array) are preferred
-  * Planned to be combined with the streaming API.
-
-## Extra
+## Library Meta
 
 ### Requirements
 

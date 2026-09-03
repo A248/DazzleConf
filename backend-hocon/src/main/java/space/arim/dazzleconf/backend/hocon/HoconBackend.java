@@ -139,6 +139,8 @@ public final class HoconBackend implements Backend {
 
     private static URL defaultSyntaxLinter() {
         try {
+            // Alternatives:
+            // https://hocon-playground.avelier.dev/ and https://hocon-playground.tehbrian.dev
             return new URI("https", "toolbox.helpch.at", "/validators/hocon", null).toURL();
         } catch (URISyntaxException | MalformedURLException ex) {
             throw new AssertionError(ex);

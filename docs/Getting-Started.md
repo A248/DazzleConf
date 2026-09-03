@@ -11,7 +11,7 @@ The artifact you choose will depend on which configuration format you desire. In
 <dependency>
 	<groupId>space.arim.dazzleconf</groupId>
 	<artifactId>dazzleconf-yaml</artifactId>
-	<version>2.0.0-M1</version>
+	<version>2.0.0-M3</version>
 </dependency>
 ```
 
@@ -19,7 +19,7 @@ The artifact you choose will depend on which configuration format you desire. In
 
 ```
 dependencies {
-    implementation 'space.arim.dazzleconf:dazzleconf-yaml:2.0.0-M1'
+    implementation 'space.arim.dazzleconf:dazzleconf-yaml:2.0.0-M3'
 }
 ```
 
@@ -33,17 +33,13 @@ The latest version of DazzleConf may be slightly more up-to-date than the one on
 
 You only need to declare a dependency on the format you choose. There is a transitive dependency on dazzleconf-core.
 
-**Hocon**
+For your information, the implementation library is listed here, but note that it is an implementation detail and can change. The implementation library is shaded and repackaged into the DazzleConf namspace (e.g. space.arim.dazzleconf.yaml.libs.snakeyaml_engine), so you do not have to worry about it.
 
-Dependency: `space.arim.dazzleconf:dazzleconf-hocon`
-
-**Toml**
-
-Dependency: `space.arim.dazzleconf:dazzleconf-toml`
-
-**Yaml**
-
-Dependency: `space.arim.dazzleconf:dazzleconf-yaml`
+| Format | Artifact                                 | Implementation library                                                                                 |
+|--------|------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| HOCON  | `space.arim.dazzleconf:dazzleconf-hocon` | [lightbend/config](https://github.com/lightbend/config) with in-repo patches for ordering + efficiency |
+| TOML   | `space.arim.dazzleconf:dazzleconf-toml`  | [JToml](https://github.com/WasabiThumb/jtoml)                                                          |
+| YAML   | `space.arim.dazzleconf:dazzleconf-yaml`  | [SnakeYaml-Engine](https://bitbucket.org/snakeyaml/snakeyaml-engine)                                   |
 
 ### Snapshot dependencies
 
@@ -96,11 +92,10 @@ I won't go over the specifics of shading because it is assumed you already know 
 
 **Relocation**
 
-Relocating `space.arim.dazzleconf` is critical.
-Since version 2.0, this is the only namespace you have to relocate.
+Relocating `space.arim.dazzleconf` is critical in some environments.
 
-**Transitive Dependencies**
+If you fail to relocate, your software can conflict with other software that also shades the same library. This is relevant for plugin environments (e.g. Bukkit plugins) where multiple Java programs are expected to work together in harmony.
 
-Since version 2.0, DazzleConf artifacts no longer expose you to third-party dependencies.
+**DazzleConf versions before 2.0**
 
-However, if you're still using version 1.x of the library, there may be additional transitive dependencies. It is your responsibility to handle them.
+If you're still using version 1.x of the library, there are additional transitive dependencies. They should also be shaded and/or relocated, and it is your responsibility to handle them. For example, `dazzleconf-ext-gson` depends on the Gson library, and it's your decision how to satisfy this dependency.
