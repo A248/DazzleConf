@@ -58,7 +58,7 @@ public final class StringLiaison implements TypeLiaison {
             LangDefault langDefault = methodAnnotations.getAnnotation(LangDefault.class);
             if (langDefault != null) {
                 KeyPath translationKey = KeyPath.parse(langDefault.value());
-                String fromLangDefault = defaultInit.translationResolve().resolveStringValue(translationKey);
+                String fromLangDefault = defaultInit.getTranslationResolve().resolveStringValue(translationKey);
                 if (fromLangDefault != null) {
                     return DefaultValues.simple(fromLangDefault);
                 }

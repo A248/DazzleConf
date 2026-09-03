@@ -26,6 +26,7 @@ import org.checkerframework.common.returnsreceiver.qual.This;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 import space.arim.dazzleconf.backend.KeyMapper;
 import space.arim.dazzleconf.backend.KeyPath;
+import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.TranslationResolve;
 import space.arim.dazzleconf.engine.TypeLiaison;
@@ -93,6 +94,7 @@ public final class ConfigurationBuilder<C> {
     // Settings
     private @Nullable Locale locale;
     private @Nullable Function<@NonNull Locale, @NonNull TranslationResolve> translation;
+    private @Nullable Interprocessor definingInterprocessor;
     private final List<TypeLiaison> typeLiaisons = new ArrayList<>();
     private @Nullable KeyMapper keyMapper;
     private MethodHandles.@Nullable Lookup lookup;
@@ -144,6 +146,21 @@ public final class ConfigurationBuilder<C> {
     @API(status = API.Status.EXPERIMENTAL)
     public @This @NonNull ConfigurationBuilder<C> translation(@NonNull Function<@NonNull Locale, @NonNull TranslationResolve> translation) {
         this.translation = Objects.requireNonNull(translation, "translation");
+        return this;
+    }
+
+    /**
+     * Sets the interprocessor used while defining the configuration's elements.
+     * <p>
+     * <b>Note well:</b> the argument object is only used during {@link #build()}. After the configuration is built, it
+     * will not be used anymore. If you seek to provide an {@link Interprocessor} while reading or writing, see
+     * {@link ConfigurationDefinition.OperationOptions#getInterprocessor()} instead.
+     *
+     * @param definingInterprocessor the interprocessor to use while building the configuration
+     * @return this builder
+     */
+    public @This @NonNull ConfigurationBuilder<C> definingInterprocessor(@NonNull Interprocessor definingInterprocessor) {
+        this.definingInterprocessor = Objects.requireNonNull(definingInterprocessor, "definingInterprocessor");
         return this;
     }
 
@@ -405,10 +422,12 @@ public final class ConfigurationBuilder<C> {
         LibraryLang libraryLang = LibraryLang.loadLang(locale);
 
         // Scan and build definition
+        Interprocessor interprocessor = this.definingInterprocessor == null ? Interprocessor.DEFAULT : this.definingInterprocessor;
         ConfigurationDefinition<C> definition = new DefinitionScan(
                 libraryLang,
-                new LiaisonCache(typeLiaisons, translationResolve),
-                new DefinitionScan.Reflection(reflectionService, lookup)
+                new LiaisonCache(typeLiaisons),
+                new DefinitionScan.Reflection(reflectionService, lookup),
+                new DefiningContextImpl(interprocessor, translationResolve)
         ).new Run<>(new KeyPath.Immut(), configType).read();
 
         // Yield final

@@ -87,7 +87,7 @@ Check out this page to get started using the library: [Getting started](docs/Get
 
 The library seeks to eliminate bugs. No new features can be added while bugs exist.
 
-Users who discovered bugs include @alowave223, @Sprax-Dev. If you find a bug, report it and we'll add your username here.
+Users who discovered bugs include [@alowave223](https://github.com/alowave223), [@SpraxDev](https://github.com/SpraxDev). If you find a bug, report it and we'll add your username here.
 
 ### API feature list
 

@@ -54,7 +54,7 @@ import space.arim.dazzleconf.backend.KeyPath;
  *
  *         public record MyResolver(Locale locale) implements TranslationResolve {
  *
- *             public CommentData resolveComments(KeyPath key) {
+ *             public CommentData resolveComments(KeyPath key, boolean auto) {
  *                 return null;
  *             }
  *
@@ -81,7 +81,7 @@ public interface TranslationResolve {
      */
     TranslationResolve DEFAULT = new TranslationResolve() {
         @Override
-        public @Nullable CommentData resolveComments(@NonNull KeyPath key) {
+        public @Nullable CommentData resolveComments(@NonNull KeyPath key, boolean auto) {
             return null;
         }
 
@@ -96,10 +96,12 @@ public interface TranslationResolve {
      * <p>
      * This method is used for translation-dependent comments on configuration methods.
      *
-     * @param key the translation key
+     * @param key  the translation key
+     * @param auto if the translation key came from the label path, {@code false} if it came from an explicit key like
+     *             that specified in {@link LangComments}
      * @return the comments
      */
-    @Nullable CommentData resolveComments(@NonNull KeyPath key);
+    @Nullable CommentData resolveComments(@NonNull KeyPath key, boolean auto);
 
     /**
      * Resolves a translation key to a string value.

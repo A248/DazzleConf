@@ -60,7 +60,7 @@ public @interface LangComments {
     /**
      * Defines the translation key used to look up the comments.
      * <p>
-     * The key is sent to {@link TranslationResolve#resolveComments(KeyPath)} to find the default. If that method
+     * The key is sent to {@link TranslationResolve#resolveComments(KeyPath, boolean)} to find the default. If that method
      * does not return anything, liaisons will treat this annotation as if it were not present.
      *
      * @return the translation key

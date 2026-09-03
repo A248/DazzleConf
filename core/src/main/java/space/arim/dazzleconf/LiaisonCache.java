@@ -24,9 +24,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.DefaultValues;
+import space.arim.dazzleconf.engine.DefiningContext;
 import space.arim.dazzleconf.engine.ProtoDefinedNode;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
-import space.arim.dazzleconf.engine.TranslationResolve;
 import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.reflect.MethodId;
 import space.arim.dazzleconf.reflect.ReflectionProvider;
@@ -42,11 +42,9 @@ final class LiaisonCache {
 
     private final Map<TypeToken<?>, HandleType<?>> cachedAgents = new HashMap<>();
     private final TypeLiaison[] typeLiaisons;
-    private final TranslationResolve translationResolve;
 
-    LiaisonCache(List<TypeLiaison> typeLiaisons, TranslationResolve translationResolve) {
+    LiaisonCache(List<TypeLiaison> typeLiaisons) {
         this.typeLiaisons = typeLiaisons.toArray(new TypeLiaison[0]);
-        this.translationResolve = translationResolve;
     }
 
     <V> HandleType<V> requestToHandle(TypeToken<V> typeToken, TypeLiaison.Handshake handshake) {
@@ -73,7 +71,7 @@ final class LiaisonCache {
         );
     }
 
-    final class HandleType<V> {
+    static final class HandleType<V> {
 
         private final TypeToken<V> typeToken;
         final TypeLiaison.Agent<V> agent;
@@ -86,10 +84,14 @@ final class LiaisonCache {
         }
 
         <C> SkeletonNode.Val<V, C> makeValueNode(
-                MethodId methodId, AnnotatedElement annotations, KeyPath.Immut labelPath,
+                DefiningContext context, MethodId methodId, AnnotatedElement annotations, KeyPath.Immut labelPath,
                 TypeToken<?> interfaceToken, ReflectionProvider.Invoker<C> defaultsInvoker
         ) {
-            class ProtoNodeBase implements ProtoDefinedNode.Value {
+            class ProtoNodeBase extends DefiningContextImpl implements ProtoDefinedNode.Value {
+
+                ProtoNodeBase() {
+                    super(context);
+                }
 
                 @Override
                 public @NonNull TypeToken<?> enclosingType() {
@@ -102,18 +104,13 @@ final class LiaisonCache {
                 }
 
                 @Override
-                public @NonNull TranslationResolve translationResolve() {
-                    return translationResolve;
-                }
-
-                @Override
                 public KeyPath.@NonNull Immut labelPath() {
                     return labelPath;
                 }
 
                 @Override
                 public @NonNull String label() {
-                    // If we ever allow custom label settings, need to update LiaisonCache/DefinitionScan
+                    // If we ever allow custom label settings, need to update LiaisonCache/DefinitionScan/SkeletonNode
                     return methodId.name();
                 }
             }

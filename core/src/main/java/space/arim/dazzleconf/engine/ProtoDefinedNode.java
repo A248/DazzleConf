@@ -29,7 +29,7 @@ import java.lang.reflect.AnnotatedElement;
  * Represents a {@link space.arim.dazzleconf.engine.DefinedNode} <i>before</i> it is constructed. Provides details
  * of the method in question.
  */
-public interface ProtoDefinedNode {
+public interface ProtoDefinedNode extends DefiningContext {
 
     /**
      * The interface type where the method is located, after computing inheritance.
@@ -48,13 +48,6 @@ public interface ProtoDefinedNode {
      * @return the method level annotations
      */
     @NonNull AnnotatedElement methodAnnotations();
-
-    /**
-     * Gets the translation resolver provided by the library user
-     *
-     * @return the translation resolve
-     */
-    @NonNull TranslationResolve translationResolve();
 
     /**
      * A {@link DefinedNode.Value} before it is constructed.
