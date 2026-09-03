@@ -75,7 +75,7 @@ public class TranslationTest {
         Configuration<Config> configuration = Configuration.defaultBuilder(Config.class)
                 .translation(locale -> new TranslationResolve() {
                     @Override
-                    public @Nullable CommentData resolveComments(@NonNull KeyPath key) {
+                    public @Nullable CommentData resolveComments(@NonNull KeyPath key, boolean auto) {
                         return null;
                     }
 
@@ -98,21 +98,34 @@ public class TranslationTest {
         CommentData engComments1 = CommentData.empty().setAt(CommentLocation.ABOVE, "assent");
         CommentData zhComments = CommentData.empty().setAt(CommentLocation.ABOVE, "同意");
         CommentData engComments2 = CommentData.empty().setAt(CommentLocation.INLINE, "yes");
+        CommentData frComments = CommentData.empty().setAt(CommentLocation.ABOVE, "wi");
         Function<Locale, TranslationResolve> resolveFunction = locale -> new TranslationResolve() {
             @Override
-            public @Nullable CommentData resolveComments(@NonNull KeyPath key) {
+            public @Nullable CommentData resolveComments(@NonNull KeyPath key, boolean auto) {
                 if (key.toString().equals("wow.now")) {
+                    assert !auto : "wow.now is an explicit key";
                     switch (locale.getLanguage()) {
                         case "en":
                             return engComments1;
                         case "zh":
                             return zhComments;
+                        case "fr":
+                            return CommentData.empty();
                         default:
                             break;
                     }
                 }
-                if (key.toString().equals("wow.more") && locale.getLanguage().equals("en")) {
-                    return engComments2;
+                if (key.toString().equals("wow.more")) {
+                    assert !auto : "wow.more is an explicit key";
+                    if (locale.getLanguage().equals("en")) {
+                        return engComments2;
+                    }
+                }
+                if (key.toString().equals("hello")) {
+                    assert auto : "hello is an automatic key";
+                    if (locale.getLanguage().equals("fr")) {
+                        return frComments;
+                    }
                 }
                 return null;
             }
@@ -129,6 +142,7 @@ public class TranslationTest {
                 .locale(Locale.ENGLISH)
                 .translation(resolveFunction)
                 .build();
+        assertComments(english, "hello", CommentData.empty());
         assertComments(english, "yes", engComments1);
         assertComments(english, "more", engComments2);
         assertEquals("hi there", english.loadDefaults().hello());
@@ -137,9 +151,18 @@ public class TranslationTest {
                 .locale(Locale.SIMPLIFIED_CHINESE)
                 .translation(resolveFunction)
                 .build();
+        assertComments(chinese, "hello", CommentData.empty());
         assertComments(chinese, "yes", zhComments);
         assertComments(chinese, "more", CommentData.empty());
         assertEquals("hi there", chinese.loadDefaults().hello());
+
+        Configuration<Config> french = Configuration.defaultBuilder(Config.class)
+                .locale(Locale.FRENCH)
+                .translation(resolveFunction)
+                .build();
+        assertComments(french, "hello", frComments);
+        assertComments(french, "yes", CommentData.empty());
+        assertComments(french, "more", CommentData.empty());
     }
 
     public interface BadKey1 {

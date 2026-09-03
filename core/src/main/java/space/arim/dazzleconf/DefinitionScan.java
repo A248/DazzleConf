@@ -26,6 +26,7 @@ import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.engine.CallableFn;
 import space.arim.dazzleconf.engine.Comments;
+import space.arim.dazzleconf.engine.DefiningContext;
 import space.arim.dazzleconf.engine.SerializeDeserialize;
 import space.arim.dazzleconf.engine.TypeLiaison;
 import space.arim.dazzleconf.internals.lang.LibraryLang;
@@ -55,13 +56,15 @@ final class DefinitionScan {
     private final LibraryLang libraryLang;
     private final LiaisonCache liaisonCache;
     private final Reflection reflection;
+    private final DefiningContext context;
 
     private final BlockInfiniteLoop blockReadDefLoop = new BlockInfiniteLoop();
 
-    DefinitionScan(LibraryLang libraryLang, LiaisonCache liaisonCache, Reflection reflection) {
+    DefinitionScan(LibraryLang libraryLang, LiaisonCache liaisonCache, Reflection reflection, DefiningContext context) {
         this.libraryLang = libraryLang;
         this.liaisonCache = liaisonCache;
         this.reflection = reflection;
+        this.context = context;
     }
 
     static final class Reflection {
@@ -229,18 +232,21 @@ final class DefinitionScan {
                     } catch (DeveloperMistakeException rethrow) {
                         throw new DeveloperMistakeException("Failed to make type agent for " + methodId, rethrow);
                     }
-                    valNodes.add(handleType.makeValueNode(methodId, annotations, labelPath, typeToken, defaultsInvoker));
+                    valNodes.add(handleType.makeValueNode(
+                            context, methodId, annotations, labelPath, typeToken, defaultsInvoker
+                    ));
                 }
                 return new TypeSkeleton<>(new TypeToken<>(reifiedType), valNodes, callableNodes);
             }
         }
 
-        private final class AsHandshake implements TypeLiaison.Handshake {
+        private final class AsHandshake extends DefiningContextImpl implements TypeLiaison.Handshake {
 
             private final BlockInfiniteLoop blockRequestLoop = new BlockInfiniteLoop();
             private final KeyPath.Immut labelPath;
 
             private AsHandshake(KeyPath.Immut labelPath) {
+                super(context);
                 this.labelPath = labelPath;
             }
 

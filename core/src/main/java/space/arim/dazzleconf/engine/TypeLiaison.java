@@ -29,7 +29,6 @@ import space.arim.dazzleconf.backend.CommentData;
 import space.arim.dazzleconf.backend.KeyPath;
 import space.arim.dazzleconf.reflect.TypeToken;
 
-import java.lang.reflect.AnnotatedElement;
 import java.util.function.Supplier;
 
 /**
@@ -97,16 +96,9 @@ public interface TypeLiaison {
          * @throws DeveloperMistakeException if a library usage failure happened
          */
         default @NonNull CommentData loadComments(@NonNull CommentInit commentInit) {
-            AnnotatedElement methodAnnotations = commentInit.methodAnnotations();
-            LangComments langComments = methodAnnotations.getAnnotation(LangComments.class);
-            if (langComments != null) {
-                KeyPath translationKey = KeyPath.parse(langComments.value());
-                CommentData fromLangComments = commentInit.translationResolve().resolveComments(translationKey);
-                if (fromLangComments != null) {
-                    return fromLangComments;
-                }
-            }
-            return CommentData.buildFrom(methodAnnotations.getAnnotationsByType(Comments.class));
+            DefiningContext.LoadNodeComments loadNodeComments = commentInit.getDefiningInterprocessor()
+                    .getHook(DefiningContext.LOAD_NODE_COMMENTS);
+            return loadNodeComments.loadComments(commentInit);
         }
 
         /**
@@ -177,7 +169,7 @@ public interface TypeLiaison {
      * A {@code Handshake} is designed to be implemented only by the library. It should not be stored, but rather used
      * only during a call to {@link TypeLiaison#makeAgent(TypeToken, Handshake)}.
      */
-    interface Handshake {
+    interface Handshake extends DefiningContext {
 
         /**
          * Gets another agent. This function allows agents to depend on each other.
@@ -226,8 +218,9 @@ public interface TypeLiaison {
          * will use separate labels; the label represents a source code location and does <b>not</b> match user
          * configuration data. Think of it as where the agent exists, from the developer's perspective.
          * <p>
-         * It is almost always inappropriate to use the label path to influence the behavior of the agent. A rare
-         * example of acceptable usage would be implementing keyed translations that are stored externally.
+         * Usually, it is inappropriate to use the label path to influence the behavior of the agent. An example of
+         * acceptable usage would be implementing keyed translations based on the administrator locale (which, in fact,
+         * is how the translation feature provided by {@link TranslationResolve} operates).
          *
          * @return the label path
          */
