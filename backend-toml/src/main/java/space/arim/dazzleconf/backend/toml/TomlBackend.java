@@ -31,6 +31,9 @@ import io.github.wasabithumb.jtoml.except.parse.TomlLocalParseException;
 import io.github.wasabithumb.jtoml.key.TomlKey;
 import io.github.wasabithumb.jtoml.option.JTomlOption;
 import io.github.wasabithumb.jtoml.option.JTomlOptions;
+import io.github.wasabithumb.jtoml.option.prop.IndentationPolicy;
+import io.github.wasabithumb.jtoml.option.prop.PaddingPolicy;
+import io.github.wasabithumb.jtoml.option.prop.SpacingPolicy;
 import io.github.wasabithumb.jtoml.value.TomlValue;
 import io.github.wasabithumb.jtoml.value.array.TomlArray;
 import io.github.wasabithumb.jtoml.value.primitive.TomlPrimitive;
@@ -109,6 +112,8 @@ public final class TomlBackend implements Backend {
                 .set(JTomlOption.READ_COMMENTS, commentMode == TomlCommentMode.ROUND_TRIP_ABOVE_ONLY)
                 .set(JTomlOption.WRITE_EMPTY_TABLES, true)
                 .set(JTomlOption.WRITE_COMMENTS, true)
+                .set(JTomlOption.INDENTATION, IndentationPolicy.NONE)
+                .set(JTomlOption.SPACING, SpacingPolicy.NONE)
                 .build();
         // Skip service loading and construct the provider directly
         jToml = new JTomlServiceImpl().createInstance(jTomlOptions);
