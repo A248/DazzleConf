@@ -100,7 +100,7 @@ public final class LibraryLang implements LanguageMessages {
     public static @NonNull LibraryLang loadLang(@NonNull Locale usingLocale) {
         LanguageCandidate chosen = bestCandidate(usingLocale);
         if (chosen == null) {
-            // 2.0.0-RC1: Remove this System.out message
+            // 2.0.0: Remove this System.out message
             // When DazzleConf 2.0 has exited the preview phase, we will remove this message. Right now, it exists
             // to help identify missing translations and encourage contributions.
             //
@@ -151,7 +151,7 @@ public final class LibraryLang implements LanguageMessages {
         };
     }
 
-    public @NonNull Printable outOfRange(@NonNull Object value, @NonNull Number min, @NonNull Number max) {
+    public @NonNull Printable outOfRange(@NonNull Number value, @NonNull Number min, @NonNull Number max) {
         Objects.requireNonNull(value, "value");
         Objects.requireNonNull(min, "min");
         Objects.requireNonNull(max, "max");
@@ -161,7 +161,7 @@ public final class LibraryLang implements LanguageMessages {
                 output.append(badValue());
                 output.append(' ');
                 mustBeBetween(
-                        displayCanonicalType(value.getClass()), min, max
+                        formatNumber(value), min, max
                 ).printTo(output);
             }
         };

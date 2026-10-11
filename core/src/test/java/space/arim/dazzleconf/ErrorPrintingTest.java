@@ -30,6 +30,7 @@ import space.arim.dazzleconf.backend.Printable;
 import space.arim.dazzleconf.backend.KebabCaseKeyMapper;
 import space.arim.dazzleconf.engine.Interprocessor;
 import space.arim.dazzleconf.engine.UpdateReason;
+import space.arim.dazzleconf.engine.liaison.IntegerRange;
 import space.arim.dazzleconf.engine.liaison.SubSection;
 import space.arim.dazzleconf.reflect.DefaultReflectionService;
 import space.arim.dazzleconf.reflect.MethodId;
@@ -61,15 +62,18 @@ public class ErrorPrintingTest {
 
         boolean enabled();
 
+        @IntegerRange(min = 2, max = 8)
+        int integral();
+
         @SubSection SubConfig subSection();
 
         interface SubConfig {
 
-            int integral();
-
             Character character();
 
             List<Double> decimalList();
+
+            int unbound();
 
             Set<Set<Boolean>> superNestedBools();
 
@@ -119,7 +123,6 @@ public class ErrorPrintingTest {
         assertEquals(expected, actual);
     }
 
-
     private void expectOutput(DataTree dataTree, String expected) {
         expectOutput(20, dataTree, expected);
     }
@@ -130,6 +133,7 @@ public class ErrorPrintingTest {
         dataTree.put("opening", new DataEntry("hi"));
         dataTree.put("hello", new DataEntry("goodbye"));
         dataTree.put("enabled", new DataEntry(true));
+        dataTree.put("integral", new DataEntry(2));
         dataTree.put("sub-section", new DataEntry(-1));
 
         expectOutput(dataTree, """
@@ -144,6 +148,7 @@ public class ErrorPrintingTest {
         dataTree.put("opening", new DataEntry("hi"));
         dataTree.put("hello", new DataEntry("goodbye"));
         dataTree.put("enabled", new DataEntry("BROKEN").withLineNumber(2));
+        dataTree.put("integral", new DataEntry(2));
         dataTree.put("sub-section", new DataEntry(-1));
         expectOutput(dataTree, """
                 We found problems loading the configuration file.
@@ -153,11 +158,28 @@ public class ErrorPrintingTest {
     }
 
     @Test
+    public void badValueAndOutOfRange() {
+        DataTree.Mut dataTree = new DataTree.Mut();
+        dataTree.put("opening", new DataEntry("hi"));
+        dataTree.put("hello", new DataEntry("goodbye"));
+        dataTree.put("enabled", new DataEntry("BROKEN").withLineNumber(2));
+        dataTree.put("integral", new DataEntry(9));
+        dataTree.put("sub-section", new DataEntry(-1));
+        expectOutput(dataTree, """
+                We found problems loading the configuration file.
+                Where or how the error happened:
+                  enabled @ line 2: This value is not chosen correctly. The value < BROKEN > is of type text/string, but it should be true/false value.
+                  integral: This value is not chosen correctly. The value must be between 2 and 8. However, it was 9.
+                  sub-section: This value is not chosen correctly. The value < -1 > is of type integer, but it should be configuration section.""");
+    }
+
+    @Test
     public void oneBadValueBecauseCapped() {
         DataTree.Mut dataTree = new DataTree.Mut();
         dataTree.put("opening", new DataEntry("hi"));
         dataTree.put("hello", new DataEntry("goodbye"));
         dataTree.put("enabled", new DataEntry("BROKEN").withLineNumber(2));
+        dataTree.put("integral", new DataEntry(2));
         dataTree.put("sub-section", new DataEntry(-1));
         expectOutput(1, dataTree, """
                 We found problems loading the configuration file.
@@ -169,6 +191,7 @@ public class ErrorPrintingTest {
     public void sixMissingValues() {
         DataTree.Mut dataTree = new DataTree.Mut();
         dataTree.put("opening", new DataEntry("hi"));
+        dataTree.put("integral", new DataEntry(2));
         dataTree.put("sub-section", new DataEntry(new DataTree.Immut()));
         expectOutput(dataTree, """
                 We found problems loading the configuration file.
@@ -184,6 +207,7 @@ public class ErrorPrintingTest {
     public void fiveMissingValuesBecauseCapped() {
         DataTree.Mut dataTree = new DataTree.Mut();
         dataTree.put("opening", new DataEntry("hi"));
+        dataTree.put("integral", new DataEntry(2));
         dataTree.put("sub-section", new DataEntry(new DataTree.Immut()));
         expectOutput(5, dataTree, """
                 We found problems loading the configuration file.
@@ -202,15 +226,15 @@ public class ErrorPrintingTest {
                 Where or how the error happened:
                   enabled: No value is configured here but it is required.
                   hello: No value is configured here but it is required.
-                  opening: No value is configured here but it is required.""");
+                  integral: No value is configured here but it is required.""");
     }
 
     @Test
     public void errorsInChildElements() {
         DataTree.Mut subSection = new DataTree.Mut();
-        subSection.put("integral", new DataEntry(2));
         subSection.put("character", new DataEntry("not a character"));
         subSection.put("decimal-list", new DataEntry(new DataList.Immut(new DataEntry(0.0), new DataEntry(1.1), new DataEntry(-4.9))));
+        subSection.put("unbound", new DataEntry(4));
         subSection.put("super-nested-bools", new DataEntry(new DataList.Immut(
                 new DataEntry(new DataList.Immut()),
                 new DataEntry(new DataList.Immut(
@@ -220,6 +244,7 @@ public class ErrorPrintingTest {
         DataTree.Mut dataTree = new DataTree.Mut();
         dataTree.put("opening", new DataEntry("hi"));
         dataTree.put("hello", new DataEntry("goodbye"));
+        dataTree.put("integral", new DataEntry(2));
         dataTree.put("enabled", new DataEntry(false));
         dataTree.put("sub-section", new DataEntry(subSection));
         expectOutput(dataTree, """
@@ -233,9 +258,9 @@ public class ErrorPrintingTest {
     @Test
     public void errorsInChildElementsCapped() {
         DataTree.Mut subSection = new DataTree.Mut();
-        subSection.put("integral", new DataEntry(2));
         subSection.put("character", new DataEntry("not a character"));
         subSection.put("decimal-list", new DataEntry(new DataList.Immut(new DataEntry(0.0), new DataEntry(1.1), new DataEntry(-4.9))));
+        subSection.put("unbound", new DataEntry(4));
         subSection.put("super-nested-bools", new DataEntry(new DataList.Immut(
                 new DataEntry(new DataList.Immut()),
                 new DataEntry(new DataList.Immut(
@@ -246,6 +271,7 @@ public class ErrorPrintingTest {
         dataTree.put("opening", new DataEntry("hi"));
         dataTree.put("hello", new DataEntry("goodbye"));
         dataTree.put("enabled", new DataEntry(false));
+        dataTree.put("integral", new DataEntry(2));
         dataTree.put("sub-section", new DataEntry(subSection));
         expectOutput(2, dataTree, """
                 We found problems loading the configuration file.
