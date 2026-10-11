@@ -95,11 +95,11 @@
 	</build>
 	
 	<dependencies>
-        <dependency>
-            <groupId>org.checkerframework</groupId>
-            <artifactId>checker-qual</artifactId>
-            <optional>true</optional>
-        </dependency>
+		<dependency>
+			<groupId>org.checkerframework</groupId>
+			<artifactId>checker-qual</artifactId>
+			<optional>true</optional>
+		</dependency>
 		<dependency>
 			<groupId>org.apiguardian</groupId>
 			<artifactId>apiguardian-api</artifactId>
@@ -112,7 +112,7 @@
 		<dependency>
 			<groupId>io.github.wasabithumb</groupId>
 			<artifactId>jtoml</artifactId>
-			<version>1.6.0</version>
+			<version>1.8.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>

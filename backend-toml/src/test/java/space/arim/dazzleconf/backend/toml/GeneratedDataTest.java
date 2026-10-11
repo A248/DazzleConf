@@ -19,7 +19,6 @@
 
 package space.arim.dazzleconf.backend.toml;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.TestingErrorSource;
 import space.arim.dazzleconf.backend.SimpleDocument;
@@ -105,12 +104,10 @@ AI0ons2K=DataEntry{value=-1130343348, lineNumber=null, comments=CommentData{{}}}
                 # GgUOMZK
                 # vy5
                 # U5ERu3
-                
                 [42]""", stringRoot.readString().trim());
     }
 
     @Test
-    //@Disabled("TODO; We still don't know what is going on here")
     public void rereadExtremelyWeird() {
 /*
 Failed to re-read data

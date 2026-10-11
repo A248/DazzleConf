@@ -19,7 +19,6 @@
 
 package space.arim.dazzleconf.backend.toml;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import space.arim.dazzleconf.Configuration;
 import space.arim.dazzleconf.backend.Backend;
@@ -31,7 +30,7 @@ import space.arim.dazzleconf.engine.liaison.SubSection;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PrettyPrintTest {
 
@@ -57,6 +56,33 @@ public class PrettyPrintTest {
 
         }
 
+        @SubSection MySection mySection();
+
+        interface MySection {
+
+            default boolean hello() {
+                return true;
+            }
+
+            @SubSection Sub subSection();
+
+            interface Sub {
+
+                default String deep() {
+                    return "ly nested";
+                }
+
+                @SubSection SuperSub superSub();
+
+                interface SuperSub {
+
+                    default char yOrN() {
+                        return 'y';
+                    }
+                }
+            }
+        }
+
         @Comments({
                 "Groups allow you to apply same options to multiple worlds",
                 "Highest group gets applied first and lowest group gets applied last"
@@ -67,6 +93,7 @@ public class PrettyPrintTest {
 
         interface Group {
 
+            @Comments("Player's name in the tablist")
             default String playerListName() {
                 return "<luckperms_prefix><player_name>";
             }
@@ -96,8 +123,7 @@ public class PrettyPrintTest {
     }
 
     @Test
-    @Disabled("This test exists to show the format, but TOML's order is not reliable and thus cannot be tested")
-    public void printDefaults() {
+    public void printExpected() {
         StringRoot stringRoot = new StringRoot("");
         Backend backend = new TomlBackend(stringRoot);
         Configuration<Config> configuration = Configuration.defaultBuilder(Config.class).build();
@@ -105,6 +131,49 @@ public class PrettyPrintTest {
         DataTree.Mut dataTree = new DataTree.Mut();
         configuration.writeTo(defaults, dataTree);
         backend.write(Backend.Document.simple(dataTree));
-        assertEquals("", stringRoot.readString());
+
+        String[] parts = new String[] {
+                """    
+                
+                [[sorters]]
+                criteria = "PREFIX_WEIGHT"
+                order = "ASCENDING"
+                type = "LUCKPERMS"
+                ""","""
+                
+                # Groups allow you to apply same options to multiple worlds
+                # Highest group gets applied first and lowest group gets applied last
+                [groups]
+                
+                  [groups.example]
+                  # Player's name in the tablist
+                  playerListName = "<luckperms_prefix><player_name>"
+                  regex = ".*"
+                  footer = [ "<rainbow>This is a footer" ]
+                  header = [ "<blue>This is an example", "<red>header with 2 lines" ]
+                """,
+                """
+                
+                [mySection]
+                hello = true
+                
+                  [mySection.subSection]
+                  deep = "ly nested"
+                
+                    [mySection.subSection.superSub]
+                    yOrN = "y"
+                """
+        };
+        // Any one of these expected values is possible (we currently can't guarantee order)
+        List<String> possibilities = List.of(
+                parts[0] + parts[1] + parts[2],
+                parts[0] + parts[2] + parts[1],
+                parts[1] + parts[0] + parts[2],
+                parts[1] + parts[2] + parts[0],
+                parts[2] + parts[0] + parts[1],
+                parts[2] + parts[1] + parts[0]
+        );
+        String actual = stringRoot.readString();
+        assertTrue(possibilities.contains(actual), () -> "Expected " + actual + " to look like " + possibilities.getFirst());
     }
 }

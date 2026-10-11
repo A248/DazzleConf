@@ -20,7 +20,6 @@
 package space.arim.dazzleconf.backend.toml;
 
 import io.github.wasabithumb.jtoml.JToml;
-import io.github.wasabithumb.jtoml.JTomlServiceImpl;
 import io.github.wasabithumb.jtoml.comment.Comment;
 import io.github.wasabithumb.jtoml.comment.CommentPosition;
 import io.github.wasabithumb.jtoml.comment.Comments;
@@ -32,8 +31,6 @@ import io.github.wasabithumb.jtoml.key.TomlKey;
 import io.github.wasabithumb.jtoml.option.JTomlOption;
 import io.github.wasabithumb.jtoml.option.JTomlOptions;
 import io.github.wasabithumb.jtoml.option.prop.IndentationPolicy;
-import io.github.wasabithumb.jtoml.option.prop.PaddingPolicy;
-import io.github.wasabithumb.jtoml.option.prop.SpacingPolicy;
 import io.github.wasabithumb.jtoml.value.TomlValue;
 import io.github.wasabithumb.jtoml.value.array.TomlArray;
 import io.github.wasabithumb.jtoml.value.primitive.TomlPrimitive;
@@ -103,6 +100,8 @@ public final class TomlBackend implements Backend {
 
     private final JToml jToml;
 
+    private static final IndentationPolicy INDENTATION = IndentationPolicy.builder().indentChar(' ').variableIndent(2).build();
+
     private TomlBackend(ReadableRoot dataRoot, Builder builder) {
         this.dataRoot = Objects.requireNonNull(dataRoot);
         this.syntaxLinter = syntaxLinterOrDefault(builder);
@@ -112,11 +111,9 @@ public final class TomlBackend implements Backend {
                 .set(JTomlOption.READ_COMMENTS, commentMode == TomlCommentMode.ROUND_TRIP_ABOVE_ONLY)
                 .set(JTomlOption.WRITE_EMPTY_TABLES, true)
                 .set(JTomlOption.WRITE_COMMENTS, true)
-                .set(JTomlOption.INDENTATION, IndentationPolicy.NONE)
-                .set(JTomlOption.SPACING, SpacingPolicy.NONE)
+                .set(JTomlOption.INDENTATION, INDENTATION)
                 .build();
-        // Skip service loading and construct the provider directly
-        jToml = new JTomlServiceImpl().createInstance(jTomlOptions);
+        jToml = JToml.jToml(jTomlOptions);
     }
 
     /**
